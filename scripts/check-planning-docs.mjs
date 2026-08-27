@@ -463,13 +463,20 @@ report("offline", "final-artifact-provenance", () => {
     const finalBlob = kind === "prototype-evidence-only" ? objectId(artifact, source) : objectId(artifact);
     const sourceBlob = objectId(artifact, source);
     assert(entry.final_blob_sha === finalBlob, "#" + ticket + " final blob does not match target");
+    if (kind !== "prototype-evidence-only") {
+      assert(
+        objectId(artifact, expectedApprovalCommit) === finalBlob,
+        "#" + ticket + " final blob was not present in approval commit A",
+      );
+    }
     if (overlays.length === 0) {
       assert(finalBlob === sourceBlob, "#" + ticket + " claims no overlay but differs from source");
     } else if (kind !== "prototype-evidence-only") {
       assert(finalBlob !== sourceBlob, "#" + ticket + " declares overlay but equals source");
     }
   });
-  return "13 final blobs and enumerated overlays approved by " + expectedApprovalCommit;
+  return "13 final blobs, 12 approval-tree matches, and enumerated overlays approved by "
+    + expectedApprovalCommit;
 });
 
 report("offline", "normative-contract-invariants", () => {
