@@ -10,9 +10,25 @@ mechanisms.
 The date-scoped Markdown note whose eligible items form one day's planning input.
 _Avoid_: Daily Page, journal entry
 
+**Plan Region**:
+The explicitly bounded and versioned part of a Daily Note that supplies planning input.
+_Avoid_: Plan section, task area
+
 **Plan Item**:
-An eligible Daily Note item that the planner interprets as either a Fixed Event or Flexible Task.
+An eligible direct item in the Primary Plan that the planner interprets as either a Fixed Event or Flexible Task.
 _Avoid_: Block, record
+
+**Primary Plan**:
+The one Plan Region in a Daily Note that supplies the authoritative day plan.
+_Avoid_: Main section, first task list
+
+**Plan Item ID**:
+The durable, vault-scoped identity of a Plan Item independent of its wording or location.
+_Avoid_: UID, line key, task hash
+
+**Grammar Version**:
+The declared contract that determines how a Plan Region's source becomes Plan Items.
+_Avoid_: Plugin version, schema version
 
 **Fixed Event**:
 A Plan Item with an explicit start time that reserves its position on the day timeline.
