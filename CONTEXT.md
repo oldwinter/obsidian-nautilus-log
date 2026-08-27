@@ -59,3 +59,21 @@ _Avoid_: Pomodoro task, focus block
 **LOGBOOK**:
 The Markdown property section used to persist compatible CLOCK timing history when that option is enabled.
 _Avoid_: Activity database, audit log
+
+## Acceptance
+
+**Parity Requirement**:
+A stable, never-reused statement of one observable baseline behavior or approved Obsidian adaptation that a release must satisfy.
+_Avoid_: Feature checklist, test case
+
+**Evidence Record**:
+An immutable result that links one Release Candidate, environment, test, and set of Parity Requirements.
+_Avoid_: Test output, screenshot folder
+
+**Deviation**:
+An explicitly approved Obsidian-native difference from the baseline, limited to host integration, accessibility, theme, or write safety without changing scheduling semantics or the core workflow.
+_Avoid_: Bug waiver, omission
+
+**Release Candidate**:
+One exact Git commit and its deterministic package assets evaluated together by the release gates.
+_Avoid_: Branch head, latest build
