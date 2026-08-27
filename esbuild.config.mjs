@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { builtinModules } from "node:module";
 import path from "node:path";
 import process from "node:process";
 import vm from "node:vm";
@@ -13,6 +12,34 @@ import * as esbuild from "esbuild";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.join(rootDir, "main.js");
 const productionExtensions = new Set([".css", ".js", ".mjs", ".ts", ".tsx"]);
+const markerExtensions = new Set([
+  ".cjs",
+  ".css",
+  ".html",
+  ".js",
+  ".json",
+  ".jsx",
+  ".md",
+  ".mjs",
+  ".sh",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".yaml",
+  ".yml",
+]);
+const auditedDirectories = [
+  ".github/workflows",
+  "benchmarks",
+  "docs/parity/trace-reports",
+  "evidence/g0-g6",
+  "scripts/release",
+  "scripts/verify",
+  "src",
+  "styles",
+  "tests",
+];
+const auditedExactFiles = ["docs/parity/deviations.json"];
 const provenanceFields = [
   "target_scope",
   "disposition",
@@ -158,7 +185,11 @@ function parseProvenanceLedger(provenanceText) {
   return JSON.parse(match[1]);
 }
 
-async function listProductionFiles() {
+async function listFiles(
+  relativeDirectory,
+  predicate = () => true,
+  shouldVisitDirectory = () => true,
+) {
   const files = [];
 
   async function visit(relativeDirectory) {
@@ -167,22 +198,67 @@ async function listProductionFiles() {
     for (const entry of await readdir(absoluteDirectory, { withFileTypes: true })) {
       const relativePath = path.posix.join(relativeDirectory, entry.name);
       if (entry.isDirectory()) {
-        await visit(relativePath);
-      } else if (entry.isFile() && productionExtensions.has(path.extname(entry.name))) {
+        if (shouldVisitDirectory(relativePath)) await visit(relativePath);
+      } else if (entry.isFile() && predicate(relativePath)) {
         files.push(relativePath);
       }
     }
   }
 
-  await visit("src");
-  await visit("styles");
+  await visit(relativeDirectory);
   return files.sort();
 }
 
+async function listProductionFiles() {
+  const files = await Promise.all(
+    ["src", "styles"].map((directory) =>
+      listFiles(directory, (file) => productionExtensions.has(path.extname(file))),
+    ),
+  );
+  return files.flat().sort();
+}
+
+async function listGloballyMarkedFiles() {
+  const isRepositoryPath = (file) => {
+    const [firstSegment] = file.split("/");
+    return firstSegment !== ".git" && firstSegment !== "node_modules";
+  };
+  const candidates = await listFiles(
+    ".",
+    (file) => isRepositoryPath(file) && file !== "main.js" && markerExtensions.has(path.extname(file)),
+    isRepositoryPath,
+  );
+  const marked = [];
+  for (const file of candidates) {
+    if (sourceHeaderPattern.test(await readText(file))) marked.push(file);
+  }
+  return marked;
+}
+
+async function listAuditedFiles() {
+  const files = new Set(await listGloballyMarkedFiles());
+  const directoryFiles = await Promise.all(auditedDirectories.map((directory) => listFiles(directory)));
+  for (const file of directoryFiles.flat()) files.add(file);
+  for (const file of auditedExactFiles) {
+    if (existsSync(path.join(rootDir, file))) files.add(file);
+  }
+  return [...files].sort();
+}
+
+function validateProvenanceCoverage(auditedFiles, rowsByTarget) {
+  for (const file of auditedFiles) {
+    const row = rowsByTarget.get(file);
+    if (!row || row.disposition === "excluded") {
+      fail(`PROVENANCE.md: audited file ${file} needs one non-excluded ledger row`);
+    }
+  }
+}
+
 async function loadAndValidateProvenance() {
-  const [provenanceText, noticesText, productionFiles] = await Promise.all([
+  const [provenanceText, noticesText, auditedFiles, productionFiles] = await Promise.all([
     readText("PROVENANCE.md"),
     readText("THIRD_PARTY_NOTICES.md"),
+    listAuditedFiles(),
     listProductionFiles(),
   ]);
   const notices = parseNoticeBlocks(noticesText);
@@ -201,21 +277,22 @@ async function loadAndValidateProvenance() {
     rowsByTarget.set(row.target_scope, row);
   }
 
-  for (const file of productionFiles) {
+  validateProvenanceCoverage(auditedFiles, rowsByTarget);
+  for (const file of auditedFiles) {
     const row = rowsByTarget.get(file);
-    if (!row || row.disposition === "excluded") {
-      fail(`PROVENANCE.md: production file ${file} needs one non-excluded ledger row`);
-    }
     const sourceText = await readText(file);
-    if (copiedDispositions.has(row.disposition)) {
-      const header = sourceText.match(sourceHeaderPattern);
+    const header = sourceText.match(sourceHeaderPattern);
+    if (header && !copiedDispositions.has(row.disposition)) {
+      fail(`${file}: a source marker requires a copied or ported ledger disposition`);
+    }
+    if (copiedDispositions.has(row.disposition) && markerExtensions.has(path.extname(file))) {
       if (!header || header[1] !== row.source_commit || header[2] !== row.source_path) {
         fail(`${file}: copied/ported source header must match its ledger commit and path`);
       }
     }
   }
 
-  return { ledger, notices, productionFiles };
+  return { auditedFiles, ledger, notices, productionFiles };
 }
 
 async function validateRequirementContract() {
@@ -294,13 +371,11 @@ async function validateManifestAndPackage() {
 async function scanRuntimeInputs() {
   const productionFiles = await listProductionFiles();
   const networkPattern = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b|\b(analytics|telemetry)\b/i;
-  const runtimeImportPattern = /(?:from\s+|import\s*\()\s*["'](?:node:|electron(?:["'/])|fs["'/]|path["'/]|child_process["'/])/;
   const forbiddenInputPattern = /issue-13|prototype\/|extension\.js|extension\.css|bp3-icon|nautilus-log-overview\.png/i;
 
   for (const file of productionFiles) {
     const source = await readText(file);
     if (networkPattern.test(source)) fail(`${file}: network or telemetry API/token is forbidden`);
-    if (runtimeImportPattern.test(source)) fail(`${file}: Node/Electron runtime imports are forbidden`);
     if (forbiddenInputPattern.test(source)) fail(`${file}: forbidden upstream/prototype input token found`);
   }
 }
@@ -338,9 +413,8 @@ function makeBanner(packageJson, ledger, notices) {
   return `/*!\n${legalText}\n*/`;
 }
 
-const hostExternals = [
+const allowedHostExternals = new Set([
   "obsidian",
-  "electron",
   "@codemirror/autocomplete",
   "@codemirror/collab",
   "@codemirror/commands",
@@ -352,22 +426,30 @@ const hostExternals = [
   "@lezer/common",
   "@lezer/highlight",
   "@lezer/lr",
-  ...builtinModules,
-  ...builtinModules.map((moduleName) => `node:${moduleName}`),
-];
+]);
+
+function validateRuntimeImports(result) {
+  for (const [inputPath, input] of Object.entries(result.metafile?.inputs ?? {})) {
+    for (const imported of input.imports ?? []) {
+      if (imported.external && !allowedHostExternals.has(imported.path)) {
+        fail(`${inputPath}: runtime import ${imported.path} is not an allowed Obsidian host external`);
+      }
+    }
+  }
+}
 
 async function createProductionBundle() {
   const [{ ledger, notices }, packageJson] = await Promise.all([
     loadAndValidateProvenance(),
     readJson("package.json"),
   ]);
-  return esbuild.build({
+  const result = await esbuild.build({
     absWorkingDir: rootDir,
     banner: { js: makeBanner(packageJson, ledger, notices) },
     bundle: true,
     charset: "utf8",
     entryPoints: ["src/main.ts"],
-    external: hostExternals,
+    external: [...allowedHostExternals],
     format: "cjs",
     legalComments: "none",
     logLevel: "silent",
@@ -380,6 +462,8 @@ async function createProductionBundle() {
     treeShaking: true,
     write: false,
   });
+  validateRuntimeImports(result);
+  return result;
 }
 
 function onlyOutput(result) {
@@ -400,13 +484,17 @@ function scanBundle(bundleBytes) {
     ["upstream asset or bundle", /extension\.js|extension\.css|nautilus-log-overview\.png/i],
     ["network API", /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/],
     ["telemetry", /\b(analytics|telemetry)\b/i],
-    ["Node/Electron runtime import", /require\(["'](?:node:|electron|fs|path|child_process)/],
   ];
   for (const [label, pattern] of forbidden) {
     if (pattern.test(bundle)) fail(`main.js contains forbidden ${label}`);
   }
   if (!bundle.startsWith("/*!\nSpiral Day v")) {
     fail("main.js is missing the minifier-preserved Spiral Day banner");
+  }
+  for (const match of bundle.matchAll(/\brequire\(["']([^"']+)["']\)/g)) {
+    if (!allowedHostExternals.has(match[1])) {
+      fail(`main.js contains non-host runtime import ${match[1]}`);
+    }
   }
 }
 
@@ -468,6 +556,43 @@ function runProvenanceNegativeTests(knownNotices) {
   const noTest = structuredClone(row);
   noTest.covering_tests = [];
   assert.throws(() => validateProvenanceRow(noTest, knownNotices));
+
+  assert.throws(
+    () => validateProvenanceCoverage(["tests/ported-upstream.test.ts"], new Map()),
+    /audited file tests\/ported-upstream\.test\.ts needs one non-excluded ledger row/,
+  );
+  assert.throws(
+    () => validateProvenanceCoverage(["docs/parity/deviations.json"], new Map()),
+    /audited file docs\/parity\/deviations\.json needs one non-excluded ledger row/,
+  );
+  assert.throws(
+    () => validateProvenanceCoverage(["evidence/g0-g6/host.json"], new Map()),
+    /audited file evidence\/g0-g6\/host\.json needs one non-excluded ledger row/,
+  );
+}
+
+function runRuntimeImportPolicyTests() {
+  const resultFor = (path) => ({
+    metafile: {
+      inputs: {
+        "src/main.ts": { imports: [{ external: true, kind: "import-statement", path }] },
+      },
+    },
+  });
+
+  validateRuntimeImports(resultFor("obsidian"));
+  assert.throws(
+    () => validateRuntimeImports(resultFor("http")),
+    /runtime import http is not an allowed/,
+  );
+  assert.throws(
+    () => validateRuntimeImports(resultFor("node:http")),
+    /runtime import node:http is not an allowed/,
+  );
+  assert.throws(
+    () => validateRuntimeImports(resultFor("electron")),
+    /runtime import electron is not an allowed/,
+  );
 }
 
 async function createLifecycleBundle() {
@@ -632,11 +757,14 @@ async function runTests() {
   await validateFoundation();
   const { notices } = await loadAndValidateProvenance();
   runProvenanceNegativeTests(new Set(notices.keys()));
+  runRuntimeImportPolicyTests();
   await runLifecycleTest();
   const [first, second] = await Promise.all([createProductionBundle(), createProductionBundle()]);
   assert.deepEqual(Buffer.from(onlyOutput(first)), Buffer.from(onlyOutput(second)));
   scanBundle(onlyOutput(first));
-  console.log("tests: provenance-negative, lifecycle-10x, no-write, local-only, deterministic-bundle passed");
+  console.log(
+    "tests: provenance-negative, unledgered-ported-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle passed",
+  );
 }
 
 async function main() {
@@ -646,7 +774,9 @@ async function main() {
     console.log("clean: removed generated main.js");
   } else if (command === "provenance") {
     const result = await loadAndValidateProvenance();
-    console.log(`provenance: ${result.ledger.rows.length} rows, ${result.productionFiles.length} production files`);
+    console.log(
+      `provenance: ${result.ledger.rows.length} rows, ${result.auditedFiles.length} audited files, ${result.productionFiles.length} production files`,
+    );
   } else if (command === "validate") {
     await validateFoundation();
     console.log("validate: manifest, package, #22 contract, provenance, local-only inputs passed");

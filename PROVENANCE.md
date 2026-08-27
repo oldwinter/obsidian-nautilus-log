@@ -12,10 +12,12 @@ The canonical behavior specification is the implementation dossier at commit
 ## Validation policy
 
 `npm run validate:provenance` parses the ledger below and fails unless every
-production file under `src/` or `styles/` has exactly one row with all required
-fields. A `copied` or `ported` row additionally requires immutable repository,
-commit, path, blob, license, applicable notice, modification, and covering-test
-data. Such a source file must also carry a short
+file under `src/`, `styles/`, `tests/`, `benchmarks/`, release/verification
+scripts, workflows, deviations, or trace reports has exactly one row with all
+required fields. The same rule applies repository-wide to any text file carrying
+an `@spiral-day-source` marker. A `copied` or `ported` row additionally requires
+immutable repository, commit, path, blob, license, applicable notice,
+modification, and covering-test data. Such a source file must also carry a short
 `@spiral-day-source <40-character-commit>:<path>` header.
 
 Notice identifiers resolve to verbatim, marker-delimited notices in
