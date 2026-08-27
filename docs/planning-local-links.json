@@ -1,26 +1,264 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "discovery": "all-inline-and-reference-definition-relative-destinations",
   "links": [
-    { "source": "README.md", "href": "docs/implementation-dossier.md", "target": "docs/implementation-dossier.md" },
-    { "source": "README.md", "href": "docs/parity/requirement-owners.json", "target": "docs/parity/requirement-owners.json" },
-    { "source": "CONTEXT.md", "href": "docs/implementation-dossier.md", "target": "docs/implementation-dossier.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/behavior-inventory.md", "target": "docs/research/behavior-inventory.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/scheduler-semantics.md", "target": "docs/research/scheduler-semantics.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/execution-layer.md", "target": "docs/research/execution-layer.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/roam-obsidian-capability-map.md", "target": "docs/research/roam-obsidian-capability-map.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/visual-interaction.md", "target": "docs/research/visual-interaction.md" },
-    { "source": "docs/implementation-dossier.md", "href": "research/license-provenance.md", "target": "docs/research/license-provenance.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/markdown-grammar-and-plan-item-identity.md", "target": "docs/decisions/markdown-grammar-and-plan-item-identity.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/plugin-architecture-and-state-ownership.md", "target": "docs/decisions/plugin-architecture-and-state-ownership.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/timing-write-safety-conflict-handling-and-recovery.md", "target": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/parity-acceptance-matrix-and-release-gates.md", "target": "docs/decisions/parity-acceptance-matrix-and-release-gates.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/desktop-compatibility-and-performance-envelope.md", "target": "docs/decisions/desktop-compatibility-and-performance-envelope.md" },
-    { "source": "docs/implementation-dossier.md", "href": "decisions/community-compliant-product-naming-and-attribution.md", "target": "docs/decisions/community-compliant-product-naming-and-attribution.md" },
-    { "source": "docs/implementation-dossier.md", "href": "parity/requirement-owners.json", "target": "docs/parity/requirement-owners.json" },
-    { "source": "docs/implementation-dossier.md", "href": "parity/requirement-owners.schema.json", "target": "docs/parity/requirement-owners.schema.json" },
-    { "source": "docs/implementation-dossier.md", "href": "parity/source-ledger.json", "target": "docs/parity/source-ledger.json" },
-    { "source": "docs/implementation-dossier.md", "href": "planning-github-graph.json", "target": "docs/planning-github-graph.json" },
-    { "source": "docs/research/roam-obsidian-capability-map.md", "href": "../implementation-dossier.md", "target": "docs/implementation-dossier.md" },
-    { "source": "docs/decisions/parity-acceptance-matrix-and-release-gates.md", "href": "../parity/requirement-owners.schema.json", "target": "docs/parity/requirement-owners.schema.json" }
+    {
+      "source": "CONTEXT.md",
+      "href": "docs/implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "target": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/parity/requirement-owners.json",
+      "target": "docs/parity/requirement-owners.json",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/parity/ticket-boundaries.json",
+      "target": "docs/parity/ticket-boundaries.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+      "href": "../parity/requirement-owners.json",
+      "target": "docs/parity/requirement-owners.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+      "href": "../parity/requirement-owners.schema.json",
+      "target": "docs/parity/requirement-owners.schema.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/plugin-architecture-and-state-ownership.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "href": "markdown-grammar-and-plan-item-identity.md",
+      "target": "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "href": "plugin-architecture-and-state-ownership.md",
+      "target": "docs/decisions/plugin-architecture-and-state-ownership.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "href": "parity-acceptance-matrix-and-release-gates.md",
+      "target": "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "href": "desktop-compatibility-and-performance-envelope.md",
+      "target": "docs/decisions/desktop-compatibility-and-performance-envelope.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "href": "community-compliant-product-naming-and-attribution.md",
+      "target": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/source-ledger.json",
+      "target": "docs/parity/source-ledger.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/behavior-inventory.md",
+      "target": "docs/research/behavior-inventory.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/scheduler-semantics.md",
+      "target": "docs/research/scheduler-semantics.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/execution-layer.md",
+      "target": "docs/research/execution-layer.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/roam-obsidian-capability-map.md",
+      "target": "docs/research/roam-obsidian-capability-map.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/visual-interaction.md",
+      "target": "docs/research/visual-interaction.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/license-provenance.md",
+      "target": "docs/research/license-provenance.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/markdown-grammar-and-plan-item-identity.md",
+      "target": "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/plugin-architecture-and-state-ownership.md",
+      "target": "docs/decisions/plugin-architecture-and-state-ownership.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "target": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/parity-acceptance-matrix-and-release-gates.md",
+      "target": "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/desktop-compatibility-and-performance-envelope.md",
+      "target": "docs/decisions/desktop-compatibility-and-performance-envelope.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/community-compliant-product-naming-and-attribution.md",
+      "target": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/behavior-inventory.md",
+      "target": "docs/research/behavior-inventory.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/requirement-owners.json",
+      "target": "docs/parity/requirement-owners.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/requirement-owners.schema.json",
+      "target": "docs/parity/requirement-owners.schema.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/ticket-boundaries.json",
+      "target": "docs/parity/ticket-boundaries.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/ticket-boundaries.schema.json",
+      "target": "docs/parity/ticket-boundaries.schema.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "research/execution-layer.md",
+      "target": "docs/research/execution-layer.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/plugin-architecture-and-state-ownership.md",
+      "target": "docs/decisions/plugin-architecture-and-state-ownership.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "target": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "planning-github-graph.json",
+      "target": "docs/planning-github-graph.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "parity/ticket-boundaries.json",
+      "target": "docs/parity/ticket-boundaries.json",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/research/behavior-inventory.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/research/execution-layer.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/research/license-provenance.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/research/roam-obsidian-capability-map.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/research/scheduler-semantics.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/research/visual-interaction.md",
+      "href": "../implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    }
   ]
 }

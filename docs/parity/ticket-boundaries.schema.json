@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oldwinter/obsidian-nautilus-log/blob/main/docs/parity/ticket-boundaries.schema.json",
+  "title": "Spiral Day implementation ticket boundaries",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema_version", "requirement_set", "tickets"],
+  "properties": {
+    "$schema": { "const": "./ticket-boundaries.schema.json" },
+    "schema_version": { "const": 1 },
+    "requirement_set": { "const": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1" },
+    "tickets": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/ticketBoundary" }
+    }
+  },
+  "$defs": {
+    "ticketBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ticket", "allowed_module_boundaries", "allowed_external_boundaries", "primary_requirement_ids"],
+      "properties": {
+        "ticket": { "type": "integer", "minimum": 17, "maximum": 31 },
+        "allowed_module_boundaries": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowed_external_boundaries": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^external:[a-z0-9-]+$" }
+        },
+        "primary_requirement_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(UP-(INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-[0-9]{2}|OBS-(TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-[0-9]{3}|REL-[0-9]{3})$"
+          }
+        }
+      }
+    }
+  }
+}

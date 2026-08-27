@@ -1,0 +1,268 @@
+{
+  "$schema": "./ticket-boundaries.schema.json",
+  "schema_version": 1,
+  "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
+  "tickets": [
+    {
+      "ticket": 17,
+      "allowed_module_boundaries": [
+        ".gitignore",
+        "LICENSE",
+        "PROVENANCE.md",
+        "README.md",
+        "THIRD_PARTY_NOTICES.md",
+        "esbuild.config.mjs",
+        "manifest.json",
+        "package-lock.json",
+        "package.json",
+        "src/main.ts",
+        "tsconfig.json",
+        "versions.json"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["UP-INS-01", "UP-INS-02", "UP-DRF-01", "OBS-LOCAL-001"]
+    },
+    {
+      "ticket": 18,
+      "allowed_module_boundaries": [
+        "src/core/diagnostics.ts",
+        "src/core/grammar-v1.ts",
+        "src/core/model.ts",
+        "src/core/parser/",
+        "tests/core/grammar-v1/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-PAR-01", "UP-PAR-02", "UP-PAR-03", "UP-PAR-04", "UP-PAR-05", "UP-PAR-06",
+        "UP-PAR-07", "UP-PAR-08", "UP-PAR-09", "UP-PAR-10", "UP-PAR-11", "UP-PAR-12",
+        "UP-DRF-02", "UP-DRF-05"
+      ]
+    },
+    {
+      "ticket": 19,
+      "allowed_module_boundaries": [
+        "src/core/capacity.ts",
+        "src/core/day.ts",
+        "src/core/history.ts",
+        "src/core/scheduler.ts",
+        "tests/core/scheduler/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-SCH-01", "UP-SCH-02", "UP-SCH-03", "UP-SCH-04", "UP-SCH-05", "UP-SCH-06", "UP-SCH-07",
+        "UP-DAY-01", "UP-DAY-02", "UP-DAY-03", "UP-DAY-04"
+      ]
+    },
+    {
+      "ticket": 20,
+      "allowed_module_boundaries": [
+        "src/workspace/clock-parser.ts",
+        "src/workspace/daily-notes.ts",
+        "src/workspace/identity-index.ts",
+        "src/workspace/logbook-reader.ts",
+        "src/workspace/plan-region.ts",
+        "src/workspace/primary-plan-resolver.ts",
+        "src/workspace/read.ts",
+        "src/workspace/source-version.ts",
+        "src/workspace/text-access.ts",
+        "tests/workspace/read/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["UP-PER-01", "UP-DRF-03", "UP-DRF-04"]
+    },
+    {
+      "ticket": 21,
+      "allowed_module_boundaries": [
+        "src/runtime/cache.ts",
+        "src/runtime/lifecycle.ts",
+        "src/runtime/plugin-data.ts",
+        "src/runtime/projection-runtime.ts",
+        "src/runtime/refresh.ts",
+        "src/runtime/snapshots.ts",
+        "src/runtime/system-clock.ts",
+        "tests/runtime/projection/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["UP-INS-04", "UP-INS-05", "UP-EXE-01", "OBS-LIFE-001"]
+    },
+    {
+      "ticket": 22,
+      "allowed_module_boundaries": [
+        ".github/workflows/",
+        "docs/parity/deviations.json",
+        "docs/parity/requirement-owners.json",
+        "docs/parity/requirement-owners.schema.json",
+        "docs/parity/requirements.json",
+        "docs/parity/scope.schema.json",
+        "docs/parity/source-ledger.json",
+        "docs/parity/ticket-boundaries.json",
+        "docs/parity/ticket-boundaries.schema.json",
+        "docs/parity/trace-reports/",
+        "docs/planning-github-graph.json",
+        "docs/planning-local-links.json",
+        "scripts/check-planning-docs.mjs",
+        "scripts/generate-planning-local-links.mjs",
+        "scripts/generate-requirement-owners.mjs",
+        "scripts/release/",
+        "scripts/verify/",
+        "tests/fixtures/",
+        "tests/release/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["UP-DRF-09", "OBS-TRACE-001", "REL-001", "REL-002"]
+    },
+    {
+      "ticket": 23,
+      "allowed_module_boundaries": [
+        "src/adapters/planner-view.ts",
+        "src/ui/planner/diagnostics.ts",
+        "src/ui/planner/geometry.ts",
+        "src/ui/planner/planner-state.ts",
+        "src/ui/planner/responsive-layout.ts",
+        "src/ui/planner/spiral.ts",
+        "src/ui/planner/view.ts",
+        "styles/planner.css",
+        "tests/ui/planner/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-INS-03",
+        "UP-VIS-01", "UP-VIS-02", "UP-VIS-03", "UP-VIS-04", "UP-VIS-05", "UP-VIS-06", "UP-VIS-07",
+        "UP-CMP-01", "UP-CMP-02", "UP-CMP-03", "UP-ERR-01", "UP-ERR-02", "OBS-VIS-001"
+      ]
+    },
+    {
+      "ticket": 24,
+      "allowed_module_boundaries": [
+        "src/i18n/locales/en/planner.ts",
+        "src/i18n/locales/en/shared.ts",
+        "src/i18n/locales/zh-CN/planner.ts",
+        "src/i18n/locales/zh-CN/shared.ts",
+        "src/i18n/resolver.ts",
+        "src/i18n/types.ts",
+        "src/ui/planner/controls.ts",
+        "src/ui/planner/disclosures.ts",
+        "src/ui/planner/focus.ts",
+        "src/ui/planner/playback.ts",
+        "styles/a11y.css",
+        "styles/theme.css",
+        "tests/ui/planner-controls/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-CTL-01", "UP-CTL-02", "UP-CTL-03", "UP-CTL-04", "UP-CTL-05",
+        "UP-ERR-09", "UP-DRF-06", "OBS-VIS-002", "OBS-A11Y-001", "OBS-I18N-001"
+      ]
+    },
+    {
+      "ticket": 25,
+      "allowed_module_boundaries": [
+        "src/workspace/commit.ts",
+        "src/workspace/conflicts.ts",
+        "src/workspace/expectation.ts",
+        "src/workspace/logbook-clock.ts",
+        "src/workspace/mutations.ts",
+        "src/workspace/receipt.ts",
+        "tests/workspace/write/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["OBS-SAFE-001"]
+    },
+    {
+      "ticket": 26,
+      "allowed_module_boundaries": [
+        "src/runtime/execution/clock-index.ts",
+        "src/runtime/execution/commands.ts",
+        "src/runtime/execution/execution-state.ts",
+        "src/runtime/execution/mutation-queue.ts",
+        "src/runtime/execution/pomo.ts",
+        "src/runtime/execution/recovery.ts",
+        "src/runtime/execution/time-continuity.ts",
+        "tests/runtime/execution/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-EXE-10", "UP-EXE-11",
+        "UP-CLK-01", "UP-CLK-02", "UP-CLK-03", "UP-CLK-04", "UP-CLK-05",
+        "UP-CLK-06", "UP-CLK-07", "UP-CLK-08", "UP-CLK-09", "UP-PER-02"
+      ]
+    },
+    {
+      "ticket": 27,
+      "allowed_module_boundaries": [
+        "src/adapters/active-task-view.ts",
+        "src/adapters/commands.ts",
+        "src/adapters/editor-menu.ts",
+        "src/adapters/execution-entry.ts",
+        "src/adapters/notices.ts",
+        "src/adapters/settings.ts",
+        "src/adapters/source-navigation.ts",
+        "src/i18n/locales/en/execution.ts",
+        "src/i18n/locales/zh-CN/execution.ts",
+        "src/ui/execution/active-task-view.ts",
+        "src/ui/execution/panel.ts",
+        "src/ui/execution/plan-view.ts",
+        "src/ui/execution/shared-controls.ts",
+        "src/ui/execution/timing-view.ts",
+        "styles/execution.css",
+        "tests/ui/execution/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-SET-01", "UP-SET-02", "UP-SET-03", "UP-SET-04", "UP-SET-05", "UP-SET-06", "UP-SET-07",
+        "UP-SET-08", "UP-SET-09", "UP-SET-10", "UP-SET-11", "UP-SET-12", "UP-SET-13",
+        "UP-EXE-03", "UP-EXE-04", "UP-EXE-05", "UP-EXE-06", "UP-EXE-07", "UP-EXE-12", "UP-EXE-13",
+        "UP-CLK-10", "UP-CMD-01", "UP-CMD-02",
+        "UP-ERR-03", "UP-ERR-04", "UP-ERR-05", "UP-ERR-06", "UP-ERR-07", "UP-ERR-08",
+        "UP-ERX-01", "UP-ERX-02", "UP-ERX-03", "UP-ERX-04", "UP-ERX-05", "UP-ERX-06", "UP-ERX-07", "UP-ERX-08",
+        "UP-DRF-07", "UP-DRF-08", "OBS-HOST-001"
+      ]
+    },
+    {
+      "ticket": 28,
+      "allowed_module_boundaries": [
+        "src/core/review.ts",
+        "src/runtime/review/coordinator.ts",
+        "src/workspace/history-index.ts",
+        "tests/core/review/",
+        "tests/workspace/history-index/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": [
+        "UP-HIS-01", "UP-HIS-02", "UP-HIS-03", "UP-HIS-04", "UP-HIS-05", "UP-EXE-02", "UP-EXE-09"
+      ]
+    },
+    {
+      "ticket": 29,
+      "allowed_module_boundaries": [
+        "src/i18n/locales/en/review.ts",
+        "src/i18n/locales/zh-CN/review.ts",
+        "src/ui/execution/review-row.ts",
+        "src/ui/execution/review-view.ts",
+        "styles/review.css",
+        "tests/ui/review/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": ["UP-EXE-08"]
+    },
+    {
+      "ticket": 30,
+      "allowed_module_boundaries": [
+        "benchmarks/",
+        "evidence/g0-g6/",
+        "tests/host-matrix/",
+        "tests/lifecycle/",
+        "tests/performance/",
+        "tests/privacy/"
+      ],
+      "allowed_external_boundaries": [],
+      "primary_requirement_ids": []
+    },
+    {
+      "ticket": 31,
+      "allowed_module_boundaries": [],
+      "allowed_external_boundaries": ["external:g7-g9-sign-off"],
+      "primary_requirement_ids": ["REL-003"]
+    }
+  ]
+}

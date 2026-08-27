@@ -32,6 +32,9 @@ accepted decisions, prototype evidence boundary, implementation task graph, and
 release gates without requiring a reader to reconstruct precedence.
 The machine-readable [126-row requirement owner map](docs/parity/requirement-owners.json)
 assigns every initial requirement to exactly one implementation ticket/module.
+The corresponding [ticket-boundary manifest](docs/parity/ticket-boundaries.json)
+defines each ticket's exclusive allowed modules and complete primary ID set;
+the planning checker requires exact equality with the live task tickets.
 
 ## Product Boundary
 

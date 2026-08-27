@@ -25,6 +25,7 @@
     "Outcome",
     "Canonical spec",
     "Owning files and modules",
+    "Primary requirement ownership",
     "Native dependencies",
     "Acceptance tests",
     "Manual QA",

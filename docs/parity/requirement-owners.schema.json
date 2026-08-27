@@ -28,7 +28,11 @@
           "pattern": "^(UP-(INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-[0-9]{2}|OBS-(TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-[0-9]{3}|REL-[0-9]{3})$"
         },
         "owner_ticket": { "type": "integer", "minimum": 17, "maximum": 31 },
-        "owner_module": { "type": "string", "minLength": 1 },
+        "owner_module": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One exact allowed module or external boundary from the owning ticket in ticket-boundaries.json."
+        },
         "evidence_contributors": {
           "type": "array",
           "uniqueItems": true,
