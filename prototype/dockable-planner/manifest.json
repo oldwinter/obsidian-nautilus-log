@@ -1,0 +1,9 @@
+{
+  "id": "spiral-day-planner-prototype",
+  "name": "Spiral Day Planner Prototype",
+  "version": "0.0.0",
+  "minAppVersion": "1.7.7",
+  "description": "Throwaway evidence for a dockable planner and safe Markdown round trip.",
+  "author": "oldwinter",
+  "isDesktopOnly": true
+}
