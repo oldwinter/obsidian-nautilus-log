@@ -1,18 +1,150 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "approval_commit": "564dc5317612ceef47b0d9d22387868bae773c47",
+  "overlay_vocabulary": ["status", "errata", "resolution", "decision-amendment", "evidence-only"],
   "entries": [
-    { "kind": "research", "ticket": 2, "source_commit": "254976ab0c92611e59b8c9bb88d946d7b155212b", "integrated_commit": "957843485e3bcdb780ac2db5ce6cc1282cf6b061", "artifact": "docs/research/behavior-inventory.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "research", "ticket": 3, "source_commit": "d0d1c100f863a3cea43c0a37407670aa1a3997a4", "integrated_commit": "0a2ae1d8cc6b1e4708962c889d0026db443aa259", "artifact": "docs/research/scheduler-semantics.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "research", "ticket": 4, "source_commit": "a43ae669a40799468e6473c6e8f8baac36143b1f", "integrated_commit": "392c90c9ee98132dc48a14d104ed4e1fe5610f8d", "artifact": "docs/research/execution-layer.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "research", "ticket": 6, "source_commit": "d906db8ea949c36a9255116b5a535bc9d0afa211", "integrated_commit": "82d213243147859ed49e41bff210a26c6634f3fc", "artifact": "docs/research/roam-obsidian-capability-map.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "research", "ticket": 5, "source_commit": "bce308843b3579f1be0afc5a2367e6b00e6feb9a", "integrated_commit": "97f24f137df7b9e55132bc0d5bccc32a3e35d8a6", "artifact": "docs/research/visual-interaction.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "research", "ticket": 7, "source_commit": "b2400709e7dea84a1080864a35974f6f2c23c582", "integrated_commit": "6a1dcc96b0d19242f515c34aaf91e674d63195dc", "artifact": "docs/research/license-provenance.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 8, "source_commit": "343ae3f252b27f723a97eddaae8813f66a8c21fe", "integrated_commit": "a2dd0c766abab5d013becfba5c5d8c5651846e0b", "artifact": "docs/decisions/markdown-grammar-and-plan-item-identity.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 9, "source_commit": "7f3972c2f64bbcf4a6d31c00d262201836273dc2", "integrated_commit": "4b0ae3f145c3736ec4a4250cceece0e71c8a890a", "artifact": "docs/decisions/plugin-architecture-and-state-ownership.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 10, "source_commit": "d09d766423326525be1c7e9e6a5d7dc3d8257426", "integrated_commit": "03e7a8d734a3eec99c8be5b8ce0edde65d9e9a54", "artifact": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 11, "source_commit": "278b3e68c0db50c65b33d572a1a14ec4d8d1e05b", "integrated_commit": "300a51efd4071357cb58ac2cb031e4b7b15efc19", "artifact": "docs/decisions/parity-acceptance-matrix-and-release-gates.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 12, "source_commit": "0feaf0ec8f7dc470e06e7bf5d55f0cbc8c8d906c", "integrated_commit": "f34d6b10880fb9101d05e1328b80fc55f942d84e", "artifact": "docs/decisions/desktop-compatibility-and-performance-envelope.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "decision", "ticket": 15, "source_commit": "8b7b10abd70a4796c78d518fa3d697e38560fcba", "integrated_commit": "cdc3a5529271ee3aad2716d130adee53f03f8e24", "artifact": "docs/decisions/community-compliant-product-naming-and-attribution.md", "status_pointer": "docs/implementation-dossier.md" },
-    { "kind": "prototype-evidence-only", "ticket": 13, "source_commit": "5a2db368df31f6ded948a983fbceae38c455b611", "integrated_commit": null, "artifact": "prototype/evidence/issue-13/index.md", "status_pointer": "docs/implementation-dossier.md" }
+    {
+      "kind": "research",
+      "ticket": 2,
+      "source_commit": "254976ab0c92611e59b8c9bb88d946d7b155212b",
+      "integrated_commit": "957843485e3bcdb780ac2db5ce6cc1282cf6b061",
+      "artifact": "docs/research/behavior-inventory.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status", "errata"],
+      "final_blob_sha": "fbfe462094528d9dac08aa325ef148d14eba2ec3",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "research",
+      "ticket": 3,
+      "source_commit": "d0d1c100f863a3cea43c0a37407670aa1a3997a4",
+      "integrated_commit": "0a2ae1d8cc6b1e4708962c889d0026db443aa259",
+      "artifact": "docs/research/scheduler-semantics.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status"],
+      "final_blob_sha": "913726e144396d8e14cb0e82d31889af5faea380",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "research",
+      "ticket": 4,
+      "source_commit": "a43ae669a40799468e6473c6e8f8baac36143b1f",
+      "integrated_commit": "392c90c9ee98132dc48a14d104ed4e1fe5610f8d",
+      "artifact": "docs/research/execution-layer.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status"],
+      "final_blob_sha": "dac4b0f096489b9d9135a762ff623638a226082d",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "research",
+      "ticket": 6,
+      "source_commit": "d906db8ea949c36a9255116b5a535bc9d0afa211",
+      "integrated_commit": "82d213243147859ed49e41bff210a26c6634f3fc",
+      "artifact": "docs/research/roam-obsidian-capability-map.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status", "resolution"],
+      "final_blob_sha": "0831fc07de0e1e7b7dfab1fa74119069a753b4a2",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "research",
+      "ticket": 5,
+      "source_commit": "bce308843b3579f1be0afc5a2367e6b00e6feb9a",
+      "integrated_commit": "97f24f137df7b9e55132bc0d5bccc32a3e35d8a6",
+      "artifact": "docs/research/visual-interaction.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status"],
+      "final_blob_sha": "eea06b16545f3b4cac7e64d43eb15029bd8d564a",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "research",
+      "ticket": 7,
+      "source_commit": "b2400709e7dea84a1080864a35974f6f2c23c582",
+      "integrated_commit": "6a1dcc96b0d19242f515c34aaf91e674d63195dc",
+      "artifact": "docs/research/license-provenance.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["status"],
+      "final_blob_sha": "67e47d67e4ae6cc2a9bbae8410215f8be6405cd0",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 8,
+      "source_commit": "343ae3f252b27f723a97eddaae8813f66a8c21fe",
+      "integrated_commit": "a2dd0c766abab5d013becfba5c5d8c5651846e0b",
+      "artifact": "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["decision-amendment"],
+      "final_blob_sha": "cbd039b8c02473ef942d54ee970c262e615b8ad8",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 9,
+      "source_commit": "7f3972c2f64bbcf4a6d31c00d262201836273dc2",
+      "integrated_commit": "4b0ae3f145c3736ec4a4250cceece0e71c8a890a",
+      "artifact": "docs/decisions/plugin-architecture-and-state-ownership.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["decision-amendment"],
+      "final_blob_sha": "459c33a5dcda1c03b7b38ecb3b764f969ab260ef",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 10,
+      "source_commit": "d09d766423326525be1c7e9e6a5d7dc3d8257426",
+      "integrated_commit": "03e7a8d734a3eec99c8be5b8ce0edde65d9e9a54",
+      "artifact": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": [],
+      "final_blob_sha": "65ab5b9713998c94b4905ad22a59b14f1697935c",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 11,
+      "source_commit": "278b3e68c0db50c65b33d572a1a14ec4d8d1e05b",
+      "integrated_commit": "300a51efd4071357cb58ac2cb031e4b7b15efc19",
+      "artifact": "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["decision-amendment"],
+      "final_blob_sha": "a954e4376567c556e1ab3084a5ded3a52c16712f",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 12,
+      "source_commit": "0feaf0ec8f7dc470e06e7bf5d55f0cbc8c8d906c",
+      "integrated_commit": "f34d6b10880fb9101d05e1328b80fc55f942d84e",
+      "artifact": "docs/decisions/desktop-compatibility-and-performance-envelope.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": [],
+      "final_blob_sha": "c93a5790f9af9c8eeb6fb8b98c1fd2a16089fce2",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "decision",
+      "ticket": 15,
+      "source_commit": "8b7b10abd70a4796c78d518fa3d697e38560fcba",
+      "integrated_commit": "cdc3a5529271ee3aad2716d130adee53f03f8e24",
+      "artifact": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": [],
+      "final_blob_sha": "73db23ea9e32f8f75064f046a6a59bf16d10f7fa",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    },
+    {
+      "kind": "prototype-evidence-only",
+      "ticket": 13,
+      "source_commit": "5a2db368df31f6ded948a983fbceae38c455b611",
+      "integrated_commit": null,
+      "artifact": "prototype/evidence/issue-13/index.md",
+      "status_pointer": "docs/implementation-dossier.md",
+      "overlay_kinds": ["evidence-only"],
+      "final_blob_sha": "51fbbadfabd3c0c3635dd65b888e06a38f7e4800",
+      "approved_commit": "564dc5317612ceef47b0d9d22387868bae773c47"
+    }
   ]
 }

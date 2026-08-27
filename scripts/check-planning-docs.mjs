@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const failures = [];
-const expectedApprovalCommit = null; // Commit B pins substantive approval commit A here.
+const expectedApprovalCommit = "564dc5317612ceef47b0d9d22387868bae773c47";
 
 function fail(message) {
   throw new Error(message);
@@ -453,6 +453,8 @@ report("offline", "final-artifact-provenance", () => {
   const ledger = readJsonObject("docs/parity/source-ledger.json");
   assert(ledger.schema_version === 2, "final source ledger schema_version must be 2");
   const allowedOverlays = new Set(["status", "errata", "resolution", "decision-amendment", "evidence-only"]);
+  assert(ledger.approval_commit === expectedApprovalCommit, "ledger approval_commit is not A");
+  sameSet(ledger.overlay_vocabulary, allowedOverlays, "ledger overlay vocabulary");
   expectedLedger.forEach(([kind, ticket, source, , artifact, overlays], index) => {
     const entry = ledger.entries[index];
     assert(entry.approved_commit === expectedApprovalCommit, "#" + ticket + " approved_commit is not A");
@@ -697,12 +699,15 @@ function claimedPrimaryFamilies(body) {
       inFence = !inFence;
       continue;
     }
-    if (inFence || /evidence[- ]only|not (?:a )?primary/i.test(line)) continue;
-    if (!/(?:primary (?:owner|ownership)|own(?:s|ing)? (?:all|every)|cover(?:s|ing)? every|all mapped)/i.test(line)) {
-      continue;
-    }
-    for (const family of line.match(/UP-(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)\b/g) ?? []) {
-      claims.push(family);
+    if (inFence) continue;
+    for (const clause of line.split(/[.;]/)) {
+      if (/evidence contribution|evidence[- ]only|not (?:a )?primary/i.test(clause)) continue;
+      if (!/(?:mapped primary|primary (?:owner|ownership|for|\x60?UP-)|own(?:s|ing)? (?:all|every)|cover(?:s|ing)? every|all mapped)/i.test(clause)) {
+        continue;
+      }
+      for (const family of clause.match(/UP-(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)\b/g) ?? []) {
+        claims.push(family);
+      }
     }
   }
   return claims;
