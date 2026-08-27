@@ -1,0 +1,5241 @@
+{
+  "schema_version": 1,
+  "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
+  "upstream_baseline_sha": "973a041aa2f59f3b05bf31db8187efbfea07017a",
+  "row_count": 126,
+  "counts": {
+    "upstream": 114,
+    "obsidian": 9,
+    "release": 3
+  },
+  "evidence_binding": "candidate-evidence-index",
+  "fixture_catalog": [
+    {
+      "id": "FX-01",
+      "statement": "Fresh lifecycle: empty vault, first load, reload, and unload with an active timing record.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-02",
+      "statement": "Settings and migrations: saved preview defaults followed by manual Chinese and custom values.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-03",
+      "statement": "Parser grammar spanning valid, invalid, zero, progress, completion, formatting, marker, empty, and nested forms.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-04",
+      "statement": "Reference ownership with direct and nested block references plus source mutation.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-05",
+      "statement": "Greedy capacity with overlaps, touching events, fragmented gaps, overload, and fit-fragmentation.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-06",
+      "statement": "Day relation and playback across dates and controlled workday clock phases.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-07",
+      "statement": "Spiral progress, completion, reopen, cleanup, and fixed-event retention.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-08",
+      "statement": "Historical Planned and Actual anchors, sessions, open clocks, cross-midnight records, and over-plan actuals.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-09",
+      "statement": "Responsive surfaces at canonical widths plus sidebar, themes, reduced motion, and debug state.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-10",
+      "statement": "Primary selection with multiple renderers, prefixes, and direct versus nested tasks.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-11",
+      "statement": "CLOCK lifecycle across Clock In, reselection, switch, Clock Out, restart, overlap, and completed owner.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-12",
+      "statement": "Timing retention and alarms around Recent, POMO, and forgotten thresholds.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-13",
+      "statement": "Standalone POMO across reload, threshold, stop, and same-tick CLOCK precedence.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-14",
+      "statement": "Execution views and actions across running, paused, completed, tracked, untracked, scheduled, and overflow states.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-15",
+      "statement": "Commands and navigation across setting, focus, context menu, sidebar, and failure states.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "FX-16",
+      "statement": "Failures and localization across writer conflict, injected API failures, locales, and unavailable command API.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests"
+      ]
+    },
+    {
+      "id": "OFX-001",
+      "statement": "Traceability manifest and exact-candidate Evidence Index linkage.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-002",
+      "statement": "Obsidian host command, menu, notice, navigation, and singleton view workflows.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-003",
+      "statement": "Canonical visual geometry, breakpoint, theme, state, and text-fit matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-004",
+      "statement": "Keyboard, focus, screen-reader, reduced-motion, and 200 percent zoom matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-005",
+      "statement": "Vault write allowlist, stale target, conflict, malformed input, and failure-injection matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-006",
+      "statement": "Repeated enable, disable, open, close, reload, and unload lifecycle matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-007",
+      "statement": "English and Simplified Chinese key equality and canonical surface matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-008",
+      "statement": "Network interception and telemetry persistence matrix for every acceptance fixture.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "OFX-009",
+      "statement": "Deterministic package, scope declaration, policy, install, upgrade, uninstall, and sign-off matrix.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    }
+  ],
+  "test_catalog": [
+    {
+      "id": "TC-UP-INS-01-001",
+      "requirement_id": "UP-INS-01",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-02-001",
+      "requirement_id": "UP-INS-02",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-03-001",
+      "requirement_id": "UP-INS-03",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-04-001",
+      "requirement_id": "UP-INS-04",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-05-001",
+      "requirement_id": "UP-INS-05",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-01-001",
+      "requirement_id": "UP-SET-01",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-02-001",
+      "requirement_id": "UP-SET-02",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-03-001",
+      "requirement_id": "UP-SET-03",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-04-001",
+      "requirement_id": "UP-SET-04",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-05-001",
+      "requirement_id": "UP-SET-05",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-06-001",
+      "requirement_id": "UP-SET-06",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-07-001",
+      "requirement_id": "UP-SET-07",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-08-001",
+      "requirement_id": "UP-SET-08",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-09-001",
+      "requirement_id": "UP-SET-09",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-10-001",
+      "requirement_id": "UP-SET-10",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-11-001",
+      "requirement_id": "UP-SET-11",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-12-001",
+      "requirement_id": "UP-SET-12",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-13-001",
+      "requirement_id": "UP-SET-13",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-01-001",
+      "requirement_id": "UP-PAR-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-02-001",
+      "requirement_id": "UP-PAR-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-03-001",
+      "requirement_id": "UP-PAR-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-04-001",
+      "requirement_id": "UP-PAR-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-05-001",
+      "requirement_id": "UP-PAR-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-06-001",
+      "requirement_id": "UP-PAR-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-07-001",
+      "requirement_id": "UP-PAR-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-08-001",
+      "requirement_id": "UP-PAR-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-09-001",
+      "requirement_id": "UP-PAR-09",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-10-001",
+      "requirement_id": "UP-PAR-10",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-11-001",
+      "requirement_id": "UP-PAR-11",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-12-001",
+      "requirement_id": "UP-PAR-12",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-01-001",
+      "requirement_id": "UP-SCH-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-02-001",
+      "requirement_id": "UP-SCH-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-03-001",
+      "requirement_id": "UP-SCH-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-04-001",
+      "requirement_id": "UP-SCH-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-05-001",
+      "requirement_id": "UP-SCH-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-06-001",
+      "requirement_id": "UP-SCH-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-07-001",
+      "requirement_id": "UP-SCH-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-01-001",
+      "requirement_id": "UP-DAY-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-02-001",
+      "requirement_id": "UP-DAY-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-03-001",
+      "requirement_id": "UP-DAY-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-04-001",
+      "requirement_id": "UP-DAY-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-01-001",
+      "requirement_id": "UP-HIS-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-02-001",
+      "requirement_id": "UP-HIS-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-03-001",
+      "requirement_id": "UP-HIS-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-04-001",
+      "requirement_id": "UP-HIS-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-05-001",
+      "requirement_id": "UP-HIS-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-01-001",
+      "requirement_id": "UP-VIS-01",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-02-001",
+      "requirement_id": "UP-VIS-02",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-03-001",
+      "requirement_id": "UP-VIS-03",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-04-001",
+      "requirement_id": "UP-VIS-04",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-06-001",
+      "requirement_id": "UP-VIS-06",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-07-001",
+      "requirement_id": "UP-VIS-07",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-01-001",
+      "requirement_id": "UP-CTL-01",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-02-001",
+      "requirement_id": "UP-CTL-02",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-03-001",
+      "requirement_id": "UP-CTL-03",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-04-001",
+      "requirement_id": "UP-CTL-04",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-05-001",
+      "requirement_id": "UP-CTL-05",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-01-001",
+      "requirement_id": "UP-CMP-01",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-02-001",
+      "requirement_id": "UP-CMP-02",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-03-001",
+      "requirement_id": "UP-CMP-03",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-05-001",
+      "requirement_id": "UP-VIS-05",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-01-001",
+      "requirement_id": "UP-EXE-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-02-001",
+      "requirement_id": "UP-EXE-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-03-001",
+      "requirement_id": "UP-EXE-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-04-001",
+      "requirement_id": "UP-EXE-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-05-001",
+      "requirement_id": "UP-EXE-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-06-001",
+      "requirement_id": "UP-EXE-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-07-001",
+      "requirement_id": "UP-EXE-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-08-001",
+      "requirement_id": "UP-EXE-08",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-09-001",
+      "requirement_id": "UP-EXE-09",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-10-001",
+      "requirement_id": "UP-EXE-10",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-11-001",
+      "requirement_id": "UP-EXE-11",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-12-001",
+      "requirement_id": "UP-EXE-12",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-13-001",
+      "requirement_id": "UP-EXE-13",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-01-001",
+      "requirement_id": "UP-CLK-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-02-001",
+      "requirement_id": "UP-CLK-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-03-001",
+      "requirement_id": "UP-CLK-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-04-001",
+      "requirement_id": "UP-CLK-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-05-001",
+      "requirement_id": "UP-CLK-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-06-001",
+      "requirement_id": "UP-CLK-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-07-001",
+      "requirement_id": "UP-CLK-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-08-001",
+      "requirement_id": "UP-CLK-08",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-09-001",
+      "requirement_id": "UP-CLK-09",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-10-001",
+      "requirement_id": "UP-CLK-10",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-01-001",
+      "requirement_id": "UP-CMD-01",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-02-001",
+      "requirement_id": "UP-CMD-02",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-01-001",
+      "requirement_id": "UP-PER-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-02-001",
+      "requirement_id": "UP-PER-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-01-001",
+      "requirement_id": "UP-ERR-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-02-001",
+      "requirement_id": "UP-ERR-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-03-001",
+      "requirement_id": "UP-ERR-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-04-001",
+      "requirement_id": "UP-ERR-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-05-001",
+      "requirement_id": "UP-ERR-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-06-001",
+      "requirement_id": "UP-ERR-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-07-001",
+      "requirement_id": "UP-ERR-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-08-001",
+      "requirement_id": "UP-ERR-08",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-09-001",
+      "requirement_id": "UP-ERR-09",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-01-001",
+      "requirement_id": "UP-ERX-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-02-001",
+      "requirement_id": "UP-ERX-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-03-001",
+      "requirement_id": "UP-ERX-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-04-001",
+      "requirement_id": "UP-ERX-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-05-001",
+      "requirement_id": "UP-ERX-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-06-001",
+      "requirement_id": "UP-ERX-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-07-001",
+      "requirement_id": "UP-ERX-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-08-001",
+      "requirement_id": "UP-ERX-08",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-01-001",
+      "requirement_id": "UP-DRF-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-02-001",
+      "requirement_id": "UP-DRF-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-03-001",
+      "requirement_id": "UP-DRF-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-04-001",
+      "requirement_id": "UP-DRF-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-05-001",
+      "requirement_id": "UP-DRF-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-06-001",
+      "requirement_id": "UP-DRF-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-07-001",
+      "requirement_id": "UP-DRF-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-08-001",
+      "requirement_id": "UP-DRF-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DRF-09-001",
+      "requirement_id": "UP-DRF-09",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-OBS-TRACE-001-001",
+      "requirement_id": "OBS-TRACE-001",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G0"
+      ]
+    },
+    {
+      "id": "TC-OBS-HOST-001-001",
+      "requirement_id": "OBS-HOST-001",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-001-001",
+      "requirement_id": "OBS-VIS-001",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-002-001",
+      "requirement_id": "OBS-VIS-002",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-A11Y-001-001",
+      "requirement_id": "OBS-A11Y-001",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-SAFE-001-001",
+      "requirement_id": "OBS-SAFE-001",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G3",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-LIFE-001-001",
+      "requirement_id": "OBS-LIFE-001",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-I18N-001-001",
+      "requirement_id": "OBS-I18N-001",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-LOCAL-001-001",
+      "requirement_id": "OBS-LOCAL-001",
+      "evidence_kind": "NETWORK",
+      "gates": [
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-REL-001-001",
+      "requirement_id": "REL-001",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G0",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-REL-002-001",
+      "requirement_id": "REL-002",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G0",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-REL-003-001",
+      "requirement_id": "REL-003",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G0",
+        "G7",
+        "G9"
+      ]
+    }
+  ],
+  "environment_catalog": [
+    {
+      "id": "ENV-PURE",
+      "statement": "Pinned repository toolchain and lockfile on CI Linux, fake clock, en and zh-CN locales, UTC, Asia/Shanghai, and America/New_York time zones, including DST transitions.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-VIS",
+      "statement": "Pinned Playwright Chromium on Ubuntu 24.04 LTS, DPR 1, 100 percent zoom, 1440x1000 viewport, controlled fonts and clock, canonical widths, themes, and reduced motion.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-HOST-PRIVATE",
+      "statement": "Exact Obsidian, Electron, Chromium, OS, locale, and theme versions for the intended private-vault installation.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-HOST-MIN",
+      "statement": "Resolved minimum-supported Obsidian on one supported desktop OS with exact app, Electron, Chromium, and OS versions.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-HOST-MAC",
+      "statement": "Resolved current-stable Obsidian on the supported macOS major version across themes, locales, and zoom levels.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-HOST-WIN",
+      "statement": "Resolved current-stable Obsidian on Windows 11 across themes, locales, and zoom levels.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-HOST-LINUX",
+      "statement": "Resolved current-stable Obsidian on Ubuntu 24.04 LTS across themes, locales, and zoom levels.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-THEME",
+      "statement": "Canonical current-stable host plus versioned high-contrast and heavily customized community themes.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    },
+    {
+      "id": "ENV-A11Y",
+      "statement": "Current macOS with VoiceOver plus automated accessibility checks in ENV-VIS, reduced motion, and 200 percent zoom.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "id": "UP-INS-01",
+      "owner_ticket": 17,
+      "owner_module": "README.md",
+      "evidence_contributors": [
+        22,
+        30
+      ],
+      "statement": "Given Extension not installed; when Follow preview install instructions; the observable result is English says Depot PR `1430` and shorthand `404KSG+roam-nautilus-log+1430`; Chinese says PR/shorthand `1428`; Acceptance also requires The correct v1.0.2 preview route is unknown; preserve as research unknown, not product behavior.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L38-L44",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.zh-CN.md#L35-L41"
+      ],
+      "disposition": "not-applicable",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-INS-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "not_applicable_approval_id": "NA-001",
+      "status": "active"
+    },
+    {
+      "id": "UP-INS-02",
+      "owner_ticket": 17,
+      "owner_module": "src/main.ts",
+      "evidence_contributors": [
+        22,
+        30
+      ],
+      "statement": "Given First load in a graph; when Enable/install extension; the observable result is `roam/render` page is created if absent; `Nautilus Log` H3, `Nautilus Log [[roam/templates]]`, renderer template, collapsed `code` block, and compiled ClojureScript child are created/repaired in order; Acceptance also requires Operation is idempotent and does not search for or alter legacy-extension blocks.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L112-L165",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-scaffold.test.js#L35-L136"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-INS-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-INS-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/view.ts",
+      "evidence_contributors": [
+        17,
+        21,
+        30
+      ],
+      "statement": "Given Renderer block mounted; when Extension startup pending / unavailable; the observable result is Pending text is `Loading Nautilus Log...`; unavailable text is red `Extension not installed. To use Nautilus Log, install it from Roam Depot.`; Acceptance also requires Running state is polled every 5 seconds.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1686-L1742"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-INS-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-INS-04",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        30
+      ],
+      "statement": "Given Extension loaded; when Settings or block content changes; time passes; the observable result is Mounted chart reacts to direct-child pulls, runtime settings events, current minute, and whether its page is today's Daily Note; Acceptance also requires Installation polling is 5 s; time/Daily-Note relation polling is 60 s; CLOCK cache is 15 s when Execution runtime is absent.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1686-L1737",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L43-L93"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-INS-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-INS-05",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        30
+      ],
+      "statement": "Given Extension loaded; when Unload/disable extension itself; the observable result is Renderer/runtime/topbar/commands are removed; no graph content is deleted or rewritten; an active CLOCK is not closed on unload; Acceptance also requires Teardown calls timing stop with `closeActive:false`; this differs from turning Execution Layer off.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L489-L508",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L189-L213",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L124-L136"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-INS-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-01",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Fresh install / pre-migration install; when First load; the observable result is Defaults: language `en`; start `5`; end `21`; prefix `[[Nautilus Log]]`; legend max `22`; untimed task `15`; urgent trigger empty; Execution off; sidebar fronting on; POMO `45`; Recent `45`; forgotten warning `120`; Acceptance also requires Old preview empty prefix resets to default and end `24` resets to `21` once; old language resets to English once, then a manually selected `zh` persists.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L21-L41",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L154-L168",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-scaffold.test.js#L138-L260"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01",
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-02",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Change Language; the observable result is Choices `en`, `zh`; panel labels switch immediately and mounted surfaces receive the new runtime setting; Acceptance also requires Invalid/missing saved value normalizes to `en`.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L236-L247",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L378-L394"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-03",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Change Chart Start / End; the observable result is Start choices `5,6,7,8`; end choices `18,19,20,21,22,23,24`; chart bounds and template update; Acceptance also requires v1.0.2 exposes no arbitrary start minute/hour outside these lists.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L397-L407",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L168-L186"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-04",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Set Component Prefix; the observable result is Free-text prefix is inserted before newly generated component render text; example says `#schedule`; Acceptance also requires Execution Primary detection in v1.0.2 requires literal `[[Nautilus Log]]`; a custom/empty prefix can render the chart but make Execution report no Primary Plan.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L287-L312",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L183-L224"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-05",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Select Legend Max Length; the observable result is Choices `14,16,18,20,22,24,26,28`; wide labels truncate by measured available width; Acceptance also requires Renderer accepts only `15..30`; choosing `14` falls back to `22`, despite the visible setting remaining `14`.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L415-L419",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L145-L179"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-06",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Select Default Todo Duration; the observable result is Choices `5,10,15,20,25,30,45,60` minutes; used when a flexible row has no duration token; Acceptance also requires Explicit zero-duration syntax is not replaced by this fallback.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L420-L425",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L28-L55"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Enter Urgent Trigger Word; the observable result is All whitespace is removed; token-boundary match colors a flexible task urgent red; trigger remains visible in the cleaned label; Acceptance also requires Empty trigger disables urgency; it changes color, not scheduling priority.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L307-L312",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L426-L431",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L607-L686"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-08",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Settings panel open; when Toggle Execution Layer on; the observable result is Timing topbar, runtime poller, three palette commands, context commands, and dependent settings appear; Acceptance also requires Default-off has no panel, poller, commands, or CLOCK writer; activation failure resets setting off.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L170-L233",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L48-L53"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-09",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution Layer on; when Toggle Execution Layer off; the observable result is All open CLOCKs are closed/confirmed, standalone/task POMO cleared, and entire execution UI/commands removed; Acceptance also requires If closing/confirmation fails, UI remains enabled and setting is restored to true.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L212-L233",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L482-L490"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-09-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-10",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution Layer on; when Change Keep Timing Line first in right sidebar; the observable result is Boolean, default on; controls automatic sidebar opening/fronting after Clock In/switch; Acceptance also requires Sidebar failure warns but successful CLOCK mutation remains.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L324-L338",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L462-L518"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-10-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-11",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution Layer on; when Select Pomodoro Threshold; the observable result is Choices `15,20,25,30,45,50,60,90`; elapsed text becomes red at threshold but keeps counting; Acceptance also requires Shared by task-bound cycle and standalone POMO; never auto-stops.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L340-L352",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L7-L18"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-11-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-12",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution Layer on; when Edit Recent Retention / Forgotten Timer; the observable result is Numeric minutes; blank is ignored; finite values round and clamp to `>=0`; invalid nonblank resets to `45` / `120`; `0` disables corresponding behavior; Acceptance also requires Input UI is free numeric text, not a select.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L314-L322",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L354-L375"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-SET-12-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SET-13",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Existing mounted chart; when Change a chart setting; the observable result is Open chart follows extension runtime settings even when serialized render arguments are stale; Acceptance also requires Runtime settings take precedence; this is required for immediate parity.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L145-L179",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L364-L410"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-SET-13-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-01",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Nautilus renderer under a Daily Note; when Add/reorder direct children; the observable result is Nonempty direct children are read in Roam block order; nested descendants are ignored by the spiral; Acceptance also requires Empty-string children and labels that become empty after cleaning are omitted.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1722-L1737"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-01-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-02",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct nonempty child; when Enter plain text with no TODO marker or time range; the observable result is Spiral treats it as a flexible task; v1.0.2 Execution Plan/Timing/Review omit it because they require TODO/DONE; Acceptance also requires README says flexible tasks are unfinished TODOs. Exact parity must retain this cross-surface disagreement.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L29-L36",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L636-L686",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L226-L254"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-02-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-03",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct child; when Include first duration token; the observable result is Case-insensitive forms are arbitrary nonnegative integer `Nh`, `Nm`, `Nmin`, `NhNm`, `NhNmin`; docs name `30m`, `30min`, `1h`, `1h30m`; Acceptance also requires Token must be whitespace-delimited; decimals do not parse; first matching token wins; absent token uses configured default.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L28-L55",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L53-L54",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L18-L55"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-03-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-04",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct flexible child; when Use `0m`; the observable result is Row remains parsed but occupies no scheduled minutes and is not overflowed; Acceptance also requires It can therefore be absent from visible scheduled/overflow slices while still existing in Execution Plan; no dedicated test settles desired presentation.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L28-L55",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L570-L639"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-04-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-05",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct child; when Enter a time range; the observable result is Fixed event recognized from 1/2-digit hour, optional `:MM`, optional AM/PM; separators `-`, en dash, `az`, or `to`; end AM/PM is inherited by start; Acceptance also requires Invalid hour/minute makes parser return no range, so spiral falls back to flexible-task treatment.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L57-L93",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L57-L105"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-05-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-06",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Valid fixed event; when End precedes/equal start; the observable result is Earlier end becomes next-day end and is clipped at 24:00 with overnight warning; equal times produce zero range and same-time warning; Acceptance also requires `23:00-00:00` maps end to 24:00 but the condition emits no overnight warning, contradicting the general guide claim.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L75-L93",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L651-L670",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L124-L126"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-06-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-07",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Flexible task; when Add `dN%`; the observable result is Planned remaining duration is reduced by progress, clamped 0..100; `60m d50%` occupies 30 minutes exactly once; Acceptance also requires Renderer floors percentage result; shared scheduler normalizes it for Execution.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L626-L686",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L94-L97"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-07-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-08",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given DONE flexible task; when Add completion anchor `dH` or `dH:MM`; the observable result is Anchor supplies end time for a Planned fallback slice or end anchor for condensed Actual history; Acceptance also requires Anchor is considered only for DONE; syntax is permissive and undocumented.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L631-L686",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L337-L456"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-08-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-09",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct child; when Use Markdown link, wiki link, emphasis/highlight, embed wrapper, task marker, duration/progress/time syntax, or `---`; the observable result is Display label keeps Markdown link text but removes target; strips wiki delimiters, formatting, recognized metadata, embed wrapper, and horizontal rule; Acceptance also requires Urgent trigger remains in label; empty cleaned label disappears.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L580-L686"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-09-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-10",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Task marker present; when Use `{{[[TODO]]}}` / `{{[[DONE]]}}` versus simple `{{TODO}}` / `{{DONE}}`; the observable result is Execution accepts both forms; renderer's explicit DONE/cleanup recognition only covers wiki-bracket forms; Acceptance also requires Simple marker can leak into chart label or fail chart DONE semantics while Execution recognizes it.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L594-L635",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L17-L36"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-03"
+      ],
+      "tests": [
+        "TC-UP-PAR-10-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-11",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct child contains block references; when Enter one or more `((source-uid))` tokens; the observable result is Spiral replaces each resolvable token from the child's `block/refs` with source text for parsing/display while retaining wrapper UID; Acceptance also requires Resolution is one pass in renderer; nested/recursive references are not a v1.0.2 contract.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L111-L124",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1728-L1734"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-04"
+      ],
+      "tests": [
+        "TC-UP-PAR-11-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PAR-12",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ],
+      "statement": "Given Direct child is bare reference to TODO source; Execution on; when View in Plan then Clock In; the observable result is Plan projection resolves source content but preserves wrapper UID; Clock In validates the wrapper's own current string, which has no TODO marker and can reject with `Only an unfinished TODO...`; Acceptance also requires Test proves resolved projection, but no v1.0.2 end-to-end reference mutation test settles ownership UX.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L205-L254",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L141-L194",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L31-L40"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-04"
+      ],
+      "tests": [
+        "TC-UP-PAR-12-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-01",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Today's Daily Note; when Unfinished fixed events and flexible tasks; the observable result is Events claim their time; whole tasks fill the first sufficient continuous gaps from the current minute, in direct-child order; tasks never split; Acceptance also requires Deterministic greedy scheduling; completed/zero-duration rows do not consume future schedule.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L33-L36",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L570-L639",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L117-L214"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-01-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-02",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Fragmented free time; when Earlier high-priority task cannot fit current gap; the observable result is Scheduler advances past the blocking event to place that task later; a smaller later task does not backfill the abandoned earlier gap; Acceptance also requires Source-order priority is stronger than packing efficiency.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L588-L625",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L216-L258"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-02-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-03",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Task cannot fit before workday end; when Render chart/Plan; the observable result is Task appears in overflow panel/Execution section labelled `Unscheduled today`; status is `Overload` if total demand exceeds available, otherwise `No fitting slot`; Acceptance also requires README calls the concept `Today won't fit`; code-facing wording is `Unscheduled today`.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L33-L36",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L721-L778",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L84-L87"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-03-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-04",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Overlapping fixed events; when Render chart/capacity; the observable result is Each event renders; overlap gets dashed conflict styling; capacity subtracts the union, not double-counted minutes; Acceptance also requires Half-open ranges that merely touch are not conflicts; no textual overlap warning is emitted.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L439-L500",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L647-L719",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L260-L335"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-04-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-05",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Chart with workday bounds; when View capacity header; the observable result is Current `Available` is remaining bounded workday minus union of unfinished fixed events; full-day `Available` and `Events` also shown; Planned is unfinished remaining task demand; Acceptance also requires Full event denominator includes completed fixed events; ranges clip to workday.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L647-L778",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/docs/guide.md#L112-L156"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-05-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-06",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Capacity computed; when View header/status; the observable result is Metric order: `Planned`, then `Remaining` / `Overload` / `No fitting slot`, then `Available`, then `Events`; status precedence is Overload > No fitting slot > Remaining; Acceptance also requires Planned percent is rounded demand/current Available and may exceed 100%; demand with zero Available displays dash; both zero displays 0%.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L875-L927",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L235-L315"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-06-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-SCH-07",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "Given Current time lies in workday/event; when Time advances; the observable result is Flame/burning marker identifies current half-open bucket; it is suppressed for completed events; Acceptance also requires Touching end time is outside the bucket.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L780-L851",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L468-L516"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-05"
+      ],
+      "tests": [
+        "TC-UP-SCH-07-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DAY-01",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ],
+      "statement": "Given Displayed page is today; when Render normally; the observable result is Schedule/capacity start at current minute clamped to workday; elapsed overlay, now needle, current Available interaction, and task click interactivity are enabled; Acceptance also requires Time passing reflows unfinished tasks without reordering source blocks.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L254-L291",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L105-L198"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-06"
+      ],
+      "tests": [
+        "TC-UP-DAY-01-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DAY-02",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ],
+      "statement": "Given Displayed Daily Note is in past; when Render normally; the observable result is Scheduling begins at workday start; entire workday is elapsed/hatched where unrecorded; no now needle, burning marker, actionable Available hover, or task clicks; Acceptance also requires Remaining capacity is zero although historical plan slices can still render.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L254-L291",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L24-L31"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-06"
+      ],
+      "tests": [
+        "TC-UP-DAY-02-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DAY-03",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ],
+      "statement": "Given Displayed page is future or not recognized as today/past; when Render normally; the observable result is Scheduling/capacity begin at workday start; no elapsed overlay/now needle/task clicks; future Available-slot hover remains available; Acceptance also requires Non-Daily pages fall into `other` behavior.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L254-L291",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L105-L198"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-06"
+      ],
+      "tests": [
+        "TC-UP-DAY-03-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DAY-04",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ],
+      "statement": "Given Any visible chart; when Start playback; the observable result is Six-second simulation moves cursor start-to-end, recomputes schedule/capacity/elapsed and shows needle/available region; playback button disables; end resets to live state; Acceptance also requires Does not make a non-today chart task-click interactive.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L430-L476",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1758-L1769"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-06"
+      ],
+      "tests": [
+        "TC-UP-DAY-04-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-HIS-01",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ],
+      "statement": "Given DONE flexible task with closed CLOCK sessions on displayed day; when Render spiral; the observable result is Actual is all valid closed sessions clipped to local displayed day, summed before one floor; one condensed slice uses Actual even if longer than Planned; Acceptance also requires Running CLOCK is ignored for completed spiral history; cross-midnight sessions contribute only overlap.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L1065-L1168",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L337-L456"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-08"
+      ],
+      "tests": [
+        "TC-UP-HIS-01-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-HIS-02",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ],
+      "statement": "Given HIS-01; when Determine Actual slice placement; the observable result is Slice ends at explicit completion anchor if present, else at latest closed-session end; starts `Actual` minutes earlier; Acceptance also requires Separate LOGBOOK sessions become one spiral slice.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L1169-L1228",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L78-L83"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-08"
+      ],
+      "tests": [
+        "TC-UP-HIS-02-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-HIS-03",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ],
+      "statement": "Given DONE flexible task without valid Actual; when Render spiral; the observable result is Falls back to Planned duration ending at explicit `dH`/`dH:MM`; with neither Actual nor anchor, no historical slice is invented; Acceptance also requires Planned history is explicit-anchor-only.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L1169-L1228",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L337-L456"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-08"
+      ],
+      "tests": [
+        "TC-UP-HIS-03-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-HIS-04",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ],
+      "statement": "Given DONE fixed event; when Render spiral/capacity; the observable result is Keeps its explicit time range, appears muted as completed, and still contributes to full-day Events denominator; Acceptance also requires Completion does not replace event range with CLOCK Actual.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L651-L686",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L647-L719"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-07",
+        "FX-08"
+      ],
+      "tests": [
+        "TC-UP-HIS-04-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-HIS-05",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ],
+      "statement": "Given Elapsed interval exists; when Render past overlay; the observable result is Past unplanned hatch is elapsed time minus fixed, scheduled, and completed-history intervals, split at hour boundaries; Acceptance also requires Generated free/Available time does not count as recorded work; hiding completed items does not reclassify their recorded intervals as unplanned.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L1230-L1367",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L412-L520"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-08"
+      ],
+      "tests": [
+        "TC-UP-HIS-05-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Wide chart (`>520px`); when Render; the observable result is Flat header: Planned/status and Available/Events metrics left; controls and red/yellow/blue legend right; spiral below with external labels/connectors; Acceptance also requires Exact semantic colors: urgent red, event yellow, task blue; adjacent task fills may vary subtly.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1365-L1510",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L1-L150"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-01-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Spiral visible; when Read timeline; the observable result is Hour sectors form paired 12-hour depth; configured end `24` is labelled `0`; center shows first comma-delimited page-title portion truncated to 16 characters and current time when applicable; Acceptance also requires Now is a red needle; completed tasks/events and past grid are muted.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1040-L1165",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L509-L550"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-02-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Wide chart; when Hover or keyboard-focus task/event slice or external label; the observable result is Fixed body-level tooltip shows item type, full title, exact range, duration; connector/label emphasize; tooltip flips/shifts inside viewport; Acceptance also requires SVG groups are keyboard focusable/`role=img`; compact layout mounts no hover surface.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1365-L1453",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L429-L507",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L88-L90"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-03-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-04",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Wide future/today chart; when Hover/focus blank future slot; the observable result is Tooltip exposes `Available` exact range and duration; current-day slot copy is `Available now`; Acceptance also requires Past Daily Note exposes no actionable slot targets.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L293-L357",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L448-L466"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-04-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-06",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Today's chart; current minute is inside an unfinished planned task; when Render/time advances; the observable result is Current planned task receives a 2 px semantic-blue outline, stronger label weight, and `aria-current=true`; Acceptance also requires Uses half-open boundaries and only today's plan; no current-task treatment on past/future pages.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L378-L436",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L504-L510"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-06-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-07",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Wide chart has colliding external labels; when Render/reflow; the observable result is Labels stay outside the spiral on left/right side rails, use nearby vertical rows/tracks, preserve connector reading order, then move farther outward if required; full text remains in title/tooltip; Acceptance also requires Equal-height tie order differs by side so later times continue naturally; compact mode replaces rails with list.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L942-L1065",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-core.test.js#L810-L1016"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-07-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CTL-01",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ],
+      "statement": "Given Chart visible; when Eye control; the observable result is Toggles completed slices/list visibility; initial state is shown; Acceptance also requires Multiple renders have independent state.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1738-L1738",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1530-L1605"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-07"
+      ],
+      "tests": [
+        "TC-UP-CTL-01-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CTL-02",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ],
+      "statement": "Given Chart visible; when Playback control; the observable result is Runs DAY-04 simulation; button is disabled while active; Acceptance also requires Animation respects reduced-motion preference.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L430-L476",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L748-L769"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CTL-02-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CTL-03",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ],
+      "statement": "Given Chart visible; when Collapse control; the observable result is Chart collapses to zero height; only expand/collapse control remains visible above it; Acceptance also requires Persistent per renderer instance, including reload.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L404-L429",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L659-L676"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CTL-03-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CTL-04",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ],
+      "statement": "Given Today's interactive chart; when Click flexible task slice/list row; the observable result is Advances progress by 10 points; at 90% converts TODO to DONE and adds current `dHH:MM`; clicking DONE without progress reopens TODO at `d10%` and removes completion anchor; Acceptance also requires DONE watcher removes progress markers; this interaction is undocumented and lacks a direct behavior test.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L478-L510",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L831-L865",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L982-L1018"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-07"
+      ],
+      "tests": [
+        "TC-UP-CTL-04-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CTL-05",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ],
+      "statement": "Given Renderer invocation's first argument is `:debug`; when Render and toggle extra debug button; the observable result is Extra button toggles global debug state and text `debug is off` / `debug is on`; enabled mode overlays center/geometry markers and prints debug values; Acceptance also requires Hidden, undocumented developer mode; state is shared across renderer instances and not persisted.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L84-L112",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L800-L828",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1411-L1417",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1753-L1757"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CTL-05-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CMP-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ],
+      "statement": "Given Container width `<=520px`; when Render; the observable result is Wide header metrics/legend and external labels hide; compact `Overview` disclosure (initially folded) and `Schedule` list appear; hover surfaces are absent; Acceptance also requires At `<=360px`, SVG max height is `48vh`.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1600-L1684",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L678-L746"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CMP-01-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CMP-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ],
+      "statement": "Given Compact chart; when Render main vs right sidebar; the observable result is Schedule starts open in ordinary compact render and folded in right-sidebar render; user can toggle it afterward; Acceptance also requires Right-sidebar detection uses Roam sidebar selectors.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1640-L1661",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L14-L42"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CMP-02-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CMP-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ],
+      "statement": "Given Renderer replicated in breadcrumb/collapsed path; when Roam mounts replica; the observable result is Component suppresses chart work and reserves no visible space; Acceptance also requires Selectors cover zoom path, breadcrumbs, parent path, collapsed zoom replica.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L5-L29",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1743-L1749"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-CMP-03-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-VIS-05",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ],
+      "statement": "Given Any layout/theme; when Roam light/dark or OS reduced motion; the observable result is CSS adapts colors to dark themes and reduces animations/transitions to effectively zero; Acceptance also requires Control opacity is `.38` until chart hover/control focus.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L1-L150",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L552-L606",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L761-L769"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-VIS-05-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-01",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/projection-runtime.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        27
+      ],
+      "statement": "Given Execution Layer on; today's Daily Note has components; when Runtime refresh; the observable result is First matching Nautilus renderer in depth-first Daily Note tree order is Primary Plan; Acceptance also requires v1.0.2 match requires both renderer and literal prefix; multiple charts render, but only first drives execution.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L183-L224",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L71-L75"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-10"
+      ],
+      "tests": [
+        "TC-UP-EXE-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-02",
+      "owner_ticket": 28,
+      "owner_module": "src/core/review.ts",
+      "evidence_contributors": [
+        19,
+        26,
+        27,
+        29
+      ],
+      "statement": "Given Primary Plan found; when Build Plan/Review; the observable result is Only direct TODO/DONE children without fixed time ranges participate; Plan includes TODO only, Review includes TODO and DONE; Acceptance also requires Nested tasks, fixed events, and plain unmarked renderer tasks are excluded.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L226-L254",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L67-L139"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-10"
+      ],
+      "tests": [
+        "TC-UP-EXE-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-03",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution Layer on; when View topbar idle/active; the observable result is Idle is compact `unresolve` icon; active shows elapsed and distinct thread count; standalone shows `elapsed · POMO` with adjacent `x` stop; Acceptance also requires Elapsed goes red at POMO threshold; forgotten CLOCK adds warning styling/signal.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L386-L478",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L778-L903"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-13"
+      ],
+      "tests": [
+        "TC-UP-EXE-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-04",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Topbar mounted; when Click trigger; click outside; press Escape; the observable result is Opens anchored popover; outside/Escape closes; Escape restores trigger focus; Acceptance also requires Header contains `unresolve · Nautilus` identity and Timing/Plan/Review tabs.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L480-L612",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L904-L1012"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-05",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Popover open; Primary exists; when Click Nautilus identity; the observable result is Navigates Primary Plan into main window and flashes target for about 1.2 s; Acceptance also requires No Shift-click alternate in v1.0.2; later main adds modifier navigation.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L107-L144",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L520-L565"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-06",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Popover open; when Switch Timing / Plan / Review; the observable result is Timing shows focused plus distinct Recent; Plan shows scheduled plus folded `Unscheduled today`; Review shows state/comparison rows; capacity strip remains on every tab; Acceptance also requires Empty copy distinguishes no active task, no Primary, no unfinished direct tasks, and no Review tasks.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L146-L384",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L379-L436"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-07",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Plan tab has tasks; when View rows; the observable result is Scheduled rows show projected range; Unscheduled section shows count/duration and starts folded; task metadata shows remaining versus planned where progress exists; Acceptance also requires Focused row keeps live Timing metadata instead of projected interval.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L202-L302",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L84-L87"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-08",
+      "owner_ticket": 29,
+      "owner_module": "src/ui/execution/review-view.ts",
+      "evidence_contributors": [
+        28,
+        30
+      ],
+      "statement": "Given Review tab; when View rows/summary; the observable result is States: completed comparison, `Not tracked` DONE, live TODO, paused TODO, not-started TODO; summary shows completed/total and compared count; Acceptance also requires Planned/Actual/variance totals include only DONE tasks with same-day closed Actual; no comparable rows display em dash; positive variance is over/orange.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L281-L377",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-core.test.js#L109-L148"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-09",
+      "owner_ticket": 28,
+      "owner_module": "src/core/review.ts",
+      "evidence_contributors": [
+        19,
+        26,
+        27,
+        29
+      ],
+      "statement": "Given TODO has open/closed CLOCK; when Review runtime refresh; the observable result is TODO running time is live; TODO with only closed time is paused; DONE comparison uses closed same-day time; Acceptance also requires Actual uses local calendar day, not configured chart bounds; partial minutes sum then floor once.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L256-L377",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-core.test.js#L109-L213"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-09-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-10",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/pomo.ts",
+      "evidence_contributors": [
+        27,
+        30
+      ],
+      "statement": "Given No active CLOCK/POMO; when Click stopwatch in popover header; the observable result is Starts standalone count-up POMO, closes popover, topbar shows elapsed POMO; Acceptance also requires Does not create blocks, affect Review/spiral/Actual, or query graph each second.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L435-L478",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L5-L20",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L475-L550"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-13"
+      ],
+      "tests": [
+        "TC-UP-EXE-10-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-11",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/pomo.ts",
+      "evidence_contributors": [
+        27,
+        30
+      ],
+      "statement": "Given Standalone POMO active; when Refresh, stop, or Clock In; the observable result is Refresh restores absolute start; `x` stops and clears it; Clock In clears it first; if both restore, CLOCK wins; Acceptance also requires Same-tick mutual exclusion is serialized.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L305-L385",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L14-L20"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-13"
+      ],
+      "tests": [
+        "TC-UP-EXE-11-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-12",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/source-navigation.ts",
+      "evidence_contributors": [
+        20,
+        30
+      ],
+      "statement": "Given Focused/Recent task row; when Click title; the observable result is Opens task in Roam main window; Shift-click opens it in right sidebar; Acceptance also requires This modifier behavior is for task titles; EXE-05 identity has no v1.0.2 modifier path.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L72-L105",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L520-L565"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-12-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-EXE-13",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        26,
+        30
+      ],
+      "statement": "Given A serialized graph mutation is queued; when Click a timing/completion/delete action; the observable result is Current rows and panel remain painted; affected action buttons become quietly disabled until confirmation; cursor stays default rather than wait; Acceptance also requires The execution surface is not replaced by a blocking/loading view; queued writes remain serialized.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L146-L194",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L374-L392",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/log-contract.test.js#L214-L220"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-EXE-13-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-01",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Execution on; unfinished TODO; when Clock In from row/context/palette; the observable result is Task becomes focused; one live CLOCK starts; topbar and Timing update; Acceptance also requires Drawer matching is case/whitespace/colon tolerant; canonical form used for creation.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L15-L70",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L250-L369",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L196-L313"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-11"
+      ],
+      "tests": [
+        "TC-UP-CLK-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-02",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Any open CLOCK; when Clock In another TODO; the observable result is Previous open CLOCK closes and new CLOCK opens at the same instant; new task becomes sole focus; Acceptance also requires Serialized mutations enforce one CLOCK globally.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L151-L303",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L196-L313"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-11"
+      ],
+      "tests": [
+        "TC-UP-CLK-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-03",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Focused task; when Clock Out / global Clock Out; the observable result is Open CLOCK closes; focused clears; task enters Recent if eligible; Acceptance also requires Global Clock Out with no active CLOCK is a no-op.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L249-L303",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L55-L57"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-11"
+      ],
+      "tests": [
+        "TC-UP-CLK-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-04",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Multiple legacy open CLOCKs / DONE task has open CLOCK; when Runtime initialize/reconcile; the observable result is Newest open start is focused; older opens close at newest start; open CLOCKs owned by DONE tasks close; Acceptance also requires Invalid CLOCK strings are ignored; full LOGBOOK scan occurs at startup.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L77-L149",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L137-L155"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-11"
+      ],
+      "tests": [
+        "TC-UP-CLK-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-05",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Focused row; when Click Complete; the observable result is Closes owned open CLOCK at same instant, converts TODO marker to DONE, and clears focused state; Acceptance also requires Does not add spiral completion anchor `dHH:MM`; if no closed Actual is usable, Review is Not tracked and spiral may show no history.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L387-L449",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L38-L56"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-CLK-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-06",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Focused row has current open CLOCK; when Click trash, then confirm within 2500 ms; the observable result is First click arms confirmation; second deletes only current open CLOCK; task remains TODO and drawer remains; Acceptance also requires Confirmation expires after 2.5 s; closed sessions are not deleted.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L612-L690",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L69-L70"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-14"
+      ],
+      "tests": [
+        "TC-UP-CLK-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-07",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Active/closed tasks exist; when Time passes; the observable result is Recent contains distinct unfinished nonfocused tasks whose latest close is strictly inside retention window, newest first, with ceil-minutes remaining; Acceptance also requires Exactly at boundary is excluded; `0` disables Recent; DONE and focused tasks excluded.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L98-L181",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-core.test.js#L112-L210"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-12"
+      ],
+      "tests": [
+        "TC-UP-CLK-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-08",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given First task Clock In; when Continue/switch/reselect/Clock Out; the observable result is Task-bound Pomodoro cycle starts on first Clock In, survives switches and task reselection, and clears on Clock Out; Acceptance also requires Threshold only changes color; it never stops time; reselecting focused task creates no second CLOCK.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L151-L303",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-runtime.test.js#L315-L420"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-12"
+      ],
+      "tests": [
+        "TC-UP-CLK-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-09",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ],
+      "statement": "Given Open CLOCK; when Elapsed reaches forgotten threshold; the observable result is Topbar shows amber forgotten warning while time continues; Acceptance also requires `0` disables; no auto-stop/delete.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L57-L96",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L874-L893"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-12"
+      ],
+      "tests": [
+        "TC-UP-CLK-09-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CLK-10",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/active-task-view.ts",
+      "evidence_contributors": [
+        20,
+        21,
+        26,
+        30
+      ],
+      "statement": "Given Right-sidebar setting on; when Clock In/switch; the observable result is Active task is opened/moved to right-sidebar order 0 and duplicate task windows are removed; Acceptance also requires Sidebar navigation begins promptly; failure warning does not roll back CLOCK.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L462-L518",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L145-L153"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15"
+      ],
+      "tests": [
+        "TC-UP-CLK-10-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CMD-01",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/commands.ts",
+      "evidence_contributors": [
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution on; when Open Command Palette; the observable result is Exactly three actions, no default hotkeys: `Nautilus Log: 1. Focus current block`; `2. Clock out Timing Line`; `3. Locate Primary Plan`; Acceptance also requires Removed when Execution turns off/unloads.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L4-L8",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L43-L85",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-commands.test.js"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15"
+      ],
+      "tests": [
+        "TC-UP-CMD-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-CMD-02",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/commands.ts",
+      "evidence_contributors": [
+        24,
+        26,
+        30
+      ],
+      "statement": "Given Execution on; block context menu available; when Open block menu; the observable result is `Nautilus Log: Clock in` appears only for unfinished TODO; `Nautilus Log: Clock out` appears only for current focused task; Acceptance also requires Context actions are removed on teardown.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L9-L10",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L59-L84"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15"
+      ],
+      "tests": [
+        "TC-UP-CMD-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PER-01",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/logbook-reader.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        28
+      ],
+      "statement": "Given Existing Roam Logbook-compatible data; when Runtime/chart reads graph; the observable result is Recognizes tolerant LOGBOOK/CLOCK formats; closed sessions remain separate graph records but history condenses by task/day; Acceptance also requires Malformed entries are ignored rather than displayed as Actual.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L15-L124",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/test/timing-core.test.js#L16-L110"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-11"
+      ],
+      "tests": [
+        "TC-UP-PER-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-PER-02",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/time-continuity.ts",
+      "evidence_contributors": [
+        21,
+        27,
+        30
+      ],
+      "statement": "Given Execution runtime active; when Runtime tick/refresh; the observable result is Elapsed text updates each second; authoritative graph refresh is every 15 s; startup scans all LOGBOOK entries, later refreshes only relevant task UIDs; Acceptance also requires Standalone POMO per-second tick does not query graph/rebuild views.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L451-L531",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L98-L103"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-13"
+      ],
+      "tests": [
+        "TC-UP-PER-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/diagnostics.ts",
+      "evidence_contributors": [
+        18,
+        19,
+        24,
+        30
+      ],
+      "statement": "when Overnight or equal-time fixed ranges; the observable result is Expandable warning panel lists affected rows and localized warning (`Overnight events display only through 24:00` / start and end are same); Acceptance also requires Panel starts collapsed; `23:00-00:00` warning omission is PAR-06.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1320-L1363",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L609-L652"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/diagnostics.ts",
+      "evidence_contributors": [
+        18,
+        19,
+        24,
+        30
+      ],
+      "statement": "when Task overflow/fragmentation; the observable result is Expandable overflow list plus `Overload` or `No fitting slot`; task names and durations remain visible; Acceptance also requires Overlap conflicts are visual dashed outlines only, not this warning list.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1265-L1319",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L609-L647"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-03",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Enable Execution while legacy Roam Logbook extension is detected; the observable result is Danger toast for 5 s: `Disable Roam Logbook before enabling Nautilus Log Actual Time Tracking. Only one extension may write CLOCK records.`; master switch returns off; Acceptance also requires Detection depends on host extension state.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L567-L617",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L170-L233"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-04",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Palette Focus Current without focused block / on non-TODO; the observable result is Warning toast for 5 s: `Focus an unfinished TODO block before starting timing.` / `Only an unfinished TODO can own the Timing Line.`; Acceptance also requires Same validation affects plain/reference wrapper inconsistency.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L21-L40",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L238-L248"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15",
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-05",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Locate with no Primary or unavailable navigation; the observable result is Warning/panel notice reports `No Primary Nautilus Log was found today.` or navigation unavailable; Acceptance also requires Topbar actions place runtime errors into popover notice; commands additionally toast.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L387-L449",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L387-L406",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/extension.css#L1042-L1049"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15",
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-06",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Graph query/create/update/delete/confirmation API fails during a timing action; the observable result is Action rejects with specific graph-operation error; command path warns via toast, topbar path shows notice after refresh and logs error; Acceptance also requires Exact strings include unavailable query/write/delete, drawer/CLOCK creation/closure confirmation, current-clock ownership, and block completion confirmation.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L126-L460",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L151-L449"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15",
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Sidebar fronting fails after valid Clock In; the observable result is Warning toast; CLOCK still starts and task remains focused; Acceptance also requires Sidebar is an optional navigation side effect, not transaction authority.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L462-L518",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L145-L153"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15",
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-08",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ],
+      "statement": "when Command Palette API unavailable during Execution activation; the observable result is Source throws `Roam command-palette actions are unavailable.` and resets master off; Acceptance also requires Repository tests do not establish whether Roam displays the thrown setting-handler error to a user beyond console/host UI.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L43-L50",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L170-L233"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERR-09",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/focus.ts",
+      "evidence_contributors": [
+        23,
+        27,
+        29,
+        30
+      ],
+      "statement": "when Browser/host accessibility and focus integration; the observable result is Source declares roles, focusability, labels, Escape restoration, and reduced motion; Acceptance also requires No browser/E2E suite in v1.0.2 proves actual Roam focus order, screen-reader announcement, portal clipping, or sidebar selector survival.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1365-L1453",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/package.json#L1-L20"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERR-09-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-01",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Refresh/queue lifecycle; the observable result is `Timing data could not be refreshed.`; `The graph change could not be confirmed.`; `Actual Time Tracking is no longer active.`; `Legacy overlapping CLOCK records could not be reconciled.`; Acceptance also requires Popover notice or rejected activation/mutation.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L195-L210",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L281-L300",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L331-L340"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-01-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-02",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Task ownership/action; the observable result is `Only an unfinished TODO can own the Timing Line.`; `Only the current Timing CLOCK can be deleted.`; `Only the current running CLOCK can be deleted.`; `Only unfinished TODO tasks can be completed.`; Acceptance also requires Command warning toast or popover notice; no unauthorized write.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L347-L418",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L370-L385"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-02-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-03",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Graph read/write API; the observable result is `Roam graph query is unavailable.`; `Roam returned an unreadable graph result.`; `Roam block creation is unavailable.`; `Roam block update is unavailable.`; `A block UID is required for deletion.`; `Roam block deletion is unavailable.`; Acceptance also requires Command toast / popover notice / activation rejection.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L145-L160",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L294-L318"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-03-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-04",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Mutation confirmation; the observable result is `Roam could not confirm the block deletion.`; `LOGBOOK drawer creation could not be confirmed.`; `Clock In could not be confirmed.`; `Clock Out could not read the current CLOCK block.`; `Clock Out could not be confirmed.`; `Task completion could not be confirmed.`; Acceptance also requires Popover notice / command toast; operation not accepted as authoritative.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L313-L385"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-04-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-05",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Focus/command setup; the observable result is `Focus an unfinished TODO block before starting timing.`; `Roam command-palette actions are unavailable.`; fallback `Nautilus Log could not complete that action.`; Acceptance also requires Warning toast, or failed Execution activation for missing palette API.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L21-L50"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-05-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-06",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Primary/navigation; the observable result is `No Primary Nautilus Log was found today.`; `Roam main-window navigation is unavailable.`; `This task has no block UID.`; Acceptance also requires Command toast / popover notice; navigation does not occur.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L387-L406"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-07",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Sidebar; the observable result is `Roam right-sidebar block windows are unavailable.`; `Roam could not move the Timing Line sidebar window to the top.`; `Could not open this task in the right sidebar.`; fallback `The task started, but Roam could not show it at the top of the right sidebar.`; Acceptance also requires Five-second warning toast; CLOCK/task mutation remains.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L445-L518",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L567-L599",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L344-L354"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-ERX-08",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ],
+      "statement": "when Writer conflict; the observable result is `Disable Roam Logbook before enabling Nautilus Log Actual Time Tracking. Only one extension may write CLOCK records.`; Acceptance also requires Five-second danger toast; Execution setting resets off.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L437-L447",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L608-L615"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-ERX-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-01",
+      "owner_ticket": 17,
+      "owner_module": "README.md",
+      "evidence_contributors": [
+        22,
+        31
+      ],
+      "statement": "the observable result is Installation references conflict (INS-01); Acceptance also requires Treat exact preview route as unknown; it is not an Obsidian feature.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L38-L44",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.zh-CN.md#L35-L41"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-01"
+      ],
+      "tests": [
+        "TC-UP-DRF-01-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-02",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        19,
+        22
+      ],
+      "statement": "the observable result is Spiral accepts plain direct tasks; Execution requires TODO; Acceptance also requires Reproduce v1.0.2 disagreement; do not import main's unified rule.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L226-L254",
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L32-L37"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-10"
+      ],
+      "tests": [
+        "TC-UP-DRF-02-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-03",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/primary-plan-resolver.ts",
+      "evidence_contributors": [
+        18,
+        22,
+        26
+      ],
+      "statement": "the observable result is Primary matcher requires literal `[[Nautilus Log]]` prefix; Acceptance also requires Preserve v1.0.2 prefix failure as a known compatibility bug.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L183-L224",
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L49-L51"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-10"
+      ],
+      "tests": [
+        "TC-UP-DRF-03-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-04",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/primary-plan-resolver.ts",
+      "evidence_contributors": [
+        18,
+        22,
+        26
+      ],
+      "statement": "the observable result is Reference wrapper UID and one-pass resolution expose mutation ambiguity; Acceptance also requires Do not backport; add fixtures for v1.0.2 wrapper rejection/ownership unknown.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L205-L254",
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L38-L48"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-04"
+      ],
+      "tests": [
+        "TC-UP-DRF-04-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-05",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        19,
+        22
+      ],
+      "statement": "the observable result is Workday start select is restricted to 05:00-08:00; overnight event is clipped; Acceptance also requires Preserve bounded same-day v1.0.2 model.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L397-L407",
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L27-L31"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-02"
+      ],
+      "tests": [
+        "TC-UP-DRF-05-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-06",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ],
+      "statement": "the observable result is No Tidy/Undo controls; Acceptance also requires Exclude both from v1.0.2 parity.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L7-L25",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/component.cljs#L1530-L1605"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-DRF-06-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-VIS"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/execution-entry.ts",
+      "evidence_contributors": [
+        22,
+        24
+      ],
+      "statement": "the observable result is Topbar trigger only toggles the panel; identity locates in main; task title has Shift-sidebar; Acceptance also requires Preserve v1.0.2 split behavior.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L72-L144",
+        "https://github.com/404KSG/roam-nautilus-log/blob/08892f948c63e4cacd3fc1cc100a600dd38c21f8/CHANGELOG.md#L11-L14"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-15"
+      ],
+      "tests": [
+        "TC-UP-DRF-07-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-08",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        22,
+        24
+      ],
+      "statement": "the observable result is Chinese README/guide describe task CLOCK execution but omit standalone POMO; Acceptance also requires POMO is a source/test-backed v1.0.2 feature; localization omission is documentation drift.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L56-L68",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.zh-CN.md#L52-L65",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/CHANGELOG.md#L3-L20"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-16"
+      ],
+      "tests": [
+        "TC-UP-DRF-08-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "UP-DRF-09",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/source-ledger.json",
+      "evidence_contributors": [
+        23,
+        30
+      ],
+      "statement": "the observable result is README screenshot URL uses mutable `main` asset; Acceptance also requires Do not use the rendered README image as fixed visual evidence; inspect the asset at the v1.0.2 SHA and behavior rows instead.",
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/README.md#L9-L12",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/docs/assets/nautilus-log-overview.png"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "FX-09"
+      ],
+      "tests": [
+        "TC-UP-DRF-09-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-VIS"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-TRACE-001",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/requirements.json",
+      "evidence_contributors": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "statement": "All 114 upstream IDs have exactly one current disposition and no dangling source, fixture, test, environment, evidence, or deviation reference.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-001"
+      ],
+      "tests": [
+        "TC-OBS-TRACE-001-001"
+      ],
+      "environments": [
+        "ENV-PURE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-HOST-001",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/active-task-view.ts",
+      "evidence_contributors": [
+        21,
+        23,
+        24,
+        29,
+        30
+      ],
+      "statement": "Obsidian-owned chrome may differ visually, but command availability, conditional actions, notice meaning, navigation result, and plugin state match the linked upstream workflow.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-002"
+      ],
+      "tests": [
+        "TC-OBS-HOST-001-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-VIS-001",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ],
+      "statement": "The planner switches to compact at content widths 520 px and below and to wide above 520 px; 519, 520, and 521 px are explicit gates.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-003"
+      ],
+      "tests": [
+        "TC-OBS-VIS-001-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-VIS-002",
+      "owner_ticket": 24,
+      "owner_module": "styles/theme.css",
+      "evidence_contributors": [
+        23,
+        27,
+        29,
+        30
+      ],
+      "statement": "Plugin-owned surfaces preserve semantic hierarchy and distinguish every required state in default light and dark themes without overlap, clipping, or inaccessible reliance on color alone.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-003"
+      ],
+      "tests": [
+        "TC-OBS-VIS-002-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-THEME"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-A11Y-001",
+      "owner_ticket": 24,
+      "owner_module": "styles/a11y.css",
+      "evidence_contributors": [
+        27,
+        29,
+        30
+      ],
+      "statement": "Pointer actions have keyboard equivalents, focus is visible and deterministic, the Execution dialog/tab pattern is complete, status changes are announced, and reduced motion removes nonessential delay and animation.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-004"
+      ],
+      "tests": [
+        "TC-OBS-A11Y-001-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-SAFE-001",
+      "owner_ticket": 25,
+      "owner_module": "src/workspace/commit.ts",
+      "evidence_contributors": [
+        20,
+        26,
+        30
+      ],
+      "statement": "Visual planning performs no write. Every vault write follows an explicit user action, revalidates the exact target, preserves unowned Markdown, and fails closed on conflict.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-005"
+      ],
+      "tests": [
+        "TC-OBS-SAFE-001-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-LIFE-001",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        27,
+        29,
+        30
+      ],
+      "statement": "Repeated enable, disable, open, close, reload, and unload leave no duplicate command, view, listener, timer, or post-unload mutation.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-006"
+      ],
+      "tests": [
+        "TC-OBS-LIFE-001-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-I18N-001",
+      "owner_ticket": 24,
+      "owner_module": "src/i18n/resolver.ts",
+      "evidence_contributors": [
+        27,
+        29,
+        30
+      ],
+      "statement": "English and Simplified Chinese have identical stable message-key sets and expose the same actions, states, and geometry.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-007"
+      ],
+      "tests": [
+        "TC-OBS-I18N-001-001"
+      ],
+      "environments": [
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "OBS-LOCAL-001",
+      "owner_ticket": 17,
+      "owner_module": "src/main.ts",
+      "evidence_contributors": [
+        22,
+        30,
+        31
+      ],
+      "statement": "The plugin initiates no network request and emits no telemetry in any acceptance fixture.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-008"
+      ],
+      "tests": [
+        "TC-OBS-LOCAL-001-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "REL-001",
+      "owner_ticket": 22,
+      "owner_module": "scripts/release/",
+      "evidence_contributors": [
+        17,
+        30,
+        31
+      ],
+      "statement": "A Release Candidate is one clean, pushed 40-character Git commit plus deterministic package assets whose SHA-256 values are recorded.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-009"
+      ],
+      "tests": [
+        "TC-REL-001-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "REL-002",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/scope.schema.json",
+      "evidence_contributors": [
+        30,
+        31
+      ],
+      "statement": "A private package declares its included requirement IDs and may not claim full v1.0.2 parity.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-009"
+      ],
+      "tests": [
+        "TC-REL-002-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE"
+      ],
+      "evidence": [],
+      "status": "active"
+    },
+    {
+      "id": "REL-003",
+      "owner_ticket": 31,
+      "owner_module": "external:g7-g9-sign-off",
+      "evidence_contributors": [
+        22,
+        30
+      ],
+      "statement": "The first public package includes every active requirement, every approved deviation, Community Plugins policy evidence, and final human sign-off on the exact candidate commit.",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md"
+      ],
+      "disposition": "exact",
+      "fixtures": [
+        "OFX-009"
+      ],
+      "tests": [
+        "TC-REL-003-001"
+      ],
+      "environments": [
+        "ENV-PURE",
+        "ENV-VIS",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
+        "ENV-THEME",
+        "ENV-A11Y"
+      ],
+      "evidence": [],
+      "status": "active"
+    }
+  ]
+}
