@@ -11,14 +11,16 @@ The canonical behavior specification is the implementation dossier at commit
 
 ## Validation policy
 
-`npm run validate:provenance` parses the ledger below and fails unless every
-file under `src/`, `styles/`, `tests/`, `benchmarks/`, release/verification
-scripts, workflows, deviations, or trace reports has exactly one row with all
-required fields. The same rule applies repository-wide to any text file carrying
-an `@spiral-day-source` marker. A `copied` or `ported` row additionally requires
-immutable repository, commit, path, blob, license, applicable notice,
-modification, and covering-test data. Such a source file must also carry a short
-`@spiral-day-source <40-character-commit>:<path>` header.
+`npm run validate:provenance` scans repository text files for
+`@spiral-day-source <40-character-commit>:<path>` markers. Every marker must
+match a `copied` or `ported` ledger row for that target file or section, and
+every such row must have a matching marker in its target file. Copied or ported
+rows require immutable repository, commit, path, blob, license, applicable
+notice, modification, and covering-test data.
+
+Clean-room `original` or `behavioral-reimplementation` files without a source
+marker do not require per-file rows. In particular, unmarked files owned by
+downstream tickets do not need to mutate this root ledger.
 
 Notice identifiers resolve to verbatim, marker-delimited notices in
 `THIRD_PARTY_NOTICES.md`. Production builds preserve every notice selected by a

@@ -28,18 +28,6 @@ const markerExtensions = new Set([
   ".yaml",
   ".yml",
 ]);
-const auditedDirectories = [
-  ".github/workflows",
-  "benchmarks",
-  "docs/parity/trace-reports",
-  "evidence/g0-g6",
-  "scripts/release",
-  "scripts/verify",
-  "src",
-  "styles",
-  "tests",
-];
-const auditedExactFiles = ["docs/parity/deviations.json"];
 const provenanceFields = [
   "target_scope",
   "disposition",
@@ -65,7 +53,7 @@ const validDispositions = new Set([
 ]);
 const copiedDispositions = new Set(["copied", "ported"]);
 const shaPattern = /^[0-9a-f]{40}$/;
-const sourceHeaderPattern = /@spiral-day-source\s+([0-9a-f]{40}):([^\s*]+)/;
+const sourceMarkerPattern = /@spiral-day-source\s+([0-9a-f]{40}):([^\s*]+)/g;
 
 function fail(message) {
   throw new Error(message);
@@ -218,6 +206,13 @@ async function listProductionFiles() {
   return files.flat().sort();
 }
 
+function parseSourceMarkers(sourceText) {
+  return [...sourceText.matchAll(sourceMarkerPattern)].map((match) => ({
+    sourceCommit: match[1],
+    sourcePath: match[2],
+  }));
+}
+
 async function listGloballyMarkedFiles() {
   const isRepositoryPath = (file) => {
     const [firstSegment] = file.split("/");
@@ -230,35 +225,45 @@ async function listGloballyMarkedFiles() {
   );
   const marked = [];
   for (const file of candidates) {
-    if (sourceHeaderPattern.test(await readText(file))) marked.push(file);
+    const markers = parseSourceMarkers(await readText(file));
+    if (markers.length > 0) marked.push({ file, markers });
   }
   return marked;
 }
 
-async function listAuditedFiles() {
-  const files = new Set(await listGloballyMarkedFiles());
-  const directoryFiles = await Promise.all(auditedDirectories.map((directory) => listFiles(directory)));
-  for (const file of directoryFiles.flat()) files.add(file);
-  for (const file of auditedExactFiles) {
-    if (existsSync(path.join(rootDir, file))) files.add(file);
-  }
-  return [...files].sort();
+function targetFile(targetScope) {
+  return targetScope.split("#", 1)[0];
 }
 
-function validateProvenanceCoverage(auditedFiles, rowsByTarget) {
-  for (const file of auditedFiles) {
-    const row = rowsByTarget.get(file);
-    if (!row || row.disposition === "excluded") {
-      fail(`PROVENANCE.md: audited file ${file} needs one non-excluded ledger row`);
+function validateProvenanceMarkers(markedFiles, rows) {
+  const copiedRows = rows.filter((row) => copiedDispositions.has(row.disposition));
+  const markerMatchesRow = (file, marker, row) =>
+    targetFile(row.target_scope) === file
+    && row.source_commit === marker.sourceCommit
+    && row.source_path === marker.sourcePath;
+
+  for (const { file, markers } of markedFiles) {
+    for (const marker of markers) {
+      if (!copiedRows.some((row) => markerMatchesRow(file, marker, row))) {
+        fail(`${file}: source marker has no matching copied or ported ledger row`);
+      }
+    }
+  }
+
+  for (const row of copiedRows) {
+    const file = targetFile(row.target_scope);
+    const markedFile = markedFiles.find((candidate) => candidate.file === file);
+    if (!markedFile?.markers.some((marker) => markerMatchesRow(file, marker, row))) {
+      fail(`${file}: copied/ported ledger row ${row.target_scope} requires a matching source marker`);
     }
   }
 }
 
 async function loadAndValidateProvenance() {
-  const [provenanceText, noticesText, auditedFiles, productionFiles] = await Promise.all([
+  const [provenanceText, noticesText, markedFiles, productionFiles] = await Promise.all([
     readText("PROVENANCE.md"),
     readText("THIRD_PARTY_NOTICES.md"),
-    listAuditedFiles(),
+    listGloballyMarkedFiles(),
     listProductionFiles(),
   ]);
   const notices = parseNoticeBlocks(noticesText);
@@ -277,22 +282,9 @@ async function loadAndValidateProvenance() {
     rowsByTarget.set(row.target_scope, row);
   }
 
-  validateProvenanceCoverage(auditedFiles, rowsByTarget);
-  for (const file of auditedFiles) {
-    const row = rowsByTarget.get(file);
-    const sourceText = await readText(file);
-    const header = sourceText.match(sourceHeaderPattern);
-    if (header && !copiedDispositions.has(row.disposition)) {
-      fail(`${file}: a source marker requires a copied or ported ledger disposition`);
-    }
-    if (copiedDispositions.has(row.disposition) && markerExtensions.has(path.extname(file))) {
-      if (!header || header[1] !== row.source_commit || header[2] !== row.source_path) {
-        fail(`${file}: copied/ported source header must match its ledger commit and path`);
-      }
-    }
-  }
+  validateProvenanceMarkers(markedFiles, ledger.rows);
 
-  return { auditedFiles, ledger, notices, productionFiles };
+  return { ledger, markedFiles, notices, productionFiles };
 }
 
 async function validateRequirementContract() {
@@ -557,17 +549,38 @@ function runProvenanceNegativeTests(knownNotices) {
   noTest.covering_tests = [];
   assert.throws(() => validateProvenanceRow(noTest, knownNotices));
 
+  const unknownNotice = structuredClone(row);
+  unknownNotice.notice = ["UNKNOWN-NOTICE"];
   assert.throws(
-    () => validateProvenanceCoverage(["tests/ported-upstream.test.ts"], new Map()),
-    /audited file tests\/ported-upstream\.test\.ts needs one non-excluded ledger row/,
+    () => validateProvenanceRow(unknownNotice, knownNotices),
+    /has no verbatim notice block/,
+  );
+
+  const markedTest = {
+    file: "packages/downstream/tests/fixtures/ported-upstream.test.ts",
+    markers: parseSourceMarkers(
+      `// @spiral-day-source ${row.source_commit}:${row.source_path}`,
+    ),
+  };
+  assert.equal(markedTest.markers.length, 1);
+  assert.throws(
+    () => validateProvenanceMarkers([markedTest], []),
+    /source marker has no matching copied or ported ledger row/,
+  );
+
+  const testRow = structuredClone(row);
+  testRow.target_scope = markedTest.file;
+  validateProvenanceMarkers([markedTest], [testRow]);
+
+  const mismatchedMarker = structuredClone(markedTest);
+  mismatchedMarker.markers[0].sourcePath = "src/different.js";
+  assert.throws(
+    () => validateProvenanceMarkers([mismatchedMarker], [testRow]),
+    /source marker has no matching copied or ported ledger row/,
   );
   assert.throws(
-    () => validateProvenanceCoverage(["docs/parity/deviations.json"], new Map()),
-    /audited file docs\/parity\/deviations\.json needs one non-excluded ledger row/,
-  );
-  assert.throws(
-    () => validateProvenanceCoverage(["evidence/g0-g6/host.json"], new Map()),
-    /audited file evidence\/g0-g6\/host\.json needs one non-excluded ledger row/,
+    () => validateProvenanceMarkers([], [testRow]),
+    /requires a matching source marker/,
   );
 }
 
@@ -763,7 +776,7 @@ async function runTests() {
   assert.deepEqual(Buffer.from(onlyOutput(first)), Buffer.from(onlyOutput(second)));
   scanBundle(onlyOutput(first));
   console.log(
-    "tests: provenance-negative, unledgered-ported-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle passed",
+    "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle passed",
   );
 }
 
@@ -775,7 +788,7 @@ async function main() {
   } else if (command === "provenance") {
     const result = await loadAndValidateProvenance();
     console.log(
-      `provenance: ${result.ledger.rows.length} rows, ${result.auditedFiles.length} audited files, ${result.productionFiles.length} production files`,
+      `provenance: ${result.ledger.rows.length} rows, ${result.markedFiles.length} marked files, ${result.productionFiles.length} production files`,
     );
   } else if (command === "validate") {
     await validateFoundation();
