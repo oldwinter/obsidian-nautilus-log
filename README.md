@@ -45,9 +45,14 @@ installation. Neither route is a Spiral Day install mechanism.
 
 ## Provenance and credits
 
-Spiral Day is implemented from the accepted behavior dossier, not by copying
-the upstream or Issue #13 prototype implementation. See [PROVENANCE.md](PROVENANCE.md),
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and [LICENSE](LICENSE).
+Spiral Day follows the
+[community-compliance decision](docs/decisions/community-compliant-product-naming-and-attribution.md)
+and is implemented from the accepted [behavior dossier](docs/implementation-dossier.md),
+not by copying the upstream or Issue #13 prototype implementation. Requirement
+and ticket ownership remain defined by the
+[requirement-owner registry](docs/parity/requirement-owners.json) and
+[ticket boundaries](docs/parity/ticket-boundaries.json). Local compliance
+records are `PROVENANCE.md`, `THIRD_PARTY_NOTICES.md`, and `LICENSE`.
 
 The project credits these behavioral sources and inspirations without implying
 their authors maintain, own, or endorse Spiral Day:
