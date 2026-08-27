@@ -4,6 +4,10 @@ This glossary is the canonical language for the Obsidian parity port. It keeps
 upstream scheduling and execution concepts distinct from Obsidian storage and UI
 mechanisms.
 
+Normative implementation precedence belongs to the
+[canonical implementation dossier](docs/implementation-dossier.md). This file
+defines terms and must be updated with the dossier when a contract changes.
+
 ## Planning
 
 **Daily Note**:
@@ -64,13 +68,32 @@ _Avoid_: Productivity mode, tracking add-on
 The single Plan Item currently associated with CLOCK timing.
 _Avoid_: Selected task, current block
 
+**ActiveTaskView**:
+The dedicated singleton Obsidian `ItemView` that projects the Active Task and
+reveals/focuses its one existing leaf when opened again. It owns no canonical
+task state and is not the source Markdown leaf.
+_Avoid_: Active Task panel, planner selection
+
 **CLOCK**:
 The task-bound timing interval that takes precedence over POMO and can be persisted in LOGBOOK-compatible Markdown.
 _Avoid_: Stopwatch, timer
 
 **POMO**:
-A standalone focus interval that is not bound to a Plan Item and yields to an active CLOCK.
-_Avoid_: Pomodoro task, focus block
+The umbrella focus-cycle concept covering Task POMO and Standalone POMO. CLOCK
+is authoritative whenever a valid running CLOCK exists.
+_Avoid_: Stopwatch, generic timer
+
+**Task POMO**:
+A focus cycle bound to the Active Task. Its absolute start persists in plugin
+data, it exists only while the Active Task remains valid, and it is suppressed
+by the authoritative CLOCK presentation rather than becoming a second timer.
+_Avoid_: Standalone timer, task duration
+
+**Standalone POMO**:
+An unbound focus cycle that starts only when there is no CLOCK, persists its
+absolute start in plugin data, and clears before Clock In. If restore observes
+both states, CLOCK wins and the standalone state is removed.
+_Avoid_: Task POMO, CLOCK
 
 **LOGBOOK**:
 The Markdown property section used to persist compatible CLOCK timing history when that option is enabled.

@@ -30,11 +30,15 @@ The [implementation dossier](docs/implementation-dossier.md) is the single
 canonical specification and source index. It resolves the frozen research,
 accepted decisions, prototype evidence boundary, implementation task graph, and
 release gates without requiring a reader to reconstruct precedence.
+The machine-readable [126-row requirement owner map](docs/parity/requirement-owners.json)
+assigns every initial requirement to exactly one implementation ticket/module.
 
 ## Product Boundary
 
 - Daily Notes and ordinary Markdown remain the canonical user data.
 - The planner is a dockable Obsidian `ItemView`; notes remain normal Markdown.
+- Active timing projects into the dedicated singleton `ActiveTaskView`; it is
+  neither planner-owned state nor a replacement for the source Markdown leaf.
 - No hard dependency on Tasks, Dataview, or another community plugin.
 - Desktop parity comes first. Mobile parity and Roam graph import are outside
   the first release.
@@ -62,3 +66,8 @@ provenance must be recorded as required by the decision above.
 Production implementation starts only through the root issue linked by the
 canonical dossier. The throwaway prototype is evidence and is not a source tree
 for the plugin.
+
+Reusable release schemas, scanners, fixtures, scripts, and templates must exist
+before candidate freeze. Hardening freezes one clean pushed SHA after G0-G6;
+release sign-off runs G7-G9 against that identical SHA without changing any
+candidate input.

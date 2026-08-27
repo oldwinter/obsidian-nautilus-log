@@ -138,9 +138,19 @@ machine-readable requirement manifest.
 Implementation must introduce one structured source of truth at
 `docs/parity/requirements.json`. Each active requirement row has these fields:
 
+The initial machine-checkable ownership projection and its normative field
+schema are published now as
+[requirement-owners.json](../parity/requirement-owners.json) and
+[requirement-owners.schema.json](../parity/requirement-owners.schema.json).
+Ticket #22 owns both schemas and the future full manifest. Ticket #17 only
+bootstraps and consumes the generated contract; it does not own either schema.
+
 | Field | Rule |
 | --- | --- |
 | `id` | One stable requirement ID. Unique across active and retired rows. |
+| `owner_ticket` | Exactly one primary implementation ticket. Required on every active row. |
+| `owner_module` | Exactly one owning module/file boundary inside that ticket. Required on every active row. |
+| `evidence_contributors` | Optional secondary tickets that produce evidence without becoming another implementation owner. |
 | `statement` | One observable pass/fail statement, not a feature label. |
 | `source_refs` | One or more immutable commit/path/anchor references or accepted decision references. |
 | `disposition` | `exact`, `host-adapted`, `approved-improvement`, or `not-applicable`. |
@@ -299,6 +309,16 @@ Gates run in this order so an expensive or subjective gate never hides a cheap,
 deterministic failure. A material code, test, requirement, golden, dependency,
 build, or package change invalidates all later gates and requires them to rerun
 on the new exact commit.
+
+All reusable release scripts, fixtures, scanners, schemas, and templates are
+candidate inputs owned and delivered by ticket #22 before hardening. After the
+last material change, ticket #30 pushes one clean commit, runs G0-G6 against
+that remote SHA, records its deterministic package identity, and freezes it as
+the sole candidate. Ticket #31 runs and signs G7-G9 on that identical SHA. It
+owns no repository file and must not commit or modify source, tests, build,
+package, or release-input files. Any required change returns to its owning
+ticket and invalidates the freeze; #30 must then rerun G0-G6 on the replacement
+SHA before #31 restarts.
 
 | Gate | Decision | Required result |
 | --- | --- | --- |

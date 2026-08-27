@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "links": [
+    { "source": "README.md", "href": "docs/implementation-dossier.md", "target": "docs/implementation-dossier.md" },
+    { "source": "README.md", "href": "docs/parity/requirement-owners.json", "target": "docs/parity/requirement-owners.json" },
+    { "source": "CONTEXT.md", "href": "docs/implementation-dossier.md", "target": "docs/implementation-dossier.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/behavior-inventory.md", "target": "docs/research/behavior-inventory.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/scheduler-semantics.md", "target": "docs/research/scheduler-semantics.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/execution-layer.md", "target": "docs/research/execution-layer.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/roam-obsidian-capability-map.md", "target": "docs/research/roam-obsidian-capability-map.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/visual-interaction.md", "target": "docs/research/visual-interaction.md" },
+    { "source": "docs/implementation-dossier.md", "href": "research/license-provenance.md", "target": "docs/research/license-provenance.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/markdown-grammar-and-plan-item-identity.md", "target": "docs/decisions/markdown-grammar-and-plan-item-identity.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/plugin-architecture-and-state-ownership.md", "target": "docs/decisions/plugin-architecture-and-state-ownership.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/timing-write-safety-conflict-handling-and-recovery.md", "target": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/parity-acceptance-matrix-and-release-gates.md", "target": "docs/decisions/parity-acceptance-matrix-and-release-gates.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/desktop-compatibility-and-performance-envelope.md", "target": "docs/decisions/desktop-compatibility-and-performance-envelope.md" },
+    { "source": "docs/implementation-dossier.md", "href": "decisions/community-compliant-product-naming-and-attribution.md", "target": "docs/decisions/community-compliant-product-naming-and-attribution.md" },
+    { "source": "docs/implementation-dossier.md", "href": "parity/requirement-owners.json", "target": "docs/parity/requirement-owners.json" },
+    { "source": "docs/implementation-dossier.md", "href": "parity/requirement-owners.schema.json", "target": "docs/parity/requirement-owners.schema.json" },
+    { "source": "docs/implementation-dossier.md", "href": "parity/source-ledger.json", "target": "docs/parity/source-ledger.json" },
+    { "source": "docs/implementation-dossier.md", "href": "planning-github-graph.json", "target": "docs/planning-github-graph.json" },
+    { "source": "docs/research/roam-obsidian-capability-map.md", "href": "../implementation-dossier.md", "target": "docs/implementation-dossier.md" },
+    { "source": "docs/decisions/parity-acceptance-matrix-and-release-gates.md", "href": "../parity/requirement-owners.schema.json", "target": "docs/parity/requirement-owners.schema.json" }
+  ]
+}

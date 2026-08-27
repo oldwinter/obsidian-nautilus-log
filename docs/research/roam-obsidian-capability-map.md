@@ -1,7 +1,8 @@
 # Roam to Obsidian Capability Map
 
 > Status: frozen platform research. The [canonical implementation dossier](../implementation-dossier.md)
-> records the accepted resolution of every downstream capability choice.
+> records the accepted resolution of every historical downstream capability
+> choice; the resolution ledger below makes those results explicit here.
 
 ## Question
 
@@ -250,7 +251,8 @@ This research does not select one.
 
 ## Capability gaps and downstream decisions
 
-The following questions remain genuinely unresolved by platform research:
+The following were genuinely unresolved by platform research. They are retained
+as the historical decision queue; every item now has an accepted resolution:
 
 1. **Daily Note resolution:** plugin-owned folder/date-format settings, an
    explicit file binding, or another deterministic resolver.
@@ -263,17 +265,28 @@ The following questions remain genuinely unresolved by platform research:
    to preserve third-party suffix fields.
 5. **Execution trigger placement:** status bar, ribbon, ItemView action, or
    in-view header. Exact Roam topbar placement is unsupported.
-6. **Active Task sidebar behavior:** dedicated Active Task view, Markdown leaf at
-   a block link, or state inside the planner view. Exact Roam block-window order
-   is unsupported.
+6. **Active Task sidebar behavior:** resolved as the dedicated singleton
+   `ActiveTaskView` `ItemView`, never planner state or a bare Markdown leaf.
+   Repeated open reveals/focuses the same leaf. Its primary action opens source
+   Markdown and locates the authoritative block ID. Missing, stale, or
+   unavailable sources render a read-only unavailable state and never write.
 7. **Cross-note history scope:** today's note only, configured Daily Note files,
    or a derived cache over the vault. There is no Datalog index.
 8. **External CLOCK writers:** fail closed on ambiguous data without trying to
    inspect another plugin's private runtime.
 9. **Minimum Obsidian version:** 1.1.0, 1.7.2, or 1.13.0 depending on selected
    settings/sidebar APIs.
-10. **Community display name:** use manifest name "Nautilus Log" to satisfy the
-    current rule while retaining "for Obsidian" only in descriptive prose.
+10. **Community display name:** resolved as `Spiral Day` with stable plugin ID
+    `spiral-day` and explicit upstream attribution.
+
+Resolution summary: Daily Notes use the plugin-owned resolver; Plan Items use
+explicit terminal block IDs; the marked Plan Region is authoritative; canonical
+LOGBOOK/CLOCK Markdown follows the accepted grammar/write protocol; execution
+uses public view/ribbon/command entry points; `ActiveTaskView` supplies the
+singleton dock projection; history uses the bounded configured Daily Note index;
+ambiguous external CLOCK state fails closed; the desktop floor is 1.7.7; and the
+public product name is Spiral Day. The dossier is normative for the full
+contract and rollback boundaries.
 
 ## Conclusion
 

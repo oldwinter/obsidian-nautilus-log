@@ -1,6 +1,6 @@
 # Spiral Day implementation dossier
 
-Version: `1.0.0`
+Version: `1.1.0`
 
 Status: implementation-ready specification for
 [Produce the implementation-ready parity dossier and execution sequence](https://github.com/oldwinter/obsidian-nautilus-log/issues/14),
@@ -42,6 +42,9 @@ The six research artifacts were integrated in this exact order. `Source commit`
 is the immutable branch head reviewed on its closed research ticket. Ordered
 cherry-picks preserved each research body; this branch adds only a current-status
 pointer that routes historical unknowns to this dossier and the accepted records.
+The machine-readable [source ledger](parity/source-ledger.json) binds every
+ticket, source commit, ordered integration commit, artifact, and status pointer;
+the planning checker verifies those tuples and matching patch identities.
 
 | Order | Closed source ticket | Source commit | Integrated artifact | Authority |
 | ---: | --- | --- | --- | --- |
@@ -102,8 +105,16 @@ universe, not 114 copied summaries.
 Implementation adds the 12 accepted cross-cutting IDs `OBS-TRACE-001`,
 `OBS-HOST-001`, `OBS-VIS-001..002`, `OBS-A11Y-001`, `OBS-SAFE-001`,
 `OBS-LIFE-001`, `OBS-I18N-001`, `OBS-LOCAL-001`, and `REL-001..003`.
-The implementation source of truth will be `docs/parity/requirements.json`.
-Every row must have exactly one disposition (`exact`, `host-adapted`,
+The complete initial 126-row [requirement owner map](parity/requirement-owners.json)
+and its [schema](parity/requirement-owners.schema.json) are normative now. Every
+row has exactly one `owner_ticket` and one `owner_module`; optional
+`evidence_contributors` never confer a second implementation owner. Ticket #22
+owns this schema/map and the future `docs/parity/requirements.json`; ticket #17
+is a bootstrap consumer only.
+
+The full implementation source of truth will be
+`docs/parity/requirements.json`. Every row must retain its mapped primary owner
+and have exactly one disposition (`exact`, `host-adapted`,
 `approved-improvement`, or `not-applicable`), immutable source references,
 fixtures, tests, environments, current-candidate evidence, and an approved
 `DEV-NNN` when adapted or improved. IDs are never reused.
@@ -172,7 +183,9 @@ store, screen-owned domain logic, or per-view runtime.
 | `MarkdownWorkspace` | Daily Note resolution, region/list grammar, source spans, identity index, LOGBOOK/CLOCK placement, byte-preserving read/commit, host change normalization | UI, runtime queues, arbitrary text callbacks, cached-position write authority |
 | `NautilusRuntime` | One vault-scoped lifecycle, settings/POMO saves, one mutation queue, refresh generations, snapshots, active-CLOCK projection, cancellation/reconciliation | Markdown syntax, concrete views, a durable projection or command journal |
 | Surface adapters | `ItemView`, commands, ribbon/actions, editor menu, settings, notices, focus/scroll/transient presentation | Markdown reads/writes, core calls, active-task state, success inference |
-| `Messages` | Stable English and Simplified Chinese keys and typed interpolation | Domain decisions or source text |
+| `ActiveTaskView` | One singleton `ItemView` leaf projecting current Active Task, read-only unavailable states, source navigation by authoritative block ID, keyboard/focus behavior, narrow-dock presentation | Canonical active state, Markdown writes, planner selection, stale source navigation |
+| i18n base/shared | Typed resolver, locale selection/fallback, and equal `shared` catalogs owned by #24 | Planner, Execution, or Review namespace content |
+| i18n feature namespaces | Equal `planner` catalogs owned by #24, `execution` catalogs owned by #27, and `review` catalogs owned by #29 | Domain decisions, source text, edits to another ticket's namespace |
 
 Production adapters use public Obsidian APIs only. `MemoryTextAdapter`, fake
 clock, in-memory plugin data, and scripted runtime adapters must execute the same
@@ -199,6 +212,7 @@ Every reachable state is assigned below so none is hidden in a UI ticket.
 | Plan projection | no plan/empty/scheduled/unscheduled/focused/working/error; remains a read-only snapshot while Timing mutation is pending and updates only after confirmation | Core + execution adapter |
 | Review row | exactly `not-started`, `live`, `paused`, `not-tracked`, or `compared`; only done tasks with positive closed same-day Actual compare; cross-midnight Actual clips by local calendar day | Core + Review adapter |
 | Execution panel | closed/open; Timing/Plan/Review tab with correct roving focus and panel semantics; pending/notice/error/confirmation; Escape and close restore focus | Execution adapter |
+| `ActiveTaskView` | `closed -> opening -> available` or `unavailable`; a repeated open reveals/focuses the one existing leaf; source refresh may move `available -> unavailable`; only a fresh authoritative block ID enables source navigation; unavailable is always read-only | Execution adapter over Runtime snapshot |
 | Commit | `admitted -> queued -> fresh-read -> decided -> host-transform -> confirming -> applied/already-applied/rejected/conflict/failed-no-change/uncertain/partial-safe/invariant-broken`; uncertain never retries and blocks later writes until reread | Runtime + workspace |
 | Time continuity | trusted -> `time-review-required` on >5 s wall/monotonic divergence, backwards time, or impossible elapsed -> explicit keep-measured/use-system/stop-at-trusted action -> trusted | Runtime + write protocol |
 | History index | absent/building/current/dirty/over-limit/unavailable; yields at least every 50 ms, never blocks today's plan, never presents partial totals as complete | Workspace + runtime |
@@ -281,6 +295,18 @@ Overflow area.
   dimensions, and at most 0.2% pixels above per-channel delta 16. Missing state,
   overlap, clipping, or changed hierarchy fails regardless of numeric diff.
 
+`ActiveTaskView` is the approved HOST replacement for Roam right-sidebar task
+fronting. Opening it normally creates one dedicated leaf; every later open
+reveals and focuses that same leaf, including after workspace restoration. Its
+primary action opens the authoritative source Markdown and locates the current
+terminal block ID. It never navigates by cached line/span alone. A missing or
+stale ID, missing file, unreadable source, over-limit source, or unavailable
+workspace API produces an explicit localized read-only unavailable state and
+zero write. All actions and unavailable details are keyboard reachable. At a
+narrow dock it retains status, elapsed timing, and source navigation while
+folding secondary metadata; it never changes into planner state or a bare
+Markdown leaf.
+
 ## Keyboard, accessibility, and localization
 
 - Every pointer action has a keyboard equivalent. Icon buttons have stable
@@ -301,6 +327,13 @@ Overflow area.
   is a defensive path, not releasable evidence.
 - Both locales must expose identical actions and fit all canonical states at
   every required width and 100%/200% zoom on supported host profiles.
+
+Catalogs are namespaced `shared`, `planner`, `execution`, and `review`. Ticket
+#24 lands the typed resolver plus equal `shared`/`planner` catalogs and exports
+the namespace registration contract. Tickets #27 and #29 depend on that API and
+own only equal `execution` and `review` catalogs respectively. Integration
+imports namespaces through the resolver; no ticket edits another namespace,
+and #30 verifies union-key equality plus cross-locale action/state parity.
 
 ## Privacy and offline contract
 
@@ -346,7 +379,7 @@ instance still requires a linked, reviewed `DEV-NNN` record and passing evidence
 
 | Class | Approved difference | Preserved invariant | Rollback/revisit trigger |
 | --- | --- | --- | --- |
-| `HOST` | Roam scaffold/topbar/sidebar/block menu become Obsidian ItemView, ribbon/view actions, commands, editor menu, settings, notices, and public workspace navigation | Same availability, conditional action, result, state, and one-step execution access | Public API no longer supports the workflow or host behavior changes |
+| `HOST` | Roam scaffold/topbar/block menu become Obsidian planner/entry adapters; right-sidebar task fronting becomes the dedicated singleton `ActiveTaskView` with authoritative-block-ID source navigation and read-only unavailable fallback | Same availability, conditional action, state/timing visibility, keyboard reachability, one-step source access, and zero-write stale/missing behavior; repeated open never duplicates leaves | Public APIs cannot reveal/focus a singleton leaf or authoritative ID navigation cannot be preserved |
 | `A11Y` | Correct tabs/dialog focus, focus rings, Enter/Space activation, urgency naming, live status, and complete reduced motion | Same action, semantic state, and information hierarchy | Accessibility regression or an upstream parity decision changes meaning |
 | `THEME` | Obsidian variables, `.theme-dark`, Lucide icons, inherited fonts, contrast-corrected colors | Semantic hue roles, emphasis, hit areas, geometry, and non-color cues | Theme/API change collapses a required state |
 | `SAFETY` | Explicit Plan Region/ID materialization, semantic CAS, conservative link handling, fail-closed conflicts, no automatic write/repair/retry | Scheduling semantics and explicit workflow remain; unowned Markdown is byte-preserved | New host atomicity/identity capability justifies a narrower approved protocol |
@@ -369,6 +402,7 @@ hidden errors, and core-workflow changes require a new Wayfinder decision.
 | External edits/races | Fresh queue-head and in-primitive parse, watched bytes, no retry | Return no-write/conflict; user source is the rollback authority |
 | Performance/large vault | Fixed scale fixtures, budgets, last-input-wins, bounded caches | Disable cross-note history first; then disable interactive projection, never truncate |
 | UI/theme/a11y regression | State assertions plus screenshots, contrast, keyboard/screen-reader scripts | Revert the owning surface commit independently of core/workspace |
+| `ActiveTaskView` duplication or stale navigation | Singleton leaf assertions; fresh ID lookup; missing/stale/source-unavailable and narrow-dock QA | Revert #27 view/adapter files; execution runtime and source Markdown remain unchanged |
 | License/name/policy failure | Provenance ledger, notices, bundle scan, current policy recheck | Remove/reimplement the affected ported unit or stop release; do not rename a published ID |
 | Bad package/candidate mismatch | Reproducible build, asset allowlist/hash, exact remote SHA | Withdraw the candidate assets/tag; Markdown data requires no migration |
 
@@ -378,9 +412,15 @@ backward migration notes. Rollback never means replaying old note bytes.
 
 ## Packaging and release gates
 
-Run G0 through G9 in order on one clean pushed candidate. A material source,
-test, fixture, requirement, golden, dependency, build, or package change
-invalidates all later gates.
+Ticket #22 first delivers every reusable release script, fixture, scanner,
+schema, and template. After the last material change, ticket #30 pushes one
+clean commit, runs G0-G6 against that remote SHA, records package identity, and
+freezes it. Ticket #31 runs and signs G7-G9 against that identical SHA. It owns
+no repository files and may not commit or modify any source, test, build,
+package, or release-input file. A material source, test, fixture, requirement,
+golden, dependency, build, package, release script, scanner, schema, or template
+change invalidates the freeze and returns the candidate to #30 for G0-G6 before
+#31 may restart.
 
 | Gate | Blocking result |
 | --- | --- |
@@ -405,28 +445,30 @@ POMO/warnings; and past/current/future Review across two local dates.
 
 The unique `implement-spec` entry is the GitHub root issue linked here after the
 graph is published. Its native sub-issues and `blocked by` edges are canonical;
-the table below is the dossier view and must match them.
+the table below is the dossier view and must match them. The
+[machine-readable graph manifest](planning-github-graph.json) is the checker's
+expected graph and is compared read-only with live GitHub metadata.
 
 Implementation root issue:
 [Implementation spec: ship Spiral Day v1.0.2 parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/16).
 
 | Phase | Task | Blocked by | Owning boundary |
 | --- | --- | --- | --- |
-| Foundation | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | None | Toolchain, manifest, license/notices/provenance skeleton, requirement schema |
+| Foundation | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | None | Toolchain, manifest, license/notices/provenance baseline; requirement-schema consumer/bootstrap only |
 | Scheduler | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | `src/core/model`, parser, diagnostics |
 | Scheduler | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19) | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | Pure scheduler/capacity/day/history primitives |
 | Scheduler | [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | Workspace grammar/read/index/TextAccess |
 | Scheduler | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | Runtime snapshots, cache, clock, plugin data, lifecycle |
-| Cross-cutting | [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | Requirements manifest, fixtures, test/evidence tooling |
+| Cross-cutting | [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | Requirement map/schema/manifest plus all reusable release scripts, fixtures, scanners, schemas, templates, and evidence tooling |
 | Planner UI | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | ItemView, spiral geometry, planner state rendering |
-| Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Planner controls, i18n catalogs, a11y/theme styles |
+| Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Planner controls, i18n resolver/shared/planner namespaces, a11y/theme styles |
 | Execution Layer | [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Workspace commit/mutations/conflicts |
 | Execution Layer | [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21); [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | Runtime commands, mutation queue, execution/recovery/POMO |
-| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Commands/settings/notices/execution panel/Timing/Plan |
+| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView` and source navigation |
 | Review | [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | History index and Review core projection |
-| Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review UI/styles and Review host QA |
-| Hardening | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26); [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Benchmarks, host/lifecycle/privacy evidence and bounded fixes |
-| Release | [Release: produce the deterministic candidate and execute gates G0-G9](https://github.com/oldwinter/obsidian-nautilus-log/issues/31) | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Release scripts/assets/checklists/sign-off only |
+| Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review UI/styles, review locale namespace, and Review host QA |
+| Hardening | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26); [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Last bounded fixes, clean push, G0-G6 evidence, and exact-SHA candidate freeze |
+| Release | [Release: produce the deterministic candidate and execute gates G0-G9](https://github.com/oldwinter/obsidian-nautilus-log/issues/31) | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | G7-G9 execution/sign-off on #30's exact SHA; owns no repository files and changes none |
 
 No task may implement outside its owning boundary without first updating its
 issue and native dependencies. Scheduler and workspace work can proceed in
@@ -449,7 +491,7 @@ downstream of all required evidence.
 | Roam setting persistence/sync unknown | Versioned local `data.json`, one save tail, Markdown authority, and local-only contract | No |
 | Partial writes, external CLOCKs, malformed records, DST, time jumps, unload races | Complete write/recovery decision with safety index, explicit repair, calendar-day clipping, trusted clock, and no retry | No |
 | Daily Note configuration and minimum host version | Plugin-owned resolver; desktop 1.7.7/Electron 32.2.5 floor | No |
-| Unsupported topbar/sidebar APIs | Approved HOST adaptation to ItemView/commands/workspace without private DOM | No |
+| Unsupported topbar/sidebar APIs | Approved HOST adaptation to public entry points plus singleton `ActiveTaskView`; repeated open reveals one leaf, authoritative ID opens/locates source, and stale/missing/unavailable is read-only | No |
 | Cross-note history scope and scale | Configured Daily Notes, bounded derived index, fail-closed incomplete totals | No |
 | Product name, existing registry collision, attribution | Spiral Day/`spiral-day`, immutable-ID gate, unofficial credits/notices | No |
 | Contributor notice completeness and Community duplicate/fork policy | Conservative credits/notices plus mandatory live policy/approval check before public submission | No implementation blocker; public release gate remains intentionally time-sensitive |
@@ -465,7 +507,8 @@ require reopening behavior, data, architecture, safety, or product decisions.
 - One canonical linked dossier/index: this file.
 - All six research commits integrated in order and traceable: evidence ledger.
 - All six accepted decisions current and precedence-resolved: decision ledger.
-- 114-row versioned parity universe plus Obsidian/release IDs: parity section.
+- 114-row versioned parity universe plus 12 Obsidian/release IDs, all with one
+  primary owner: parity section and machine-readable owner map/schema.
 - Semantics, data, architecture, state machines, writes, compatibility,
   performance, visual/interaction, keyboard/accessibility, bilingual UI,
   privacy/offline, license/attribution, risks/rollback, release gates,
@@ -474,4 +517,5 @@ require reopening behavior, data, architecture, safety, or product decisions.
   conclusion cited only: evidence ledger.
 - Implementable non-overlapping task graph with native relations: linked root
   issue and tickets, kept open for `implement-spec`.
-- Parent Wayfinder map remains unchanged by this ticket.
+- Parent Wayfinder map is not edited by this ticket; the resolution handoff
+  supplies one-line gists for #2-#7 and #14 to the controller that owns #1.
