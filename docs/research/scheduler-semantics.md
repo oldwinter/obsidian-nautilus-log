@@ -1,5 +1,8 @@
 # Nautilus Log v1.0.2 scheduler and parser semantics
 
+> Status: frozen upstream evidence. The [canonical implementation dossier](../implementation-dossier.md)
+> records the accepted Markdown mapping and discrepancy resolutions.
+
 ## Research question
 
 What exact deterministic rules turn v1.0.2 Daily Note inputs into Fixed Events,

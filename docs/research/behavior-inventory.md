@@ -1,5 +1,8 @@
 # Nautilus Log v1.0.2 observable behavior inventory
 
+> Status: frozen upstream evidence. The [canonical implementation dossier](../implementation-dossier.md)
+> records the accepted disposition of every contradiction and research unknown.
+
 Research target: upstream commit [`973a041aa2f59f3b05bf31db8187efbfea07017a`](https://github.com/404KSG/roam-nautilus-log/tree/973a041aa2f59f3b05bf31db8187efbfea07017a), tagged `1.0.2` (2026-08-23). The later `main` commit `08892f948c63e4cacd3fc1cc100a600dd38c21f8` is used only in the drift ledger. This document records the contract to reproduce, not an Obsidian design.
 
 ## Evidence and confidence key

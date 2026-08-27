@@ -1,5 +1,8 @@
 # Roam to Obsidian Capability Map
 
+> Status: frozen platform research. The [canonical implementation dossier](../implementation-dossier.md)
+> records the accepted resolution of every downstream capability choice.
+
 ## Question
 
 For every Roam-specific API, data, lifecycle, command, settings, sidebar,

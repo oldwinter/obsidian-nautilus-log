@@ -1,4 +1,4 @@
-# Nautilus Log Context
+# Spiral Day Context
 
 This glossary is the canonical language for the Obsidian parity port. It keeps
 upstream scheduling and execution concepts distinct from Obsidian storage and UI

@@ -1,5 +1,8 @@
 # Nautilus Log v1.0.2 Execution Layer state machines
 
+> Status: frozen upstream evidence. The [canonical implementation dossier](../implementation-dossier.md)
+> records the accepted safety, persistence, recovery, and host adaptations.
+
 ## Research contract
 
 - **Functional baseline:** upstream tag `v1.0.2`, commit

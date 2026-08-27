@@ -445,8 +445,10 @@ Grammar v1 authorizes only two kinds of source metadata:
 The parser and visual plan are always read-only. There is no automatic eager ID
 assignment, marker repair, progress cleanup, checkbox normalization, block-ID
 deduplication, or migration. An explicit Complete action may own its requested
-status/progress change, but the general write transaction, LOGBOOK children,
-partial failure, external writer, and recovery policy are downstream decisions.
+status/progress change. The general write transaction, LOGBOOK children,
+partial failure, external writer, and recovery policy are resolved by
+[Decide: timing-write safety, conflict handling, and recovery](https://github.com/oldwinter/obsidian-nautilus-log/issues/10)
+and composed in the [canonical dossier](../implementation-dossier.md).
 
 Every writer must preserve bullet style, indentation, line ending, links, tags,
 Tasks/Dataview fields, aliases, formatting, custom suffixes, nested children, and

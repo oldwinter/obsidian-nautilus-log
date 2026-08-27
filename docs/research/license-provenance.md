@@ -1,5 +1,8 @@
 # License, provenance, and reusable-code boundary
 
+> Status: frozen engineering provenance evidence. The [canonical implementation dossier](../implementation-dossier.md)
+> records current product identity, reuse boundaries, and release gates.
+
 Status: research finding for upstream `v1.0.2` at commit
 [`973a041aa2f59f3b05bf31db8187efbfea07017a`](https://github.com/404KSG/roam-nautilus-log/tree/973a041aa2f59f3b05bf31db8187efbfea07017a).
 

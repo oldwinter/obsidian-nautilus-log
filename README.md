@@ -26,6 +26,11 @@ rules are recorded in the
   rewrite Roam APIs and ClojureScript UI in TypeScript; preserve attribution and
   applicable license notices.
 
+The [implementation dossier](docs/implementation-dossier.md) is the single
+canonical specification and source index. It resolves the frozen research,
+accepted decisions, prototype evidence boundary, implementation task graph, and
+release gates without requiring a reader to reconstruct precedence.
+
 ## Product Boundary
 
 - Daily Notes and ordinary Markdown remain the canonical user data.
@@ -54,5 +59,6 @@ Credits do not replace required license notices. Before copied or substantially
 ported code enters the project, the applicable verbatim notices and per-file
 provenance must be recorded as required by the decision above.
 
-Implementation begins only after the Wayfinder map has resolved the behavior,
-data-contract, architecture, and parity-acceptance decisions.
+Production implementation starts only through the root issue linked by the
+canonical dossier. The throwaway prototype is evidence and is not a source tree
+for the plugin.

@@ -69,12 +69,13 @@ recommendation. The decision therefore proceeds with these assumptions:
 - `data.json` is appropriate for validated plugin configuration and POMO start
   timestamps, but not for Plan Items, CLOCK history, active-task identity, or a
   durable vault index.
-- The exact eligible Markdown grammar and `PlanItemRef` representation will be
+- The exact eligible Markdown grammar and `PlanItemRef` representation are
   supplied by [Decide: Obsidian Markdown grammar and stable Plan Item identity](https://github.com/oldwinter/obsidian-nautilus-log/issues/8).
 - The exact optimistic checks, partial-write recovery, and user conflict flow
-  will be supplied by [Decide: timing-write safety, conflict handling, and recovery](https://github.com/oldwinter/obsidian-nautilus-log/issues/10).
-  The architecture below fixes their ownership and required outcomes without
-  preselecting their wire formats.
+  are supplied by [Decide: timing-write safety, conflict handling, and recovery](https://github.com/oldwinter/obsidian-nautilus-log/issues/10).
+  The architecture below fixes their ownership and required outcomes; the
+  [canonical dossier](../implementation-dossier.md) composes the resolved wire
+  contracts.
 
 ## Module map
 

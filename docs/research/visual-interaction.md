@@ -1,5 +1,8 @@
 # Visual and interaction parity contract
 
+> Status: frozen upstream evidence. The [canonical implementation dossier](../implementation-dossier.md)
+> records the approved Spiral-first prototype result and native adaptations.
+
 ## Scope and evidence rules
 
 This note defines the observable visual and interaction contract of Nautilus Log
