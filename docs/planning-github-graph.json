@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "repo": "oldwinter/obsidian-nautilus-log",
+  "dossier_issue": 14,
+  "implementation_root": 16,
+  "pr": 32,
+  "tasks": [
+    { "number": 17, "blocked_by": [] },
+    { "number": 18, "blocked_by": [17] },
+    { "number": 19, "blocked_by": [18] },
+    { "number": 20, "blocked_by": [18] },
+    { "number": 21, "blocked_by": [19, 20] },
+    { "number": 22, "blocked_by": [17] },
+    { "number": 23, "blocked_by": [21] },
+    { "number": 24, "blocked_by": [22, 23] },
+    { "number": 25, "blocked_by": [19, 20, 22] },
+    { "number": 26, "blocked_by": [21, 25] },
+    { "number": 27, "blocked_by": [24, 26] },
+    { "number": 28, "blocked_by": [19, 20, 26] },
+    { "number": 29, "blocked_by": [27, 28] },
+    { "number": 30, "blocked_by": [22, 24, 26, 29] },
+    { "number": 31, "blocked_by": [22, 30] }
+  ],
+  "required_task_sections": [
+    "Outcome",
+    "Canonical spec",
+    "Owning files and modules",
+    "Primary requirement ownership",
+    "Native dependencies",
+    "Acceptance tests",
+    "Manual QA",
+    "Exact-SHA evidence",
+    "Rollback boundary"
+  ]
+}

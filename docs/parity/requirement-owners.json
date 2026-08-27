@@ -1,0 +1,1280 @@
+{
+  "$schema": "./requirement-owners.schema.json",
+  "schema_version": 1,
+  "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
+  "row_count": 126,
+  "requirements": [
+    {
+      "id": "UP-INS-01",
+      "owner_ticket": 17,
+      "owner_module": "README.md",
+      "evidence_contributors": [
+        22,
+        30
+      ]
+    },
+    {
+      "id": "UP-INS-02",
+      "owner_ticket": 17,
+      "owner_module": "src/main.ts",
+      "evidence_contributors": [
+        22,
+        30
+      ]
+    },
+    {
+      "id": "UP-INS-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/view.ts",
+      "evidence_contributors": [
+        17,
+        21,
+        30
+      ]
+    },
+    {
+      "id": "UP-INS-04",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        30
+      ]
+    },
+    {
+      "id": "UP-INS-05",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-01",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-02",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-03",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-04",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-05",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-06",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-08",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-09",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-10",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-11",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-12",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-SET-13",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/settings.ts",
+      "evidence_contributors": [
+        21,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-PAR-01",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-02",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-03",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-04",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-05",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-06",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-07",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-08",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-09",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-10",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-11",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-PAR-12",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        20,
+        22
+      ]
+    },
+    {
+      "id": "UP-SCH-01",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-02",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-03",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-04",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-05",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-06",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-SCH-07",
+      "owner_ticket": 19,
+      "owner_module": "src/core/scheduler.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-DAY-01",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ]
+    },
+    {
+      "id": "UP-DAY-02",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ]
+    },
+    {
+      "id": "UP-DAY-03",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ]
+    },
+    {
+      "id": "UP-DAY-04",
+      "owner_ticket": 19,
+      "owner_module": "src/core/day.ts",
+      "evidence_contributors": [
+        21,
+        23
+      ]
+    },
+    {
+      "id": "UP-HIS-01",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ]
+    },
+    {
+      "id": "UP-HIS-02",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ]
+    },
+    {
+      "id": "UP-HIS-03",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ]
+    },
+    {
+      "id": "UP-HIS-04",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ]
+    },
+    {
+      "id": "UP-HIS-05",
+      "owner_ticket": 28,
+      "owner_module": "src/workspace/history-index.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        29
+      ]
+    },
+    {
+      "id": "UP-VIS-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-04",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-06",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-07",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-CTL-01",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ]
+    },
+    {
+      "id": "UP-CTL-02",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ]
+    },
+    {
+      "id": "UP-CTL-03",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ]
+    },
+    {
+      "id": "UP-CTL-04",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ]
+    },
+    {
+      "id": "UP-CTL-05",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        23,
+        25,
+        30
+      ]
+    },
+    {
+      "id": "UP-CMP-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-CMP-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-CMP-03",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-VIS-05",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/spiral.ts",
+      "evidence_contributors": [
+        22,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-01",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/projection-runtime.ts",
+      "evidence_contributors": [
+        19,
+        20,
+        27
+      ]
+    },
+    {
+      "id": "UP-EXE-02",
+      "owner_ticket": 28,
+      "owner_module": "src/core/review.ts",
+      "evidence_contributors": [
+        19,
+        26,
+        27,
+        29
+      ]
+    },
+    {
+      "id": "UP-EXE-03",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-04",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-05",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-06",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-07",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        23,
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-08",
+      "owner_ticket": 29,
+      "owner_module": "src/ui/execution/review-view.ts",
+      "evidence_contributors": [
+        28,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-09",
+      "owner_ticket": 28,
+      "owner_module": "src/core/review.ts",
+      "evidence_contributors": [
+        19,
+        26,
+        27,
+        29
+      ]
+    },
+    {
+      "id": "UP-EXE-10",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/pomo.ts",
+      "evidence_contributors": [
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-11",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/pomo.ts",
+      "evidence_contributors": [
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-12",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/source-navigation.ts",
+      "evidence_contributors": [
+        20,
+        30
+      ]
+    },
+    {
+      "id": "UP-EXE-13",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/panel.ts",
+      "evidence_contributors": [
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-01",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-02",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-03",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-04",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-05",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-06",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-07",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-08",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-09",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/execution-state.ts",
+      "evidence_contributors": [
+        20,
+        25,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-CLK-10",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/active-task-view.ts",
+      "evidence_contributors": [
+        20,
+        21,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-CMD-01",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/commands.ts",
+      "evidence_contributors": [
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-CMD-02",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/commands.ts",
+      "evidence_contributors": [
+        24,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-PER-01",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/logbook-reader.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        28
+      ]
+    },
+    {
+      "id": "UP-PER-02",
+      "owner_ticket": 26,
+      "owner_module": "src/runtime/execution/time-continuity.ts",
+      "evidence_contributors": [
+        21,
+        27,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-01",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/diagnostics.ts",
+      "evidence_contributors": [
+        18,
+        19,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-02",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/diagnostics.ts",
+      "evidence_contributors": [
+        18,
+        19,
+        24,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-03",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-04",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-05",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-06",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-08",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/notices.ts",
+      "evidence_contributors": [
+        21,
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERR-09",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/focus.ts",
+      "evidence_contributors": [
+        23,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-01",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-02",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-03",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-04",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-05",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-06",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-07",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-ERX-08",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        25,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "UP-DRF-01",
+      "owner_ticket": 17,
+      "owner_module": "README.md",
+      "evidence_contributors": [
+        22,
+        31
+      ]
+    },
+    {
+      "id": "UP-DRF-02",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        19,
+        22
+      ]
+    },
+    {
+      "id": "UP-DRF-03",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/primary-plan-resolver.ts",
+      "evidence_contributors": [
+        18,
+        22,
+        26
+      ]
+    },
+    {
+      "id": "UP-DRF-04",
+      "owner_ticket": 20,
+      "owner_module": "src/workspace/primary-plan-resolver.ts",
+      "evidence_contributors": [
+        18,
+        22,
+        26
+      ]
+    },
+    {
+      "id": "UP-DRF-05",
+      "owner_ticket": 18,
+      "owner_module": "src/core/grammar-v1.ts",
+      "evidence_contributors": [
+        19,
+        22
+      ]
+    },
+    {
+      "id": "UP-DRF-06",
+      "owner_ticket": 24,
+      "owner_module": "src/ui/planner/controls.ts",
+      "evidence_contributors": [
+        22,
+        23
+      ]
+    },
+    {
+      "id": "UP-DRF-07",
+      "owner_ticket": 27,
+      "owner_module": "src/adapters/execution-entry.ts",
+      "evidence_contributors": [
+        22,
+        24
+      ]
+    },
+    {
+      "id": "UP-DRF-08",
+      "owner_ticket": 27,
+      "owner_module": "src/i18n/locales/en/execution.ts",
+      "evidence_contributors": [
+        22,
+        24
+      ]
+    },
+    {
+      "id": "UP-DRF-09",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/source-ledger.json",
+      "evidence_contributors": [
+        23,
+        30
+      ]
+    },
+    {
+      "id": "OBS-TRACE-001",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/requirements.json",
+      "evidence_contributors": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    {
+      "id": "OBS-HOST-001",
+      "owner_ticket": 27,
+      "owner_module": "src/ui/execution/active-task-view.ts",
+      "evidence_contributors": [
+        21,
+        23,
+        24,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "OBS-VIS-001",
+      "owner_ticket": 23,
+      "owner_module": "src/ui/planner/responsive-layout.ts",
+      "evidence_contributors": [
+        24,
+        30
+      ]
+    },
+    {
+      "id": "OBS-VIS-002",
+      "owner_ticket": 24,
+      "owner_module": "styles/theme.css",
+      "evidence_contributors": [
+        23,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "OBS-A11Y-001",
+      "owner_ticket": 24,
+      "owner_module": "styles/a11y.css",
+      "evidence_contributors": [
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "OBS-SAFE-001",
+      "owner_ticket": 25,
+      "owner_module": "src/workspace/commit.ts",
+      "evidence_contributors": [
+        20,
+        26,
+        30
+      ]
+    },
+    {
+      "id": "OBS-LIFE-001",
+      "owner_ticket": 21,
+      "owner_module": "src/runtime/lifecycle.ts",
+      "evidence_contributors": [
+        17,
+        23,
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "OBS-I18N-001",
+      "owner_ticket": 24,
+      "owner_module": "src/i18n/resolver.ts",
+      "evidence_contributors": [
+        27,
+        29,
+        30
+      ]
+    },
+    {
+      "id": "OBS-LOCAL-001",
+      "owner_ticket": 17,
+      "owner_module": "src/main.ts",
+      "evidence_contributors": [
+        22,
+        30,
+        31
+      ]
+    },
+    {
+      "id": "REL-001",
+      "owner_ticket": 22,
+      "owner_module": "scripts/release/",
+      "evidence_contributors": [
+        17,
+        30,
+        31
+      ]
+    },
+    {
+      "id": "REL-002",
+      "owner_ticket": 22,
+      "owner_module": "docs/parity/scope.schema.json",
+      "evidence_contributors": [
+        30,
+        31
+      ]
+    },
+    {
+      "id": "REL-003",
+      "owner_ticket": 31,
+      "owner_module": "external:g7-g9-sign-off",
+      "evidence_contributors": [
+        22,
+        30
+      ]
+    }
+  ]
+}
