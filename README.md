@@ -1,7 +1,20 @@
-# Nautilus Log for Obsidian
+# Spiral Day
 
-An Obsidian desktop plugin project aiming for observable behavior and visual
-parity with Roam Nautilus Log, while using Obsidian-native internals.
+An unofficial, independently maintained Obsidian desktop plugin project aiming
+for observable behavior and visual parity with Roam Nautilus Log, while using
+Obsidian-native internals.
+
+## Product Identity
+
+- Project, manifest, and Community directory name: **Spiral Day**
+- Stable plugin ID and installation folder: `spiral-day`
+- `Nautilus Log` identifies the upstream lineage, not an alternate name for
+  this plugin.
+
+Spiral Day is not affiliated with or endorsed by Obsidian or the upstream
+project maintainers. The governing naming, attribution, notice, and migration
+rules are recorded in the
+[product naming and attribution decision](docs/decisions/community-compliant-product-naming-and-attribution.md).
 
 ## Baseline
 
@@ -23,6 +36,23 @@ parity with Roam Nautilus Log, while using Obsidian-native internals.
 - Local-only operation: no telemetry or network dependency.
 - Planning is read-only. Vault writes happen only after explicit user actions.
 - English and Simplified Chinese ship from the first public release.
+
+## Credits and Provenance
+
+- [Roam Nautilus Log](https://github.com/404KSG/roam-nautilus-log) by
+  `404KSG` is the direct functional baseline.
+- [Nautilus](https://github.com/tombarys/roam-depot-nautilus) by Tomas Baranek
+  is the original project and concept lineage.
+- [Nautilus Enhanced](https://github.com/hopeserena/nautilus-enhanced) by
+  `hopeserena` is the intermediate fork lineage.
+- [Roam Depot Render Template](https://github.com/8bitgentleman/roam-depot-render-template)
+  by Matt Vogel is part of the license-notice lineage.
+- [Roam Logbook](https://github.com/forrestchang/roam-logbook) by Jiayuan
+  Zhang informs the CLOCK/LOGBOOK compatibility and provenance boundary.
+
+Credits do not replace required license notices. Before copied or substantially
+ported code enters the project, the applicable verbatim notices and per-file
+provenance must be recorded as required by the decision above.
 
 Implementation begins only after the Wayfinder map has resolved the behavior,
 data-contract, architecture, and parity-acceptance decisions.
