@@ -58,7 +58,6 @@
       "allowed_module_boundaries": [
         "src/workspace/clock-parser.ts",
         "src/workspace/daily-notes.ts",
-        "src/workspace/identity-index.ts",
         "src/workspace/logbook-reader.ts",
         "src/workspace/plan-region.ts",
         "src/workspace/primary-plan-resolver.ts",
@@ -160,6 +159,7 @@
         "src/workspace/commit.ts",
         "src/workspace/conflicts.ts",
         "src/workspace/expectation.ts",
+        "src/workspace/identity-index.ts",
         "src/workspace/logbook-clock.ts",
         "src/workspace/mutations.ts",
         "src/workspace/receipt.ts",
