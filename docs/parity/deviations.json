@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
+  "deviations": [],
+  "not_applicable_approvals": [
+    {
+      "id": "NA-001",
+      "requirement_ids": [
+        "UP-INS-01"
+      ],
+      "status": "approved",
+      "reason": "The contradictory Roam Depot preview route is not an Obsidian product behavior; the Obsidian package and installation workflow is tested instead.",
+      "reviewer": "oldwinter",
+      "approved_at": "2026-08-28T06:04:45+08:00",
+      "source_refs": [
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/implementation-dossier.md#explicit-deviations-and-drift-boundary"
+      ]
+    }
+  ]
+}
