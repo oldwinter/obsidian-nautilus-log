@@ -1112,8 +1112,9 @@ function currentFileRunningFacts(
         && item.source.blockId === selectedRepair?.id
         && item.source.itemSpan.fromOffset === selectedRepair?.selectedSpan.fromOffset
         && item.source.itemSpan.toOffset === selectedRepair?.selectedSpan.toOffset;
-      if (!item.source.blockId
-        || (!selectedOwnerRepair && (ownerIdentity?.kind !== "unique" || ownerIdentity.location.path !== path))) continue;
+      if (item.source.blockId) {
+        if (!selectedOwnerRepair && (ownerIdentity?.kind !== "unique" || ownerIdentity.location.path !== path)) continue;
+      } else if (!item.executionEligible) continue;
       const logbook = readLogbook(text, {
         path,
         itemFromOffset: item.source.itemSpan.fromOffset,
@@ -2750,7 +2751,9 @@ export class WorkspaceCommitter {
       globalCheck: {
         status: !snapshot.complete
           ? "unavailable"
-          : facts.potentialRunning.length > 0 || facts.running.length > 1
+          : result.code === "clock-owner-invalid"
+            || facts.potentialRunning.length > 0
+            || facts.running.length > 1
             ? "violated"
             : "confirmed",
         runningClockIds: snapshot.complete ? receiptRunningKeys(facts.running) : [],

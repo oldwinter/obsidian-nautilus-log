@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { WorkspaceCommitter } from "../../../src/workspace/commit.ts";
+import {
+  ObsidianAtomicTextAccess,
+  WorkspaceCommitter,
+  legacyRunningClockKey,
+} from "../../../src/workspace/commit.ts";
 import { parseClockText } from "../../../src/workspace/clock-parser.ts";
 import {
   WRITE_RESULT_CODES,
@@ -14,9 +18,11 @@ import {
   createMutationExpectation,
   revalidateClockExpectation,
 } from "../../../src/workspace/expectation.ts";
+import { WorkspaceIndex } from "../../../src/workspace/identity-index.ts";
 import { createMutationPlan, type MutationPlan } from "../../../src/workspace/mutations.ts";
 import { createCommitReceipt, isCommitReceipt } from "../../../src/workspace/receipt.ts";
 import { createSourceVersion } from "../../../src/workspace/source-version.ts";
+import { MemoryTextAccess } from "../../../src/workspace/text-access.ts";
 import { MemoryAtomicTextAccess } from "./adapters.ts";
 import {
   CLOCK_A,
@@ -33,12 +39,16 @@ import {
 
 const PATH = "Daily/Protocol.md";
 
-function clockInPlan(expectedRunningClockIds: readonly string[] = []) {
+function clockInPlanAt(
+  path: string,
+  intentId: string,
+  expectedRunningClockIds: readonly string[] = [],
+) {
   return createMutationPlan({
-    intentId: "protocol-clock-in",
+    intentId,
     action: "clock-in",
     stages: [{
-      path: PATH,
+      path,
       confirmationRequired: false,
       operations: [{
         kind: "clock-in",
@@ -47,6 +57,35 @@ function clockInPlan(expectedRunningClockIds: readonly string[] = []) {
       }],
     }],
     expectedRunningClockIds,
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+}
+
+function clockInPlan(expectedRunningClockIds: readonly string[] = []) {
+  return clockInPlanAt(PATH, "protocol-clock-in", expectedRunningClockIds);
+}
+
+function anonymousLegacyClockOutPlan(path: string, runningKey: string, intentId: string) {
+  return createMutationPlan({
+    intentId,
+    action: "clock-out",
+    stages: [{
+      path,
+      confirmationRequired: false,
+      operations: [{
+        kind: "clock-out",
+        target: { kind: "clock" },
+        close: {
+          clockId: CLOCK_NEW,
+          assignedClockId: CLOCK_NEW,
+          endEpochMs: NOW,
+          offsetMinutes: 480,
+          legacyStartOffsetMinutes: 480,
+        },
+      }],
+    }],
+    expectedRunningClockIds: [runningKey],
     settingsVersion: CONTEXT.settingsVersion,
     zoneId: CONTEXT.zoneId,
   });
@@ -198,6 +237,315 @@ test("multiple and potential running CLOCKs block before any host transform", as
   assert.equal(potential.result?.code, "potential-running-clock");
   assert.equal(potentialAccess.transactionCounts.size, 0);
   potentialWriter.dispose();
+});
+
+test("anonymous eligible ID-less legacy running CLOCK blocks cross-file Clock In", async () => {
+  const anonymousPath = "Daily/Anonymous.md";
+  const targetPath = "Daily/Target.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const anonymousSource = `${OPEN}\n- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const targetSource = `${OPEN}\n- [ ] Identified task d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [anonymousPath]: anonymousSource,
+    [targetPath]: targetSource,
+  });
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+  const parsedSnapshot = await parsedIndex.rebuild();
+  assert.equal(parsedSnapshot.running.length, 1);
+  const parsedClock = parsedSnapshot.running[0]!;
+  const runningKey = legacyRunningClockKey(
+    parsedClock.path,
+    parsedClock.fromOffset,
+    parsedClock.text,
+  );
+  parsedIndex.dispose();
+  const mutation = clockInPlanAt(targetPath, "anonymous-legacy-global-clock", [runningKey]);
+  const expectation = await mutationExpectation(access, mutation, {
+    planIds: [PLAN_B],
+    expectedRunningClockIds: [runningKey],
+  });
+  assert.deepEqual(expectation.expectedRunningClockIds, [runningKey]);
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "conflict");
+  assert.equal(receipt.result?.code, "clock-owner-invalid");
+  assert.equal(receipt.globalCheck.status, "violated");
+  assert.equal(receipt.globalCheck.runningClockIds.length, 1);
+  assert.ok(receipt.globalCheck.runningClockIds[0]?.startsWith(
+    `legacy:${parsedClock.path}:${parsedClock.fromOffset}:`,
+  ));
+  assert.match(receipt.globalCheck.runningClockIds[0]!, /:[0-9a-f]{8}$/);
+  assert.equal(receipt.globalCheck.runningClockIds[0]?.includes(parsedClock.text), false);
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(anonymousPath), anonymousSource);
+  assert.equal(await access.readText(targetPath), targetSource);
+  writer.dispose();
+});
+
+test("anonymous eligible malformed potential CLOCK blocks cross-file Clock In", async () => {
+  const anonymousPath = "Daily/Anonymous-Potential.md";
+  const targetPath = "Daily/Potential-Target.md";
+  const anonymousSource = `${OPEN}\n- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - CLOCK: [broken]\n${CLOSE}\n`;
+  const targetSource = `${OPEN}\n- [ ] Identified task d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [anonymousPath]: anonymousSource,
+    [targetPath]: targetSource,
+  });
+  const mutation = clockInPlanAt(targetPath, "anonymous-potential-global-clock");
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+  const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "conflict");
+  assert.equal(receipt.result?.code, "potential-running-clock");
+  assert.equal(receipt.globalCheck.status, "violated");
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(anonymousPath), anonymousSource);
+  assert.equal(await access.readText(targetPath), targetSource);
+  writer.dispose();
+});
+
+test("unsaved active Editor anonymous legacy CLOCK blocks before any host mutation", async () => {
+  const anonymousPath = "Daily/Unsaved-Anonymous.md";
+  const targetPath = "Daily/Unsaved-Target.md";
+  const vaultAnonymous = `${OPEN}\n- [ ] Anonymous task d30m\n${CLOSE}\n`;
+  const editorAnonymous = `${OPEN}\n- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - CLOCK: [2026-08-28 08:10]\n${CLOSE}\n`;
+  const targetSource = `${OPEN}\n- [ ] Identified task d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const text = new MemoryTextAccess({
+    [anonymousPath]: vaultAnonymous,
+    [targetPath]: targetSource,
+  });
+  let editorTransactions = 0;
+  let vaultProcesses = 0;
+  const buffers = new Map([[anonymousPath, editorAnonymous], [targetPath, targetSource]]);
+  const access = new ObsidianAtomicTextAccess({
+    text,
+    editorForPath: (path) => buffers.has(path) ? {
+      getValue: () => buffers.get(path)!,
+      transaction: () => { editorTransactions += 1; },
+    } as never : undefined,
+    fileForPath: (path) => ({ path }) as never,
+    vault: {
+      process: async () => { vaultProcesses += 1; },
+    } as never,
+  });
+  const mutation = clockInPlanAt(targetPath, "unsaved-anonymous-global-clock");
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.result?.code, "clock-owner-invalid");
+  assert.equal(receipt.globalCheck.status, "violated");
+  assert.equal(editorTransactions, 0);
+  assert.equal(vaultProcesses, 0);
+  assert.equal(await text.readText(anonymousPath), vaultAnonymous);
+  assert.equal(buffers.get(anonymousPath), editorAnonymous);
+  assert.equal(buffers.get(targetPath), targetSource);
+  writer.dispose();
+});
+
+test("anonymous non-execution-eligible CLOCK-looking text stays outside global running facts", async () => {
+  const noneligiblePath = "Daily/Anonymous-Noneligible.md";
+  const source = [
+    OPEN,
+    "- [x] Done task",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:01]",
+    "- [ ] Fixed event 08:00-09:00",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:02]",
+    "- Plain item",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:03]",
+    "- [-] Foreign task",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:04]",
+    `- [ ] Eligible task d30m ^${PLAN_B}`,
+    CLOSE,
+    "",
+  ].join("\n");
+  const access = new MemoryAtomicTextAccess({ [noneligiblePath]: source });
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  const index = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+
+  const snapshot = await index.rebuild();
+
+  assert.equal(snapshot.complete, true);
+  assert.deepEqual(snapshot.clocks.filter((clock) => clock.path === noneligiblePath), []);
+  assert.deepEqual(snapshot.running, []);
+  assert.deepEqual(snapshot.potentialRunning, []);
+  const target = index.identity(PLAN_B);
+  assert.equal(target.kind, "unique");
+  if (target.kind === "unique") assert.equal(target.location.path, noneligiblePath);
+  index.dispose();
+
+  const mutation = clockInPlanAt(noneligiblePath, "noneligible-anonymous-clock-text");
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+  const receipt = await writer.commit(mutation, expectation);
+  assert.equal(receipt.outcome, "applied");
+  assert.deepEqual(receipt.globalCheck, { status: "confirmed", runningClockIds: [CLOCK_NEW] });
+  assert.equal(access.transactionCounts.get(noneligiblePath), 1);
+  const after = await access.readText(noneligiblePath);
+  for (const clockText of ["08:01", "08:02", "08:03", "08:04"]) {
+    assert.equal(after?.match(new RegExp(`CLOCK: \\[2026-08-28 ${clockText}\\]`, "g"))?.length, 1);
+  }
+  writer.dispose();
+
+  const confirmedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+  const confirmed = await confirmedIndex.rebuild();
+  assert.equal(confirmed.clocks.length, 1);
+  assert.equal(confirmed.running.length, 1);
+  assert.equal(confirmed.running[0]?.clockId, CLOCK_NEW);
+  assert.equal(confirmed.running[0]?.ownerId, PLAN_B);
+  const confirmedTarget = confirmedIndex.identity(PLAN_B);
+  assert.equal(confirmedTarget.kind, "unique");
+  if (confirmedTarget.kind === "unique") assert.equal(confirmedTarget.location.path, noneligiblePath);
+  confirmedIndex.dispose();
+});
+
+test("callback scan rejects newly inserted anonymous eligible CLOCK facts without plugin bytes", async () => {
+  const path = "Daily/Anonymous-Callback.md";
+  const source = `${OPEN}\n- [ ] Eligible task d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  for (const fixture of [
+    {
+      intentId: "anonymous-callback-legacy",
+      clockText: "CLOCK: [2026-08-28 08:10]",
+      code: "source-conflict",
+      globalStatus: "unavailable",
+    },
+    {
+      intentId: "anonymous-callback-potential",
+      clockText: "CLOCK: [broken]",
+      code: "potential-running-clock",
+      globalStatus: "unavailable",
+    },
+  ] as const) {
+    const access = new MemoryAtomicTextAccess({ [path]: source });
+    const mutation = clockInPlanAt(path, fixture.intentId);
+    const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+    const externallyChanged = source.replace(
+      `- [ ] Eligible task d30m ^${PLAN_B}`,
+      `- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - ${fixture.clockText}\n- [ ] Eligible task d30m ^${PLAN_B}`,
+    );
+    access.raceBeforeCallback(path, () => externallyChanged);
+    const writer = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+
+    const receipt = await writer.commit(mutation, expectation);
+
+    assert.equal(receipt.outcome, "conflict");
+    assert.equal(receipt.result?.code, fixture.code);
+    assert.equal(receipt.globalCheck.status, fixture.globalStatus);
+    assert.equal(access.transactionCounts.get(path), 1);
+    assert.equal(access.callbackCounts.get(path), 1);
+    assert.equal(await access.readText(path), externallyChanged);
+    assert.equal((await access.readText(path))?.includes(CLOCK_NEW), false);
+    writer.dispose();
+  }
+});
+
+test("anonymous eligible ID-less legacy running CLOCK permits only exact locator recovery", async () => {
+  const anonymousPath = "Daily/Anonymous-Recovery.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const source = `${OPEN}\n- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({ [anonymousPath]: source });
+  const legacyStart = Date.UTC(2026, 7, 28, 0, 10);
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
+  const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+  const parsed = await parsedIndex.rebuild();
+  assert.equal(parsed.running.length, 1);
+  const parsedClock = parsed.running[0]!;
+  const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
+  parsedIndex.dispose();
+  const mutation = anonymousLegacyClockOutPlan(
+    anonymousPath,
+    runningKey,
+    "anonymous-legacy-exact-recovery",
+  );
+  const expectation = await mutationExpectation(access, mutation, {
+    clockIds: [undefined],
+    expectedRunningClockIds: [runningKey],
+    logbookOptions: { resolveLocalTime },
+  });
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "applied");
+  const expected = source.replace(
+    legacyText,
+    formatCanonicalClosedClock(legacyStart, 480, NOW, 480, CLOCK_NEW),
+  );
+  assert.equal(access.transactionCounts.get(anonymousPath), 1);
+  assert.equal(access.callbackCounts.get(anonymousPath), 1);
+  assert.equal(await access.readText(anonymousPath), expected);
+  const primitive = process.env.OBS_SAFE_ADAPTER_PASS === "disposable-editor" ? "editor" : "vault-process";
+  assert.deepEqual(receipt.sources, [{
+    path: anonymousPath,
+    primitive,
+    before: await createSourceVersion(anonymousPath, source),
+    after: await createSourceVersion(anonymousPath, expected),
+    changed: true,
+    undo: primitive === "editor" ? "single-native-step" : "not-guaranteed",
+    locations: [{ line: 3 }],
+  }]);
+  assert.ok(receipt.semanticChanges.includes("clock-closed"));
+  assert.deepEqual(receipt.resultingIdentities, [{
+    kind: "clock",
+    id: CLOCK_NEW,
+    path: anonymousPath,
+  }]);
+  assert.deepEqual(receipt.globalCheck, { status: "confirmed", runningClockIds: [] });
+  writer.dispose();
+
+  const drifted = source.replace(`${OPEN}\n`, `${OPEN}\n<!-- external offset shift -->\n`);
+  const driftAccess = new MemoryAtomicTextAccess({ [anonymousPath]: source });
+  const driftExpectation = await mutationExpectation(driftAccess, mutation, {
+    clockIds: [undefined],
+    expectedRunningClockIds: [runningKey],
+    logbookOptions: { resolveLocalTime },
+  });
+  driftAccess.raceBeforeCallback(anonymousPath, () => drifted);
+  const driftWriter = new WorkspaceCommitter(driftAccess, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+  const rejected = await driftWriter.commit(mutation, driftExpectation);
+  assert.equal(rejected.outcome, "conflict");
+  assert.equal(rejected.result?.code, "source-conflict");
+  assert.equal(driftAccess.transactionCounts.get(anonymousPath), 1);
+  assert.equal(driftAccess.callbackCounts.get(anonymousPath), 1);
+  assert.equal(await driftAccess.readText(anonymousPath), drifted);
+  assert.equal((await driftAccess.readText(anonymousPath))?.includes(CLOCK_NEW), false);
+  driftWriter.dispose();
 });
 
 test("over-limit and settings-version drift fail closed without sampling or writes", async () => {

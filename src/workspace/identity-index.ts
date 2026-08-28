@@ -1,3 +1,4 @@
+import { parseGrammar } from "../core/grammar-v1";
 import {
   isCanonicalClockId,
   parseClockText,
@@ -469,6 +470,18 @@ function isValidStructuredClock(clock: LogbookClock, path: string, text: string)
     && text.slice(clock.fromOffset, clock.toOffset) === clock.text;
 }
 
+function isAnonymousLegacyRunningFact(clock: LogbookClock): boolean {
+  if (clock.ownerId) return false;
+  if (clock.parsed.kind === "record") {
+    return clock.parsed.record.format === "legacy"
+      && clock.parsed.record.state === "running"
+      && clock.parsed.record.clockId === undefined;
+  }
+  if (clock.parsed.kind !== "malformed" || !clock.parsed.potentialRunning) return false;
+  const terminalId = TERMINAL_BLOCK_ID.exec(clock.text)?.[1];
+  return terminalId === undefined || !isCanonicalClockId(terminalId);
+}
+
 function normalizeLimits(overrides: Partial<WorkspaceIndexLimits> | undefined): WorkspaceIndexLimits {
   const limits = { ...DEFAULT_WORKSPACE_INDEX_LIMITS, ...overrides };
   for (const [name, value] of Object.entries(limits)) {
@@ -534,14 +547,21 @@ async function defaultStructuredClockReader(
   await context.checkpoint();
   if (!primary.region) return Object.freeze(clocks);
   if (primary.limitExceeded) throw STRUCTURED_INPUT_LIMIT;
+  const parsed = parseGrammar({ version: primary.region.version, candidates: primary.candidates });
+  const eligibleAnonymousSources = new Set(parsed.items
+    .filter((item) => item.executionEligible && !item.source.blockId)
+    .map((item) => item.source));
   for (const candidate of primary.candidates) {
     await context.checkpoint();
-    if (candidate.status === "foreign" || !candidate.source.blockId) continue;
+    if (
+      candidate.status === "foreign"
+      || (!candidate.source.blockId && !eligibleAnonymousSources.has(candidate.source))
+    ) continue;
     const logbook = readLogbook(text, {
       path,
       itemFromOffset: candidate.source.itemSpan.fromOffset,
       itemToOffset: candidate.source.itemSpan.toOffset,
-      ownerId: candidate.source.blockId,
+      ...(candidate.source.blockId ? { ownerId: candidate.source.blockId } : {}),
     }, { ...options, maxClockRecords: maximumClockRecords - clocks.length });
     if (!logbook.complete) throw CLOCK_RECORD_LIMIT;
     clocks.push(...logbook.clocks);
@@ -895,14 +915,16 @@ export class WorkspaceIndex {
             blockIds,
           });
         }
-        if (!clock.ownerId || lookup.lookup(clock.ownerId).kind !== "unique") continue;
+        if (clock.ownerId) {
+          if (lookup.lookup(clock.ownerId).kind !== "unique") continue;
+        } else if (!isAnonymousLegacyRunningFact(clock)) continue;
         if (clock.parsed.kind === "not-clock") continue;
         const entry: IndexedClockSource = Object.freeze({
           path: clock.path,
           fromOffset: clock.fromOffset,
           toOffset: clock.toOffset,
           text: clock.text,
-          ownerId: clock.ownerId,
+          ...(clock.ownerId ? { ownerId: clock.ownerId } : {}),
           ...(clock.parsed.kind === "record" && clock.parsed.record.clockId
             ? { clockId: clock.parsed.record.clockId }
             : {}),
@@ -912,7 +934,9 @@ export class WorkspaceIndex {
         const key = clockKey(entry);
         const existing = clocks.get(key);
         if (!existing) clocks.set(key, entry);
-        else if (!existing.ownerId) clocks.set(key, Object.freeze({ ...existing, ownerId: clock.ownerId }));
+        else if (!existing.ownerId && clock.ownerId) {
+          clocks.set(key, Object.freeze({ ...existing, ownerId: clock.ownerId }));
+        }
         if (clocks.size > this.#limits.maxClockRecords) {
           return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
             markdownFiles: paths.length, markdownBytes, blockIds,
