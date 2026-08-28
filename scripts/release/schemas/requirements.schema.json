@@ -47,7 +47,6 @@
     "test_catalog": {
       "type": "array",
       "minItems": 126,
-      "maxItems": 126,
       "items": { "$ref": "#/$defs/testEntry" }
     },
     "environment_catalog": {

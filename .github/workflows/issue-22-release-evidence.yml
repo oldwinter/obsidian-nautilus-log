@@ -5,11 +5,18 @@ on:
     paths:
       - ".github/workflows/issue-22-release-evidence.yml"
       - "docs/parity/**"
+      - "docs/planning-github-graph.json"
+      - "docs/planning-local-links.json"
+      - "docs/implementation-dossier.md"
+      - "docs/decisions/**"
+      - "docs/research/behavior-inventory.md"
       - "scripts/release/**"
       - "scripts/verify/**"
       - "tests/fixtures/**"
       - "tests/release/**"
       - "scripts/check-planning-docs.mjs"
+      - "scripts/generate-planning-local-links.mjs"
+      - "scripts/generate-requirement-owners.mjs"
   push:
     branches:
       - "implement/issue-22-evidence"

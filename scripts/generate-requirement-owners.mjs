@@ -248,57 +248,60 @@ const visualEnvironments = ["ENV-VIS", "ENV-HOST-PRIVATE", "ENV-HOST-MAC", "ENV-
 function environmentsFor(id) {
   if (id === "OBS-TRACE-001") return ["ENV-PURE"];
   if (["OBS-HOST-001", "OBS-LIFE-001", "OBS-LOCAL-001", "OBS-SAFE-001", "REL-001"].includes(id)) return hostEnvironments;
-  if (id === "OBS-VIS-001" || id === "OBS-I18N-001") return visualEnvironments;
-  if (id === "OBS-VIS-002") return [...visualEnvironments, "ENV-THEME"];
+  if (id === "OBS-VIS-001" || id === "OBS-I18N-001") return ["ENV-PURE", ...visualEnvironments];
+  if (id === "OBS-VIS-002") return ["ENV-PURE", ...visualEnvironments, "ENV-THEME"];
   if (id === "OBS-A11Y-001") return ["ENV-VIS", "ENV-A11Y"];
   if (id === "REL-002") return ["ENV-PURE", "ENV-HOST-PRIVATE"];
-  if (id === "REL-003") return [...environmentDescriptions.keys()];
+  if (id === "REL-003") return hostEnvironments;
   const family = id.split("-")[1];
   if (["PAR", "SCH", "DAY", "HIS", "DRF"].includes(family)) {
-    if (["UP-DRF-06", "UP-DRF-09"].includes(id)) return ["ENV-PURE", "ENV-VIS"];
-    if (["UP-DRF-07", "UP-DRF-08"].includes(id)) return hostEnvironments;
     return ["ENV-PURE"];
   }
-  if (["VIS", "CMP"].includes(family)) return visualEnvironments;
-  if (family === "CTL") return [...visualEnvironments, "ENV-A11Y"];
+  if (["VIS", "CMP"].includes(family)) return ["ENV-PURE", ...visualEnvironments];
+  if (family === "CTL") return ["ENV-PURE", ...visualEnvironments, "ENV-A11Y"];
+  if (family === "EXE") return ["ENV-PURE", "ENV-VIS", ...hostEnvironments.slice(1)];
+  if (["ERR", "ERX"].includes(family)) return [...hostEnvironments, "ENV-A11Y"];
   if (id === "UP-ERR-09") return ["ENV-VIS", "ENV-A11Y"];
   return hostEnvironments;
 }
 
-function evidenceKindFor(id) {
-  if (id.startsWith("REL-")) return "PACKAGE";
-  const obsKinds = {
-    "OBS-TRACE-001": "CONTRACT", "OBS-HOST-001": "MANUAL", "OBS-VIS-001": "SCREENSHOT", "OBS-VIS-002": "SCREENSHOT",
-    "OBS-A11Y-001": "A11Y", "OBS-SAFE-001": "VAULT", "OBS-LIFE-001": "LIFECYCLE", "OBS-I18N-001": "SCREENSHOT", "OBS-LOCAL-001": "INTEGRATION",
-  };
-  if (obsKinds[id]) return obsKinds[id];
+function matrixFor(id) {
+  if (id.startsWith("REL-")) {
+    return { kinds: ["PACKAGE"], gates: ["G0", "G7", id === "REL-003" ? "G9" : "G8"] };
+  }
+  if (id.startsWith("UP-DRF-")) return { kinds: ["CONTRACT"], gates: ["G0", "G2", "G8"] };
+  if (id === "OBS-TRACE-001") return { kinds: ["CONTRACT"], gates: ["G0"] };
+  if (id === "OBS-A11Y-001") return { kinds: ["KEYBOARD", "A11Y", "MANUAL"], gates: ["G5", "G6"] };
+  if (id === "OBS-I18N-001") return { kinds: ["CONTRACT", "SCREENSHOT", "MANUAL"], gates: ["G1", "G5", "G6"] };
+  if (id === "OBS-LOCAL-001") return { kinds: ["INTEGRATION"], gates: ["G4", "G7", "G8"] };
   const family = id.split("-")[1];
-  if (["PAR", "SCH", "DAY", "HIS", "DRF"].includes(family)) return "CONTRACT";
-  if (["VIS", "CMP"].includes(family)) return "SCREENSHOT";
-  if (["CTL", "CMD"].includes(family)) return "KEYBOARD";
-  if (["INS", "SET"].includes(family)) return "LIFECYCLE";
-  return "INTEGRATION";
+  if (["INS", "SET"].includes(family) || id === "OBS-LIFE-001") {
+    return { kinds: ["UNIT", "INTEGRATION", "LIFECYCLE", "PACKAGE", "MANUAL"], gates: id === "OBS-LIFE-001" ? ["G1", "G4", "G7", "G8"] : ["G1", "G4", "G7", "G8"] };
+  }
+  if (["PAR", "SCH", "DAY"].includes(family)) return { kinds: ["UNIT", "CONTRACT"], gates: ["G1", "G2"] };
+  if (family === "HIS") return { kinds: ["UNIT", "VAULT", "INTEGRATION"], gates: ["G2", "G3"] };
+  if (["VIS", "CTL", "CMP"].includes(family) || id.startsWith("OBS-VIS")) {
+    return { kinds: ["CONTRACT", "INTEGRATION", "SCREENSHOT", "MANUAL"], gates: ["G4", "G5", "G6"] };
+  }
+  if (family === "EXE") return { kinds: ["CONTRACT", "INTEGRATION", "KEYBOARD", "SCREENSHOT", "LIFECYCLE"], gates: ["G2", "G4", "G5", "G6"] };
+  if (["CLK", "PER"].includes(family) || id === "OBS-SAFE-001") {
+    return { kinds: ["UNIT", "CONTRACT", "VAULT", "INTEGRATION", "LIFECYCLE"], gates: id === "OBS-SAFE-001" ? ["G2", "G3", "G4", "G8"] : ["G2", "G3", "G4"] };
+  }
+  if (family === "CMD" || id === "OBS-HOST-001") return { kinds: ["INTEGRATION", "KEYBOARD", "MANUAL"], gates: ["G4", "G5"] };
+  if (["ERR", "ERX"].includes(family)) return { kinds: ["CONTRACT", "VAULT", "INTEGRATION", "A11Y"], gates: ["G2", "G3", "G4", "G5"] };
+  throw new Error(`no evidence matrix for ${id}`);
 }
 
-function gatesFor(id) {
-  if (id.startsWith("REL-")) return ["G0", "G7", id === "REL-003" ? "G9" : "G8"];
-  if (id.startsWith("UP-DRF-")) return ["G0", "G2", "G8"];
-  if (id.startsWith("OBS-VIS")) return ["G4", "G5", "G6"];
-  if (id === "OBS-A11Y-001") return ["G5", "G6"];
-  if (id === "OBS-I18N-001") return ["G1", "G5", "G6"];
-  if (id === "OBS-SAFE-001") return ["G2", "G3", "G4", "G8"];
-  if (id === "OBS-HOST-001") return ["G4", "G5"];
-  if (id === "OBS-LIFE-001") return ["G1", "G4", "G7", "G8"];
-  if (id === "OBS-LOCAL-001") return ["G4", "G7", "G8"];
-  if (id === "OBS-TRACE-001") return ["G0"];
-  const family = id.split("-")[1];
-  if (["VIS", "CTL", "CMP"].includes(family)) return ["G2", "G5", "G6"];
-  if (["INS", "SET", "CMD"].includes(family)) return ["G1", "G4", "G5"];
-  if (["ERR", "ERX"].includes(family)) return ["G2", "G4", "G5"];
-  return ["G2"];
-}
-
-const testCatalog = expectedIds.map((id) => ({ id: `TC-${id}-001`, requirement_id: id, evidence_kind: evidenceKindFor(id), gates: gatesFor(id) }));
+const testsByRequirement = new Map(expectedIds.map((id) => {
+  const matrix = matrixFor(id);
+  return [id, matrix.kinds.map((evidenceKind, index) => ({
+    id: `TC-${id}-${String(index + 1).padStart(3, "0")}`,
+    requirement_id: id,
+    evidence_kind: evidenceKind,
+    gates: matrix.gates,
+  }))];
+}));
+const testCatalog = expectedIds.flatMap((id) => testsByRequirement.get(id));
 const ownershipByRequirementId = new Map(ownershipRequirements.map((row) => [row.id, row]));
 const requirements = expectedIds.map((id) => {
   const inventoryRow = id.startsWith("UP-") ? inventoryRows.get(id.slice(3)) : undefined;
@@ -309,7 +312,7 @@ const requirements = expectedIds.map((id) => {
     source_refs: inventoryRow ? sourceRefsFor(inventoryRow) : [decisionRef],
     disposition: isNotApplicable ? "not-applicable" : "exact",
     fixtures: [...fixtureByRequirement.get(id)],
-    tests: [`TC-${id}-001`],
+    tests: testsByRequirement.get(id).map((entry) => entry.id),
     environments: environmentsFor(id),
     evidence: [],
     ...(isNotApplicable ? { not_applicable_approval_id: "NA-001" } : {}),

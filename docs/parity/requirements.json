@@ -191,413 +191,1578 @@
     {
       "id": "TC-UP-INS-01-001",
       "requirement_id": "UP-INS-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-01-002",
+      "requirement_id": "UP-INS-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-01-003",
+      "requirement_id": "UP-INS-01",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-01-004",
+      "requirement_id": "UP-INS-01",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-01-005",
+      "requirement_id": "UP-INS-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-INS-02-001",
       "requirement_id": "UP-INS-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-02-002",
+      "requirement_id": "UP-INS-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-02-003",
+      "requirement_id": "UP-INS-02",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-02-004",
+      "requirement_id": "UP-INS-02",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-02-005",
+      "requirement_id": "UP-INS-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-INS-03-001",
       "requirement_id": "UP-INS-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-03-002",
+      "requirement_id": "UP-INS-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-03-003",
+      "requirement_id": "UP-INS-03",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-03-004",
+      "requirement_id": "UP-INS-03",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-03-005",
+      "requirement_id": "UP-INS-03",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-INS-04-001",
       "requirement_id": "UP-INS-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-04-002",
+      "requirement_id": "UP-INS-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-04-003",
+      "requirement_id": "UP-INS-04",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-04-004",
+      "requirement_id": "UP-INS-04",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-04-005",
+      "requirement_id": "UP-INS-04",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-INS-05-001",
       "requirement_id": "UP-INS-05",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-05-002",
+      "requirement_id": "UP-INS-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-05-003",
+      "requirement_id": "UP-INS-05",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-05-004",
+      "requirement_id": "UP-INS-05",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-INS-05-005",
+      "requirement_id": "UP-INS-05",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-01-001",
       "requirement_id": "UP-SET-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-01-002",
+      "requirement_id": "UP-SET-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-01-003",
+      "requirement_id": "UP-SET-01",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-01-004",
+      "requirement_id": "UP-SET-01",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-01-005",
+      "requirement_id": "UP-SET-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-02-001",
       "requirement_id": "UP-SET-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-02-002",
+      "requirement_id": "UP-SET-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-02-003",
+      "requirement_id": "UP-SET-02",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-02-004",
+      "requirement_id": "UP-SET-02",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-02-005",
+      "requirement_id": "UP-SET-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-03-001",
       "requirement_id": "UP-SET-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-03-002",
+      "requirement_id": "UP-SET-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-03-003",
+      "requirement_id": "UP-SET-03",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-03-004",
+      "requirement_id": "UP-SET-03",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-03-005",
+      "requirement_id": "UP-SET-03",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-04-001",
       "requirement_id": "UP-SET-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-04-002",
+      "requirement_id": "UP-SET-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-04-003",
+      "requirement_id": "UP-SET-04",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-04-004",
+      "requirement_id": "UP-SET-04",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-04-005",
+      "requirement_id": "UP-SET-04",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-05-001",
       "requirement_id": "UP-SET-05",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-05-002",
+      "requirement_id": "UP-SET-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-05-003",
+      "requirement_id": "UP-SET-05",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-05-004",
+      "requirement_id": "UP-SET-05",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-05-005",
+      "requirement_id": "UP-SET-05",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-06-001",
       "requirement_id": "UP-SET-06",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-06-002",
+      "requirement_id": "UP-SET-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-06-003",
+      "requirement_id": "UP-SET-06",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-06-004",
+      "requirement_id": "UP-SET-06",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-06-005",
+      "requirement_id": "UP-SET-06",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-07-001",
       "requirement_id": "UP-SET-07",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-07-002",
+      "requirement_id": "UP-SET-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-07-003",
+      "requirement_id": "UP-SET-07",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-07-004",
+      "requirement_id": "UP-SET-07",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-07-005",
+      "requirement_id": "UP-SET-07",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-08-001",
       "requirement_id": "UP-SET-08",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-08-002",
+      "requirement_id": "UP-SET-08",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-08-003",
+      "requirement_id": "UP-SET-08",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-08-004",
+      "requirement_id": "UP-SET-08",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-08-005",
+      "requirement_id": "UP-SET-08",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-09-001",
       "requirement_id": "UP-SET-09",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-09-002",
+      "requirement_id": "UP-SET-09",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-09-003",
+      "requirement_id": "UP-SET-09",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-09-004",
+      "requirement_id": "UP-SET-09",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-09-005",
+      "requirement_id": "UP-SET-09",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-10-001",
       "requirement_id": "UP-SET-10",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-10-002",
+      "requirement_id": "UP-SET-10",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-10-003",
+      "requirement_id": "UP-SET-10",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-10-004",
+      "requirement_id": "UP-SET-10",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-10-005",
+      "requirement_id": "UP-SET-10",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-11-001",
       "requirement_id": "UP-SET-11",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-11-002",
+      "requirement_id": "UP-SET-11",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-11-003",
+      "requirement_id": "UP-SET-11",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-11-004",
+      "requirement_id": "UP-SET-11",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-11-005",
+      "requirement_id": "UP-SET-11",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-12-001",
       "requirement_id": "UP-SET-12",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-12-002",
+      "requirement_id": "UP-SET-12",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-12-003",
+      "requirement_id": "UP-SET-12",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-12-004",
+      "requirement_id": "UP-SET-12",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-12-005",
+      "requirement_id": "UP-SET-12",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-SET-13-001",
       "requirement_id": "UP-SET-13",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-13-002",
+      "requirement_id": "UP-SET-13",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-13-003",
+      "requirement_id": "UP-SET-13",
       "evidence_kind": "LIFECYCLE",
       "gates": [
         "G1",
         "G4",
-        "G5"
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-13-004",
+      "requirement_id": "UP-SET-13",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-UP-SET-13-005",
+      "requirement_id": "UP-SET-13",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
       ]
     },
     {
       "id": "TC-UP-PAR-01-001",
       "requirement_id": "UP-PAR-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-01-002",
+      "requirement_id": "UP-PAR-01",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-02-001",
       "requirement_id": "UP-PAR-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-02-002",
+      "requirement_id": "UP-PAR-02",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-03-001",
       "requirement_id": "UP-PAR-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-03-002",
+      "requirement_id": "UP-PAR-03",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-04-001",
       "requirement_id": "UP-PAR-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-04-002",
+      "requirement_id": "UP-PAR-04",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-05-001",
       "requirement_id": "UP-PAR-05",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-05-002",
+      "requirement_id": "UP-PAR-05",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-06-001",
       "requirement_id": "UP-PAR-06",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-06-002",
+      "requirement_id": "UP-PAR-06",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-07-001",
       "requirement_id": "UP-PAR-07",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-07-002",
+      "requirement_id": "UP-PAR-07",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-08-001",
       "requirement_id": "UP-PAR-08",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-08-002",
+      "requirement_id": "UP-PAR-08",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-09-001",
       "requirement_id": "UP-PAR-09",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-09-002",
+      "requirement_id": "UP-PAR-09",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-10-001",
       "requirement_id": "UP-PAR-10",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-10-002",
+      "requirement_id": "UP-PAR-10",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-11-001",
       "requirement_id": "UP-PAR-11",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-11-002",
+      "requirement_id": "UP-PAR-11",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-PAR-12-001",
       "requirement_id": "UP-PAR-12",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-PAR-12-002",
+      "requirement_id": "UP-PAR-12",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-01-001",
       "requirement_id": "UP-SCH-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-01-002",
+      "requirement_id": "UP-SCH-01",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-02-001",
       "requirement_id": "UP-SCH-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-02-002",
+      "requirement_id": "UP-SCH-02",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-03-001",
       "requirement_id": "UP-SCH-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-03-002",
+      "requirement_id": "UP-SCH-03",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-04-001",
       "requirement_id": "UP-SCH-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-04-002",
+      "requirement_id": "UP-SCH-04",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-05-001",
       "requirement_id": "UP-SCH-05",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-05-002",
+      "requirement_id": "UP-SCH-05",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-06-001",
       "requirement_id": "UP-SCH-06",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-06-002",
+      "requirement_id": "UP-SCH-06",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-SCH-07-001",
       "requirement_id": "UP-SCH-07",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-SCH-07-002",
+      "requirement_id": "UP-SCH-07",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-DAY-01-001",
       "requirement_id": "UP-DAY-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-01-002",
+      "requirement_id": "UP-DAY-01",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-DAY-02-001",
       "requirement_id": "UP-DAY-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-02-002",
+      "requirement_id": "UP-DAY-02",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-DAY-03-001",
       "requirement_id": "UP-DAY-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-03-002",
+      "requirement_id": "UP-DAY-03",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-DAY-04-001",
       "requirement_id": "UP-DAY-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G2"
+      ]
+    },
+    {
+      "id": "TC-UP-DAY-04-002",
+      "requirement_id": "UP-DAY-04",
       "evidence_kind": "CONTRACT",
       "gates": [
+        "G1",
         "G2"
       ]
     },
     {
       "id": "TC-UP-HIS-01-001",
       "requirement_id": "UP-HIS-01",
-      "evidence_kind": "CONTRACT",
+      "evidence_kind": "UNIT",
       "gates": [
-        "G2"
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-01-002",
+      "requirement_id": "UP-HIS-01",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-01-003",
+      "requirement_id": "UP-HIS-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3"
       ]
     },
     {
       "id": "TC-UP-HIS-02-001",
       "requirement_id": "UP-HIS-02",
-      "evidence_kind": "CONTRACT",
+      "evidence_kind": "UNIT",
       "gates": [
-        "G2"
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-02-002",
+      "requirement_id": "UP-HIS-02",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-02-003",
+      "requirement_id": "UP-HIS-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3"
       ]
     },
     {
       "id": "TC-UP-HIS-03-001",
       "requirement_id": "UP-HIS-03",
-      "evidence_kind": "CONTRACT",
+      "evidence_kind": "UNIT",
       "gates": [
-        "G2"
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-03-002",
+      "requirement_id": "UP-HIS-03",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-03-003",
+      "requirement_id": "UP-HIS-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3"
       ]
     },
     {
       "id": "TC-UP-HIS-04-001",
       "requirement_id": "UP-HIS-04",
-      "evidence_kind": "CONTRACT",
+      "evidence_kind": "UNIT",
       "gates": [
-        "G2"
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-04-002",
+      "requirement_id": "UP-HIS-04",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-04-003",
+      "requirement_id": "UP-HIS-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3"
       ]
     },
     {
       "id": "TC-UP-HIS-05-001",
       "requirement_id": "UP-HIS-05",
-      "evidence_kind": "CONTRACT",
+      "evidence_kind": "UNIT",
       "gates": [
-        "G2"
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-05-002",
+      "requirement_id": "UP-HIS-05",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3"
+      ]
+    },
+    {
+      "id": "TC-UP-HIS-05-003",
+      "requirement_id": "UP-HIS-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3"
       ]
     },
     {
       "id": "TC-UP-VIS-01-001",
       "requirement_id": "UP-VIS-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-01-002",
+      "requirement_id": "UP-VIS-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-01-003",
+      "requirement_id": "UP-VIS-01",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-01-004",
+      "requirement_id": "UP-VIS-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -605,9 +1770,39 @@
     {
       "id": "TC-UP-VIS-02-001",
       "requirement_id": "UP-VIS-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-02-002",
+      "requirement_id": "UP-VIS-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-02-003",
+      "requirement_id": "UP-VIS-02",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-02-004",
+      "requirement_id": "UP-VIS-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -615,9 +1810,39 @@
     {
       "id": "TC-UP-VIS-03-001",
       "requirement_id": "UP-VIS-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-03-002",
+      "requirement_id": "UP-VIS-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-03-003",
+      "requirement_id": "UP-VIS-03",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-03-004",
+      "requirement_id": "UP-VIS-03",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -625,9 +1850,39 @@
     {
       "id": "TC-UP-VIS-04-001",
       "requirement_id": "UP-VIS-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-04-002",
+      "requirement_id": "UP-VIS-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-04-003",
+      "requirement_id": "UP-VIS-04",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-04-004",
+      "requirement_id": "UP-VIS-04",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -635,9 +1890,39 @@
     {
       "id": "TC-UP-VIS-06-001",
       "requirement_id": "UP-VIS-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-06-002",
+      "requirement_id": "UP-VIS-06",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-06-003",
+      "requirement_id": "UP-VIS-06",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-06-004",
+      "requirement_id": "UP-VIS-06",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -645,9 +1930,39 @@
     {
       "id": "TC-UP-VIS-07-001",
       "requirement_id": "UP-VIS-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-07-002",
+      "requirement_id": "UP-VIS-07",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-07-003",
+      "requirement_id": "UP-VIS-07",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-07-004",
+      "requirement_id": "UP-VIS-07",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -655,9 +1970,39 @@
     {
       "id": "TC-UP-CTL-01-001",
       "requirement_id": "UP-CTL-01",
-      "evidence_kind": "KEYBOARD",
+      "evidence_kind": "CONTRACT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-01-002",
+      "requirement_id": "UP-CTL-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-01-003",
+      "requirement_id": "UP-CTL-01",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-01-004",
+      "requirement_id": "UP-CTL-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -665,9 +2010,39 @@
     {
       "id": "TC-UP-CTL-02-001",
       "requirement_id": "UP-CTL-02",
-      "evidence_kind": "KEYBOARD",
+      "evidence_kind": "CONTRACT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-02-002",
+      "requirement_id": "UP-CTL-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-02-003",
+      "requirement_id": "UP-CTL-02",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-02-004",
+      "requirement_id": "UP-CTL-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -675,9 +2050,39 @@
     {
       "id": "TC-UP-CTL-03-001",
       "requirement_id": "UP-CTL-03",
-      "evidence_kind": "KEYBOARD",
+      "evidence_kind": "CONTRACT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-03-002",
+      "requirement_id": "UP-CTL-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-03-003",
+      "requirement_id": "UP-CTL-03",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-03-004",
+      "requirement_id": "UP-CTL-03",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -685,9 +2090,39 @@
     {
       "id": "TC-UP-CTL-04-001",
       "requirement_id": "UP-CTL-04",
-      "evidence_kind": "KEYBOARD",
+      "evidence_kind": "CONTRACT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-04-002",
+      "requirement_id": "UP-CTL-04",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-04-003",
+      "requirement_id": "UP-CTL-04",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-04-004",
+      "requirement_id": "UP-CTL-04",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -695,9 +2130,39 @@
     {
       "id": "TC-UP-CTL-05-001",
       "requirement_id": "UP-CTL-05",
-      "evidence_kind": "KEYBOARD",
+      "evidence_kind": "CONTRACT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-05-002",
+      "requirement_id": "UP-CTL-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-05-003",
+      "requirement_id": "UP-CTL-05",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CTL-05-004",
+      "requirement_id": "UP-CTL-05",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -705,9 +2170,39 @@
     {
       "id": "TC-UP-CMP-01-001",
       "requirement_id": "UP-CMP-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-01-002",
+      "requirement_id": "UP-CMP-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-01-003",
+      "requirement_id": "UP-CMP-01",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-01-004",
+      "requirement_id": "UP-CMP-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -715,9 +2210,39 @@
     {
       "id": "TC-UP-CMP-02-001",
       "requirement_id": "UP-CMP-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-02-002",
+      "requirement_id": "UP-CMP-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-02-003",
+      "requirement_id": "UP-CMP-02",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-02-004",
+      "requirement_id": "UP-CMP-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -725,9 +2250,39 @@
     {
       "id": "TC-UP-CMP-03-001",
       "requirement_id": "UP-CMP-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-03-002",
+      "requirement_id": "UP-CMP-03",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-03-003",
+      "requirement_id": "UP-CMP-03",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-CMP-03-004",
+      "requirement_id": "UP-CMP-03",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -735,9 +2290,39 @@
     {
       "id": "TC-UP-VIS-05-001",
       "requirement_id": "UP-VIS-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-05-002",
+      "requirement_id": "UP-VIS-05",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-05-003",
+      "requirement_id": "UP-VIS-05",
       "evidence_kind": "SCREENSHOT",
       "gates": [
-        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-VIS-05-004",
+      "requirement_id": "UP-VIS-05",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -745,193 +2330,1241 @@
     {
       "id": "TC-UP-EXE-01-001",
       "requirement_id": "UP-EXE-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-01-002",
+      "requirement_id": "UP-EXE-01",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-01-003",
+      "requirement_id": "UP-EXE-01",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-01-004",
+      "requirement_id": "UP-EXE-01",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-01-005",
+      "requirement_id": "UP-EXE-01",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-02-001",
       "requirement_id": "UP-EXE-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-02-002",
+      "requirement_id": "UP-EXE-02",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-02-003",
+      "requirement_id": "UP-EXE-02",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-02-004",
+      "requirement_id": "UP-EXE-02",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-02-005",
+      "requirement_id": "UP-EXE-02",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-03-001",
       "requirement_id": "UP-EXE-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-03-002",
+      "requirement_id": "UP-EXE-03",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-03-003",
+      "requirement_id": "UP-EXE-03",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-03-004",
+      "requirement_id": "UP-EXE-03",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-03-005",
+      "requirement_id": "UP-EXE-03",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-04-001",
       "requirement_id": "UP-EXE-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-04-002",
+      "requirement_id": "UP-EXE-04",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-04-003",
+      "requirement_id": "UP-EXE-04",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-04-004",
+      "requirement_id": "UP-EXE-04",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-04-005",
+      "requirement_id": "UP-EXE-04",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-05-001",
       "requirement_id": "UP-EXE-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-05-002",
+      "requirement_id": "UP-EXE-05",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-05-003",
+      "requirement_id": "UP-EXE-05",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-05-004",
+      "requirement_id": "UP-EXE-05",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-05-005",
+      "requirement_id": "UP-EXE-05",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-06-001",
       "requirement_id": "UP-EXE-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-06-002",
+      "requirement_id": "UP-EXE-06",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-06-003",
+      "requirement_id": "UP-EXE-06",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-06-004",
+      "requirement_id": "UP-EXE-06",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-06-005",
+      "requirement_id": "UP-EXE-06",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-07-001",
       "requirement_id": "UP-EXE-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-07-002",
+      "requirement_id": "UP-EXE-07",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-07-003",
+      "requirement_id": "UP-EXE-07",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-07-004",
+      "requirement_id": "UP-EXE-07",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-07-005",
+      "requirement_id": "UP-EXE-07",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-08-001",
       "requirement_id": "UP-EXE-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-08-002",
+      "requirement_id": "UP-EXE-08",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-08-003",
+      "requirement_id": "UP-EXE-08",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-08-004",
+      "requirement_id": "UP-EXE-08",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-08-005",
+      "requirement_id": "UP-EXE-08",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-09-001",
       "requirement_id": "UP-EXE-09",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-09-002",
+      "requirement_id": "UP-EXE-09",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-09-003",
+      "requirement_id": "UP-EXE-09",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-09-004",
+      "requirement_id": "UP-EXE-09",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-09-005",
+      "requirement_id": "UP-EXE-09",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-10-001",
       "requirement_id": "UP-EXE-10",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-10-002",
+      "requirement_id": "UP-EXE-10",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-10-003",
+      "requirement_id": "UP-EXE-10",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-10-004",
+      "requirement_id": "UP-EXE-10",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-10-005",
+      "requirement_id": "UP-EXE-10",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-11-001",
       "requirement_id": "UP-EXE-11",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-11-002",
+      "requirement_id": "UP-EXE-11",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-11-003",
+      "requirement_id": "UP-EXE-11",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-11-004",
+      "requirement_id": "UP-EXE-11",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-11-005",
+      "requirement_id": "UP-EXE-11",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-12-001",
       "requirement_id": "UP-EXE-12",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-12-002",
+      "requirement_id": "UP-EXE-12",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-12-003",
+      "requirement_id": "UP-EXE-12",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-12-004",
+      "requirement_id": "UP-EXE-12",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-12-005",
+      "requirement_id": "UP-EXE-12",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-EXE-13-001",
       "requirement_id": "UP-EXE-13",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-13-002",
+      "requirement_id": "UP-EXE-13",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-13-003",
+      "requirement_id": "UP-EXE-13",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-13-004",
+      "requirement_id": "UP-EXE-13",
+      "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-UP-EXE-13-005",
+      "requirement_id": "UP-EXE-13",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G4",
+        "G5",
+        "G6"
       ]
     },
     {
       "id": "TC-UP-CLK-01-001",
       "requirement_id": "UP-CLK-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-01-002",
+      "requirement_id": "UP-CLK-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-01-003",
+      "requirement_id": "UP-CLK-01",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-01-004",
+      "requirement_id": "UP-CLK-01",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-01-005",
+      "requirement_id": "UP-CLK-01",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-02-001",
       "requirement_id": "UP-CLK-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-02-002",
+      "requirement_id": "UP-CLK-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-02-003",
+      "requirement_id": "UP-CLK-02",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-02-004",
+      "requirement_id": "UP-CLK-02",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-02-005",
+      "requirement_id": "UP-CLK-02",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-03-001",
       "requirement_id": "UP-CLK-03",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-03-002",
+      "requirement_id": "UP-CLK-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-03-003",
+      "requirement_id": "UP-CLK-03",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-03-004",
+      "requirement_id": "UP-CLK-03",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-03-005",
+      "requirement_id": "UP-CLK-03",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-04-001",
       "requirement_id": "UP-CLK-04",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-04-002",
+      "requirement_id": "UP-CLK-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-04-003",
+      "requirement_id": "UP-CLK-04",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-04-004",
+      "requirement_id": "UP-CLK-04",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-04-005",
+      "requirement_id": "UP-CLK-04",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-05-001",
       "requirement_id": "UP-CLK-05",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-05-002",
+      "requirement_id": "UP-CLK-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-05-003",
+      "requirement_id": "UP-CLK-05",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-05-004",
+      "requirement_id": "UP-CLK-05",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-05-005",
+      "requirement_id": "UP-CLK-05",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-06-001",
       "requirement_id": "UP-CLK-06",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-06-002",
+      "requirement_id": "UP-CLK-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-06-003",
+      "requirement_id": "UP-CLK-06",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-06-004",
+      "requirement_id": "UP-CLK-06",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-06-005",
+      "requirement_id": "UP-CLK-06",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-07-001",
       "requirement_id": "UP-CLK-07",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-07-002",
+      "requirement_id": "UP-CLK-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-07-003",
+      "requirement_id": "UP-CLK-07",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-07-004",
+      "requirement_id": "UP-CLK-07",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-07-005",
+      "requirement_id": "UP-CLK-07",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-08-001",
       "requirement_id": "UP-CLK-08",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-08-002",
+      "requirement_id": "UP-CLK-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-08-003",
+      "requirement_id": "UP-CLK-08",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-08-004",
+      "requirement_id": "UP-CLK-08",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-08-005",
+      "requirement_id": "UP-CLK-08",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-09-001",
       "requirement_id": "UP-CLK-09",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-09-002",
+      "requirement_id": "UP-CLK-09",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-09-003",
+      "requirement_id": "UP-CLK-09",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-09-004",
+      "requirement_id": "UP-CLK-09",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-09-005",
+      "requirement_id": "UP-CLK-09",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CLK-10-001",
       "requirement_id": "UP-CLK-10",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-10-002",
+      "requirement_id": "UP-CLK-10",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-10-003",
+      "requirement_id": "UP-CLK-10",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-10-004",
+      "requirement_id": "UP-CLK-10",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-CLK-10-005",
+      "requirement_id": "UP-CLK-10",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-CMD-01-001",
       "requirement_id": "UP-CMD-01",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-01-002",
+      "requirement_id": "UP-CMD-01",
       "evidence_kind": "KEYBOARD",
       "gates": [
-        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-01-003",
+      "requirement_id": "UP-CMD-01",
+      "evidence_kind": "MANUAL",
+      "gates": [
         "G4",
         "G5"
       ]
@@ -939,9 +3572,26 @@
     {
       "id": "TC-UP-CMD-02-001",
       "requirement_id": "UP-CMD-02",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-02-002",
+      "requirement_id": "UP-CMD-02",
       "evidence_kind": "KEYBOARD",
       "gates": [
-        "G1",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-CMD-02-003",
+      "requirement_id": "UP-CMD-02",
+      "evidence_kind": "MANUAL",
+      "gates": [
         "G4",
         "G5"
       ]
@@ -949,25 +3599,143 @@
     {
       "id": "TC-UP-PER-01-001",
       "requirement_id": "UP-PER-01",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-01-002",
+      "requirement_id": "UP-PER-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-01-003",
+      "requirement_id": "UP-PER-01",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-01-004",
+      "requirement_id": "UP-PER-01",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-01-005",
+      "requirement_id": "UP-PER-01",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-PER-02-001",
       "requirement_id": "UP-PER-02",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-02-002",
+      "requirement_id": "UP-PER-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-02-003",
+      "requirement_id": "UP-PER-02",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-02-004",
+      "requirement_id": "UP-PER-02",
       "evidence_kind": "INTEGRATION",
       "gates": [
-        "G2"
+        "G2",
+        "G3",
+        "G4"
+      ]
+    },
+    {
+      "id": "TC-UP-PER-02-005",
+      "requirement_id": "UP-PER-02",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4"
       ]
     },
     {
       "id": "TC-UP-ERR-01-001",
       "requirement_id": "UP-ERR-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-01-002",
+      "requirement_id": "UP-ERR-01",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-01-003",
+      "requirement_id": "UP-ERR-01",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-01-004",
+      "requirement_id": "UP-ERR-01",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -975,9 +3743,43 @@
     {
       "id": "TC-UP-ERR-02-001",
       "requirement_id": "UP-ERR-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-02-002",
+      "requirement_id": "UP-ERR-02",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-02-003",
+      "requirement_id": "UP-ERR-02",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-02-004",
+      "requirement_id": "UP-ERR-02",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -985,9 +3787,43 @@
     {
       "id": "TC-UP-ERR-03-001",
       "requirement_id": "UP-ERR-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-03-002",
+      "requirement_id": "UP-ERR-03",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-03-003",
+      "requirement_id": "UP-ERR-03",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-03-004",
+      "requirement_id": "UP-ERR-03",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -995,9 +3831,43 @@
     {
       "id": "TC-UP-ERR-04-001",
       "requirement_id": "UP-ERR-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-04-002",
+      "requirement_id": "UP-ERR-04",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-04-003",
+      "requirement_id": "UP-ERR-04",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-04-004",
+      "requirement_id": "UP-ERR-04",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1005,9 +3875,43 @@
     {
       "id": "TC-UP-ERR-05-001",
       "requirement_id": "UP-ERR-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-05-002",
+      "requirement_id": "UP-ERR-05",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-05-003",
+      "requirement_id": "UP-ERR-05",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-05-004",
+      "requirement_id": "UP-ERR-05",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1015,9 +3919,43 @@
     {
       "id": "TC-UP-ERR-06-001",
       "requirement_id": "UP-ERR-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-06-002",
+      "requirement_id": "UP-ERR-06",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-06-003",
+      "requirement_id": "UP-ERR-06",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-06-004",
+      "requirement_id": "UP-ERR-06",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1025,9 +3963,43 @@
     {
       "id": "TC-UP-ERR-07-001",
       "requirement_id": "UP-ERR-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-07-002",
+      "requirement_id": "UP-ERR-07",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-07-003",
+      "requirement_id": "UP-ERR-07",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-07-004",
+      "requirement_id": "UP-ERR-07",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1035,9 +4007,43 @@
     {
       "id": "TC-UP-ERR-08-001",
       "requirement_id": "UP-ERR-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-08-002",
+      "requirement_id": "UP-ERR-08",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-08-003",
+      "requirement_id": "UP-ERR-08",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-08-004",
+      "requirement_id": "UP-ERR-08",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1045,9 +4051,43 @@
     {
       "id": "TC-UP-ERR-09-001",
       "requirement_id": "UP-ERR-09",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-09-002",
+      "requirement_id": "UP-ERR-09",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-09-003",
+      "requirement_id": "UP-ERR-09",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERR-09-004",
+      "requirement_id": "UP-ERR-09",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1055,9 +4095,43 @@
     {
       "id": "TC-UP-ERX-01-001",
       "requirement_id": "UP-ERX-01",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-01-002",
+      "requirement_id": "UP-ERX-01",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-01-003",
+      "requirement_id": "UP-ERX-01",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-01-004",
+      "requirement_id": "UP-ERX-01",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1065,9 +4139,43 @@
     {
       "id": "TC-UP-ERX-02-001",
       "requirement_id": "UP-ERX-02",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-02-002",
+      "requirement_id": "UP-ERX-02",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-02-003",
+      "requirement_id": "UP-ERX-02",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-02-004",
+      "requirement_id": "UP-ERX-02",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1075,9 +4183,43 @@
     {
       "id": "TC-UP-ERX-03-001",
       "requirement_id": "UP-ERX-03",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-03-002",
+      "requirement_id": "UP-ERX-03",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-03-003",
+      "requirement_id": "UP-ERX-03",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-03-004",
+      "requirement_id": "UP-ERX-03",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1085,9 +4227,43 @@
     {
       "id": "TC-UP-ERX-04-001",
       "requirement_id": "UP-ERX-04",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-04-002",
+      "requirement_id": "UP-ERX-04",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-04-003",
+      "requirement_id": "UP-ERX-04",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-04-004",
+      "requirement_id": "UP-ERX-04",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1095,9 +4271,43 @@
     {
       "id": "TC-UP-ERX-05-001",
       "requirement_id": "UP-ERX-05",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-05-002",
+      "requirement_id": "UP-ERX-05",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-05-003",
+      "requirement_id": "UP-ERX-05",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-05-004",
+      "requirement_id": "UP-ERX-05",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1105,9 +4315,43 @@
     {
       "id": "TC-UP-ERX-06-001",
       "requirement_id": "UP-ERX-06",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-06-002",
+      "requirement_id": "UP-ERX-06",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-06-003",
+      "requirement_id": "UP-ERX-06",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-06-004",
+      "requirement_id": "UP-ERX-06",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1115,9 +4359,43 @@
     {
       "id": "TC-UP-ERX-07-001",
       "requirement_id": "UP-ERX-07",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-07-002",
+      "requirement_id": "UP-ERX-07",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-07-003",
+      "requirement_id": "UP-ERX-07",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-07-004",
+      "requirement_id": "UP-ERX-07",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1125,9 +4403,43 @@
     {
       "id": "TC-UP-ERX-08-001",
       "requirement_id": "UP-ERX-08",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-08-002",
+      "requirement_id": "UP-ERX-08",
+      "evidence_kind": "VAULT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-08-003",
+      "requirement_id": "UP-ERX-08",
       "evidence_kind": "INTEGRATION",
       "gates": [
         "G2",
+        "G3",
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-UP-ERX-08-004",
+      "requirement_id": "UP-ERX-08",
+      "evidence_kind": "A11Y",
+      "gates": [
+        "G2",
+        "G3",
         "G4",
         "G5"
       ]
@@ -1233,6 +4545,24 @@
     {
       "id": "TC-OBS-HOST-001-001",
       "requirement_id": "OBS-HOST-001",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-OBS-HOST-001-002",
+      "requirement_id": "OBS-HOST-001",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G4",
+        "G5"
+      ]
+    },
+    {
+      "id": "TC-OBS-HOST-001-003",
+      "requirement_id": "OBS-HOST-001",
       "evidence_kind": "MANUAL",
       "gates": [
         "G4",
@@ -1242,7 +4572,37 @@
     {
       "id": "TC-OBS-VIS-001-001",
       "requirement_id": "OBS-VIS-001",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-001-002",
+      "requirement_id": "OBS-VIS-001",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-001-003",
+      "requirement_id": "OBS-VIS-001",
       "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-001-004",
+      "requirement_id": "OBS-VIS-001",
+      "evidence_kind": "MANUAL",
       "gates": [
         "G4",
         "G5",
@@ -1252,7 +4612,37 @@
     {
       "id": "TC-OBS-VIS-002-001",
       "requirement_id": "OBS-VIS-002",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-002-002",
+      "requirement_id": "OBS-VIS-002",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-002-003",
+      "requirement_id": "OBS-VIS-002",
       "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G4",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-VIS-002-004",
+      "requirement_id": "OBS-VIS-002",
+      "evidence_kind": "MANUAL",
       "gates": [
         "G4",
         "G5",
@@ -1262,6 +4652,15 @@
     {
       "id": "TC-OBS-A11Y-001-001",
       "requirement_id": "OBS-A11Y-001",
+      "evidence_kind": "KEYBOARD",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-A11Y-001-002",
+      "requirement_id": "OBS-A11Y-001",
       "evidence_kind": "A11Y",
       "gates": [
         "G5",
@@ -1269,7 +4668,38 @@
       ]
     },
     {
+      "id": "TC-OBS-A11Y-001-003",
+      "requirement_id": "OBS-A11Y-001",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G5",
+        "G6"
+      ]
+    },
+    {
       "id": "TC-OBS-SAFE-001-001",
+      "requirement_id": "OBS-SAFE-001",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-SAFE-001-002",
+      "requirement_id": "OBS-SAFE-001",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-SAFE-001-003",
       "requirement_id": "OBS-SAFE-001",
       "evidence_kind": "VAULT",
       "gates": [
@@ -1280,7 +4710,51 @@
       ]
     },
     {
+      "id": "TC-OBS-SAFE-001-004",
+      "requirement_id": "OBS-SAFE-001",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-SAFE-001-005",
+      "requirement_id": "OBS-SAFE-001",
+      "evidence_kind": "LIFECYCLE",
+      "gates": [
+        "G2",
+        "G3",
+        "G4",
+        "G8"
+      ]
+    },
+    {
       "id": "TC-OBS-LIFE-001-001",
+      "requirement_id": "OBS-LIFE-001",
+      "evidence_kind": "UNIT",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-LIFE-001-002",
+      "requirement_id": "OBS-LIFE-001",
+      "evidence_kind": "INTEGRATION",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-LIFE-001-003",
       "requirement_id": "OBS-LIFE-001",
       "evidence_kind": "LIFECYCLE",
       "gates": [
@@ -1291,9 +4765,51 @@
       ]
     },
     {
+      "id": "TC-OBS-LIFE-001-004",
+      "requirement_id": "OBS-LIFE-001",
+      "evidence_kind": "PACKAGE",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
+      "id": "TC-OBS-LIFE-001-005",
+      "requirement_id": "OBS-LIFE-001",
+      "evidence_kind": "MANUAL",
+      "gates": [
+        "G1",
+        "G4",
+        "G7",
+        "G8"
+      ]
+    },
+    {
       "id": "TC-OBS-I18N-001-001",
       "requirement_id": "OBS-I18N-001",
+      "evidence_kind": "CONTRACT",
+      "gates": [
+        "G1",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-I18N-001-002",
+      "requirement_id": "OBS-I18N-001",
       "evidence_kind": "SCREENSHOT",
+      "gates": [
+        "G1",
+        "G5",
+        "G6"
+      ]
+    },
+    {
+      "id": "TC-OBS-I18N-001-003",
+      "requirement_id": "OBS-I18N-001",
+      "evidence_kind": "MANUAL",
       "gates": [
         "G1",
         "G5",
@@ -1425,7 +4941,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-INS-01-001"
+        "TC-UP-INS-01-001",
+        "TC-UP-INS-01-002",
+        "TC-UP-INS-01-003",
+        "TC-UP-INS-01-004",
+        "TC-UP-INS-01-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1457,7 +4977,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-INS-02-001"
+        "TC-UP-INS-02-001",
+        "TC-UP-INS-02-002",
+        "TC-UP-INS-02-003",
+        "TC-UP-INS-02-004",
+        "TC-UP-INS-02-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1488,7 +5012,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-INS-03-001"
+        "TC-UP-INS-03-001",
+        "TC-UP-INS-03-002",
+        "TC-UP-INS-03-003",
+        "TC-UP-INS-03-004",
+        "TC-UP-INS-03-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1520,7 +5048,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-INS-04-001"
+        "TC-UP-INS-04-001",
+        "TC-UP-INS-04-002",
+        "TC-UP-INS-04-003",
+        "TC-UP-INS-04-004",
+        "TC-UP-INS-04-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1553,7 +5085,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-INS-05-001"
+        "TC-UP-INS-05-001",
+        "TC-UP-INS-05-002",
+        "TC-UP-INS-05-003",
+        "TC-UP-INS-05-004",
+        "TC-UP-INS-05-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1588,7 +5124,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-01-001"
+        "TC-UP-SET-01-001",
+        "TC-UP-SET-01-002",
+        "TC-UP-SET-01-003",
+        "TC-UP-SET-01-004",
+        "TC-UP-SET-01-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1621,7 +5161,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-02-001"
+        "TC-UP-SET-02-001",
+        "TC-UP-SET-02-002",
+        "TC-UP-SET-02-003",
+        "TC-UP-SET-02-004",
+        "TC-UP-SET-02-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1654,7 +5198,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-03-001"
+        "TC-UP-SET-03-001",
+        "TC-UP-SET-03-002",
+        "TC-UP-SET-03-003",
+        "TC-UP-SET-03-004",
+        "TC-UP-SET-03-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1687,7 +5235,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-04-001"
+        "TC-UP-SET-04-001",
+        "TC-UP-SET-04-002",
+        "TC-UP-SET-04-003",
+        "TC-UP-SET-04-004",
+        "TC-UP-SET-04-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1720,7 +5272,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-05-001"
+        "TC-UP-SET-05-001",
+        "TC-UP-SET-05-002",
+        "TC-UP-SET-05-003",
+        "TC-UP-SET-05-004",
+        "TC-UP-SET-05-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1753,7 +5309,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-06-001"
+        "TC-UP-SET-06-001",
+        "TC-UP-SET-06-002",
+        "TC-UP-SET-06-003",
+        "TC-UP-SET-06-004",
+        "TC-UP-SET-06-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1787,7 +5347,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-07-001"
+        "TC-UP-SET-07-001",
+        "TC-UP-SET-07-002",
+        "TC-UP-SET-07-003",
+        "TC-UP-SET-07-004",
+        "TC-UP-SET-07-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1820,7 +5384,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-08-001"
+        "TC-UP-SET-08-001",
+        "TC-UP-SET-08-002",
+        "TC-UP-SET-08-003",
+        "TC-UP-SET-08-004",
+        "TC-UP-SET-08-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1853,7 +5421,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-09-001"
+        "TC-UP-SET-09-001",
+        "TC-UP-SET-09-002",
+        "TC-UP-SET-09-003",
+        "TC-UP-SET-09-004",
+        "TC-UP-SET-09-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1886,7 +5458,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-10-001"
+        "TC-UP-SET-10-001",
+        "TC-UP-SET-10-002",
+        "TC-UP-SET-10-003",
+        "TC-UP-SET-10-004",
+        "TC-UP-SET-10-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1919,7 +5495,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-11-001"
+        "TC-UP-SET-11-001",
+        "TC-UP-SET-11-002",
+        "TC-UP-SET-11-003",
+        "TC-UP-SET-11-004",
+        "TC-UP-SET-11-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1952,7 +5532,11 @@
         "FX-02"
       ],
       "tests": [
-        "TC-UP-SET-12-001"
+        "TC-UP-SET-12-001",
+        "TC-UP-SET-12-002",
+        "TC-UP-SET-12-003",
+        "TC-UP-SET-12-004",
+        "TC-UP-SET-12-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -1985,7 +5569,11 @@
         "FX-01"
       ],
       "tests": [
-        "TC-UP-SET-13-001"
+        "TC-UP-SET-13-001",
+        "TC-UP-SET-13-002",
+        "TC-UP-SET-13-003",
+        "TC-UP-SET-13-004",
+        "TC-UP-SET-13-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -2015,7 +5603,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-01-001"
+        "TC-UP-PAR-01-001",
+        "TC-UP-PAR-01-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2042,7 +5631,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-02-001"
+        "TC-UP-PAR-02-001",
+        "TC-UP-PAR-02-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2069,7 +5659,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-03-001"
+        "TC-UP-PAR-03-001",
+        "TC-UP-PAR-03-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2095,7 +5686,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-04-001"
+        "TC-UP-PAR-04-001",
+        "TC-UP-PAR-04-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2121,7 +5713,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-05-001"
+        "TC-UP-PAR-05-001",
+        "TC-UP-PAR-05-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2148,7 +5741,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-06-001"
+        "TC-UP-PAR-06-001",
+        "TC-UP-PAR-06-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2174,7 +5768,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-07-001"
+        "TC-UP-PAR-07-001",
+        "TC-UP-PAR-07-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2200,7 +5795,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-08-001"
+        "TC-UP-PAR-08-001",
+        "TC-UP-PAR-08-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2225,7 +5821,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-09-001"
+        "TC-UP-PAR-09-001",
+        "TC-UP-PAR-09-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2251,7 +5848,8 @@
         "FX-03"
       ],
       "tests": [
-        "TC-UP-PAR-10-001"
+        "TC-UP-PAR-10-001",
+        "TC-UP-PAR-10-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2277,7 +5875,8 @@
         "FX-04"
       ],
       "tests": [
-        "TC-UP-PAR-11-001"
+        "TC-UP-PAR-11-001",
+        "TC-UP-PAR-11-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2304,7 +5903,8 @@
         "FX-04"
       ],
       "tests": [
-        "TC-UP-PAR-12-001"
+        "TC-UP-PAR-12-001",
+        "TC-UP-PAR-12-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2331,7 +5931,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-01-001"
+        "TC-UP-SCH-01-001",
+        "TC-UP-SCH-01-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2357,7 +5958,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-02-001"
+        "TC-UP-SCH-02-001",
+        "TC-UP-SCH-02-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2384,7 +5986,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-03-001"
+        "TC-UP-SCH-03-001",
+        "TC-UP-SCH-03-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2411,7 +6014,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-04-001"
+        "TC-UP-SCH-04-001",
+        "TC-UP-SCH-04-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2437,7 +6041,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-05-001"
+        "TC-UP-SCH-05-001",
+        "TC-UP-SCH-05-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2463,7 +6068,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-06-001"
+        "TC-UP-SCH-06-001",
+        "TC-UP-SCH-06-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2489,7 +6095,8 @@
         "FX-05"
       ],
       "tests": [
-        "TC-UP-SCH-07-001"
+        "TC-UP-SCH-07-001",
+        "TC-UP-SCH-07-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2515,7 +6122,8 @@
         "FX-06"
       ],
       "tests": [
-        "TC-UP-DAY-01-001"
+        "TC-UP-DAY-01-001",
+        "TC-UP-DAY-01-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2541,7 +6149,8 @@
         "FX-06"
       ],
       "tests": [
-        "TC-UP-DAY-02-001"
+        "TC-UP-DAY-02-001",
+        "TC-UP-DAY-02-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2567,7 +6176,8 @@
         "FX-06"
       ],
       "tests": [
-        "TC-UP-DAY-03-001"
+        "TC-UP-DAY-03-001",
+        "TC-UP-DAY-03-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2593,7 +6203,8 @@
         "FX-06"
       ],
       "tests": [
-        "TC-UP-DAY-04-001"
+        "TC-UP-DAY-04-001",
+        "TC-UP-DAY-04-002"
       ],
       "environments": [
         "ENV-PURE"
@@ -2620,7 +6231,9 @@
         "FX-08"
       ],
       "tests": [
-        "TC-UP-HIS-01-001"
+        "TC-UP-HIS-01-001",
+        "TC-UP-HIS-01-002",
+        "TC-UP-HIS-01-003"
       ],
       "environments": [
         "ENV-PURE"
@@ -2647,7 +6260,9 @@
         "FX-08"
       ],
       "tests": [
-        "TC-UP-HIS-02-001"
+        "TC-UP-HIS-02-001",
+        "TC-UP-HIS-02-002",
+        "TC-UP-HIS-02-003"
       ],
       "environments": [
         "ENV-PURE"
@@ -2674,7 +6289,9 @@
         "FX-08"
       ],
       "tests": [
-        "TC-UP-HIS-03-001"
+        "TC-UP-HIS-03-001",
+        "TC-UP-HIS-03-002",
+        "TC-UP-HIS-03-003"
       ],
       "environments": [
         "ENV-PURE"
@@ -2702,7 +6319,9 @@
         "FX-08"
       ],
       "tests": [
-        "TC-UP-HIS-04-001"
+        "TC-UP-HIS-04-001",
+        "TC-UP-HIS-04-002",
+        "TC-UP-HIS-04-003"
       ],
       "environments": [
         "ENV-PURE"
@@ -2729,7 +6348,9 @@
         "FX-08"
       ],
       "tests": [
-        "TC-UP-HIS-05-001"
+        "TC-UP-HIS-05-001",
+        "TC-UP-HIS-05-002",
+        "TC-UP-HIS-05-003"
       ],
       "environments": [
         "ENV-PURE"
@@ -2756,9 +6377,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-01-001"
+        "TC-UP-VIS-01-001",
+        "TC-UP-VIS-01-002",
+        "TC-UP-VIS-01-003",
+        "TC-UP-VIS-01-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2787,9 +6412,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-02-001"
+        "TC-UP-VIS-02-001",
+        "TC-UP-VIS-02-002",
+        "TC-UP-VIS-02-003",
+        "TC-UP-VIS-02-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2819,9 +6448,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-03-001"
+        "TC-UP-VIS-03-001",
+        "TC-UP-VIS-03-002",
+        "TC-UP-VIS-03-003",
+        "TC-UP-VIS-03-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2850,9 +6483,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-04-001"
+        "TC-UP-VIS-04-001",
+        "TC-UP-VIS-04-002",
+        "TC-UP-VIS-04-003",
+        "TC-UP-VIS-04-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2881,9 +6518,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-06-001"
+        "TC-UP-VIS-06-001",
+        "TC-UP-VIS-06-002",
+        "TC-UP-VIS-06-003",
+        "TC-UP-VIS-06-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2912,9 +6553,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-07-001"
+        "TC-UP-VIS-07-001",
+        "TC-UP-VIS-07-002",
+        "TC-UP-VIS-07-003",
+        "TC-UP-VIS-07-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2943,9 +6588,13 @@
         "FX-07"
       ],
       "tests": [
-        "TC-UP-CTL-01-001"
+        "TC-UP-CTL-01-001",
+        "TC-UP-CTL-01-002",
+        "TC-UP-CTL-01-003",
+        "TC-UP-CTL-01-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -2975,9 +6624,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CTL-02-001"
+        "TC-UP-CTL-02-001",
+        "TC-UP-CTL-02-002",
+        "TC-UP-CTL-02-003",
+        "TC-UP-CTL-02-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3007,9 +6660,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CTL-03-001"
+        "TC-UP-CTL-03-001",
+        "TC-UP-CTL-03-002",
+        "TC-UP-CTL-03-003",
+        "TC-UP-CTL-03-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3040,9 +6697,13 @@
         "FX-07"
       ],
       "tests": [
-        "TC-UP-CTL-04-001"
+        "TC-UP-CTL-04-001",
+        "TC-UP-CTL-04-002",
+        "TC-UP-CTL-04-003",
+        "TC-UP-CTL-04-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3074,9 +6735,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CTL-05-001"
+        "TC-UP-CTL-05-001",
+        "TC-UP-CTL-05-002",
+        "TC-UP-CTL-05-003",
+        "TC-UP-CTL-05-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3105,9 +6770,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CMP-01-001"
+        "TC-UP-CMP-01-001",
+        "TC-UP-CMP-01-002",
+        "TC-UP-CMP-01-003",
+        "TC-UP-CMP-01-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3135,9 +6804,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CMP-02-001"
+        "TC-UP-CMP-02-001",
+        "TC-UP-CMP-02-002",
+        "TC-UP-CMP-02-003",
+        "TC-UP-CMP-02-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3165,9 +6838,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-CMP-03-001"
+        "TC-UP-CMP-03-001",
+        "TC-UP-CMP-03-002",
+        "TC-UP-CMP-03-003",
+        "TC-UP-CMP-03-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3197,9 +6874,13 @@
         "FX-09"
       ],
       "tests": [
-        "TC-UP-VIS-05-001"
+        "TC-UP-VIS-05-001",
+        "TC-UP-VIS-05-002",
+        "TC-UP-VIS-05-003",
+        "TC-UP-VIS-05-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -3228,10 +6909,15 @@
         "FX-10"
       ],
       "tests": [
-        "TC-UP-EXE-01-001"
+        "TC-UP-EXE-01-001",
+        "TC-UP-EXE-01-002",
+        "TC-UP-EXE-01-003",
+        "TC-UP-EXE-01-004",
+        "TC-UP-EXE-01-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3261,10 +6947,15 @@
         "FX-10"
       ],
       "tests": [
-        "TC-UP-EXE-02-001"
+        "TC-UP-EXE-02-001",
+        "TC-UP-EXE-02-002",
+        "TC-UP-EXE-02-003",
+        "TC-UP-EXE-02-004",
+        "TC-UP-EXE-02-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3294,10 +6985,15 @@
         "FX-13"
       ],
       "tests": [
-        "TC-UP-EXE-03-001"
+        "TC-UP-EXE-03-001",
+        "TC-UP-EXE-03-002",
+        "TC-UP-EXE-03-003",
+        "TC-UP-EXE-03-004",
+        "TC-UP-EXE-03-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3327,10 +7023,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-04-001"
+        "TC-UP-EXE-04-001",
+        "TC-UP-EXE-04-002",
+        "TC-UP-EXE-04-003",
+        "TC-UP-EXE-04-004",
+        "TC-UP-EXE-04-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3360,10 +7061,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-05-001"
+        "TC-UP-EXE-05-001",
+        "TC-UP-EXE-05-002",
+        "TC-UP-EXE-05-003",
+        "TC-UP-EXE-05-004",
+        "TC-UP-EXE-05-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3393,10 +7099,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-06-001"
+        "TC-UP-EXE-06-001",
+        "TC-UP-EXE-06-002",
+        "TC-UP-EXE-06-003",
+        "TC-UP-EXE-06-004",
+        "TC-UP-EXE-06-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3426,10 +7137,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-07-001"
+        "TC-UP-EXE-07-001",
+        "TC-UP-EXE-07-002",
+        "TC-UP-EXE-07-003",
+        "TC-UP-EXE-07-004",
+        "TC-UP-EXE-07-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3457,10 +7173,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-08-001"
+        "TC-UP-EXE-08-001",
+        "TC-UP-EXE-08-002",
+        "TC-UP-EXE-08-003",
+        "TC-UP-EXE-08-004",
+        "TC-UP-EXE-08-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3490,10 +7211,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-09-001"
+        "TC-UP-EXE-09-001",
+        "TC-UP-EXE-09-002",
+        "TC-UP-EXE-09-003",
+        "TC-UP-EXE-09-004",
+        "TC-UP-EXE-09-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3522,10 +7248,15 @@
         "FX-13"
       ],
       "tests": [
-        "TC-UP-EXE-10-001"
+        "TC-UP-EXE-10-001",
+        "TC-UP-EXE-10-002",
+        "TC-UP-EXE-10-003",
+        "TC-UP-EXE-10-004",
+        "TC-UP-EXE-10-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3553,10 +7284,15 @@
         "FX-13"
       ],
       "tests": [
-        "TC-UP-EXE-11-001"
+        "TC-UP-EXE-11-001",
+        "TC-UP-EXE-11-002",
+        "TC-UP-EXE-11-003",
+        "TC-UP-EXE-11-004",
+        "TC-UP-EXE-11-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3584,10 +7320,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-12-001"
+        "TC-UP-EXE-12-001",
+        "TC-UP-EXE-12-002",
+        "TC-UP-EXE-12-003",
+        "TC-UP-EXE-12-004",
+        "TC-UP-EXE-12-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3616,10 +7357,15 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-EXE-13-001"
+        "TC-UP-EXE-13-001",
+        "TC-UP-EXE-13-002",
+        "TC-UP-EXE-13-003",
+        "TC-UP-EXE-13-004",
+        "TC-UP-EXE-13-005"
       ],
       "environments": [
         "ENV-PURE",
+        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
@@ -3650,7 +7396,11 @@
         "FX-11"
       ],
       "tests": [
-        "TC-UP-CLK-01-001"
+        "TC-UP-CLK-01-001",
+        "TC-UP-CLK-01-002",
+        "TC-UP-CLK-01-003",
+        "TC-UP-CLK-01-004",
+        "TC-UP-CLK-01-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3683,7 +7433,11 @@
         "FX-11"
       ],
       "tests": [
-        "TC-UP-CLK-02-001"
+        "TC-UP-CLK-02-001",
+        "TC-UP-CLK-02-002",
+        "TC-UP-CLK-02-003",
+        "TC-UP-CLK-02-004",
+        "TC-UP-CLK-02-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3716,7 +7470,11 @@
         "FX-11"
       ],
       "tests": [
-        "TC-UP-CLK-03-001"
+        "TC-UP-CLK-03-001",
+        "TC-UP-CLK-03-002",
+        "TC-UP-CLK-03-003",
+        "TC-UP-CLK-03-004",
+        "TC-UP-CLK-03-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3749,7 +7507,11 @@
         "FX-11"
       ],
       "tests": [
-        "TC-UP-CLK-04-001"
+        "TC-UP-CLK-04-001",
+        "TC-UP-CLK-04-002",
+        "TC-UP-CLK-04-003",
+        "TC-UP-CLK-04-004",
+        "TC-UP-CLK-04-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3782,7 +7544,11 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-CLK-05-001"
+        "TC-UP-CLK-05-001",
+        "TC-UP-CLK-05-002",
+        "TC-UP-CLK-05-003",
+        "TC-UP-CLK-05-004",
+        "TC-UP-CLK-05-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3815,7 +7581,11 @@
         "FX-14"
       ],
       "tests": [
-        "TC-UP-CLK-06-001"
+        "TC-UP-CLK-06-001",
+        "TC-UP-CLK-06-002",
+        "TC-UP-CLK-06-003",
+        "TC-UP-CLK-06-004",
+        "TC-UP-CLK-06-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3848,7 +7618,11 @@
         "FX-12"
       ],
       "tests": [
-        "TC-UP-CLK-07-001"
+        "TC-UP-CLK-07-001",
+        "TC-UP-CLK-07-002",
+        "TC-UP-CLK-07-003",
+        "TC-UP-CLK-07-004",
+        "TC-UP-CLK-07-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3881,7 +7655,11 @@
         "FX-12"
       ],
       "tests": [
-        "TC-UP-CLK-08-001"
+        "TC-UP-CLK-08-001",
+        "TC-UP-CLK-08-002",
+        "TC-UP-CLK-08-003",
+        "TC-UP-CLK-08-004",
+        "TC-UP-CLK-08-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3914,7 +7692,11 @@
         "FX-12"
       ],
       "tests": [
-        "TC-UP-CLK-09-001"
+        "TC-UP-CLK-09-001",
+        "TC-UP-CLK-09-002",
+        "TC-UP-CLK-09-003",
+        "TC-UP-CLK-09-004",
+        "TC-UP-CLK-09-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3947,7 +7729,11 @@
         "FX-15"
       ],
       "tests": [
-        "TC-UP-CLK-10-001"
+        "TC-UP-CLK-10-001",
+        "TC-UP-CLK-10-002",
+        "TC-UP-CLK-10-003",
+        "TC-UP-CLK-10-004",
+        "TC-UP-CLK-10-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -3980,7 +7766,9 @@
         "FX-15"
       ],
       "tests": [
-        "TC-UP-CMD-01-001"
+        "TC-UP-CMD-01-001",
+        "TC-UP-CMD-01-002",
+        "TC-UP-CMD-01-003"
       ],
       "environments": [
         "ENV-PURE",
@@ -4012,7 +7800,9 @@
         "FX-15"
       ],
       "tests": [
-        "TC-UP-CMD-02-001"
+        "TC-UP-CMD-02-001",
+        "TC-UP-CMD-02-002",
+        "TC-UP-CMD-02-003"
       ],
       "environments": [
         "ENV-PURE",
@@ -4044,7 +7834,11 @@
         "FX-11"
       ],
       "tests": [
-        "TC-UP-PER-01-001"
+        "TC-UP-PER-01-001",
+        "TC-UP-PER-01-002",
+        "TC-UP-PER-01-003",
+        "TC-UP-PER-01-004",
+        "TC-UP-PER-01-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -4076,7 +7870,11 @@
         "FX-13"
       ],
       "tests": [
-        "TC-UP-PER-02-001"
+        "TC-UP-PER-02-001",
+        "TC-UP-PER-02-002",
+        "TC-UP-PER-02-003",
+        "TC-UP-PER-02-004",
+        "TC-UP-PER-02-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -4109,7 +7907,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-01-001"
+        "TC-UP-ERR-01-001",
+        "TC-UP-ERR-01-002",
+        "TC-UP-ERR-01-003",
+        "TC-UP-ERR-01-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4117,7 +7918,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4142,7 +7944,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-02-001"
+        "TC-UP-ERR-02-001",
+        "TC-UP-ERR-02-002",
+        "TC-UP-ERR-02-003",
+        "TC-UP-ERR-02-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4150,7 +7955,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4175,7 +7981,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-03-001"
+        "TC-UP-ERR-03-001",
+        "TC-UP-ERR-03-002",
+        "TC-UP-ERR-03-003",
+        "TC-UP-ERR-03-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4183,7 +7992,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4209,7 +8019,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-04-001"
+        "TC-UP-ERR-04-001",
+        "TC-UP-ERR-04-002",
+        "TC-UP-ERR-04-003",
+        "TC-UP-ERR-04-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4217,7 +8030,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4244,7 +8058,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-05-001"
+        "TC-UP-ERR-05-001",
+        "TC-UP-ERR-05-002",
+        "TC-UP-ERR-05-003",
+        "TC-UP-ERR-05-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4252,7 +8069,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4278,7 +8096,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-06-001"
+        "TC-UP-ERR-06-001",
+        "TC-UP-ERR-06-002",
+        "TC-UP-ERR-06-003",
+        "TC-UP-ERR-06-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4286,7 +8107,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4312,7 +8134,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-07-001"
+        "TC-UP-ERR-07-001",
+        "TC-UP-ERR-07-002",
+        "TC-UP-ERR-07-003",
+        "TC-UP-ERR-07-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4320,7 +8145,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4345,7 +8171,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-08-001"
+        "TC-UP-ERR-08-001",
+        "TC-UP-ERR-08-002",
+        "TC-UP-ERR-08-003",
+        "TC-UP-ERR-08-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4353,7 +8182,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4378,10 +8208,18 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERR-09-001"
+        "TC-UP-ERR-09-001",
+        "TC-UP-ERR-09-002",
+        "TC-UP-ERR-09-003",
+        "TC-UP-ERR-09-004"
       ],
       "environments": [
-        "ENV-VIS",
+        "ENV-PURE",
+        "ENV-HOST-PRIVATE",
+        "ENV-HOST-MIN",
+        "ENV-HOST-MAC",
+        "ENV-HOST-WIN",
+        "ENV-HOST-LINUX",
         "ENV-A11Y"
       ],
       "evidence": [],
@@ -4407,7 +8245,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-01-001"
+        "TC-UP-ERX-01-001",
+        "TC-UP-ERX-01-002",
+        "TC-UP-ERX-01-003",
+        "TC-UP-ERX-01-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4415,7 +8256,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4439,7 +8281,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-02-001"
+        "TC-UP-ERX-02-001",
+        "TC-UP-ERX-02-002",
+        "TC-UP-ERX-02-003",
+        "TC-UP-ERX-02-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4447,7 +8292,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4471,7 +8317,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-03-001"
+        "TC-UP-ERX-03-001",
+        "TC-UP-ERX-03-002",
+        "TC-UP-ERX-03-003",
+        "TC-UP-ERX-03-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4479,7 +8328,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4502,7 +8352,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-04-001"
+        "TC-UP-ERX-04-001",
+        "TC-UP-ERX-04-002",
+        "TC-UP-ERX-04-003",
+        "TC-UP-ERX-04-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4510,7 +8363,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4533,7 +8387,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-05-001"
+        "TC-UP-ERX-05-001",
+        "TC-UP-ERX-05-002",
+        "TC-UP-ERX-05-003",
+        "TC-UP-ERX-05-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4541,7 +8398,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4564,7 +8422,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-06-001"
+        "TC-UP-ERX-06-001",
+        "TC-UP-ERX-06-002",
+        "TC-UP-ERX-06-003",
+        "TC-UP-ERX-06-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4572,7 +8433,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4597,7 +8459,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-07-001"
+        "TC-UP-ERX-07-001",
+        "TC-UP-ERX-07-002",
+        "TC-UP-ERX-07-003",
+        "TC-UP-ERX-07-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4605,7 +8470,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4629,7 +8495,10 @@
         "FX-16"
       ],
       "tests": [
-        "TC-UP-ERX-08-001"
+        "TC-UP-ERX-08-001",
+        "TC-UP-ERX-08-002",
+        "TC-UP-ERX-08-003",
+        "TC-UP-ERX-08-004"
       ],
       "environments": [
         "ENV-PURE",
@@ -4637,7 +8506,8 @@
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-HOST-LINUX",
+        "ENV-A11Y"
       ],
       "evidence": [],
       "status": "active"
@@ -4795,8 +8665,7 @@
         "TC-UP-DRF-06-001"
       ],
       "environments": [
-        "ENV-PURE",
-        "ENV-VIS"
+        "ENV-PURE"
       ],
       "evidence": [],
       "status": "active"
@@ -4822,12 +8691,7 @@
         "TC-UP-DRF-07-001"
       ],
       "environments": [
-        "ENV-PURE",
-        "ENV-HOST-PRIVATE",
-        "ENV-HOST-MIN",
-        "ENV-HOST-MAC",
-        "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-PURE"
       ],
       "evidence": [],
       "status": "active"
@@ -4854,12 +8718,7 @@
         "TC-UP-DRF-08-001"
       ],
       "environments": [
-        "ENV-PURE",
-        "ENV-HOST-PRIVATE",
-        "ENV-HOST-MIN",
-        "ENV-HOST-MAC",
-        "ENV-HOST-WIN",
-        "ENV-HOST-LINUX"
+        "ENV-PURE"
       ],
       "evidence": [],
       "status": "active"
@@ -4885,8 +8744,7 @@
         "TC-UP-DRF-09-001"
       ],
       "environments": [
-        "ENV-PURE",
-        "ENV-VIS"
+        "ENV-PURE"
       ],
       "evidence": [],
       "status": "active"
@@ -4948,7 +8806,9 @@
         "OFX-002"
       ],
       "tests": [
-        "TC-OBS-HOST-001-001"
+        "TC-OBS-HOST-001-001",
+        "TC-OBS-HOST-001-002",
+        "TC-OBS-HOST-001-003"
       ],
       "environments": [
         "ENV-PURE",
@@ -4978,9 +8838,13 @@
         "OFX-003"
       ],
       "tests": [
-        "TC-OBS-VIS-001-001"
+        "TC-OBS-VIS-001-001",
+        "TC-OBS-VIS-001-002",
+        "TC-OBS-VIS-001-003",
+        "TC-OBS-VIS-001-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -5009,9 +8873,13 @@
         "OFX-003"
       ],
       "tests": [
-        "TC-OBS-VIS-002-001"
+        "TC-OBS-VIS-002-001",
+        "TC-OBS-VIS-002-002",
+        "TC-OBS-VIS-002-003",
+        "TC-OBS-VIS-002-004"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -5040,7 +8908,9 @@
         "OFX-004"
       ],
       "tests": [
-        "TC-OBS-A11Y-001-001"
+        "TC-OBS-A11Y-001-001",
+        "TC-OBS-A11Y-001-002",
+        "TC-OBS-A11Y-001-003"
       ],
       "environments": [
         "ENV-VIS",
@@ -5067,7 +8937,11 @@
         "OFX-005"
       ],
       "tests": [
-        "TC-OBS-SAFE-001-001"
+        "TC-OBS-SAFE-001-001",
+        "TC-OBS-SAFE-001-002",
+        "TC-OBS-SAFE-001-003",
+        "TC-OBS-SAFE-001-004",
+        "TC-OBS-SAFE-001-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -5100,7 +8974,11 @@
         "OFX-006"
       ],
       "tests": [
-        "TC-OBS-LIFE-001-001"
+        "TC-OBS-LIFE-001-001",
+        "TC-OBS-LIFE-001-002",
+        "TC-OBS-LIFE-001-003",
+        "TC-OBS-LIFE-001-004",
+        "TC-OBS-LIFE-001-005"
       ],
       "environments": [
         "ENV-PURE",
@@ -5131,9 +9009,12 @@
         "OFX-007"
       ],
       "tests": [
-        "TC-OBS-I18N-001-001"
+        "TC-OBS-I18N-001-001",
+        "TC-OBS-I18N-001-002",
+        "TC-OBS-I18N-001-003"
       ],
       "environments": [
+        "ENV-PURE",
         "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MAC",
@@ -5252,14 +9133,11 @@
       ],
       "environments": [
         "ENV-PURE",
-        "ENV-VIS",
         "ENV-HOST-PRIVATE",
         "ENV-HOST-MIN",
         "ENV-HOST-MAC",
         "ENV-HOST-WIN",
-        "ENV-HOST-LINUX",
-        "ENV-THEME",
-        "ENV-A11Y"
+        "ENV-HOST-LINUX"
       ],
       "evidence": [],
       "status": "active"

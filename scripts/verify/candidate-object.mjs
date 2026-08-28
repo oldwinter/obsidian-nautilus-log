@@ -149,6 +149,13 @@ export async function assertPushedCandidate(repository, candidateSha, expectedBr
 
 export async function archiveCandidate(repository, candidateSha) {
   await assertCandidateObject(repository, candidateSha);
+  const tree = await runGit(repository, ["ls-tree", "-r", "-z", candidateSha]);
+  for (const entry of tree.split("\0").filter(Boolean)) {
+    const [metadata, repositoryPath] = entry.split("\t", 2);
+    if (metadata.startsWith("120000 ")) {
+      throw new CandidateError(`candidate contains forbidden symbolic link ${repositoryPath}`);
+    }
+  }
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "spiral-day-candidate-"));
   const archivePath = path.join(temporaryRoot, "candidate.tar");
   const checkoutPath = path.join(temporaryRoot, "tree");

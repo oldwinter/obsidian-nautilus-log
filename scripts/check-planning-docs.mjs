@@ -542,7 +542,8 @@ report("offline", "requirement-parity-contract", () => {
   assert(new Set(environmentIds).size === environmentIds.length, "environment_catalog contains duplicate IDs");
   sameSet(fixtureIds, expectedCatalogFixtureIds, "fixture catalog exact ID set");
   sameSet(environmentIds, expectedEnvironmentIds, "environment catalog exact ID set");
-  sameSet(testIds, expectedRequirementIds.map((id) => "TC-" + id + "-001"), "test catalog exact ID set");
+  assert(testIds.length >= 126, "test catalog must contain at least one test per requirement");
+  assert(!Object.hasOwn(requirementSchema.properties.test_catalog, "maxItems"), "test catalog schema must not impose a 126-test ceiling");
   for (const [catalogName, catalog] of [
     ["fixture_catalog", fixtureCatalog],
     ["environment_catalog", environmentCatalog],
@@ -554,16 +555,34 @@ report("offline", "requirement-parity-contract", () => {
     }
   }
   const requirementIdSet = new Set(requirementIds);
+  function acceptedMatrix(id) {
+    if (id.startsWith("REL-")) return [["PACKAGE"], ["G0", "G7", id === "REL-003" ? "G9" : "G8"]];
+    if (id.startsWith("UP-DRF-")) return [["CONTRACT"], ["G0", "G2", "G8"]];
+    if (id === "OBS-TRACE-001") return [["CONTRACT"], ["G0"]];
+    if (id === "OBS-A11Y-001") return [["KEYBOARD", "A11Y", "MANUAL"], ["G5", "G6"]];
+    if (id === "OBS-I18N-001") return [["CONTRACT", "SCREENSHOT", "MANUAL"], ["G1", "G5", "G6"]];
+    if (id === "OBS-LOCAL-001") return [["INTEGRATION"], ["G4", "G7", "G8"]];
+    const family = id.split("-")[1];
+    if (["INS", "SET"].includes(family) || id === "OBS-LIFE-001") return [["UNIT", "INTEGRATION", "LIFECYCLE", "PACKAGE", "MANUAL"], ["G1", "G4", "G7", "G8"]];
+    if (["PAR", "SCH", "DAY"].includes(family)) return [["UNIT", "CONTRACT"], ["G1", "G2"]];
+    if (family === "HIS") return [["UNIT", "VAULT", "INTEGRATION"], ["G2", "G3"]];
+    if (["VIS", "CTL", "CMP"].includes(family) || id.startsWith("OBS-VIS")) return [["CONTRACT", "INTEGRATION", "SCREENSHOT", "MANUAL"], ["G4", "G5", "G6"]];
+    if (family === "EXE") return [["CONTRACT", "INTEGRATION", "KEYBOARD", "SCREENSHOT", "LIFECYCLE"], ["G2", "G4", "G5", "G6"]];
+    if (["CLK", "PER"].includes(family) || id === "OBS-SAFE-001") return [["UNIT", "CONTRACT", "VAULT", "INTEGRATION", "LIFECYCLE"], id === "OBS-SAFE-001" ? ["G2", "G3", "G4", "G8"] : ["G2", "G3", "G4"]];
+    if (family === "CMD" || id === "OBS-HOST-001") return [["INTEGRATION", "KEYBOARD", "MANUAL"], ["G4", "G5"]];
+    if (["ERR", "ERX"].includes(family)) return [["CONTRACT", "VAULT", "INTEGRATION", "A11Y"], ["G2", "G3", "G4", "G5"]];
+    throw new Error("no accepted evidence matrix for " + id);
+  }
   const testById = new Map();
   for (const entry of testCatalog) {
     assertRequiredFields(entry, ["id", "requirement_id", "evidence_kind", "gates"], "test catalog entry");
     assert(
-      /^TC-(?:UP-[A-Z]{3}-[0-9]{2}|OBS-[A-Z0-9]+-[0-9]{3}|REL-[0-9]{3})-001$/.test(entry.id),
+      /^TC-(?:UP-[A-Z]{3}-[0-9]{2}|OBS-[A-Z0-9]+-[0-9]{3}|REL-[0-9]{3})-[0-9]{3}$/.test(entry.id),
       "invalid stable test ID " + entry.id,
     );
     assert(requirementIdSet.has(entry.requirement_id), entry.id + " points to an unknown requirement");
     assert(
-      entry.id === "TC-" + entry.requirement_id + "-001",
+      entry.id.startsWith("TC-" + entry.requirement_id + "-"),
       entry.id + " does not encode its requirement reverse link",
     );
     assert(acceptedEvidenceKinds.has(entry.evidence_kind), entry.id + " has unsupported evidence_kind " + entry.evidence_kind);
@@ -639,6 +658,9 @@ report("offline", "requirement-parity-contract", () => {
       tests.every((id) => testById.get(id)?.requirement_id === row.id),
       row.id + " has a dangling or mislinked test",
     );
+    const [expectedKinds, expectedGates] = acceptedMatrix(row.id);
+    sameSequence(tests.map((id) => testById.get(id).evidence_kind), expectedKinds, row.id + " evidence modalities");
+    for (const testId of tests) sameSequence(testById.get(testId).gates, expectedGates, testId + " gate matrix");
     assert(Array.isArray(row.evidence_contributors), row.id + " evidence_contributors must be an array");
     assert(
       row.evidence_contributors.every((ticket) => Number.isInteger(ticket) && ticket >= 17 && ticket <= 31),
@@ -785,6 +807,7 @@ report("offline", "release-input-inventory", () => {
   const declaration = readJsonObject("scripts/release/release-inputs.json");
   assert(declaration.schema_version === 1, "release-input declaration schema_version must be 1");
   const candidateOwned = uniqueStrings(declaration.candidate_owned, "candidate_owned");
+  const transitiveInputs = uniqueStrings(declaration.transitive_inputs, "transitive_inputs");
   const externalInputs = uniqueStrings(declaration.external_run_inputs, "external_run_inputs");
   const requiredContractInputs = [
     "docs/parity/requirements.json",
@@ -801,6 +824,14 @@ report("offline", "release-input-inventory", () => {
     assert(candidateOwned.includes(path), "candidate_owned omits required contract " + path);
   }
   for (const path of candidateOwned) assert(objectExists(path), "candidate_owned path is absent from target: " + path);
+  for (const path of transitiveInputs) assert(objectExists(path), "transitive input is absent from target: " + path);
+  const exactOwnedInputs = objectFiles.filter((path) => [
+    ".github/workflows/", "docs/parity/", "scripts/release/", "scripts/verify/", "tests/fixtures/", "tests/release/",
+  ].some((prefix) => path.startsWith(prefix)) || [
+    "docs/planning-github-graph.json", "docs/planning-local-links.json", "scripts/check-planning-docs.mjs",
+    "scripts/generate-planning-local-links.mjs", "scripts/generate-requirement-owners.mjs",
+  ].includes(path));
+  sameSet(candidateOwned, exactOwnedInputs, "complete #22 candidate-owned release input inventory");
   const relevantScriptInputs = objectFiles.filter(
     (path) => path.startsWith("scripts/release/") || path.startsWith("scripts/verify/"),
   );
@@ -881,13 +912,15 @@ report("offline", "release-input-inventory", () => {
       "schema_version", "gate", "decision", "release_type", "version", "candidate_sha",
       "remote_head", "package_filename", "package_sha256", "requirements", "gate_results",
       "evidence_bundle", "approved_deviation_ids", "scope_exclusions", "manual_workflows",
-      "attestations", "repository_state",
+      "attestations", "repository_state", "release",
     ],
     "G9 template",
   );
   assert(g9.schema_version === 1 && g9.gate === "G9" && g9.decision === "NO-GO", "G9 template must fail closed");
   assert(g9.candidate_sha === zeroSha && g9.remote_head === zeroSha, "G9 candidate identities must begin unresolved");
   assert(g9.package_sha256 === zeroHash, "G9 package identity must begin unresolved");
+  assert(g9.evidence_bundle?.index_sha256 === zeroHash, "G9 evidence index identity must begin unresolved");
+  assert(g9.release?.draft === false && g9.release?.published === false, "G9 release template must begin unpublished and non-draft");
   assert(g9.repository_state?.before === null && g9.repository_state?.after === null, "G9 repository states must begin unresolved");
 
   const runGate = readObject("scripts/release/run-gate.mjs");
@@ -925,6 +958,10 @@ report("offline", "release-input-inventory", () => {
     assert(workflow.includes(phrase), "issue #22 workflow is missing: " + phrase);
   }
   assert(workflow.includes('"scripts/check-planning-docs.mjs"'), "workflow paths omit the planning checker");
+  for (const path of [
+    '"docs/planning-github-graph.json"', '"docs/planning-local-links.json"',
+    '"scripts/generate-planning-local-links.mjs"', '"scripts/generate-requirement-owners.mjs"',
+  ]) assert(workflow.includes(path), "workflow paths omit " + path);
   return candidateOwned.length + " immutable candidate inputs, five run inputs, exact G0-G9 commands, and fail-closed templates/workflow";
 });
 

@@ -51,47 +51,54 @@ const REQUIRED_ENVIRONMENT_IDS = [
   "ENV-THEME",
   "ENV-A11Y",
 ];
-export const REQUIRED_RELEASE_INPUT_PATHS = [
-  "docs/parity/deviations.json",
-  "docs/parity/requirement-owners.json",
-  "docs/parity/requirement-owners.schema.json",
-  "docs/parity/requirements.json",
-  "docs/parity/scope.schema.json",
-  "docs/parity/ticket-boundaries.json",
-  "docs/parity/ticket-boundaries.schema.json",
-  "docs/parity/trace-reports/README.md",
-  "scripts/release/build-candidate.mjs",
-  "scripts/release/dry-run.mjs",
-  "scripts/release/g7-package.template.json",
-  "scripts/release/g8-scope.template.json",
-  "scripts/release/g9-signoff.template.json",
-  "scripts/release/release-inputs.json",
-  "scripts/release/run-gate.mjs",
-  "scripts/release/schemas/requirements.schema.json",
-  "scripts/verify/candidate-evidence.mjs",
-  "scripts/verify/candidate-g0.mjs",
-  "scripts/verify/candidate-object.mjs",
-  "scripts/verify/candidate-package.mjs",
-  "scripts/verify/candidate-release.mjs",
-  "scripts/verify/evidence-bundle.mjs",
-  "scripts/verify/evidence-schema.mjs",
-  "scripts/verify/render-trace-report.mjs",
-  "scripts/verify/verify-evidence.mjs",
+const RELEASE_INPUT_PREFIXES = [
+  ".github/workflows/",
+  "docs/parity/",
+  "scripts/release/",
+  "scripts/verify/",
+  "tests/fixtures/",
+  "tests/release/",
 ];
-const GATE_IDS = Array.from({ length: 10 }, (_, index) => `G${index}`);
-const ACCEPTED_GATE_MAPPINGS = new Map([
-  ...Array.from({ length: 9 }, (_, index) => [
-    `UP-DRF-${String(index + 1).padStart(2, "0")}`,
-    ["G0", "G2", "G8"],
-  ]),
-  ["OBS-LOCAL-001", ["G4", "G7", "G8"]],
-  ["OBS-LIFE-001", ["G1", "G4", "G7", "G8"]],
-  ["OBS-SAFE-001", ["G2", "G3", "G4", "G8"]],
-  ["OBS-I18N-001", ["G1", "G5", "G6"]],
-  ["OBS-HOST-001", ["G4", "G5"]],
-  ["OBS-VIS-001", ["G4", "G5", "G6"]],
-  ["OBS-VIS-002", ["G4", "G5", "G6"]],
+const RELEASE_INPUT_FILES = new Set([
+  "docs/planning-github-graph.json",
+  "docs/planning-local-links.json",
+  "scripts/check-planning-docs.mjs",
+  "scripts/generate-planning-local-links.mjs",
+  "scripts/generate-requirement-owners.mjs",
 ]);
+export const REQUIRED_TRANSITIVE_INPUT_PATHS = [
+  "docs/decisions/community-compliant-product-naming-and-attribution.md",
+  "docs/decisions/desktop-compatibility-and-performance-envelope.md",
+  "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+  "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+  "docs/decisions/plugin-architecture-and-state-ownership.md",
+  "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+  "docs/implementation-dossier.md",
+  "docs/research/behavior-inventory.md",
+];
+export function expectedCandidateOwnedPaths(candidateFiles) {
+  return candidateFiles.filter((path) => RELEASE_INPUT_FILES.has(path)
+    || RELEASE_INPUT_PREFIXES.some((prefix) => path.startsWith(prefix))).sort();
+}
+const GATE_IDS = Array.from({ length: 10 }, (_, index) => `G${index}`);
+export function acceptedEvidenceMatrix(requirementId) {
+  if (requirementId.startsWith("REL-")) return { kinds: ["PACKAGE"], gates: ["G0", "G7", requirementId === "REL-003" ? "G9" : "G8"] };
+  if (requirementId.startsWith("UP-DRF-")) return { kinds: ["CONTRACT"], gates: ["G0", "G2", "G8"] };
+  if (requirementId === "OBS-TRACE-001") return { kinds: ["CONTRACT"], gates: ["G0"] };
+  if (requirementId === "OBS-A11Y-001") return { kinds: ["KEYBOARD", "A11Y", "MANUAL"], gates: ["G5", "G6"] };
+  if (requirementId === "OBS-I18N-001") return { kinds: ["CONTRACT", "SCREENSHOT", "MANUAL"], gates: ["G1", "G5", "G6"] };
+  if (requirementId === "OBS-LOCAL-001") return { kinds: ["INTEGRATION"], gates: ["G4", "G7", "G8"] };
+  const family = requirementId.split("-")[1];
+  if (["INS", "SET"].includes(family) || requirementId === "OBS-LIFE-001") return { kinds: ["UNIT", "INTEGRATION", "LIFECYCLE", "PACKAGE", "MANUAL"], gates: ["G1", "G4", "G7", "G8"] };
+  if (["PAR", "SCH", "DAY"].includes(family)) return { kinds: ["UNIT", "CONTRACT"], gates: ["G1", "G2"] };
+  if (family === "HIS") return { kinds: ["UNIT", "VAULT", "INTEGRATION"], gates: ["G2", "G3"] };
+  if (["VIS", "CTL", "CMP"].includes(family) || requirementId.startsWith("OBS-VIS")) return { kinds: ["CONTRACT", "INTEGRATION", "SCREENSHOT", "MANUAL"], gates: ["G4", "G5", "G6"] };
+  if (family === "EXE") return { kinds: ["CONTRACT", "INTEGRATION", "KEYBOARD", "SCREENSHOT", "LIFECYCLE"], gates: ["G2", "G4", "G5", "G6"] };
+  if (["CLK", "PER"].includes(family) || requirementId === "OBS-SAFE-001") return { kinds: ["UNIT", "CONTRACT", "VAULT", "INTEGRATION", "LIFECYCLE"], gates: requirementId === "OBS-SAFE-001" ? ["G2", "G3", "G4", "G8"] : ["G2", "G3", "G4"] };
+  if (family === "CMD" || requirementId === "OBS-HOST-001") return { kinds: ["INTEGRATION", "KEYBOARD", "MANUAL"], gates: ["G4", "G5"] };
+  if (["ERR", "ERX"].includes(family)) return { kinds: ["CONTRACT", "VAULT", "INTEGRATION", "A11Y"], gates: ["G2", "G3", "G4", "G5"] };
+  throw new CandidateError(`no accepted evidence matrix for ${requirementId}`);
+}
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -140,7 +147,7 @@ function rowMap(rows, key, label) {
   const result = new Map();
   for (const row of requireArray(rows, label)) {
     const value = row?.[key];
-    if (typeof value !== "string" || !value || result.has(value)) {
+    if ((typeof value !== "string" && typeof value !== "number") || value === "" || result.has(value)) {
       throw new CandidateError(`${label} contains a missing or duplicate ${key}: ${String(value)}`);
     }
     result.set(value, row);
@@ -211,6 +218,7 @@ export function validateRequirementManifest(manifest, deviations) {
   const usedDeviations = new Set();
   const usedNotApplicableApprovals = new Set();
 
+  const testsByRequirement = new Map([...rows.keys()].map((id) => [id, []]));
   for (const [testId, entry] of tests) {
     if (!rows.has(entry.requirement_id)) {
       throw new CandidateError(`${testId} links unknown requirement ${String(entry.requirement_id)}`);
@@ -222,13 +230,11 @@ export function validateRequirementManifest(manifest, deviations) {
     if (gates.some((gate) => !GATE_IDS.includes(gate))) {
       throw new CandidateError(`${testId} has an unknown release gate`);
     }
-    const acceptedGates = ACCEPTED_GATE_MAPPINGS.get(entry.requirement_id);
-    if (acceptedGates && JSON.stringify(gates) !== JSON.stringify(acceptedGates)) {
+    const accepted = acceptedEvidenceMatrix(entry.requirement_id);
+    if (JSON.stringify(gates) !== JSON.stringify(accepted.gates)) {
       throw new CandidateError(`${testId} differs from the accepted release-gate matrix`);
     }
-    if (entry.requirement_id === "OBS-LOCAL-001" && entry.evidence_kind !== "INTEGRATION") {
-      throw new CandidateError(`${testId} must use accepted INTEGRATION evidence`);
-    }
+    testsByRequirement.get(entry.requirement_id).push(entry);
   }
 
   for (const [id, row] of rows) {
@@ -263,6 +269,14 @@ export function validateRequirementManifest(manifest, deviations) {
         throw new CandidateError(`${id} has dangling or mislinked test ${testId}`);
       }
     }
+    const expectedTests = testsByRequirement.get(id);
+    if (JSON.stringify(rowTests) !== JSON.stringify(expectedTests.map((entry) => entry.id))) {
+      throw new CandidateError(`${id} tests must exactly match its test catalog projection`);
+    }
+    const acceptedKinds = acceptedEvidenceMatrix(id).kinds;
+    if (JSON.stringify(expectedTests.map((entry) => entry.evidence_kind)) !== JSON.stringify(acceptedKinds)) {
+      throw new CandidateError(`${id} does not declare every accepted evidence modality exactly once`);
+    }
     for (const environmentId of rowEnvironments) {
       if (!environments.has(environmentId)) throw new CandidateError(`${id} has dangling environment ${environmentId}`);
     }
@@ -293,6 +307,54 @@ export function validateRequirementManifest(manifest, deviations) {
     throw new CandidateError("not-applicable registry contains an unlinked approval");
   }
   return rows;
+}
+
+export function validateSchemaContract(schema, kind) {
+  if (schema?.$schema !== "https://json-schema.org/draft/2020-12/schema"
+    || schema.type !== "object" || schema.additionalProperties !== false) {
+    throw new CandidateError(`${kind} schema is not a strict draft 2020-12 object schema`);
+  }
+  if (kind === "requirements") {
+    if (schema.properties?.requirements?.minItems !== 126
+      || schema.properties?.requirements?.maxItems !== 126
+      || schema.properties?.test_catalog?.minItems !== 126
+      || Object.hasOwn(schema.properties?.test_catalog ?? {}, "maxItems")
+      || !Array.isArray(schema.$defs?.testEntry?.properties?.evidence_kind?.enum)
+      || JSON.stringify(schema.$defs.testEntry.properties.evidence_kind.enum) !== JSON.stringify([...EVIDENCE_KINDS])) {
+      throw new CandidateError("requirements schema does not encode the 126-row/open-test evidence contract");
+    }
+  } else if (kind === "owners" && schema.properties?.requirements?.minItems !== 126) {
+    throw new CandidateError("requirement-owner schema does not require the exact owner projection");
+  } else if (kind === "boundaries" && schema.properties?.tickets?.minItems !== 15) {
+    throw new CandidateError("ticket-boundary schema does not require tickets #17 through #31");
+  }
+}
+
+export function validateOwnershipProjections(requirementRows, owners, boundaries) {
+  const ownerRows = rowMap(owners.requirements, "id", "requirement owners");
+  const ticketRows = rowMap(boundaries.tickets, "ticket", "ticket boundaries");
+  if (owners.schema_version !== 1 || owners.row_count !== 126 || ownerRows.size !== 126
+    || boundaries.schema_version !== 1 || ticketRows.size !== 15) {
+    throw new CandidateError("owner or ticket-boundary projection has the wrong shape");
+  }
+  const reverseOwners = new Map();
+  for (const ticket of ticketRows.values()) {
+    for (const id of requireStrings(ticket.primary_requirement_ids, `ticket #${ticket.ticket} primary IDs`, true)) {
+      if (reverseOwners.has(id)) throw new CandidateError(`${id} has duplicate ticket-boundary ownership`);
+      reverseOwners.set(id, ticket.ticket);
+    }
+  }
+  for (const [id, row] of requirementRows) {
+    const owner = ownerRows.get(id);
+    if (!owner || owner.owner_ticket !== row.owner_ticket || owner.owner_module !== row.owner_module
+      || JSON.stringify(owner.evidence_contributors) !== JSON.stringify(row.evidence_contributors)
+      || reverseOwners.get(id) !== row.owner_ticket) {
+      throw new CandidateError(`${id} differs from its exact owner/ticket-boundary projection`);
+    }
+  }
+  if (ownerRows.size !== requirementRows.size || reverseOwners.size !== requirementRows.size) {
+    throw new CandidateError("owner and ticket-boundary projections must be bidirectionally set-equal");
+  }
 }
 
 export function validateCandidateScope(
@@ -369,12 +431,18 @@ export async function validateG0({
   checkPushedState = true,
 }) {
   requireFullSha(candidateSha);
-  const [requirementsBytes, deviationsBytes, releaseInputs, scopeSource, candidateFiles] = await Promise.all([
+  const [requirementsBytes, deviationsBytes, releaseInputs, scopeSource, candidateFiles,
+    requirementsSchema, owners, ownersSchema, boundaries, boundariesSchema] = await Promise.all([
     readCandidateFile(repository, candidateSha, "docs/parity/requirements.json"),
     readCandidateFile(repository, candidateSha, "docs/parity/deviations.json"),
     readCandidateJson(repository, candidateSha, "scripts/release/release-inputs.json"),
     readFile(scopePath, "utf8"),
     listCandidateFiles(repository, candidateSha),
+    readCandidateJson(repository, candidateSha, "scripts/release/schemas/requirements.schema.json"),
+    readCandidateJson(repository, candidateSha, "docs/parity/requirement-owners.json"),
+    readCandidateJson(repository, candidateSha, "docs/parity/requirement-owners.schema.json"),
+    readCandidateJson(repository, candidateSha, "docs/parity/ticket-boundaries.json"),
+    readCandidateJson(repository, candidateSha, "docs/parity/ticket-boundaries.schema.json"),
   ]);
   let requirements;
   let deviations;
@@ -386,8 +454,11 @@ export async function validateG0({
   } catch (error) {
     throw new CandidateError(`candidate release contract is malformed JSON: ${error.message}`);
   }
+  const expectedOwned = expectedCandidateOwnedPaths(candidateFiles);
   if (releaseInputs.schema_version !== 1
-    || JSON.stringify(releaseInputs.candidate_owned) !== JSON.stringify(REQUIRED_RELEASE_INPUT_PATHS)) {
+    || JSON.stringify(releaseInputs.candidate_owned) !== JSON.stringify(expectedOwned)
+    || JSON.stringify(releaseInputs.transitive_inputs) !== JSON.stringify(REQUIRED_TRANSITIVE_INPUT_PATHS)
+    || REQUIRED_TRANSITIVE_INPUT_PATHS.some((path) => !candidateFiles.includes(path))) {
     throw new CandidateError("candidate release input declaration is malformed");
   }
   const gates = rowMap(releaseInputs.gates, "id", "release gates");
@@ -404,7 +475,11 @@ export async function validateG0({
       throw new CandidateError(`candidate is missing release input ${requiredInput}`);
     }
   }
+  validateSchemaContract(requirementsSchema, "requirements");
+  validateSchemaContract(ownersSchema, "owners");
+  validateSchemaContract(boundariesSchema, "boundaries");
   const requirementRows = validateRequirementManifest(requirements, deviations);
+  validateOwnershipProjections(requirementRows, owners, boundaries);
   const scopePartition = validateCandidateScope(scope, candidateSha, requirementRows, {
     requirementsSha256: sha256(requirementsBytes),
     deviationsSha256: sha256(deviationsBytes),
@@ -422,6 +497,9 @@ export async function validateG0({
     bundleRoot,
     candidateRequirements: requirements,
     requiredRequirementIds: scopePartition.included,
+    requiredEnvironmentIds: scope.release_scope === "private"
+      ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"]
+      : REQUIRED_ENVIRONMENT_IDS,
   });
   for (const id of scopePartition.included) {
     if (!evidence.index.requirements.some((entry) => entry.requirement_id === id)) {
@@ -463,6 +541,8 @@ export async function validateG0({
     release_scope: scope.release_scope,
     requirement_count: requirementRows.size,
     upstream_count: [...requirementRows].filter(([id]) => id.startsWith("UP-")).length,
+    included_requirement_ids: [...scopePartition.included],
+    excluded_requirement_ids: [...scopePartition.excluded],
     candidate_state: candidateState,
   };
 }

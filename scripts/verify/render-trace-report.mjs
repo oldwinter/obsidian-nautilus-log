@@ -17,7 +17,7 @@ function recordsById(records) {
 export function buildTraceReport(result) {
   const recordMap = recordsById(result.records);
   const activeRows = result.resolvedRequirements.requirements
-    .filter((row) => row.status === "active")
+    .filter((row) => row.status === "active" && result.scope.included_requirement_ids.includes(row.id))
     .sort((left, right) => left.id.localeCompare(right.id));
 
   const requirements = activeRows.map((row) => ({
@@ -82,6 +82,11 @@ export function buildTraceReport(result) {
     schema_version: 1,
     candidate_sha: result.candidateSha,
     package_sha256: result.packageSha256,
+    scope: {
+      release_scope: result.scope.release_scope,
+      included_requirement_ids: sorted(result.scope.included_requirement_ids),
+      excluded_requirement_ids: sorted(result.scope.excluded_requirement_ids),
+    },
     source: {
       manifest_sha256: result.manifestSha256,
       index_path: result.manifest.index.path,
@@ -121,6 +126,10 @@ export function renderTraceReportMarkdown(report) {
     `Package SHA-256: \`${report.package_sha256}\``,
     "",
     `Manifest SHA-256: \`${report.source.manifest_sha256}\``,
+    "",
+    `Release scope: \`${report.scope.release_scope}\``,
+    "",
+    `Included requirements: ${report.scope.included_requirement_ids.length}; excluded requirements: ${report.scope.excluded_requirement_ids.length}`,
     "",
     "## Forward trace",
     "",

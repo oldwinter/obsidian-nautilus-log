@@ -15,7 +15,9 @@ import { validateCandidateEvidenceBundle } from "../../scripts/verify/candidate-
 import {
   validateCandidateScope,
   validateG0,
+  validateOwnershipProjections,
   validateRequirementManifest,
+  validateSchemaContract,
 } from "../../scripts/verify/candidate-g0.mjs";
 import {
   assertPushedCandidate,
@@ -153,6 +155,40 @@ test("G0 binds canonical scope fields and hashes to exact candidate object bytes
   assert.equal((await validate()).result, "PASS");
 });
 
+test("G0 schema and owner projections fail closed under corruption", async () => {
+  const requirements = await readJson(path.join(sourceRoot, "docs/parity/requirements.json"));
+  const owners = await readJson(path.join(sourceRoot, "docs/parity/requirement-owners.json"));
+  const boundaries = await readJson(path.join(sourceRoot, "docs/parity/ticket-boundaries.json"));
+  const requirementRows = new Map(requirements.requirements.map((row) => [row.id, row]));
+  const badOwners = structuredClone(owners);
+  badOwners.requirements[0].owner_ticket = 31;
+  assert.throws(() => validateOwnershipProjections(requirementRows, badOwners, boundaries), /projection/);
+  const schema = await readJson(path.join(sourceRoot, "scripts/release/schemas/requirements.schema.json"));
+  schema.properties.test_catalog.maxItems = 126;
+  assert.throws(() => validateSchemaContract(schema, "requirements"), /open-test evidence contract/);
+});
+
+test("actual G0 accepts private profile semantics without requiring public host profiles", async (t) => {
+  const fixture = await createDryRunFixture(sourceRoot);
+  t.after(() => fixture.cleanup());
+  const privateScope = {
+    ...fixture.scope,
+    release_scope: "private",
+    parity_claim: "private-preview",
+  };
+  const scopePath = path.join(fixture.inputRoot, "private-scope.json");
+  await writeFile(scopePath, `${JSON.stringify(privateScope, null, 2)}\n`);
+  const result = await validateG0({
+    repository: fixture.repository,
+    candidateSha: fixture.candidateSha,
+    branch: "candidate",
+    scopePath,
+    bundleRoot: fixture.bundleRoot,
+  });
+  assert.equal(result.release_scope, "private");
+  assert.equal(result.included_requirement_ids.length, 126);
+});
+
 test("actual G0 rejects extra manifest files and symlinked bundle content", async (t) => {
   await t.test("extra file", async (st) => {
     const fixture = await createDryRunFixture(sourceRoot);
@@ -229,25 +265,38 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   const duplicate = structuredClone(gateResults);
   duplicate.gates[1].id = "G0";
   assert.throws(
-    () => validateGateResults(duplicate, fixture.candidateSha, fixture.packageHash, evidence.index),
+    () => validateGateResults(duplicate, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog),
     /duplicate id/,
   );
 
   const skipped = structuredClone(gateResults);
   skipped.gates[2].execution.skipped = true;
   assert.throws(
-    () => validateGateResults(skipped, fixture.candidateSha, fixture.packageHash, evidence.index),
+    () => validateGateResults(skipped, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog),
     /skipped must be false/,
+  );
+  const wrongCommand = structuredClone(gateResults);
+  wrongCommand.gates[4].command = ["node", "other-script.mjs"];
+  assert.throws(
+    () => validateGateResults(wrongCommand, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog),
+    /canonical command/,
+  );
+  const incompleteCoverage = structuredClone(gateResults);
+  incompleteCoverage.gates[4].test_ids = incompleteCoverage.gates[4].test_ids.slice(1);
+  assert.throws(
+    () => validateGateResults(incompleteCoverage, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog),
+    /mandatory in-scope tests/,
   );
 
   const missing = structuredClone(g7);
   delete missing.builds;
   await assert.rejects(
-    validateG7Package(missing, fixture.candidateSha, fixture.packageHash, fixture.inputRoot),
+    validateG7Package(missing, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
     /G7 builds must be an array/,
   );
 
   const g7Path = path.join(fixture.inputRoot, "g7-package.json");
+  await fixture.writeGateResultsThrough("G7");
   await writeFile(g7Path, "{malformed\n");
   await assert.rejects(
     execFileAsync(process.execPath, [
@@ -265,8 +314,36 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
 
   await writeFile(path.join(fixture.inputRoot, "artifacts/spiral-day-1.0.2.zip"), "corrupt package\n");
   await assert.rejects(
-    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot),
+    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
     /exact package hash mismatch/,
+  );
+
+  const counterfeitBytes = createDeterministicPackage([
+    { path: "main.js", content: "counterfeit" },
+    { path: "manifest.json", content: '{"id":"spiral-day","name":"Spiral Day","version":"1.0.2"}' },
+  ]);
+  const counterfeitHash = sha256(counterfeitBytes);
+  const counterfeit = structuredClone(g7);
+  counterfeit.package_sha256 = counterfeitHash;
+  counterfeit.builds.forEach((build) => {
+    build.package_sha256 = counterfeitHash;
+    build.assets = [
+      { path: "main.js", sha256: sha256("counterfeit") },
+      { path: "manifest.json", sha256: sha256('{"id":"spiral-day","name":"Spiral Day","version":"1.0.2"}') },
+    ];
+  });
+  await writeFile(path.join(fixture.inputRoot, counterfeit.package_path), counterfeitBytes);
+  await assert.rejects(
+    validateG7Package(counterfeit, fixture.candidateSha, counterfeitHash, fixture.inputRoot, { repository: fixture.repository }),
+    /deterministic exact-Git-object rebuild/,
+  );
+
+  const packagePath = path.join(fixture.inputRoot, g7.package_path);
+  await unlink(packagePath);
+  await symlink(path.join(fixture.bundleRoot, "artifacts/spiral-day.zip"), packagePath);
+  await assert.rejects(
+    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
+    /symbolic link/,
   );
 });
 
@@ -295,9 +372,15 @@ test("G7-G9 validation preserves the repository and enforces the same-SHA invari
   })).stdout;
   const evidence = await loadEvidence(fixture);
   const gateResults = await readJson(path.join(fixture.inputRoot, "gate-results.json"));
-  const gates = validateGateResults(gateResults, fixture.candidateSha, fixture.packageHash, evidence.index);
-  await validateG7Package(fixture.g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot);
-  validateG9Signoff(fixture.signoff, fixture.candidateSha, fixture.packageHash, fixture.scope, gates);
+  const gates = validateGateResults(gateResults, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog);
+  await validateG7Package(fixture.g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository });
+  const identity = {
+    bundle_sha256: evidence.manifestSha256,
+    index_sha256: evidence.indexSha256,
+    g9_test_ids: fixture.candidateRequirements.test_catalog.filter((entry) => entry.gates.includes("G9")).map((entry) => entry.id).sort(),
+    g9_evidence_ids: fixture.signoff.gate_results.find((entry) => entry.id === "G9").evidence_ids,
+  };
+  validateG9Signoff(fixture.signoff, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity);
   const after = (await execFileAsync("git", ["status", "--porcelain=v2", "--branch"], {
     cwd: fixture.repository,
   })).stdout;
@@ -306,7 +389,7 @@ test("G7-G9 validation preserves the repository and enforces the same-SHA invari
   const stale = structuredClone(fixture.signoff);
   stale.repository_state.after.remote_head = "f".repeat(40);
   assert.throws(
-    () => validateG9Signoff(stale, fixture.candidateSha, fixture.packageHash, fixture.scope, gates),
+    () => validateG9Signoff(stale, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity),
     /immutable same-SHA invariant/,
   );
 });

@@ -69,7 +69,7 @@ function validateRequirementManifest(manifest) {
     "ENV-HOST-WIN", "ENV-HOST-LINUX", "ENV-THEME", "ENV-A11Y",
   ]);
   assert.equal(manifest.fixture_catalog.length, 25);
-  assert.equal(manifest.test_catalog.length, 126);
+  assert.ok(manifest.test_catalog.length > 126);
 
   const fixtureSet = new Set(fixtureIds);
   const testById = new Map(manifest.test_catalog.map((entry) => [entry.id, entry]));
@@ -135,7 +135,7 @@ function validateRequirementManifest(manifest) {
   }
 
   for (const entry of manifest.test_catalog) {
-    assert.match(entry.id, /^TC-(UP-[A-Z]{3}-\d{2}|OBS-[A-Z0-9]+-\d{3}|REL-\d{3})-001$/);
+    assert.match(entry.id, /^TC-(UP-[A-Z]{3}-\d{2}|OBS-[A-Z0-9]+-\d{3}|REL-\d{3})-\d{3}$/);
     assert.ok(ids.includes(entry.requirement_id), `${entry.id} points to unknown requirement`);
     assert.match(entry.evidence_kind, /^[A-Z0-9]+$/);
     assert.ok(entry.gates.length > 0);
@@ -236,41 +236,49 @@ test("requirements schema covers catalogs, rows, conditionals, and accepted enum
 });
 
 test("accepted evidence kind and release-gate matrix are exact", () => {
-  const testsByRequirement = new Map(requirements.test_catalog.map((entry) => [entry.requirement_id, entry]));
+  const testsByRequirement = new Map(expectedIds.map((id) => [id, requirements.test_catalog.filter((entry) => entry.requirement_id === id)]));
   for (let index = 1; index <= 9; index += 1) {
-    assert.deepEqual(testsByRequirement.get(`UP-DRF-${String(index).padStart(2, "0")}`).gates, ["G0", "G2", "G8"]);
+    const rows = testsByRequirement.get(`UP-DRF-${String(index).padStart(2, "0")}`);
+    assert.deepEqual(rows.map((entry) => entry.evidence_kind), ["CONTRACT"]);
+    assert.deepEqual(rows[0].gates, ["G0", "G2", "G8"]);
   }
   const expected = new Map([
-    ["OBS-LOCAL-001", ["INTEGRATION", ["G4", "G7", "G8"]]],
-    ["OBS-LIFE-001", ["LIFECYCLE", ["G1", "G4", "G7", "G8"]]],
-    ["OBS-SAFE-001", ["VAULT", ["G2", "G3", "G4", "G8"]]],
-    ["OBS-I18N-001", ["SCREENSHOT", ["G1", "G5", "G6"]]],
-    ["OBS-HOST-001", ["MANUAL", ["G4", "G5"]]],
-    ["OBS-VIS-001", ["SCREENSHOT", ["G4", "G5", "G6"]]],
-    ["OBS-VIS-002", ["SCREENSHOT", ["G4", "G5", "G6"]]],
+    ["OBS-LOCAL-001", [["INTEGRATION"], ["G4", "G7", "G8"]]],
+    ["OBS-LIFE-001", [["UNIT", "INTEGRATION", "LIFECYCLE", "PACKAGE", "MANUAL"], ["G1", "G4", "G7", "G8"]]],
+    ["OBS-SAFE-001", [["UNIT", "CONTRACT", "VAULT", "INTEGRATION", "LIFECYCLE"], ["G2", "G3", "G4", "G8"]]],
+    ["OBS-I18N-001", [["CONTRACT", "SCREENSHOT", "MANUAL"], ["G1", "G5", "G6"]]],
+    ["OBS-HOST-001", [["INTEGRATION", "KEYBOARD", "MANUAL"], ["G4", "G5"]]],
+    ["OBS-VIS-001", [["CONTRACT", "INTEGRATION", "SCREENSHOT", "MANUAL"], ["G4", "G5", "G6"]]],
+    ["OBS-VIS-002", [["CONTRACT", "INTEGRATION", "SCREENSHOT", "MANUAL"], ["G4", "G5", "G6"]]],
   ]);
-  for (const [id, [kind, gates]] of expected) {
-    assert.equal(testsByRequirement.get(id).evidence_kind, kind);
-    assert.deepEqual(testsByRequirement.get(id).gates, gates);
+  for (const [id, [kinds, gates]] of expected) {
+    assert.deepEqual(testsByRequirement.get(id).map((entry) => entry.evidence_kind), kinds);
+    for (const entry of testsByRequirement.get(id)) assert.deepEqual(entry.gates, gates);
+  }
+  for (const id of ["REL-001", "REL-002", "REL-003"]) {
+    assert.deepEqual(testsByRequirement.get(id).map((entry) => entry.evidence_kind), ["PACKAGE"]);
   }
 });
 
 test("release inventory exhaustively freezes every #31 repository input", () => {
   const releaseInputs = readJson("scripts/release/release-inputs.json");
-  const contractPaths = [
-    "docs/parity/deviations.json",
-    "docs/parity/requirement-owners.json",
-    "docs/parity/requirement-owners.schema.json",
-    "docs/parity/requirements.json",
-    "docs/parity/scope.schema.json",
-    "docs/parity/ticket-boundaries.json",
-    "docs/parity/ticket-boundaries.schema.json",
-    "docs/parity/trace-reports/README.md",
-  ];
+  const explicit = new Set(["docs/planning-github-graph.json", "docs/planning-local-links.json", "scripts/check-planning-docs.mjs", "scripts/generate-planning-local-links.mjs", "scripts/generate-requirement-owners.mjs"]);
+  const owned = [".github/workflows", "docs/parity", "scripts/release", "scripts/verify", "tests/fixtures", "tests/release"]
+    .flatMap((directory) => filesBelow(directory));
   assert.deepEqual(
     releaseInputs.candidate_owned,
-    [...contractPaths, ...filesBelow("scripts/release"), ...filesBelow("scripts/verify")].sort(),
+    [...owned, ...explicit].sort(),
   );
+  assert.deepEqual(releaseInputs.transitive_inputs, [
+    "docs/decisions/community-compliant-product-naming-and-attribution.md",
+    "docs/decisions/desktop-compatibility-and-performance-envelope.md",
+    "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+    "docs/decisions/parity-acceptance-matrix-and-release-gates.md",
+    "docs/decisions/plugin-architecture-and-state-ownership.md",
+    "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
+    "docs/implementation-dossier.md",
+    "docs/research/behavior-inventory.md",
+  ]);
   assert.deepEqual(
     releaseInputs.gates.map((gate) => gate.id),
     Array.from({ length: 10 }, (_, index) => `G${index}`),

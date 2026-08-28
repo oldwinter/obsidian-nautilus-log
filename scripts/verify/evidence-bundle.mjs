@@ -13,6 +13,7 @@ import {
   expectRequirementIds,
   expectSafeRelativePath,
   expectTestIds,
+  evidenceKindFromId,
   parseJson,
   validateEvidenceRecord,
   validateIndexShape,
@@ -153,7 +154,7 @@ function buildReverseProjections(records) {
   };
 }
 
-function validateRecords(bundleRoot, manifest, index, candidateSha, packageSha256) {
+function validateRecords(bundleRoot, manifest, index, candidateSha, packageSha256, freshness) {
   const fileEntries = manifestEntryByPath(manifest);
   const records = [];
   const seenEvidenceIds = new Set();
@@ -161,7 +162,7 @@ function validateRecords(bundleRoot, manifest, index, candidateSha, packageSha25
     const fileEntry = fileEntries.get(indexEntry.path);
     if (!fileEntry || fileEntry.role !== "record") fail(`${indexEntry.path}: index record is absent from manifest with role record`);
     if (fileEntry.sha256 !== indexEntry.sha256) fail(`${indexEntry.path}: index and manifest record hashes differ`);
-    const record = validateEvidenceRecord(readBundleJson(bundleRoot, indexEntry.path), indexEntry.path);
+    const record = validateEvidenceRecord(readBundleJson(bundleRoot, indexEntry.path), indexEntry.path, freshness);
     if (seenEvidenceIds.has(record.evidence_id)) fail(`${indexEntry.path}: duplicate evidence ID ${record.evidence_id}`);
     seenEvidenceIds.add(record.evidence_id);
     if (record.candidate_sha !== candidateSha) fail(`${record.evidence_id}: stale candidate SHA ${record.candidate_sha}`);
@@ -222,6 +223,7 @@ function validateResolvedRequirements(
   records,
   index,
   requiredRequirementIds,
+  requiredEnvironmentIds,
 ) {
   const candidateActive = activeRequirements(candidateRequirements, "candidate requirements");
   for (const row of candidateRequirements.requirements) {
@@ -239,6 +241,7 @@ function validateResolvedRequirements(
   if (candidateActive.length !== resolvedActive.length) fail("resolved requirements changed the active requirement universe");
 
   const activeById = new Map(candidateActive.map((row) => [row.id, row]));
+  const testById = new Map(candidateRequirements.test_catalog.map((entry) => [entry.id, entry]));
   const requiredIds = requiredRequirementIds === undefined
     ? new Set(activeById.keys())
     : new Set(requiredRequirementIds);
@@ -280,6 +283,11 @@ function validateResolvedRequirements(
       if (!record.requirement_ids.includes(row.id)) fail(`${label}: evidence ${evidenceId} lacks its reverse requirement link`);
       for (const testId of record.test_ids) {
         if (!row.tests.includes(testId)) fail(`${label}: evidence ${evidenceId} links undeclared test ${testId}`);
+        const test = testById.get(testId);
+        if (!test || test.requirement_id !== row.id) fail(`${label}: evidence ${evidenceId} links a misprojected test ${testId}`);
+        if (evidenceKindFromId(evidenceId) !== test.evidence_kind) {
+          fail(`${label}: evidence ${evidenceId} kind does not match ${testId} kind ${test.evidence_kind}`);
+        }
       }
       if (!row.environments.includes(record.environment.profile_id)) {
         fail(`${label}: evidence ${evidenceId} uses undeclared environment ${record.environment.profile_id}`);
@@ -289,8 +297,14 @@ function validateResolvedRequirements(
         themeClasses.add(record.environment.parameters["theme-class"]);
       }
     }
-    sameJson(sorted(evidencedEnvironments), sorted(row.environments), `${label}.environments: each declared environment must have evidence`);
-    if (row.environments.includes("ENV-THEME")) {
+    const expectedEnvironments = requiredEnvironmentIds === undefined
+      ? row.environments
+      : row.environments.filter((id) => new Set(requiredEnvironmentIds).has(id));
+    if (expectedEnvironments.length === 0) fail(`${label}.environments: candidate scope has no applicable evidence profile`);
+    if (expectedEnvironments.some((id) => !evidencedEnvironments.has(id))) {
+      fail(`${label}.environments: each applicable environment must have evidence`);
+    }
+    if (expectedEnvironments.includes("ENV-THEME")) {
       sameJson(sorted(themeClasses), ["community-customized", "high-contrast"], `${label}.environments: ENV-THEME requires high-contrast and community-customized evidence`);
     }
   }
@@ -308,6 +322,10 @@ export function validateEvidenceBundle({
   candidateRequirementsBlobOid,
   candidateRequirementsSourcePath,
   requiredRequirementIds,
+  requiredEnvironmentIds,
+  nowMs,
+  maxAgeMs,
+  maxFutureSkewMs,
 }) {
   expectSafeRelativePath(manifestPath, "manifest path");
   const manifestBytes = readBundleFile(bundleDir, manifestPath);
@@ -325,7 +343,11 @@ export function validateEvidenceBundle({
   const index = validateIndexShape(readBundleJson(bundleDir, manifest.index.path), manifest.index.path);
   if (index.candidate_sha !== candidateSha) fail(`evidence-index.candidate_sha: stale candidate SHA ${index.candidate_sha}`);
   if (index.package_sha256 !== expectedPackageSha256) fail(`evidence-index.package_sha256: stale package SHA-256 ${index.package_sha256}`);
-  const records = validateRecords(bundleDir, manifest, index, candidateSha, expectedPackageSha256);
+  const records = validateRecords(bundleDir, manifest, index, candidateSha, expectedPackageSha256, {
+    nowMs,
+    maxAgeMs,
+    maxFutureSkewMs,
+  });
   validateManifestCoverage(manifest, index);
   const resolvedRequirements = readBundleJson(bundleDir, manifest.requirements.path);
   validateResolvedRequirements(
@@ -334,6 +356,7 @@ export function validateEvidenceBundle({
     records,
     index,
     requiredRequirementIds,
+    requiredEnvironmentIds,
   );
   return {
     candidateSha,
@@ -345,6 +368,13 @@ export function validateEvidenceBundle({
     records,
     resolvedRequirements,
     bundleDir: realpathSync(bundleDir),
+    scope: {
+      release_scope: requiredRequirementIds === undefined ? "public" : "private",
+      included_requirement_ids: Array.from(requiredRequirementIds ?? resolvedRequirements.requirements.filter((row) => row.status === "active").map((row) => row.id)),
+      excluded_requirement_ids: resolvedRequirements.requirements
+        .filter((row) => row.status === "active" && !new Set(requiredRequirementIds ?? resolvedRequirements.requirements.map((entry) => entry.id)).has(row.id))
+        .map((row) => row.id),
+    },
   };
 }
 

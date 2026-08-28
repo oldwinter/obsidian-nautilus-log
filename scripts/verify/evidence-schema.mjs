@@ -3,7 +3,7 @@ import { posix } from "node:path";
 export const EVIDENCE_SCHEMA_VERSION = 1;
 
 export const RECORD_KIND_BY_TYPE = Object.freeze({
-  pure: Object.freeze(["UNIT", "CONTRACT"]),
+  pure: Object.freeze(["UNIT", "CONTRACT", "INTEGRATION"]),
   vault: Object.freeze(["VAULT"]),
   host: Object.freeze(["INTEGRATION"]),
   screenshot: Object.freeze(["SCREENSHOT"]),
@@ -390,7 +390,12 @@ function validateArtifacts(artifacts, path) {
   }
 }
 
-export function validateEvidenceRecord(record, path = "record") {
+export function evidenceKindFromId(evidenceId) {
+  const match = typeof evidenceId === "string" ? evidenceId.match(EVIDENCE_ID) : null;
+  return match?.[3] ?? null;
+}
+
+export function validateEvidenceRecord(record, path = "record", options = {}) {
   expectExactKeys(
     record,
     [
@@ -427,7 +432,20 @@ export function validateEvidenceRecord(record, path = "record") {
   if (!allowedKinds.includes(idMatch[3])) fail(`${path}.evidence_id`, `kind ${idMatch[3]} is invalid for ${record.record_type}`);
   validateTimestamp(record.started_at, `${path}.started_at`);
   validateTimestamp(record.ended_at, `${path}.ended_at`);
-  if (Date.parse(record.ended_at) < Date.parse(record.started_at)) fail(`${path}.ended_at`, "must not precede started_at");
+  const startedAt = Date.parse(record.started_at);
+  const endedAt = Date.parse(record.ended_at);
+  if (endedAt < startedAt) fail(`${path}.ended_at`, "must not precede started_at");
+  const nowMs = options.nowMs ?? Date.now();
+  const maxAgeMs = options.maxAgeMs ?? 7 * 24 * 60 * 60 * 1000;
+  const maxFutureSkewMs = options.maxFutureSkewMs ?? 5 * 60 * 1000;
+  if (!Number.isFinite(nowMs) || !Number.isFinite(maxAgeMs) || maxAgeMs < 0
+    || !Number.isFinite(maxFutureSkewMs) || maxFutureSkewMs < 0) {
+    fail(path, "freshness options must be finite non-negative milliseconds");
+  }
+  if (endedAt < nowMs - maxAgeMs) fail(`${path}.ended_at`, "evidence is stale");
+  if (startedAt > nowMs + maxFutureSkewMs || endedAt > nowMs + maxFutureSkewMs) {
+    fail(`${path}.ended_at`, "evidence timestamp exceeds allowed future skew");
+  }
   if (record.result !== "PASS") fail(`${path}.result`, "must equal PASS");
   expectExactKeys(record.execution, ["attempts", "retries", "skipped", "quarantined", "expected_failure"], [], `${path}.execution`);
   expectInteger(record.execution.attempts, `${path}.execution.attempts`, 1);

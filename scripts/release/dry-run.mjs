@@ -16,6 +16,7 @@ async function main() {
     const results = [];
     for (let index = 0; index <= 9; index += 1) {
       const gate = `G${index}`;
+      if (gate !== "G0") await fixture.writeGateResultsThrough(gate);
       const { stdout } = await execFileAsync(process.execPath, [
         path.join(repositoryRoot, "scripts/release/run-gate.mjs"),
         "--gate", gate,

@@ -63,19 +63,24 @@ async function main() {
     bundleRoot: path.resolve(args.bundle),
     candidateRequirements: requirements,
     requiredRequirementIds: scope.included_requirement_ids,
+    requiredEnvironmentIds: scope.release_scope === "private"
+      ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"]
+      : undefined,
   });
   const gateResults = await readJson(path.join(inputRoot, "gate-results.json"));
+  const throughGate = args.gate === "G9" ? "G8" : args.gate;
   const gates = validateGateResults(
     gateResults,
     args.candidate,
     evidence.package_sha256,
     evidence.index,
-    args.gate,
+    throughGate,
+    requirements.test_catalog,
   );
   let g7;
   if (Number(args.gate.slice(1)) >= 7) {
     g7 = await readJson(path.join(inputRoot, "g7-package.json"));
-    await validateG7Package(g7, args.candidate, evidence.package_sha256, inputRoot);
+    await validateG7Package(g7, args.candidate, evidence.package_sha256, inputRoot, { repository });
   }
   if (args.gate === "G8" && scope.release_scope === "private" && scope.excluded_requirement_ids.length === 0) {
     throw new Error("G8 private scope must disclose open requirements");
@@ -99,6 +104,14 @@ async function main() {
       scope,
       gates,
       requirementsHash,
+      {
+        bundle_sha256: evidence.manifestSha256,
+        index_sha256: evidence.indexSha256,
+        g9_test_ids: requirements.test_catalog.filter((entry) => entry.gates.includes("G9")).map((entry) => entry.id).sort(),
+        g9_evidence_ids: [...new Set(requirements.test_catalog
+          .filter((entry) => entry.gates.includes("G9"))
+          .flatMap((entry) => evidence.index.tests.find((row) => row.test_id === entry.id)?.evidence_ids ?? []))].sort(),
+      },
     );
   }
   process.stdout.write(`${JSON.stringify({ gate: args.gate, result: "PASS", candidate_sha: args.candidate })}\n`);

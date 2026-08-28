@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -49,6 +49,7 @@ function parseArguments(args) {
     "--package-sha256",
     "--repo",
     "--requirements-path",
+    "--scope",
   ]);
   const values = new Map();
   for (let index = 0; index < args.length; index += 2) {
@@ -69,6 +70,34 @@ function parseArguments(args) {
     packageSha256: values.get("--package-sha256"),
     repoRoot: resolve(values.get("--repo") ?? process.cwd()),
     requirementsPath: values.get("--requirements-path") ?? "docs/parity/requirements.json",
+    scopePath: values.has("--scope") ? resolve(values.get("--scope")) : null,
+  };
+}
+
+function evidenceScope(scopePath, candidateSha, requirements) {
+  if (!scopePath) return {
+    release_scope: "public",
+    included_requirement_ids: requirements.requirements.filter((row) => row.status === "active").map((row) => row.id),
+    excluded_requirement_ids: [],
+    environment_ids: undefined,
+  };
+  const scope = parseJson(readFileSync(scopePath, "utf8"), scopePath);
+  const activeIds = requirements.requirements.filter((row) => row.status === "active").map((row) => row.id);
+  const included = scope.included_requirement_ids;
+  const excluded = scope.excluded_requirement_ids;
+  if (scope.schema_version !== 1 || scope.candidate_sha !== candidateSha
+    || !["private", "public"].includes(scope.release_scope)
+    || !Array.isArray(included) || !Array.isArray(excluded)
+    || new Set([...included, ...excluded]).size !== activeIds.length
+    || activeIds.some((id) => included.includes(id) === excluded.includes(id))) {
+    fail("--scope is stale or is not an exact active-requirement partition");
+  }
+  if (scope.release_scope === "public" && excluded.length !== 0) fail("public --scope cannot exclude requirements");
+  return {
+    release_scope: scope.release_scope,
+    included_requirement_ids: included,
+    excluded_requirement_ids: excluded,
+    environment_ids: scope.release_scope === "private" ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"] : undefined,
   };
 }
 
@@ -77,7 +106,9 @@ export function verifyEvidenceFromCliArguments(args) {
   expectSha40(options.candidateSha, "--candidate-sha");
   expectSha256(options.packageSha256, "--package-sha256");
   const candidate = loadCandidateRequirements(options.repoRoot, options.candidateSha, options.requirementsPath);
-  return validateEvidenceBundle({
+  const scope = evidenceScope(options.scopePath, options.candidateSha, candidate.requirements);
+  return {
+    ...validateEvidenceBundle({
     bundleDir: options.bundleDir,
     manifestPath: options.manifestPath,
     candidateSha: options.candidateSha,
@@ -85,7 +116,11 @@ export function verifyEvidenceFromCliArguments(args) {
     candidateRequirements: candidate.requirements,
     candidateRequirementsBlobOid: candidate.blobOid,
     candidateRequirementsSourcePath: candidate.sourcePath,
-  });
+    requiredRequirementIds: scope.included_requirement_ids,
+    requiredEnvironmentIds: scope.environment_ids,
+    }),
+    scope,
+  };
 }
 
 function summary(result) {

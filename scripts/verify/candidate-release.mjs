@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 
 import { CandidateError, requireFullSha } from "./candidate-object.mjs";
 import { validateCandidateScope } from "./candidate-g0.mjs";
+import { buildDeterministicCandidatePackage } from "./candidate-package.mjs";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/;
 const GATES = Array.from({ length: 10 }, (_, index) => `G${index}`);
@@ -69,6 +70,7 @@ export function validateGateResults(
   packageSha256,
   evidenceIndex,
   throughGate = "G9",
+  testCatalog = [],
 ) {
   if (gateResults.schema_version !== 1
     || gateResults.candidate_sha !== candidateSha
@@ -80,7 +82,12 @@ export function validateGateResults(
   const gateIndex = GATES.indexOf(throughGate);
   if (gateIndex < 0) throw new CandidateError(`unknown release gate ${throughGate}`);
   const requiredGates = GATES.slice(0, gateIndex + 1);
-  if ([...results.keys()].some((gate) => !GATES.includes(gate))
+  if (!Array.isArray(testCatalog) || testCatalog.length === 0) {
+    throw new CandidateError("gate validation requires the committed test catalog");
+  }
+  const testsById = uniqueMap(testCatalog, "id", "test catalog");
+  const indexTests = uniqueMap(evidenceIndex.tests, "test_id", "Evidence Index tests");
+  if ([...results.keys()].some((gate) => !requiredGates.includes(gate))
     || requiredGates.some((gate) => !results.has(gate))) {
     throw new CandidateError(`gate results must contain G0 through ${throughGate} exactly once with no unknown gate`);
   }
@@ -90,13 +97,28 @@ export function validateGateResults(
       || result.package_sha256 !== packageSha256) {
       throw new CandidateError(`${gate} did not pass on the exact candidate and package`);
     }
-    if (!Array.isArray(result.command) || result.command.length === 0
-      || result.command.some((part) => typeof part !== "string" || !part)) {
-      throw new CandidateError(`${gate} is missing its exact command`);
+    if (JSON.stringify(result.command) !== JSON.stringify([
+      "node", "scripts/release/run-gate.mjs", "--gate", gate,
+    ])) {
+      throw new CandidateError(`${gate} does not use its canonical command`);
     }
+    const mandatoryTests = [...testsById.values()]
+      .filter((entry) => entry.gates.includes(gate))
+      .map((entry) => entry.id)
+      .sort();
+    const declaredTests = requireArray(result.test_ids, `${gate} test_ids`);
+    if (JSON.stringify(declaredTests) !== JSON.stringify(mandatoryTests)) {
+      throw new CandidateError(`${gate} test_ids do not exactly cover its mandatory in-scope tests`);
+    }
+    const mandatoryEvidence = [...new Set(mandatoryTests.flatMap((testId) => {
+      const projection = indexTests.get(testId);
+      if (!projection) throw new CandidateError(`${gate} mandatory test ${testId} has no Evidence Index row`);
+      return projection.evidence_ids;
+    }))].sort();
     const linkedEvidence = requireArray(result.evidence_ids, `${gate} evidence_ids`);
-    if (linkedEvidence.length === 0 || linkedEvidence.some((id) => !evidenceIds.has(id))) {
-      throw new CandidateError(`${gate} has missing or dangling evidence`);
+    if (JSON.stringify(linkedEvidence) !== JSON.stringify(mandatoryEvidence)
+      || linkedEvidence.some((id) => !evidenceIds.has(id))) {
+      throw new CandidateError(`${gate} evidence_ids do not exactly cover its mandatory tests`);
     }
     if (typeof result.result_url !== "string" || !/^https:\/\//.test(result.result_url)) {
       throw new CandidateError(`${gate} result URL is missing`);
@@ -107,7 +129,23 @@ export function validateGateResults(
   return results;
 }
 
-export async function validateG7Package(g7, candidateSha, packageSha256, inputRoot) {
+async function readRegularContainedFile(root, relativePath) {
+  const absoluteRoot = await realpath(root);
+  let cursor = absoluteRoot;
+  for (const segment of relativePath.split(/[\\/]/)) {
+    cursor = path.resolve(cursor, segment);
+    const stat = await lstat(cursor);
+    if (stat.isSymbolicLink()) throw new CandidateError(`G7 package path contains symbolic link ${relativePath}`);
+  }
+  const resolved = await realpath(cursor);
+  if (resolved !== absoluteRoot && !resolved.startsWith(`${absoluteRoot}${path.sep}`)) {
+    throw new CandidateError("G7 package path resolves outside the release input directory");
+  }
+  if (!(await lstat(resolved)).isFile()) throw new CandidateError("G7 package path must resolve to a regular file");
+  return readFile(resolved);
+}
+
+export async function validateG7Package(g7, candidateSha, packageSha256, inputRoot, options = {}) {
   if (g7.schema_version !== 1 || g7.gate !== "G7" || g7.candidate_sha !== candidateSha
     || g7.package_sha256 !== packageSha256 || g7.result !== "PASS") {
     throw new CandidateError("G7 package/policy input is stale or malformed");
@@ -121,7 +159,7 @@ export async function validateG7Package(g7, candidateSha, packageSha256, inputRo
     || g7.package_path.split(/[\\/]/).includes("..")) {
     throw new CandidateError("G7 package path must stay inside the release input directory");
   }
-  const packageBytes = await readFile(path.resolve(inputRoot, g7.package_path));
+  const packageBytes = await readRegularContainedFile(inputRoot, g7.package_path);
   if (sha256(packageBytes) !== packageSha256) throw new CandidateError("G7 exact package hash mismatch");
 
   const builds = requireArray(g7.builds, "G7 builds");
@@ -140,6 +178,18 @@ export async function validateG7Package(g7, candidateSha, packageSha256, inputRo
   }
   for (const asset of assets.values()) {
     if (!HASH_PATTERN.test(asset.sha256 ?? "")) throw new CandidateError(`G7 asset ${asset.path} has invalid hash`);
+  }
+  if (!options.repository) throw new CandidateError("G7 exact-object rebuild requires a candidate repository");
+  const rebuilt = await (options.buildCandidate ?? buildDeterministicCandidatePackage)({
+    repository: options.repository,
+    candidateSha,
+  });
+  if (rebuilt.package_sha256 !== packageSha256
+    || rebuilt.version !== g7.version
+    || rebuilt.package_filename !== g7.package_filename
+    || JSON.stringify(rebuilt.assets) !== canonicalAssets
+    || JSON.stringify(rebuilt.builds) !== JSON.stringify(builds)) {
+    throw new CandidateError("G7 package does not match the deterministic exact-Git-object rebuild");
   }
 
   const smoke = uniqueMap(g7.smoke_workflows, "id", "G7 smoke workflows");
@@ -184,6 +234,7 @@ export function validateG9Signoff(
   scope,
   gateResults,
   expectedRequirementRevision,
+  expectedEvidenceIdentity,
 ) {
   if (signoff.schema_version !== 1 || signoff.gate !== "G9" || signoff.candidate_sha !== candidateSha
     || signoff.package_sha256 !== packageSha256 || signoff.decision !== "GO") {
@@ -202,9 +253,20 @@ export function validateG9Signoff(
     || !/^https:\/\//.test(signoff.evidence_bundle?.index_url ?? "")) {
     throw new CandidateError("G9 release/package/requirements/evidence identity is incomplete");
   }
+  if (!signoff.release || signoff.release.draft !== false || signoff.release.published !== true
+    || signoff.release.target_sha !== candidateSha
+    || signoff.release.tag !== signoff.version
+    || !/^https:\/\/github\.com\/[^/]+\/[^/]+\/releases\/tag\//.test(signoff.release.url ?? "")) {
+    throw new CandidateError("G9 requires a published non-draft release URL/tag targeting the exact candidate SHA");
+  }
   if (expectedRequirementRevision
     && signoff.requirements.revision_sha256 !== expectedRequirementRevision) {
     throw new CandidateError("G9 requirement revision does not match the exact candidate object");
+  }
+  if (expectedEvidenceIdentity
+    && (signoff.evidence_bundle.sha256 !== expectedEvidenceIdentity.bundle_sha256
+      || signoff.evidence_bundle.index_sha256 !== expectedEvidenceIdentity.index_sha256)) {
+    throw new CandidateError("G9 evidence bundle/index identities differ from the validated bundle");
   }
   if (JSON.stringify([...signoff.approved_deviation_ids].sort())
       !== JSON.stringify([...scope.approved_deviation_ids].sort())
@@ -214,8 +276,27 @@ export function validateG9Signoff(
   }
   const linkedGates = uniqueMap(signoff.gate_results, "id", "G9 gate links");
   if (linkedGates.size !== GATES.length || GATES.some((gate) => !linkedGates.has(gate)
-    || linkedGates.get(gate).result !== "PASS" || !gateResults.has(gate))) {
+    || linkedGates.get(gate).result !== "PASS"
+    || linkedGates.get(gate).candidate_sha !== candidateSha
+    || linkedGates.get(gate).package_sha256 !== packageSha256)) {
     throw new CandidateError("G9 signoff must link passing G0-G9 results");
+  }
+  for (const gate of GATES.slice(0, 9)) {
+    const durable = linkedGates.get(gate);
+    const validated = gateResults.get(gate);
+    if (!validated || durable.result_url !== validated.result_url
+      || JSON.stringify(durable.test_ids) !== JSON.stringify(validated.test_ids)
+      || JSON.stringify(durable.evidence_ids) !== JSON.stringify(validated.evidence_ids)) {
+      throw new CandidateError(`G9 durable ${gate} link differs from the validated gate result`);
+    }
+  }
+  if (linkedGates.get("G9").result_url !== signoff.release.url) {
+    throw new CandidateError("G9 durable result must link the published release");
+  }
+  if (expectedEvidenceIdentity
+    && (JSON.stringify(linkedGates.get("G9").test_ids) !== JSON.stringify(expectedEvidenceIdentity.g9_test_ids)
+      || JSON.stringify(linkedGates.get("G9").evidence_ids) !== JSON.stringify(expectedEvidenceIdentity.g9_evidence_ids))) {
+    throw new CandidateError("G9 durable result does not exactly cover its mandatory tests/evidence");
   }
   const workflows = uniqueMap(signoff.manual_workflows, "id", "G9 manual workflows");
   if (workflows.size !== REQUIRED_WORKFLOWS.length || REQUIRED_WORKFLOWS.some((id) => !workflows.has(id))) {
@@ -260,11 +341,12 @@ export async function validateReleaseInputs({
   scope,
   signoff,
   inputRoot,
+  repository,
 }) {
   const requirementRows = new Map(requirements.requirements.map((row) => [row.id, row]));
   const partition = validateCandidateScope(scope, candidateSha, requirementRows);
-  const gates = validateGateResults(gateResults, candidateSha, evidence.package_sha256, evidence.index);
-  await validateG7Package(g7, candidateSha, evidence.package_sha256, inputRoot);
+  const gates = validateGateResults(gateResults, candidateSha, evidence.package_sha256, evidence.index, "G8", requirements.test_catalog);
+  await validateG7Package(g7, candidateSha, evidence.package_sha256, inputRoot, { repository });
   if (scope.release_scope === "private" && partition.excluded.size === 0) {
     throw new CandidateError("G8 private acceptance must explicitly disclose open requirements");
   }
@@ -273,9 +355,16 @@ export async function validateReleaseInputs({
     throw new CandidateError("G8 private package has an invalid release label");
   }
   if (scope.release_scope === "public") {
-    validateG9Signoff(signoff, candidateSha, evidence.package_sha256, scope, gates);
+    validateG9Signoff(signoff, candidateSha, evidence.package_sha256, scope, gates, undefined, {
+      bundle_sha256: evidence.manifestSha256,
+      index_sha256: evidence.indexSha256,
+      g9_test_ids: requirements.test_catalog.filter((entry) => entry.gates.includes("G9")).map((entry) => entry.id).sort(),
+      g9_evidence_ids: [...new Set(requirements.test_catalog
+        .filter((entry) => entry.gates.includes("G9"))
+        .flatMap((entry) => evidence.index.tests.find((row) => row.test_id === entry.id)?.evidence_ids ?? []))].sort(),
+    });
   } else if (signoff?.decision === "GO") {
     throw new CandidateError("a private candidate cannot receive public parity GO");
   }
-  return { result: "PASS", gates: GATES, release_scope: scope.release_scope };
+  return { result: "PASS", gates: [...gates.keys()], release_scope: scope.release_scope };
 }

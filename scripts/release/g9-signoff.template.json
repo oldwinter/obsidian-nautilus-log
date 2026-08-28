@@ -16,7 +16,15 @@
   "gate_results": [],
   "evidence_bundle": {
     "index_url": "https://example.invalid/replace-with-durable-index",
+    "index_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "release": {
+    "url": "https://github.com/oldwinter/obsidian-nautilus-log/releases/tag/replace-me",
+    "tag": "replace-me",
+    "draft": false,
+    "published": false,
+    "target_sha": "0000000000000000000000000000000000000000"
   },
   "approved_deviation_ids": [],
   "scope_exclusions": [],

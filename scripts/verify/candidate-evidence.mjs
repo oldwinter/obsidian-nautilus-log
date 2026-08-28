@@ -15,6 +15,8 @@ export async function validateCandidateEvidenceBundle({
   candidateRequirements,
   requirementsPath = "docs/parity/requirements.json",
   requiredRequirementIds,
+  requiredEnvironmentIds,
+  nowMs,
 }) {
   requireFullSha(candidateSha);
   const [candidateBytes, sourceBlobOid] = await Promise.all([
@@ -39,6 +41,8 @@ export async function validateCandidateEvidenceBundle({
     candidateRequirementsBlobOid: sourceBlobOid,
     candidateRequirementsSourcePath: requirementsPath,
     requiredRequirementIds,
+    requiredEnvironmentIds,
+    nowMs,
   });
   return {
     ...result,

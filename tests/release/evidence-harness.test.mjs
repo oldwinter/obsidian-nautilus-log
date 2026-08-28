@@ -64,6 +64,12 @@ const definitions = [
 function makeCandidateRequirements() {
   return {
     schema_version: 1,
+    test_catalog: definitions.map(([, kind, , requirementId, testId]) => ({
+      id: testId,
+      requirement_id: requirementId,
+      evidence_kind: kind,
+      gates: ["G0"],
+    })),
     requirements: definitions
       .map(([, , environmentId, requirementId, testId]) => ({
         id: requirementId,
@@ -520,6 +526,35 @@ test("validates every accepted environment profile with exact matrix values", ()
   assert.throws(() => validateEvidenceRecord(mismatched, "mismatched"), /screenshot evidence cannot use ENV-PURE/);
 });
 
+test("binds Evidence ID kind to the committed test catalog", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-kind-"));
+  try {
+    const candidateRequirements = makeCandidateRequirements();
+    candidateRequirements.test_catalog.find((entry) => entry.id === "EVD-PURE-001").evidence_kind = "UNIT";
+    const context = createBundle(root, { candidateRequirements });
+    assert.throws(() => validate(root, context), /kind does not match EVD-PURE-001 kind UNIT/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("freshness accepts exact boundaries and rejects stale or future-skewed evidence", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-clock-"));
+  try {
+    createBundle(root);
+    const record = readJson(resolve(root, "records/001.json"));
+    const ended = Date.parse(record.ended_at);
+    assert.doesNotThrow(() => validateEvidenceRecord(record, "boundary", { nowMs: ended + 7 * 24 * 60 * 60 * 1000 }));
+    assert.throws(() => validateEvidenceRecord(record, "stale", { nowMs: ended + 7 * 24 * 60 * 60 * 1000 + 1 }), /evidence is stale/);
+    const future = structuredClone(record);
+    future.started_at = new Date(ended + 5 * 60 * 1000 + 1).toISOString();
+    future.ended_at = future.started_at;
+    assert.throws(() => validateEvidenceRecord(future, "future", { nowMs: ended }), /future skew/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("renders deterministic forward and reverse trace paths", () => {
   const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-trace-"));
   try {
@@ -555,7 +590,12 @@ test("private evidence scopes require complete included rows and empty excluded 
     const excludedId = definitions.at(-1)[3];
     const requiredIds = definitions.slice(0, -1).map((definition) => definition[3]);
     excludeRequirementFromBundle(root, excludedId);
-    assert.equal(validate(root, context, requiredIds).records.length, requiredIds.length);
+    const privateResult = validate(root, context, requiredIds);
+    assert.equal(privateResult.records.length, requiredIds.length);
+    const privateTrace = buildTraceReport(privateResult);
+    assert.equal(privateTrace.scope.release_scope, "private");
+    assert.deepEqual(privateTrace.scope.included_requirement_ids, [...requiredIds].sort());
+    assert.deepEqual(privateTrace.scope.excluded_requirement_ids, [excludedId]);
 
     const resolvedPath = resolve(root, "resolved-requirements.json");
     const resolved = readJson(resolvedPath);
