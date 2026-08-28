@@ -208,6 +208,8 @@ export interface WorkspaceCommitterOptions {
   readonly index?: WorkspaceIndexOptions;
   readonly logbook?: LogbookReadOptions;
   readonly readContext: () => CommitContext;
+  /** Borrowed vault-scoped index; its caller retains lifecycle ownership. */
+  readonly workspaceIndex?: WorkspaceIndex;
 }
 
 interface BuiltStage {
@@ -1089,6 +1091,7 @@ function currentFileRunningFacts(
   readonly fingerprints: readonly string[];
   readonly potentialFingerprints: readonly string[];
   readonly potential: boolean;
+  readonly blockingPotential: boolean;
   readonly planInvalid: boolean;
   readonly invalidOwner: boolean;
 } {
@@ -1097,6 +1100,7 @@ function currentFileRunningFacts(
   const potentialFingerprints = new Set<string>();
   const structuredLocations = new Set<string>();
   let potential = false;
+  let blockingPotential = false;
   let invalidOwner = false;
   const planInvalid = resolved.diagnostics.length > 0 || resolved.limitExceeded !== undefined;
   if (resolved.region && !planInvalid) {
@@ -1114,6 +1118,7 @@ function currentFileRunningFacts(
           fingerprints: Object.freeze([]),
           potentialFingerprints: Object.freeze([]),
           potential: true,
+          blockingPotential: true,
           planInvalid,
           invalidOwner,
         };
@@ -1141,6 +1146,18 @@ function currentFileRunningFacts(
           if (!ownerValid && !runningClockIsSelectedRecovery(indexedClock, plan, expectation)) invalidOwner = true;
         } else if (clock.parsed.kind === "malformed" && clock.parsed.potentialRunning) {
           potential = true;
+          const indexedClock: IndexedClockSource = Object.freeze({
+            path,
+            fromOffset: clock.fromOffset,
+            toOffset: clock.toOffset,
+            text: clock.text,
+            ...(clock.ownerId ? { ownerId: clock.ownerId } : {}),
+            scope: "accepted-logbook",
+            parsed: clock.parsed,
+          });
+          if (!potentialClockIsSelectedPlanRepair(indexedClock, plan, expectation, "before")) {
+            blockingPotential = true;
+          }
           const rawIdMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(clock.text);
           const rawId = rawIdMatch && isCanonicalClockId(rawIdMatch[1]!) ? rawIdMatch[1]! : undefined;
           potentialFingerprints.add(runningFingerprint(
@@ -1183,6 +1200,7 @@ function currentFileRunningFacts(
       }
       else if (parsed.kind === "malformed" && parsed.potentialRunning) {
         potential = true;
+        blockingPotential = true;
         potentialFingerprints.add(runningFingerprint(idMatch[1]!, path, fromOffset, toOffset, clockText, undefined));
       }
     }
@@ -1191,6 +1209,7 @@ function currentFileRunningFacts(
     fingerprints: Object.freeze([...fingerprints].sort()),
     potentialFingerprints: Object.freeze([...potentialFingerprints].sort()),
     potential,
+    blockingPotential,
     planInvalid,
     invalidOwner,
   };
@@ -1209,13 +1228,13 @@ function expectationResolvedPotentialClock(
         && candidate.span.fromOffset === clock.fromOffset
         && candidate.span.toOffset === clock.toOffset;
     }
-    const identity = index.identity(candidate.target.id);
+    const identity = index.safetyIdentity(candidate.target.id);
     return clock.clockId === candidate.target.id
       && identity.kind === "unique"
       && identity.location.path === clock.path;
   });
   if (!bound?.ownerId || clock.ownerId !== bound.ownerId) return undefined;
-  const owner = index.identity(bound.ownerId);
+  const owner = index.safetyIdentity(bound.ownerId);
   if (owner.kind !== "unique" || owner.location.path !== clock.path) return undefined;
   const parsed = parseClockText(bound.text, logbookOptions);
   if (parsed.kind !== "record" || parsed.record.state !== "running") return undefined;
@@ -1250,7 +1269,7 @@ function reconciledClockFacts(
   expectation: MutationExpectation,
   logbookOptions: LogbookReadOptions,
 ): ReconciledClockFacts {
-  const snapshot = index.snapshot;
+  const snapshot = index.safetySnapshot;
   const resolvedPotential = snapshot.potentialRunning
     .map((clock) => expectationResolvedPotentialClock(index, clock, expectation, logbookOptions))
     .filter((clock): clock is IndexedClockSource => clock !== undefined);
@@ -1282,21 +1301,63 @@ function actionAllowsInvalidClockOwnerRecovery(action: MutationAction): boolean 
     || action === "repair-clock-identity";
 }
 
+function selectedPlanIdentityRepair(
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+) {
+  if (plan.action !== "repair-plan-item-identity") return undefined;
+  for (const stage of plan.stages) {
+    for (const operation of stage.operations) {
+      if (operation.kind !== "repair-plan-item-identity") continue;
+      const expected = findPlanExpectation(expectation, operation.target, stage.path);
+      const selected = expectation.selectedRepair;
+      if (
+        !expected
+        || !selected
+        || selected.id !== operation.target.id
+        || selected.selectedSpan.path !== expected.path
+        || selected.selectedSpan.fromOffset !== expected.itemSpan.fromOffset
+        || selected.selectedSpan.toOffset !== expected.itemSpan.toOffset
+      ) return undefined;
+      return { operation, expected, selected };
+    }
+  }
+  return undefined;
+}
+
+function potentialClockIsSelectedPlanRepair(
+  clock: IndexedClockSource,
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+  phase: "before" | "after",
+): boolean {
+  if (clock.parsed.kind !== "malformed" || !clock.parsed.potentialRunning) return false;
+  const repair = selectedPlanIdentityRepair(plan, expectation);
+  if (!repair) return false;
+  const expectedOwner = phase === "before" ? repair.operation.target.id : repair.operation.newId;
+  return clock.ownerId === expectedOwner
+    && clock.path === repair.expected.path
+    && clock.fromOffset >= repair.expected.itemSpan.fromOffset
+    && clock.toOffset <= repair.expected.itemSpan.toOffset;
+}
+
 function runningClockIsSelectedRecovery(
   clock: IndexedClockSource,
   plan: MutationPlan,
   expectation: MutationExpectation,
+  phase: "before" | "after" = "before",
 ): boolean {
   if (!actionAllowsInvalidClockOwnerRecovery(plan.action)) return false;
   const clockKey = indexedClockKey(clock);
   return plan.stages.some((stage) => stage.operations.some((operation) => {
     if (operation.kind === "repair-plan-item-identity") {
-      const expected = findPlanExpectation(expectation, operation.target, stage.path);
-      return expected !== undefined
-        && clock.ownerId === operation.target.id
-        && clock.path === expected.path
-        && clock.fromOffset >= expected.itemSpan.fromOffset
-        && clock.toOffset <= expected.itemSpan.toOffset;
+      if (phase === "after") return false;
+      const repair = selectedPlanIdentityRepair(plan, expectation);
+      if (!repair || clock.ownerId !== operation.target.id) return false;
+      const insideSelected = clock.path === repair.expected.path
+        && clock.fromOffset >= repair.expected.itemSpan.fromOffset
+        && clock.toOffset <= repair.expected.itemSpan.toOffset;
+      return insideSelected || repair.selected.locations.length === 2;
     }
     if (operation.kind !== "clock-out"
       && operation.kind !== "delete-clock"
@@ -1317,13 +1378,14 @@ async function invalidClockOwnerPrecondition(
   expectation: MutationExpectation,
   logbookOptions: LogbookReadOptions,
   stopped: () => boolean,
+  phase: "before" | "after" = "before",
 ): Promise<CommitConflict | undefined> {
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   const texts = new Map<string, string>();
   for (const clock of facts.running) {
     let valid = false;
     if (clock.ownerId) {
-      const identity = index.identity(clock.ownerId);
+      const identity = index.safetyIdentity(clock.ownerId);
       if (identity.kind === "unique" && identity.location.path === clock.path) {
         let text = texts.get(clock.path);
         if (text === undefined) {
@@ -1335,13 +1397,13 @@ async function invalidClockOwnerPrecondition(
           if (stopped()) return conflict("action-no-longer-applicable", plan.action, clock.path);
           if (text !== undefined) texts.set(clock.path, text);
         }
-        if (text !== undefined && !index.dirty) {
+        if (text !== undefined && index.safetySnapshot.complete) {
           const owners = parsedPlanItemsIn(clock.path, text).filter((item) => item.source.blockId === clock.ownerId);
           valid = owners.length === 1 && owners[0]!.kind === "flexible-task" && owners[0]!.status === "open";
         }
       }
     }
-    if (!valid && !runningClockIsSelectedRecovery(clock, plan, expectation)) {
+    if (!valid && !runningClockIsSelectedRecovery(clock, plan, expectation, phase)) {
       return conflict("clock-owner-invalid", plan.action, clock.path);
     }
   }
@@ -1355,11 +1417,14 @@ function globalPrecondition(
   logbookOptions: LogbookReadOptions,
 ): CommitConflict | undefined {
   const action = plan.action;
-  const snapshot = index.snapshot;
+  const snapshot = index.safetySnapshot;
   if (!snapshot.complete || !expectation.indexComplete) return conflict("source-over-limit", action);
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   const unresolvedPotential = facts.potentialRunning;
   if (unresolvedPotential.length > 0) {
+    const selectedPlanRepair = plan.action === "repair-plan-item-identity"
+      && unresolvedPotential.every((clock) =>
+        potentialClockIsSelectedPlanRepair(clock, plan, expectation, "before"));
     const normalize = plan.stages.flatMap((stage) => stage.operations)
       .find((operation): operation is Extract<FileMutationOperation, { kind: "normalize-legacy-clock" }> =>
         operation.kind === "normalize-legacy-clock",
@@ -1369,7 +1434,7 @@ function globalPrecondition(
       : undefined;
     const identityPath = normalize?.target.id
       ? (() => {
-          const lookup = index.identity(normalize.target.id!);
+          const lookup = index.safetyIdentity(normalize.target.id!);
           return lookup.kind === "unique" ? lookup.location.path : undefined;
         })()
       : undefined;
@@ -1378,13 +1443,13 @@ function globalPrecondition(
       && clock.text === expected.text
       && (normalize?.target.id !== undefined
         || (clock.fromOffset === expected.span.fromOffset && clock.toOffset === expected.span.toOffset)));
-    if (
+    if (!selectedPlanRepair && (
       action !== "normalize-legacy-clock"
       || unresolvedPotential.length !== 1
       || selected.length !== 1
       || normalize?.endEpochMs !== undefined
       || facts.running.length !== 0
-    ) return conflict("potential-running-clock", action, unresolvedPotential[0]?.path);
+    )) return conflict("potential-running-clock", action, unresolvedPotential[0]?.path);
   }
   const running = facts.running;
   if (
@@ -1479,7 +1544,7 @@ async function switchAdmission(
   } => entry.operation.kind === "clock-in");
   if (!closeEntry || !openEntry) return conflict("source-conflict", plan.action);
 
-  const snapshot = index.snapshot;
+  const snapshot = index.safetySnapshot;
   if (!snapshot.complete || !expectation.indexComplete) return conflict("source-over-limit", plan.action);
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   if (facts.potentialRunning.length > 0) {
@@ -1532,16 +1597,16 @@ async function switchAdmission(
       oldClockId,
     )
     : undefined;
-  const closedMatches = oldClockId ? snapshot.clocks.filter((clock) =>
+  const closedMatches = oldClockId ? index.snapshot.clocks.filter((clock) =>
     clock.clockId === oldClockId
     && clock.ownerId === oldExpectation?.ownerId
     && clock.parsed.kind === "record"
     && clock.parsed.record.state === "closed"
     && clock.text === expectedClosedText
   ) : [];
-  const oldIdentity = oldClockId ? index.identity(oldClockId) : undefined;
-  const newIdentity = index.identity(newClockId);
-  const ownerIdentity = index.identity(newOwnerId);
+  const oldIdentity = oldClockId ? index.safetyIdentity(oldClockId) : undefined;
+  const newIdentity = index.safetyIdentity(newClockId);
+  const ownerIdentity = index.safetyIdentity(newOwnerId);
   if (
     closedMatches.length !== 1
     || oldIdentity?.kind !== "unique"
@@ -1558,7 +1623,7 @@ async function switchAdmission(
   }
   if (
     currentTargetText === undefined
-    || index.dirty
+    || !index.safetySnapshot.complete
     || !switchTargetEndStateMatches(
       running.path,
       currentTargetText,
@@ -1592,7 +1657,7 @@ async function identityEndStateAdmission(
     ? operation.newId
     : undefined;
   if (!newId) return conflict("source-conflict", plan.action, stage.path);
-  const newIdentity = index.identity(newId);
+  const newIdentity = index.safetyIdentity(newId);
   if (newIdentity.kind === "missing") return undefined;
   if (newIdentity.kind !== "unique") return conflict("identity-collision", plan.action, stage.path);
 
@@ -1676,7 +1741,7 @@ async function identityEndStateAdmission(
   } catch {
     currentText = undefined;
   }
-  return currentText === expectedAfter && !index.dirty
+  return currentText === expectedAfter && index.safetySnapshot.complete
     ? "already-applied"
     : conflict("action-no-longer-applicable", plan.action, expectedPath);
 }
@@ -1816,7 +1881,7 @@ function validateFinalGlobal(
   readonly ids: readonly string[];
   readonly receiptIds: readonly string[];
 } {
-  const snapshot = index.snapshot;
+  const snapshot = index.safetySnapshot;
   if (!snapshot.complete) return { status: "unavailable", ids: Object.freeze([]), receiptIds: Object.freeze([]) };
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   const ids = sortedRunningKeys(facts.running);
@@ -1841,9 +1906,9 @@ function deleteIsAuthoritativelyAbsent(
     !deleteConfirmationIsCurrent(operation.confirmation)
     || operation.confirmation.firstTargetKey !== operation.target.id
     || operation.confirmation.secondTargetKey !== operation.target.id
-    || index.identity(operation.target.id).kind !== "missing"
+    || index.safetyIdentity(operation.target.id).kind !== "missing"
   ) return false;
-  const snapshot = index.snapshot;
+  const snapshot = index.safetySnapshot;
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   if (!snapshot.complete || facts.potentialRunning.length > 0 || facts.running.length > 1) return false;
   const expectedRemaining = expectation.expectedRunningClockIds.filter((id) => id !== operation.target.id).sort();
@@ -1863,7 +1928,7 @@ function relocateStagePath(stage: MutationStage, expectation: MutationExpectatio
       paths.add(stage.path);
       continue;
     }
-    const lookup = index.identity(id);
+    const lookup = index.safetyIdentity(id);
     if (lookup.kind === "collision") return conflict("identity-collision", expectation.action, stage.path);
     if (lookup.kind === "missing") return conflict("plan-item-not-found", expectation.action, stage.path);
     if (lookup.kind === "unavailable") return conflict("source-conflict", expectation.action, stage.path);
@@ -1917,10 +1982,10 @@ function captureStageIndexFacts(
   }
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   for (const clock of [...facts.running, ...facts.potentialRunning]) if (clock.ownerId) ids.add(clock.ownerId);
-  const identities = new Map([...ids].map((id) => [id, index.identity(id)]));
+  const identities = new Map([...ids].map((id) => [id, index.safetyIdentity(id)]));
   return Object.freeze({
     identity: (id: string) => identities.get(id) ?? Object.freeze({ kind: "unavailable" as const, reason: "source-changed" as const }),
-    liveIdentity: (id: string) => index.identity(id),
+    liveIdentity: (id: string) => index.safetyIdentity(id),
     running: facts.running,
     potentialRunning: facts.potentialRunning,
   });
@@ -1963,7 +2028,7 @@ function buildStage(
     (actualFileRunning.planInvalid && !permitsOldPlan)
     || !arraysEqual(actualFileRunning.fingerprints, expectedFileRunning)
     || !arraysEqual(actualFileRunning.potentialFingerprints, expectedFilePotential)
-    || (actualFileRunning.potential && plan.action !== "normalize-legacy-clock")
+    || (actualFileRunning.blockingPotential && plan.action !== "normalize-legacy-clock")
   ) {
     return { ok: false, conflict: conflict(actualFileRunning.potential ? "potential-running-clock" : "source-conflict", plan.action, currentPath) };
   }
@@ -2696,6 +2761,7 @@ async function sourceReceipt(
 export class WorkspaceCommitter {
   readonly #access: AtomicTextAccess;
   readonly #index: WorkspaceIndex;
+  readonly #ownsIndex: boolean;
   readonly #logbookOptions: LogbookReadOptions;
   readonly #readContext: () => CommitContext;
   readonly #pathChangeGenerations = new Map<string, number>();
@@ -2705,8 +2771,12 @@ export class WorkspaceCommitter {
   #disposed = false;
 
   constructor(access: AtomicTextAccess, options: WorkspaceCommitterOptions) {
+    if (options.workspaceIndex && options.index) {
+      throw new TypeError("workspaceIndex and index options are mutually exclusive");
+    }
     this.#access = access;
-    this.#index = new WorkspaceIndex(access, options.index);
+    this.#ownsIndex = options.workspaceIndex === undefined;
+    this.#index = options.workspaceIndex ?? new WorkspaceIndex(access, options.index);
     this.#logbookOptions = options.logbook ?? {};
     this.#readContext = options.readContext;
     this.#unsubscribeChanges = access.onChange((change) => {
@@ -2722,10 +2792,11 @@ export class WorkspaceCommitter {
   }
 
   dispose(): void {
+    if (this.#disposed) return;
     this.#disposed = true;
     this.#blocked = true;
     this.#unsubscribeChanges();
-    this.#index.dispose();
+    if (this.#ownsIndex) this.#index.dispose();
   }
 
   #recordChange(path: string): void {
@@ -2762,7 +2833,7 @@ export class WorkspaceCommitter {
     sources: readonly SourceReceiptInput[] = [],
     expectation?: MutationExpectation,
   ): Promise<CommitReceipt> {
-    const snapshot = this.#index.snapshot;
+    const snapshot = this.#index.safetySnapshot;
     const facts = expectation && snapshot.complete
       ? reconciledClockFacts(this.#index, expectation, this.#logbookOptions)
       : Object.freeze({ running: snapshot.running, potentialRunning: snapshot.potentialRunning });
@@ -2831,7 +2902,7 @@ export class WorkspaceCommitter {
     if (this.#disposed) {
       return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, stage.path, stageNumber) };
     }
-    if (this.#index.dirty) {
+    if (!this.#index.safetySnapshot.complete) {
       return { kind: "stopped", outcome: "conflict", sources: [], result: conflict("source-conflict", plan.action, stage.path, stageNumber) };
     }
     const relocated = relocateStagePath(stage, expectation, this.#index);
@@ -3100,7 +3171,8 @@ export class WorkspaceCommitter {
         globalCheck: { status: "not-required", runningClockIds: [] },
       });
     }
-    const snapshot = await this.#index.rebuild();
+    await this.#index.rebuild();
+    const snapshot = this.#index.safetySnapshot;
     if (this.#disposed) {
       return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
     }
@@ -3163,6 +3235,27 @@ export class WorkspaceCommitter {
       return this.#stoppedReceipt(plan, isConflictOutcome(identityEndState), identityEndState, [], expectation);
     }
     if (identityEndState === "already-applied") {
+      const finalOwner = await invalidClockOwnerPrecondition(
+        this.#index,
+        this.#access,
+        plan,
+        expectation,
+        this.#logbookOptions,
+        () => this.#disposed,
+        "after",
+      );
+      if (this.#disposed) {
+        return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+      }
+      if (finalOwner) {
+        return this.#stoppedReceipt(plan, isConflictOutcome(finalOwner), finalOwner, [], expectation);
+      }
+      const blockingPotential = initialFacts.potentialRunning.find((clock) =>
+        !potentialClockIsSelectedPlanRepair(clock, plan, expectation, "after"));
+      if (blockingPotential) {
+        const potential = conflict("potential-running-clock", plan.action, blockingPotential.path);
+        return this.#stoppedReceipt(plan, isConflictOutcome(potential), potential, [], expectation);
+      }
       const status = initialFacts.potentialRunning.length > 0 || initialFacts.running.length > 1
         ? "violated"
         : "confirmed";
@@ -3215,7 +3308,8 @@ export class WorkspaceCommitter {
         });
       }
       if (stageIndex > 0) {
-        const intermediate = await this.#index.rebuild();
+        await this.#index.rebuild();
+        const intermediate = this.#index.safetySnapshot;
         if (this.#disposed) {
           return createCommitReceipt({
             intentId: plan.intentId,
@@ -3288,7 +3382,8 @@ export class WorkspaceCommitter {
             }
             return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
           }
-          const latest = await this.#index.rebuild();
+          await this.#index.rebuild();
+          const latest = this.#index.safetySnapshot;
           const latestFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
           if (result.outcome === "uncertain" || result.outcome === "invariant-broken") {
             this.#blocked = true;
@@ -3345,7 +3440,8 @@ export class WorkspaceCommitter {
       allAlreadyApplied &&= result.alreadyApplied;
     }
 
-    const finalSnapshot = await this.#index.rebuild();
+    await this.#index.rebuild();
+    const finalSnapshot = this.#index.safetySnapshot;
     if (this.#disposed) {
       return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
     }
@@ -3358,6 +3454,7 @@ export class WorkspaceCommitter {
           expectation,
           this.#logbookOptions,
           () => this.#disposed,
+          "after",
         )
       : undefined;
     if (this.#disposed) {
@@ -3369,11 +3466,16 @@ export class WorkspaceCommitter {
       : relocateLegacyKeys(plannedFinal, legacyKeyRelocations);
     const finalFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
     const global = validateFinalGlobal(this.#index, expectedFinal, expectation, this.#logbookOptions);
-    const confirmedDegradedIdentityRepair = plan.action === "repair-clock-identity"
-      && finalSnapshot.complete
-      && finalFacts.potentialRunning.length === 0
+    const confirmedDegradedIdentityRepair = finalSnapshot.complete
       && expectedFinal !== undefined
-      && arraysEqual(global.ids, expectedFinal);
+      && arraysEqual(global.ids, expectedFinal)
+      && (
+        (plan.action === "repair-clock-identity" && finalFacts.potentialRunning.length === 0)
+        || (plan.action === "repair-plan-item-identity"
+          && finalFacts.potentialRunning.length > 0
+          && finalFacts.potentialRunning.every((clock) =>
+            potentialClockIsSelectedPlanRepair(clock, plan, expectation, "after")))
+      );
     let sourceConfirmationBroken = false;
     const confirmedVersions = [
       ...sources.map((source) => source.after),
@@ -3415,15 +3517,15 @@ export class WorkspaceCommitter {
     }));
     const missingTargets = plan.stages.flatMap((stage) => stage.operations.flatMap(missingTargetIds));
     const resultingIdentityBroken = identities.some((identity) => {
-      const lookup = this.#index.identity(identity.id);
+      const lookup = this.#index.safetyIdentity(identity.id);
       return lookup.kind !== "unique" || lookup.location.path !== identity.path;
     });
     const stableTargetBroken = stableTargets.some((target) => {
-      const lookup = this.#index.identity(target.id);
+      const lookup = this.#index.safetyIdentity(target.id);
       return lookup.kind !== "unique" || lookup.location.path !== target.path;
     });
-    const missingTargetBroken = missingTargets.some((id) => this.#index.identity(id).kind !== "missing");
-    const liveSnapshot = this.#index.snapshot;
+    const missingTargetBroken = missingTargets.some((id) => this.#index.safetyIdentity(id).kind !== "missing");
+    const liveSnapshot = this.#index.safetySnapshot;
     const finalIndexStillCurrent = liveSnapshot.complete && liveSnapshot.generation === finalGeneration;
     if (this.#disposed) {
       return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);

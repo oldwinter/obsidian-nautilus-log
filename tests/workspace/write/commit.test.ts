@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { ObsidianAtomicTextAccess, WorkspaceCommitter } from "../../../src/workspace/commit.ts";
+import { WorkspaceIndex } from "../../../src/workspace/identity-index.ts";
 import {
   formatCanonicalClosedClock,
   formatCanonicalRunningClock,
@@ -162,6 +163,67 @@ async function crossFileExpectation(access: MemoryAtomicTextAccess, plan: Mutati
 function committer(access: MemoryAtomicTextAccess | TempVaultAtomicTextAccess): WorkspaceCommitter {
   return new WorkspaceCommitter(access, { readContext: () => CONTEXT });
 }
+
+class SubscriptionCountingAccess extends MemoryAtomicTextAccess {
+  activeSubscriptions = 0;
+
+  override onChange(listener: Parameters<MemoryAtomicTextAccess["onChange"]>[0]) {
+    this.activeSubscriptions += 1;
+    const unsubscribe = super.onChange(listener);
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
+      this.activeSubscriptions -= 1;
+      unsubscribe();
+    };
+  }
+}
+
+test("WorkspaceCommitter disposes owned indexes and preserves borrowed vault-scoped indexes", async () => {
+  const internalAccess = new SubscriptionCountingAccess({ [PATH_A]: idleSource() });
+  const internal = new WorkspaceCommitter(internalAccess, { readContext: () => CONTEXT });
+  assert.equal(internalAccess.activeSubscriptions, 2);
+
+  internal.dispose();
+  internal.dispose();
+
+  assert.equal(internalAccess.activeSubscriptions, 0);
+
+  const sharedAccess = new SubscriptionCountingAccess({ [PATH_A]: idleSource() });
+  const sharedIndex = new WorkspaceIndex(sharedAccess);
+  const rebuilt = await sharedIndex.rebuild();
+  assert.equal(rebuilt.complete, true);
+  assert.throws(() => new WorkspaceCommitter(sharedAccess, {
+    readContext: () => CONTEXT,
+    index: {},
+    workspaceIndex: sharedIndex,
+  }), /workspaceIndex and index options are mutually exclusive/);
+  assert.equal(sharedAccess.activeSubscriptions, 1);
+  const first = new WorkspaceCommitter(sharedAccess, {
+    readContext: () => CONTEXT,
+    workspaceIndex: sharedIndex,
+  });
+  const second = new WorkspaceCommitter(sharedAccess, {
+    readContext: () => CONTEXT,
+    workspaceIndex: sharedIndex,
+  });
+  assert.equal(sharedAccess.activeSubscriptions, 3);
+
+  first.dispose();
+  first.dispose();
+
+  assert.equal(sharedAccess.activeSubscriptions, 2);
+  assert.equal(sharedIndex.snapshot.complete, true);
+  sharedAccess.modify(PATH_A, idleSource(PLAN_A, "Updated"));
+  assert.equal(sharedIndex.dirty, true);
+  assert.equal(sharedIndex.snapshot.complete, false);
+
+  second.dispose();
+  assert.equal(sharedAccess.activeSubscriptions, 1);
+  sharedIndex.dispose();
+  assert.equal(sharedAccess.activeSubscriptions, 0);
+});
 
 test("TC-OBS-SAFE-001-003 active Editor and Vault.process commits are byte-equivalent and authoritative", async () => {
   const source = idleSource();

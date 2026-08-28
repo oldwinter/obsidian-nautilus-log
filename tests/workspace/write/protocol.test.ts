@@ -254,8 +254,9 @@ test("anonymous eligible ID-less legacy running CLOCK blocks cross-file Clock In
   const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
   const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
   const parsedSnapshot = await parsedIndex.rebuild();
-  assert.equal(parsedSnapshot.running.length, 1);
-  const parsedClock = parsedSnapshot.running[0]!;
+  assert.deepEqual(parsedSnapshot.running, []);
+  assert.equal(parsedIndex.safetySnapshot.running.length, 1);
+  const parsedClock = parsedIndex.safetySnapshot.running[0]!;
   const runningKey = legacyRunningClockKey(
     parsedClock.path,
     parsedClock.fromOffset,
@@ -300,6 +301,11 @@ test("anonymous eligible malformed potential CLOCK blocks cross-file Clock In", 
     [anonymousPath]: anonymousSource,
     [targetPath]: targetSource,
   });
+  const parsedIndex = new WorkspaceIndex(access);
+  const parsedSnapshot = await parsedIndex.rebuild();
+  assert.deepEqual(parsedSnapshot.potentialRunning, []);
+  assert.equal(parsedIndex.safetySnapshot.potentialRunning.length, 1);
+  parsedIndex.dispose();
   const mutation = clockInPlanAt(targetPath, "anonymous-potential-global-clock");
   const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
   const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
@@ -393,27 +399,542 @@ test("colliding owner ID cannot hide a malformed potential-running CLOCK from cr
   writer.dispose();
 });
 
-test("selected colliding owner repair deterministically preserves its ID-less running CLOCK", async () => {
-  const selectedPath = "Daily/A-Selected-Colliding-Owner.md";
-  const duplicatePath = "Daily/Z-Unselected-Colliding-Owner.md";
-  const legacyText = "CLOCK: [2026-08-28 08:10]";
-  const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
-  const duplicateSource = `${OPEN}\n- [ ] Unselected owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+test("closed history under colliding owners does not consume the write-safety CLOCK limit", async () => {
+  const historyPath = "Daily/Colliding-Closed-History.md";
+  const duplicatePath = "Daily/Colliding-Closed-Duplicate.md";
+  const targetPath = "Daily/Closed-History-Target.md";
+  const canonicalClosed = formatCanonicalClosedClock(NOW - 120_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const canonicalMalformedClosed = `CLOCK: [2026-08-28 Fri 09:00:00.000 +08:00]--[2026-08-28 Fri 08:45:00.000 +08:00] => 0:00 ^${CLOCK_B}`;
+  const historySource = `${OPEN}\n- [ ] History owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - CLOCK: [2026-08-28 08:00] -- [2026-08-28 08:30] => 0:30\n    - CLOCK: [2026-08-28 09:00] -- [2026-08-28 08:45]\n    - ${canonicalClosed}\n    - ${canonicalMalformedClosed}\n${CLOSE}\n`;
+  const duplicateSource = `${OPEN}\n- [ ] Duplicate owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const targetSource = `${OPEN}\n- [ ] Unrelated target d30% ^${PLAN_B}\n${CLOSE}\n`;
   const access = new MemoryAtomicTextAccess({
-    [selectedPath]: selectedSource,
+    [historyPath]: historySource,
     [duplicatePath]: duplicateSource,
+    [targetPath]: targetSource,
   });
+  const resolveLocalTime = (parts: {
+    readonly year: number;
+    readonly month: number;
+    readonly day: number;
+    readonly hour: number;
+    readonly minute: number;
+  }) => ({
+    kind: "unique" as const,
+    epochMs: Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute),
+  });
+  const mutation = createMutationPlan({
+    intentId: "colliding-closed-history-limit",
+    action: "advance-progress",
+    stages: [{
+      path: targetPath,
+      confirmationRequired: false,
+      operations: [{
+        kind: "advance-progress",
+        target: { kind: "plan-item", id: PLAN_B },
+        logicalMinute: 570,
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+  const sharedIndex = new WorkspaceIndex(access, {
+    limits: { maxMarkdownFiles: 3, maxMarkdownBytes: 10_000, maxBlockIds: 10, maxClockRecords: 0 },
+    clockParsing: { resolveLocalTime },
+  });
+  const publicSnapshot = await sharedIndex.rebuild();
+  assert.equal(publicSnapshot.complete, false);
+  assert.equal(publicSnapshot.reason, "clock-record-limit");
+  assert.equal(sharedIndex.safetySnapshot.complete, true);
+  assert.deepEqual(sharedIndex.safetySnapshot.running, []);
+  assert.deepEqual(sharedIndex.safetySnapshot.potentialRunning, []);
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    workspaceIndex: sharedIndex,
+    logbook: { resolveLocalTime },
+  });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
+  assert.equal(access.transactionCounts.get(targetPath), 1);
+  assert.equal(access.transactionCounts.has(historyPath), false);
+  assert.equal(await access.readText(historyPath), historySource);
+  assert.equal(await access.readText(duplicatePath), duplicateSource);
+  assert.equal((await access.readText(targetPath))?.includes("d40%"), true);
+  writer.dispose();
+  assert.equal(sharedIndex.safetySnapshot.complete, true);
+  sharedIndex.dispose();
+});
+
+test("selected colliding owner repair preserves an ID-less running CLOCK under either occurrence", async () => {
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
   const legacyStart = NOW - 60_000;
   const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
-  const parsedClock = readLogbook(selectedSource, {
-    path: selectedPath,
-    itemFromOffset: selectedSource.indexOf("- [ ]"),
-    itemToOffset: selectedSource.indexOf(CLOSE),
+  for (const selectedHasClock of [true, false]) {
+    const selectedPath = `Daily/A-Selected-${selectedHasClock ? "Clock" : "No-Clock"}.md`;
+    const unselectedPath = `Daily/Z-Unselected-${selectedHasClock ? "No-Clock" : "Clock"}.md`;
+    const ownerWithClock = `${OPEN}\n- [ ] Timed owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+    const ownerWithoutClock = `${OPEN}\n- [ ] Clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+    const selectedSource = selectedHasClock ? ownerWithClock : ownerWithoutClock;
+    const unselectedSource = selectedHasClock ? ownerWithoutClock : ownerWithClock;
+    const clockPath = selectedHasClock ? selectedPath : unselectedPath;
+    const clockSource = selectedHasClock ? selectedSource : unselectedSource;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: selectedSource,
+      [unselectedPath]: unselectedSource,
+    });
+    const parsedClock = readLogbook(clockSource, {
+      path: clockPath,
+      itemFromOffset: clockSource.indexOf("- [ ]"),
+      itemToOffset: clockSource.indexOf(CLOSE),
+      ownerId: PLAN_A,
+    }, { resolveLocalTime }).clocks[0]!;
+    const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
+    const repair = createMutationPlan({
+      intentId: `selected-colliding-owner-${selectedHasClock ? "clock" : "clock-free"}`,
+      action: "repair-plan-item-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-plan-item-identity",
+          target: { kind: "plan-item", id: PLAN_A },
+          newId: PLAN_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [runningKey],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await mutationExpectation(access, repair, {
+      planIds: [PLAN_A],
+      expectedRunningClockIds: [runningKey],
+    });
+    assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+    const writer = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+
+    const receipt = await writer.commit(repair, expectation);
+
+    assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
+    assert.equal(access.transactionCounts.get(selectedPath), 1);
+    assert.equal(access.transactionCounts.has(unselectedPath), false);
+    assert.equal(
+      await access.readText(selectedPath),
+      selectedSource.replace(`^${PLAN_A}`, `^${PLAN_NEW}`),
+    );
+    assert.equal(await access.readText(unselectedPath), unselectedSource);
+    assert.equal(receipt.globalCheck.status, "confirmed");
+    assert.equal(receipt.globalCheck.runningClockIds.length, 1);
+    assert.ok(receipt.globalCheck.runningClockIds[0]?.startsWith(
+      `legacy:${parsedClock.path}:${parsedClock.fromOffset}:`,
+    ));
+    assert.equal(receipt.globalCheck.runningClockIds[0]?.includes(parsedClock.text), false);
+    writer.dispose();
+  }
+});
+
+test("selected duplicate repair cannot confirm a newly invalid unselected CLOCK owner", async () => {
+  const selectedPath = "Daily/A-Selected-Final-Owner-Race.md";
+  const clockPath = "Daily/B-Unselected-Final-Owner-Race.md";
+  const thirdPath = "Daily/C-New-Final-Owner-Collision.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const clockSource = `${OPEN}\n- [ ] Timed owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const selectedSource = `${OPEN}\n- [ ] Clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const thirdSource = `${OPEN}\n- [ ] New duplicate d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const legacyStart = NOW - 60_000;
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
+  const parsedClock = readLogbook(clockSource, {
+    path: clockPath,
+    itemFromOffset: clockSource.indexOf("- [ ]"),
+    itemToOffset: clockSource.indexOf(CLOSE),
+    ownerId: PLAN_A,
+  }, { resolveLocalTime }).clocks[0]!;
+  const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
+
+  for (const race of ["owner-done", "new-collision"] as const) {
+    const access = new MemoryAtomicTextAccess({
+      [clockPath]: clockSource,
+      [selectedPath]: selectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `selected-owner-final-${race}`,
+      action: "repair-plan-item-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-plan-item-identity",
+          target: { kind: "plan-item", id: PLAN_A },
+          newId: PLAN_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [runningKey],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await mutationExpectation(access, repair, {
+      planIds: [PLAN_A],
+      expectedRunningClockIds: [runningKey],
+    });
+    assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+    access.raceAfterTransformReads(1, () => {
+      if (race === "owner-done") {
+        access.modify(clockPath, clockSource.replace("- [ ] Timed", "- [x] Timed"));
+      } else {
+        access.create(thirdPath, thirdSource);
+      }
+    });
+    const writer = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+
+    const receipt = await writer.commit(repair, expectation);
+
+    assert.equal(receipt.outcome, "invariant-broken", `${race}: ${JSON.stringify(receipt)}`);
+    assert.equal(receipt.confirmation, "invariant-broken", race);
+    assert.equal(receipt.result?.code, "write-invariant-broken", race);
+    assert.equal(receipt.globalCheck.status, "violated", race);
+    assert.equal(writer.blocked, true, race);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, race);
+    assert.equal(
+      await access.readText(selectedPath),
+      selectedSource.replace(`^${PLAN_A}`, `^${PLAN_NEW}`),
+      race,
+    );
+    assert.equal(
+      await access.readText(clockPath),
+      race === "owner-done" ? clockSource.replace("- [ ] Timed", "- [x] Timed") : clockSource,
+      race,
+    );
+    assert.equal(await access.readText(thirdPath), race === "new-collision" ? thirdSource : undefined, race);
+    writer.dispose();
+  }
+});
+
+test("already-applied duplicate repair revalidates the remaining CLOCK owner after reload", async () => {
+  const selectedPath = "Daily/A-Selected-Retry-Owner.md";
+  const clockPath = "Daily/B-Unselected-Retry-Owner.md";
+  const thirdPath = "Daily/C-New-Retry-Collision.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const clockSource = `${OPEN}\n- [ ] Timed owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const selectedSource = `${OPEN}\n- [ ] Clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const repairedSource = selectedSource.replace(`^${PLAN_A}`, `^${PLAN_NEW}`);
+  const thirdSource = `${OPEN}\n- [ ] New duplicate d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const legacyStart = NOW - 60_000;
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
+  const parsedClock = readLogbook(clockSource, {
+    path: clockPath,
+    itemFromOffset: clockSource.indexOf("- [ ]"),
+    itemToOffset: clockSource.indexOf(CLOSE),
+    ownerId: PLAN_A,
+  }, { resolveLocalTime }).clocks[0]!;
+  const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
+
+  for (const invalidOwner of ["owner-done", "new-collision"] as const) {
+    const access = new MemoryAtomicTextAccess({
+      [clockPath]: clockSource,
+      [selectedPath]: selectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `selected-owner-retry-${invalidOwner}`,
+      action: "repair-plan-item-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-plan-item-identity",
+          target: { kind: "plan-item", id: PLAN_A },
+          newId: PLAN_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [runningKey],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await mutationExpectation(access, repair, {
+      planIds: [PLAN_A],
+      expectedRunningClockIds: [runningKey],
+    });
+    const firstWriter = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+    const applied = await firstWriter.commit(repair, expectation);
+    assert.equal(applied.outcome, "applied", invalidOwner);
+    assert.equal(applied.confirmation, "confirmed", invalidOwner);
+    firstWriter.dispose();
+
+    if (invalidOwner === "owner-done") {
+      access.modify(clockPath, clockSource.replace("- [ ] Timed", "- [x] Timed"));
+    } else {
+      access.create(thirdPath, thirdSource);
+    }
+    const transactionsBeforeRetry = access.transactionCounts.size;
+    const selectedTransactionsBeforeRetry = access.transactionCounts.get(selectedPath);
+    const retryWriter = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+
+    const retry = await retryWriter.commit(repair, expectation);
+
+    assert.equal(retry.outcome, "conflict", `${invalidOwner}: ${JSON.stringify(retry)}`);
+    assert.equal(retry.confirmation, "confirmed-no-change", invalidOwner);
+    assert.equal(retry.result?.code, "clock-owner-invalid", invalidOwner);
+    assert.equal(retry.globalCheck.status, "violated", invalidOwner);
+    assert.equal(access.transactionCounts.size, transactionsBeforeRetry, invalidOwner);
+    assert.equal(access.transactionCounts.get(selectedPath), selectedTransactionsBeforeRetry, invalidOwner);
+    assert.equal(await access.readText(selectedPath), repairedSource, invalidOwner);
+    assert.equal(
+      await access.readText(clockPath),
+      invalidOwner === "owner-done" ? clockSource.replace("- [ ] Timed", "- [x] Timed") : clockSource,
+      invalidOwner,
+    );
+    assert.equal(await access.readText(thirdPath), invalidOwner === "new-collision" ? thirdSource : undefined, invalidOwner);
+    retryWriter.dispose();
+  }
+});
+
+test("already-applied duplicate repair rejects a new unselected potential after reload", async () => {
+  const selectedPath = "Daily/A-Selected-Retry-Potential.md";
+  const unselectedPath = "Daily/B-Unselected-Retry-Potential.md";
+  const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const unselectedSource = `${OPEN}\n- [ ] Remaining owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const repairedSource = selectedSource.replace(`^${PLAN_A}`, `^${PLAN_NEW}`);
+  const potentialSource = unselectedSource.replace(
+    CLOSE,
+    `  - LOGBOOK::\n    - CLOCK: [broken]\n${CLOSE}`,
+  );
+  const access = new MemoryAtomicTextAccess({
+    [selectedPath]: selectedSource,
+    [unselectedPath]: unselectedSource,
+  });
+  const repair = createMutationPlan({
+    intentId: "selected-potential-retry-unselected",
+    action: "repair-plan-item-identity",
+    stages: [{
+      path: selectedPath,
+      confirmationRequired: true,
+      operations: [{
+        kind: "repair-plan-item-identity",
+        target: { kind: "plan-item", id: PLAN_A },
+        newId: PLAN_NEW,
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, repair, { planIds: [PLAN_A] });
+  const firstWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+  const applied = await firstWriter.commit(repair, expectation);
+  assert.equal(applied.outcome, "applied");
+  assert.equal(applied.confirmation, "confirmed");
+  firstWriter.dispose();
+
+  access.modify(unselectedPath, potentialSource);
+  const selectedTransactionsBeforeRetry = access.transactionCounts.get(selectedPath);
+  const retryWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const retry = await retryWriter.commit(repair, expectation);
+
+  assert.equal(retry.outcome, "conflict", JSON.stringify(retry));
+  assert.equal(retry.confirmation, "confirmed-no-change");
+  assert.equal(retry.result?.code, "potential-running-clock");
+  assert.equal(retry.globalCheck.status, "violated");
+  assert.equal(access.transactionCounts.get(selectedPath), selectedTransactionsBeforeRetry);
+  assert.equal(await access.readText(selectedPath), repairedSource);
+  assert.equal(await access.readText(unselectedPath), potentialSource);
+  retryWriter.dispose();
+});
+
+test("selected malformed potential owner repair applies while Clock In and switch remain zero-write", async () => {
+  const selectedPath = "Daily/A-Selected-Potential-Owner.md";
+  const duplicatePath = "Daily/Z-Unselected-Potential-Owner.md";
+  const activePath = "Daily/Active-For-Potential.md";
+  const targetPath = "Daily/Target-For-Potential.md";
+  const repairedOwner = "nl-44444444-4444-4444-8444-444444444444";
+  const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - CLOCK: [broken]\n${CLOSE}\n`;
+  const duplicateSource = `${OPEN}\n- [ ] Duplicate owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const activeSource = `${OPEN}\n- [ ] Active owner d30m ^${PLAN_NEW}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A)}\n${CLOSE}\n`;
+  const targetSource = `${OPEN}\n- [ ] Unrelated target d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const initial = {
+    [selectedPath]: selectedSource,
+    [duplicatePath]: duplicateSource,
+    [activePath]: activeSource,
+    [targetPath]: targetSource,
+  };
+
+  const clockInAccess = new MemoryAtomicTextAccess(initial);
+  const clockIn = clockInPlanAt(targetPath, "selected-potential-clock-in", [CLOCK_A]);
+  const clockInExpectation = await mutationExpectation(clockInAccess, clockIn, {
+    planIds: [PLAN_B],
+    expectedRunningClockIds: [CLOCK_A],
+  });
+  const clockInWriter = new WorkspaceCommitter(clockInAccess, { readContext: () => CONTEXT });
+  const blockedClockIn = await clockInWriter.commit(clockIn, clockInExpectation);
+  assert.equal(blockedClockIn.result?.code, "potential-running-clock");
+  assert.equal(clockInAccess.transactionCounts.size, 0);
+  clockInWriter.dispose();
+
+  const switchAccess = new MemoryAtomicTextAccess(initial);
+  const switchPlan = createMutationPlan({
+    intentId: "selected-potential-switch",
+    action: "switch-task",
+    stages: [{
+      path: activePath,
+      confirmationRequired: false,
+      operations: [{
+        kind: "clock-out",
+        target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_NEW },
+        close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
+      }],
+    }, {
+      path: targetPath,
+      confirmationRequired: false,
+      operations: [{
+        kind: "clock-in",
+        target: { kind: "plan-item", id: PLAN_B },
+        clock: { clockId: CLOCK_NEW, startEpochMs: NOW, offsetMinutes: 480 },
+      }],
+    }],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+    transitionEpochMs: NOW,
+  });
+  const switchExpectation = await mutationExpectation(switchAccess, switchPlan, {
+    planIds: [PLAN_B],
+    clockIds: [CLOCK_A],
+    expectedRunningClockIds: [CLOCK_A],
+  });
+  const switchWriter = new WorkspaceCommitter(switchAccess, { readContext: () => CONTEXT });
+  const blockedSwitch = await switchWriter.commit(switchPlan, switchExpectation);
+  assert.equal(blockedSwitch.result?.code, "potential-running-clock");
+  assert.equal(switchAccess.transactionCounts.size, 0);
+  switchWriter.dispose();
+
+  const repairAccess = new MemoryAtomicTextAccess(initial);
+  const repair = createMutationPlan({
+    intentId: "selected-potential-owner-repair",
+    action: "repair-plan-item-identity",
+    stages: [{
+      path: selectedPath,
+      confirmationRequired: true,
+      operations: [{
+        kind: "repair-plan-item-identity",
+        target: { kind: "plan-item", id: PLAN_A },
+        newId: repairedOwner,
+      }],
+    }],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const repairExpectation = await mutationExpectation(repairAccess, repair, {
+    planIds: [PLAN_A],
+    expectedRunningClockIds: [CLOCK_A],
+  });
+  assert.equal(repairExpectation.selectedRepair?.selectedSpan.path, selectedPath);
+  const repairWriter = new WorkspaceCommitter(repairAccess, { readContext: () => CONTEXT });
+
+  const receipt = await repairWriter.commit(repair, repairExpectation);
+
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
+  assert.equal(receipt.confirmation, "confirmed");
+  assert.deepEqual(receipt.globalCheck, { status: "violated", runningClockIds: [CLOCK_A] });
+  assert.equal(repairWriter.blocked, false);
+  assert.equal(repairAccess.transactionCounts.get(selectedPath), 1);
+  assert.equal(repairAccess.transactionCounts.has(duplicatePath), false);
+  assert.equal(await repairAccess.readText(selectedPath), selectedSource.replace(`^${PLAN_A}`, `^${repairedOwner}`));
+  assert.equal(await repairAccess.readText(duplicatePath), duplicateSource);
+  assert.equal(await repairAccess.readText(activePath), activeSource);
+  assert.equal(await repairAccess.readText(targetPath), targetSource);
+  repairWriter.dispose();
+
+  const retryWriter = new WorkspaceCommitter(repairAccess, { readContext: () => CONTEXT });
+  const retry = await retryWriter.commit(repair, repairExpectation);
+  assert.equal(retry.outcome, "already-applied", JSON.stringify(retry));
+  assert.equal(retry.confirmation, "confirmed");
+  assert.deepEqual(retry.globalCheck, { status: "violated", runningClockIds: [CLOCK_A] });
+  assert.equal(retryWriter.blocked, false);
+  assert.equal(repairAccess.transactionCounts.get(selectedPath), 1);
+  retryWriter.dispose();
+});
+
+test("unselected malformed potential remains blocking during selected duplicate owner repair", async () => {
+  const selectedPath = "Daily/A-Selected-Clock-Free-Potential.md";
+  const potentialPath = "Daily/Z-Unselected-Potential.md";
+  const selectedSource = `${OPEN}\n- [ ] Selected clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const potentialSource = `${OPEN}\n- [ ] Unselected potential owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - CLOCK: [broken]\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [selectedPath]: selectedSource,
+    [potentialPath]: potentialSource,
+  });
+  const repair = createMutationPlan({
+    intentId: "unselected-potential-owner-repair",
+    action: "repair-plan-item-identity",
+    stages: [{
+      path: selectedPath,
+      confirmationRequired: true,
+      operations: [{
+        kind: "repair-plan-item-identity",
+        target: { kind: "plan-item", id: PLAN_A },
+        newId: PLAN_NEW,
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, repair, { planIds: [PLAN_A] });
+  assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+  const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const receipt = await writer.commit(repair, expectation);
+
+  assert.equal(receipt.outcome, "conflict");
+  assert.equal(receipt.result?.code, "potential-running-clock");
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(selectedPath), selectedSource);
+  assert.equal(await access.readText(potentialPath), potentialSource);
+  writer.dispose();
+});
+
+test("unselected running CLOCK recovery remains limited to exactly two duplicate owners", async () => {
+  const selectedPath = "Daily/A-Selected-Three-Way.md";
+  const clockPath = "Daily/M-Clock-Three-Way.md";
+  const thirdPath = "Daily/Z-Third-Three-Way.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const selectedSource = `${OPEN}\n- [ ] Selected clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const clockSource = `${OPEN}\n- [ ] Timed owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const thirdSource = `${OPEN}\n- [ ] Third clock-free owner d30m ^${PLAN_A}\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [selectedPath]: selectedSource,
+    [clockPath]: clockSource,
+    [thirdPath]: thirdSource,
+  });
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  const parsedClock = readLogbook(clockSource, {
+    path: clockPath,
+    itemFromOffset: clockSource.indexOf("- [ ]"),
+    itemToOffset: clockSource.indexOf(CLOSE),
     ownerId: PLAN_A,
   }, { resolveLocalTime }).clocks[0]!;
   const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
   const repair = createMutationPlan({
-    intentId: "selected-colliding-owner-idless-repair",
+    intentId: "three-way-unselected-running-owner-repair",
     action: "repair-plan-item-identity",
     stages: [{
       path: selectedPath,
@@ -433,6 +954,7 @@ test("selected colliding owner repair deterministically preserves its ID-less ru
     expectedRunningClockIds: [runningKey],
   });
   assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+  assert.equal(expectation.selectedRepair?.locations.length, 3);
   const writer = new WorkspaceCommitter(access, {
     readContext: () => CONTEXT,
     index: { clockParsing: { resolveLocalTime } },
@@ -441,20 +963,12 @@ test("selected colliding owner repair deterministically preserves its ID-less ru
 
   const receipt = await writer.commit(repair, expectation);
 
-  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
-  assert.equal(access.transactionCounts.get(selectedPath), 1);
-  assert.equal(access.transactionCounts.has(duplicatePath), false);
-  assert.equal(
-    await access.readText(selectedPath),
-    selectedSource.replace(`^${PLAN_A}`, `^${PLAN_NEW}`),
-  );
-  assert.equal(await access.readText(duplicatePath), duplicateSource);
-  assert.equal(receipt.globalCheck.status, "confirmed");
-  assert.equal(receipt.globalCheck.runningClockIds.length, 1);
-  assert.ok(receipt.globalCheck.runningClockIds[0]?.startsWith(
-    `legacy:${parsedClock.path}:${parsedClock.fromOffset}:`,
-  ));
-  assert.equal(receipt.globalCheck.runningClockIds[0]?.includes(parsedClock.text), false);
+  assert.equal(receipt.outcome, "conflict");
+  assert.equal(receipt.result?.code, "clock-owner-invalid");
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(selectedPath), selectedSource);
+  assert.equal(await access.readText(clockPath), clockSource);
+  assert.equal(await access.readText(thirdPath), thirdSource);
   writer.dispose();
 });
 
@@ -524,9 +1038,14 @@ test("anonymous done fixed and plain CLOCK facts block unrelated Clock In", asyn
     const index = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
     const snapshot = await index.rebuild();
     assert.equal(snapshot.complete, true, fixture.name);
-    assert.equal(snapshot.clocks.length, 1, fixture.name);
-    assert.equal(snapshot.running.length + snapshot.potentialRunning.length, 1, fixture.name);
-    assert.equal(snapshot.clocks[0]?.ownerId, undefined, fixture.name);
+    assert.equal(snapshot.clocks.length, 0, fixture.name);
+    assert.equal(index.safetySnapshot.clocks.length, 1, fixture.name);
+    assert.equal(
+      index.safetySnapshot.running.length + index.safetySnapshot.potentialRunning.length,
+      1,
+      fixture.name,
+    );
+    assert.equal(index.safetySnapshot.clocks[0]?.ownerId, undefined, fixture.name);
     index.dispose();
 
     const mutation = clockInPlanAt(targetPath, `invalid-owner-${fixture.name}`);
@@ -685,8 +1204,9 @@ test("anonymous eligible ID-less legacy running CLOCK permits only exact locator
   const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
   const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
   const parsed = await parsedIndex.rebuild();
-  assert.equal(parsed.running.length, 1);
-  const parsedClock = parsed.running[0]!;
+  assert.deepEqual(parsed.running, []);
+  assert.equal(parsedIndex.safetySnapshot.running.length, 1);
+  const parsedClock = parsedIndex.safetySnapshot.running[0]!;
   const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
   parsedIndex.dispose();
   const mutation = anonymousLegacyClockOutPlan(
@@ -814,7 +1334,9 @@ test("normalizing an anonymous running CLOCK cannot confirm an invalid final own
   const access = new MemoryAtomicTextAccess({ [path]: source });
   const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
   const parsed = await parsedIndex.rebuild();
-  const parsedClock = parsed.running[0]!;
+  assert.deepEqual(parsed.running, []);
+  assert.equal(parsedIndex.safetySnapshot.running.length, 1);
+  const parsedClock = parsedIndex.safetySnapshot.running[0]!;
   const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
   parsedIndex.dispose();
   const mutation = createMutationPlan({
