@@ -1,4 +1,13 @@
+import { execFileSync } from "node:child_process";
+import process from "node:process";
+
 import { build } from "esbuild";
+
+execFileSync(process.execPath, [
+  "node_modules/typescript/bin/tsc",
+  "--project",
+  "tests/ui/planner-controls/tsconfig.json",
+], { cwd: process.cwd(), stdio: "inherit" });
 
 const entryPoints = [
   "tests/ui/planner-controls/adapter-seam.test.ts",

@@ -11,10 +11,16 @@ import {
 
 function fakeScheduler() {
   let now = 1_000;
+  let nextNowHook: (() => void) | undefined;
   let sequence = 0;
   const callbacks = new Map<number, () => void>();
   const scheduler: PlannerAnimationScheduler = {
-    now: () => now,
+    now: () => {
+      const hook = nextNowHook;
+      nextNowHook = undefined;
+      hook?.();
+      return now;
+    },
     requestFrame(callback) {
       sequence += 1;
       callbacks.set(sequence, callback);
@@ -33,6 +39,9 @@ function fakeScheduler() {
       for (const callback of pending) callback();
     },
     pending: () => callbacks.size,
+    onNextNow(callback: () => void) {
+      nextNowHook = callback;
+    },
   };
 }
 
@@ -154,4 +163,40 @@ test("TC-UP-CTL-02-002 a cancelled run cannot inject frames into an onFinish res
   assert.equal(playback.running, true);
   assert.equal(clock.pending(), 1);
   playback.destroy();
+});
+
+test("TC-UP-CTL-02-002 destroy during initial scheduler.now cannot leave playback running", () => {
+  const clock = fakeScheduler();
+  const frames: PlannerPlaybackFrame[] = [];
+  const finishes: string[] = [];
+  let playback: PlannerPlaybackController;
+  playback = createPlannerPlayback({
+    scheduler: clock.scheduler,
+    onFrame: (frame) => frames.push(frame),
+    onFinish: (reason) => finishes.push(reason),
+  });
+  clock.onNextNow(() => playback.destroy());
+  assert.equal(playback.start({ startMinutes: 300, endMinutes: 1_440 }), true);
+  assert.deepEqual(frames, []);
+  assert.deepEqual(finishes, ["cancelled"]);
+  assert.equal(playback.running, false);
+  assert.equal(clock.pending(), 0);
+});
+
+test("TC-UP-CTL-02-002 cancel during tick scheduler.now cannot read cleared bounds", () => {
+  const clock = fakeScheduler();
+  const frames: PlannerPlaybackFrame[] = [];
+  const finishes: string[] = [];
+  const playback = createPlannerPlayback({
+    scheduler: clock.scheduler,
+    onFrame: (frame) => frames.push(frame),
+    onFinish: (reason) => finishes.push(reason),
+  });
+  assert.equal(playback.start({ startMinutes: 300, endMinutes: 1_440 }), true);
+  clock.onNextNow(() => playback.cancel());
+  assert.doesNotThrow(() => clock.step(1_000));
+  assert.deepEqual(frames.map((frame) => frame.progress), [0]);
+  assert.deepEqual(finishes, ["cancelled"]);
+  assert.equal(playback.running, false);
+  assert.equal(clock.pending(), 0);
 });

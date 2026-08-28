@@ -10,9 +10,7 @@ export type PlannerLimitKind =
 export type MessageFunction<Parameters extends object | void = object> = [Parameters] extends [void]
   ? () => string
   : (parameters: Readonly<Extract<Parameters, object>>) => string;
-// `any` is intentional in this type predicate: concrete parameter types remain
-// preserved on each catalog entry and are recovered by `MessageArguments`.
-export type MessageValue = string | (() => string) | ((parameters: any) => string);
+export type MessageValue = string | ((...arguments_: never[]) => string);
 
 export type SharedCatalog = Readonly<{
   "action.close": string;

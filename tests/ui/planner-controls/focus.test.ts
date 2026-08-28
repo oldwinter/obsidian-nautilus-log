@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  bindPlannerActivation,
   bindPlannerTooltip,
   bindRovingTabs,
   isPlannerActivationKey,
   nextRovingIndex,
+  plannerFocusKeyAfterLayoutTransition,
 } from "../../../src/ui/planner/focus.ts";
 
 class FakeElement extends EventTarget {
@@ -15,6 +17,12 @@ class FakeElement extends EventTarget {
   parentElement: FakeElement | null = null;
   readonly attributes = new Map<string, string>();
   focusCount = 0;
+  readonly tagName: string;
+
+  constructor(tagName = "div") {
+    super();
+    this.tagName = tagName;
+  }
 
   setAttribute(name: string, value: string): void {
     this.attributes.set(name, value);
@@ -24,6 +32,55 @@ class FakeElement extends EventTarget {
     this.focusCount += 1;
   }
 }
+
+test("TC-OBS-A11Y-001-001 activation binding shares pointer, keyboard, native suppression, and teardown", () => {
+  const target = new FakeElement();
+  let activations = 0;
+  const unbind = bindPlannerActivation(
+    target as unknown as HTMLElement,
+    () => { activations += 1; },
+  );
+  for (const key of ["Enter", " ", "Spacebar"]) {
+    const event = new Event("keydown", { cancelable: true });
+    Object.defineProperties(event, { key: { value: key }, repeat: { value: false } });
+    assert.equal(target.dispatchEvent(event), false);
+    assert.equal(event.defaultPrevented, true);
+  }
+  const repeat = new Event("keydown", { cancelable: true });
+  Object.defineProperties(repeat, { key: { value: "Enter" }, repeat: { value: true } });
+  assert.equal(target.dispatchEvent(repeat), true);
+  const escape = new Event("keydown", { cancelable: true });
+  Object.defineProperties(escape, { key: { value: "Escape" }, repeat: { value: false } });
+  assert.equal(target.dispatchEvent(escape), true);
+  target.dispatchEvent(new Event("click"));
+  assert.equal(activations, 4);
+  unbind();
+  target.dispatchEvent(new Event("click"));
+  assert.equal(activations, 4);
+
+  const nativeButton = new FakeElement("button");
+  let nativeActivations = 0;
+  const unbindNative = bindPlannerActivation(
+    nativeButton as unknown as HTMLElement,
+    () => { nativeActivations += 1; },
+  );
+  const nativeKey = new Event("keydown", { cancelable: true });
+  Object.defineProperties(nativeKey, { key: { value: "Enter" }, repeat: { value: false } });
+  assert.equal(nativeButton.dispatchEvent(nativeKey), true);
+  assert.equal(nativeKey.defaultPrevented, false);
+  nativeButton.dispatchEvent(new Event("click"));
+  assert.equal(nativeActivations, 1);
+  unbindNative();
+});
+
+test("TC-OBS-A11Y-001-005 focus keys preserve exact roles except at layout transitions", () => {
+  assert.equal(plannerFocusKeyAfterLayoutTransition("label-task", "wide", "wide"), "label-task");
+  assert.equal(plannerFocusKeyAfterLayoutTransition("slice-task", "wide", "wide"), "slice-task");
+  assert.equal(plannerFocusKeyAfterLayoutTransition("label-task", "wide", "compact"), "row-task");
+  assert.equal(plannerFocusKeyAfterLayoutTransition("slice-task", "wide", "compact"), "row-task");
+  assert.equal(plannerFocusKeyAfterLayoutTransition("row-task", "compact", "wide"), "slice-task");
+  assert.equal(plannerFocusKeyAfterLayoutTransition("control-play", "wide", "compact"), "control-play");
+});
 
 test("TC-OBS-A11Y-001-001 Enter and Space are equal activation keys", () => {
   assert.equal(isPlannerActivationKey("Enter"), true);

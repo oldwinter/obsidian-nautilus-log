@@ -1,5 +1,25 @@
 export const PLANNER_FOCUS_KEY_ATTRIBUTE = "data-planner-focus-key";
 
+export type PlannerFocusLayout = "compact" | "wide";
+
+export function plannerFocusKeyAfterLayoutTransition(
+  key: string | undefined,
+  previousLayout: PlannerFocusLayout,
+  nextLayout: PlannerFocusLayout,
+): string | undefined {
+  if (!key || previousLayout === nextLayout) return key;
+  if (previousLayout === "wide" && nextLayout === "compact") {
+    for (const prefix of ["label-", "slice-"] as const) {
+      if (key.startsWith(prefix)) return `row-${key.slice(prefix.length)}`;
+    }
+  }
+  // A compact row deterministically returns to its interactive spiral slice.
+  if (previousLayout === "compact" && nextLayout === "wide" && key.startsWith("row-")) {
+    return `slice-${key.slice("row-".length)}`;
+  }
+  return key;
+}
+
 export function isPlannerActivationKey(key: string): boolean {
   return key === "Enter" || key === " " || key === "Spacebar";
 }
@@ -93,15 +113,11 @@ export function createPlannerLiveAnnouncer(root: HTMLElement): PlannerLiveAnnoun
   });
 }
 
-export function bindKeyboardActivation(
+export function bindPlannerActivation(
   element: HTMLElement | SVGElement,
   activate: () => void,
 ): () => void {
   const nativeButton = element.tagName.toLowerCase() === "button";
-  if (!nativeButton) {
-    element.setAttribute("role", "button");
-    element.setAttribute("tabindex", "0");
-  }
   const keydown = (event: Event): void => {
     const keyboardEvent = event as KeyboardEvent;
     if (nativeButton || !isPlannerActivationKey(keyboardEvent.key) || keyboardEvent.repeat) return;

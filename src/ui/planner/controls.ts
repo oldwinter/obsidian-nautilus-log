@@ -1,4 +1,4 @@
-import { isPlannerActivationKey } from "./focus";
+import { bindPlannerActivation } from "./focus";
 
 export type PlannerControlKind = "collapse" | "completed" | "debug" | "playback";
 
@@ -246,26 +246,14 @@ export function bindPlannerProgressTarget(
   dispatch: (progress: PlannerProgressDispatch) => void,
   createIntentId?: () => string,
 ): () => void {
-  const nativeButton = element.tagName.toLowerCase() === "button";
   const actionable = plannerProgressPreview(getTarget()) !== null;
   element.setAttribute("role", actionable ? "button" : "img");
   element.setAttribute("tabindex", "0");
+  if (!actionable) return () => undefined;
   const activate = (): void => {
     dispatchPlannerProgress(getTarget(), dispatch, createIntentId);
   };
-  const click = (): void => activate();
-  const keydown = (event: Event): void => {
-    const keyboardEvent = event as KeyboardEvent;
-    if (nativeButton || !isPlannerActivationKey(keyboardEvent.key) || keyboardEvent.repeat) return;
-    keyboardEvent.preventDefault();
-    activate();
-  };
-  element.addEventListener("click", click);
-  element.addEventListener("keydown", keydown);
-  return () => {
-    element.removeEventListener("click", click);
-    element.removeEventListener("keydown", keydown);
-  };
+  return bindPlannerActivation(element, activate);
 }
 
 export const FORBIDDEN_LATER_MAIN_PLANNER_CONTROLS = Object.freeze(["tidy", "undo"] as const);

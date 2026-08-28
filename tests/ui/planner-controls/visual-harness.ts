@@ -57,6 +57,7 @@ interface HarnessSurfaceState {
   readonly controlOverlaps: number;
   readonly debugControlVisible: boolean;
   readonly debugEnabled: boolean;
+  readonly duplicateFocusKeys: number;
   readonly focusKey: string | null;
   readonly horizontalOverflow: boolean;
   readonly layout: string | undefined;
@@ -64,6 +65,12 @@ interface HarnessSurfaceState {
   readonly overviewMetricClipped: boolean;
   readonly overviewMetricLabels: readonly string[];
   readonly overviewOpen: boolean;
+  readonly renderedContrast: Readonly<{
+    readonly control: number;
+    readonly focus: number;
+    readonly state: number;
+    readonly text: number;
+  }>;
   readonly semanticTargetCount: number;
   readonly surfaceRole: string | null;
   readonly playbackRunning: boolean;
@@ -103,6 +110,7 @@ declare global {
       assertKeyboardPointerParity(): Promise<boolean>;
       assertLayoutFocusRestoration(): Promise<boolean>;
       assertLifecycleReparenting(): Promise<boolean>;
+      assertMediaQueryLifecycle(): Promise<boolean>;
       assertPlaybackStopsOnContextChange(): Promise<boolean>;
       assertPlaybackStopsOnRuntimeState(): Promise<boolean>;
       assertReplicaRemount(): boolean;
@@ -456,6 +464,106 @@ function measuredWidth(root: HTMLElement): number {
   return root.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
 }
 
+type Rgba = readonly [red: number, green: number, blue: number, alpha: number];
+
+function parsedColor(value: string): Rgba {
+  if (value === "transparent") return [0, 0, 0, 0];
+  const hex = value.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
+  if (hex) {
+    const color = hex[1]!;
+    return [
+      Number.parseInt(color.slice(0, 2), 16),
+      Number.parseInt(color.slice(2, 4), 16),
+      Number.parseInt(color.slice(4, 6), 16),
+      hex[2] ? Number.parseInt(hex[2], 16) / 255 : 1,
+    ];
+  }
+  const components = value.match(/[\d.]+/g)?.map(Number);
+  if (!components || components.length < 3) throw new Error(`Unsupported computed color: ${value}`);
+  return [components[0]!, components[1]!, components[2]!, components[3] ?? 1];
+}
+
+function composite(foreground: Rgba, background: Rgba): Rgba {
+  const alpha = foreground[3] + background[3] * (1 - foreground[3]);
+  if (alpha === 0) return [0, 0, 0, 0];
+  return [
+    (foreground[0] * foreground[3] + background[0] * background[3] * (1 - foreground[3])) / alpha,
+    (foreground[1] * foreground[3] + background[1] * background[3] * (1 - foreground[3])) / alpha,
+    (foreground[2] * foreground[3] + background[2] * background[3] * (1 - foreground[3])) / alpha,
+    alpha,
+  ];
+}
+
+function effectiveBackground(element: Element): Rgba {
+  let result: Rgba = [0, 0, 0, 0];
+  let current: Element | null = element;
+  while (current) {
+    result = composite(result, parsedColor(getComputedStyle(current).backgroundColor));
+    current = current.parentElement;
+  }
+  return composite(result, [255, 255, 255, 1]);
+}
+
+function relativeLuminance(color: Rgba): number {
+  const channels = color.slice(0, 3).map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+}
+
+function contrastRatio(first: Rgba, second: Rgba): number {
+  const opaqueFirst = composite(first, second);
+  const firstLuminance = relativeLuminance(opaqueFirst);
+  const secondLuminance = relativeLuminance(second);
+  return (Math.max(firstLuminance, secondLuminance) + 0.05)
+    / (Math.min(firstLuminance, secondLuminance) + 0.05);
+}
+
+function renderedContrast(root: HTMLElement): HarnessSurfaceState["renderedContrast"] {
+  const visibleText = [...root.querySelectorAll<HTMLElement>(
+    ".spiral-day-planner__metric-label, .spiral-day-planner__disclosure-summary, "
+      + ".spiral-day-planner__interactive-item-title, .spiral-day-planner__row-title",
+  )].filter((entry) => entry.getClientRects().length > 0 && entry.textContent?.trim());
+  const textRatios = visibleText.map((entry) => contrastRatio(
+    parsedColor(getComputedStyle(entry).color),
+    effectiveBackground(entry),
+  ));
+  const controlProbe = document.createElement("span");
+  controlProbe.style.backgroundColor = "var(--spiral-day-control-surface)";
+  controlProbe.style.border = "1px solid var(--spiral-day-control-border)";
+  root.append(controlProbe);
+  const controlRatio = contrastRatio(
+    parsedColor(getComputedStyle(controlProbe).borderTopColor),
+    effectiveBackground(controlProbe),
+  );
+  const stateBoundaries = [
+    ...root.querySelectorAll<SVGElement>(".spiral-day-planner__item-path"),
+    ...root.querySelectorAll<HTMLElement>(".spiral-day-planner__interactive-item"),
+  ].filter((entry) => entry.getClientRects().length > 0);
+  const stateRatios = stateBoundaries.map((entry) => {
+    const style = getComputedStyle(entry);
+    const value = entry instanceof SVGElement ? style.stroke : style.borderLeftColor;
+    return contrastRatio(parsedColor(value), effectiveBackground(entry));
+  });
+  const focusProbe = document.createElement("span");
+  focusProbe.style.backgroundColor = "transparent";
+  focusProbe.style.outline = "1px solid var(--spiral-day-focus)";
+  root.append(focusProbe);
+  const focusRatio = contrastRatio(
+    parsedColor(getComputedStyle(focusProbe).outlineColor),
+    effectiveBackground(focusProbe),
+  );
+  controlProbe.remove();
+  focusProbe.remove();
+  return Object.freeze({
+    control: controlRatio,
+    focus: focusRatio,
+    state: stateRatios.length > 0 ? Math.min(...stateRatios) : Number.POSITIVE_INFINITY,
+    text: textRatios.length > 0 ? Math.min(...textRatios) : Number.POSITIVE_INFINITY,
+  });
+}
+
 function surfaceState(root: HTMLElement): HarnessSurfaceState {
   const visible = root.getClientRects().length > 0;
   const rootBox = root.getBoundingClientRect();
@@ -470,6 +578,8 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
   )];
   const overviewBox = overview?.getBoundingClientRect();
   const icon = root.querySelector<HTMLElement>(".spiral-day-planner__icon-button");
+  const focusKeys = [...root.querySelectorAll<HTMLElement>("[data-planner-focus-key]")]
+    .map((entry) => entry.dataset.plannerFocusKey).filter((key): key is string => Boolean(key));
   let controlOverlaps = 0;
   for (let left = 0; left < controlBoxes.length; left += 1) {
     for (let right = left + 1; right < controlBoxes.length; right += 1) {
@@ -488,6 +598,7 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     controlOverlaps,
     debugControlVisible: Boolean(root.querySelector('[data-control="debug"]')),
     debugEnabled: Boolean(root.querySelector(".spiral-day-planner__debug-overlay")),
+    duplicateFocusKeys: focusKeys.length - new Set(focusKeys).size,
     focusKey: root.contains(document.activeElement)
       ? (document.activeElement as HTMLElement).dataset.plannerFocusKey ?? null
       : null,
@@ -504,6 +615,7 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     }),
     overviewMetricLabels: Object.freeze(overviewMetricLabels.map((label) => label.textContent ?? "")),
     overviewOpen: overview?.open ?? false,
+    renderedContrast: renderedContrast(root),
     semanticTargetCount: root.querySelectorAll(
       'svg[role="group"] [data-planner-focus-key][aria-label][role]',
     ).length,
@@ -569,6 +681,7 @@ function assertAcceptance(): HarnessState {
   }
   if (result.primary.horizontalOverflow || result.primary.clippedElements > 0
     || result.primary.controlOverlaps > 0 || result.primary.viewportClipped
+    || result.primary.duplicateFocusKeys > 0 || result.secondary.duplicateFocusKeys > 0
     || result.documentHorizontalOverflow || result.stageHorizontalOverflow
     || result.tooltipViewportClipped || result.forbiddenControls > 0) {
     throw new Error(`visual contract failed: ${JSON.stringify(result)}`);
@@ -596,6 +709,12 @@ function assertAcceptance(): HarnessState {
   if (result.primary.surfaceRole !== "group"
     || (expectedLayout === "wide" && result.primary.semanticTargetCount === 0)) {
     throw new Error(`accessibility tree contract failed: ${JSON.stringify(result.primary)}`);
+  }
+  if (result.primary.renderedContrast.text < 4.5
+    || result.primary.renderedContrast.control < 3
+    || result.primary.renderedContrast.state < 3
+    || result.primary.renderedContrast.focus < 3) {
+    throw new Error(`rendered contrast contract failed: ${JSON.stringify(result.primary.renderedContrast)}`);
   }
   if (!result.primary.warningsText.includes(
     messages.t("planner", "warning.planRegionDuplicate"),
@@ -748,7 +867,7 @@ window.issue24Harness = {
     await nextFrame();
     const keyboardDispatched = intentCount === before + 2 && event.defaultPrevented;
     const announced = state().liveText.trim() !== "";
-    const focusPreserved = state().primary.focusKey?.startsWith("item-") === true;
+    const focusPreserved = state().primary.focusKey?.startsWith("slice-") === true;
     item.progressRaw = originalProgress;
     emitProjection();
     await nextFrame();
@@ -758,18 +877,43 @@ window.issue24Harness = {
     this.setWidth(521);
     await nextFrame();
     const externalLabel = primaryRoot.querySelector<SVGElement>(
-      ".spiral-day-planner__external-label[data-planner-focus-key^='item-']",
+      ".spiral-day-planner__external-label[data-planner-focus-key^='label-']",
     );
     externalLabel?.focus();
-    const wideBefore = state().primary.focusKey;
+    const labelKey = state().primary.focusKey;
+    const itemId = labelKey?.slice("label-".length);
+    const beforeIntentCount = intentCount;
+    const isExactLabel = (): boolean => document.activeElement?.classList
+      .contains("spiral-day-planner__external-label") === true
+      && document.activeElement?.getAttribute("role") === "img"
+      && (document.activeElement as HTMLElement).dataset.plannerFocusKey === labelKey;
+    const originalLocale = messages.locale;
+    messages.setLocale(originalLocale === "en" ? "zh-CN" : "en");
+    await nextFrame();
+    const localeRestored = isExactLabel();
+    emitProjection();
+    await nextFrame();
+    const runtimeRestored = isExactLabel();
+    primaryRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    await nextFrame();
+    const playbackRestored = isExactLabel();
     this.setWidth(520);
     await nextFrame();
-    const compact = state().primary.focusKey;
+    const compact = state().primary.focusKey === `row-${itemId}`
+      && document.activeElement?.classList.contains("spiral-day-planner__disclosure-row") === true;
     this.setWidth(521);
     await nextFrame();
-    const wideAfter = state().primary.focusKey;
-    return externalLabel !== null && wideBefore !== null
-      && compact === wideBefore && wideAfter === wideBefore;
+    const wideAfter = state().primary.focusKey === `slice-${itemId}`
+      && document.activeElement?.classList.contains("spiral-day-planner__item") === true
+      && document.activeElement?.getAttribute("role") === "button";
+    this.setReducedMotion(true);
+    await nextFrame();
+    this.setReducedMotion(false);
+    messages.setLocale(originalLocale);
+    await nextFrame();
+    return externalLabel !== null && labelKey !== null && itemId !== undefined
+      && localeRestored && runtimeRestored && playbackRestored
+      && compact && wideAfter && intentCount === beforeIntentCount;
   },
   async assertLifecycleReparenting() {
     const firstParent = document.createElement("section");
@@ -826,6 +970,63 @@ window.issue24Harness = {
     secondParent.remove();
     return playbackStarted && detached && reattached && playbackStopped
       && reparentedAncestorHidden && reparentedAncestorShown && disconnectCount === 1;
+  },
+  async assertMediaQueryLifecycle() {
+    class ControlledMotionPreference extends EventTarget {
+      matches = false;
+      readonly media = "(prefers-reduced-motion: reduce)";
+      onchange: ((this: MediaQueryList, event: MediaQueryListEvent) => unknown) | null = null;
+      listenerCount = 0;
+
+      override addEventListener(type: string, callback: EventListenerOrEventListenerObject | null): void {
+        if (type === "change" && callback) this.listenerCount += 1;
+        super.addEventListener(type, callback);
+      }
+
+      override removeEventListener(type: string, callback: EventListenerOrEventListenerObject | null): void {
+        if (type === "change" && callback) this.listenerCount -= 1;
+        super.removeEventListener(type, callback);
+      }
+
+      setMatches(matches: boolean): void {
+        this.matches = matches;
+        const event = new Event("change") as MediaQueryListEvent;
+        Object.defineProperty(event, "matches", { value: matches });
+        this.dispatchEvent(event);
+        this.onchange?.call(this as unknown as MediaQueryList, event);
+      }
+    }
+    const preference = new ControlledMotionPreference();
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: () => preference as unknown as MediaQueryList,
+    });
+    const root = document.createElement("div");
+    root.style.width = "900px";
+    document.body.append(root);
+    const surface = mountPlannerSurface(root, runtime, {
+      logicalDate: DISPLAYED_DATE,
+      bounds: BOUNDS,
+      hostContext: "main",
+    }, { instanceId: "issue24-motion-query", messages, renderIcon });
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: originalMatchMedia });
+    const initial = root.dataset.reducedMotion === "false" && preference.listenerCount === 1;
+    root.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    const started = root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") === "true";
+    preference.setMatches(true);
+    await nextFrame();
+    const icon = root.querySelector<HTMLElement>(".spiral-day-planner__icon-button");
+    const zeroDurations = icon !== null && getComputedStyle(icon).transitionDuration
+      .split(",").every((duration) => Number.parseFloat(duration) === 0);
+    const finished = root.dataset.reducedMotion === "true"
+      && root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") !== "true";
+    surface.destroy();
+    const removed = preference.listenerCount === 0 && root.dataset.reducedMotion === undefined;
+    preference.setMatches(false);
+    const inertAfterDestroy = root.dataset.reducedMotion === undefined;
+    root.remove();
+    return initial && started && finished && zeroDurations && removed && inertAfterDestroy;
   },
   async assertPlaybackStopsOnContextChange() {
     this.setWidth(900);

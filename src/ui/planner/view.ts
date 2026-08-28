@@ -34,6 +34,7 @@ import {
   bindPlannerTooltip,
   createPlannerFocusManager,
   createPlannerLiveAnnouncer,
+  plannerFocusKeyAfterLayoutTransition,
   type PlannerFocusManager,
   type PlannerLiveAnnouncer,
 } from "./focus";
@@ -445,7 +446,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#observeVisibility();
     this.#resize = observePlannerContainer(root, context.hostContext, (layout) => {
       this.#applyLayout(layout);
-    this.#render();
+      this.#render();
     });
     this.probeRuntimeNow();
   }
@@ -639,12 +640,22 @@ class PlannerSurfaceController implements PlannerSurface {
   #render(): void {
     if (this.#destroyed || !this.#visible) return;
     if (this.#context.hostContext !== "replica") this.#root.hidden = false;
-    this.#applyLayout(plannerLayoutForWidth(
+    const renderedLayout = this.#root.dataset.layout === "compact"
+      || this.#root.dataset.layout === "wide"
+      ? this.#root.dataset.layout
+      : undefined;
+    const focusedKey = this.#focus.capture();
+    const nextLayout = plannerLayoutForWidth(
       plannerContainerWidth(this.#root),
       this.#context.hostContext,
-    ));
-    const focusedKey = this.#focus.capture();
-    if (focusedKey?.startsWith("item-") && this.#layout.mode === "compact") {
+    );
+    this.#applyLayout(nextLayout);
+    const restoreKey = plannerFocusKeyAfterLayoutTransition(
+      focusedKey,
+      renderedLayout ?? nextLayout.mode,
+      nextLayout.mode,
+    );
+    if (restoreKey?.startsWith("row-") && nextLayout.mode === "compact") {
       this.#disclosures.setOpen("schedule", true);
     }
     this.#clearRenderBindings();
@@ -659,16 +670,16 @@ class PlannerSurfaceController implements PlannerSurface {
 
     if (!this.#snapshot) {
       this.#renderRuntimeState();
-      if (focusedKey) this.#focus.restore(focusedKey, "status");
+      if (restoreKey) this.#focus.restore(restoreKey, "status");
       return;
     }
     if (this.#snapshot.state !== "confirmed") {
       this.#renderSnapshotState(this.#snapshot);
-      if (focusedKey) this.#focus.restore(focusedKey, "status");
+      if (restoreKey) this.#focus.restore(restoreKey, "status");
       return;
     }
     this.#renderConfirmed(this.#snapshot.projection);
-    if (focusedKey) this.#focus.restore(focusedKey, "control-completed");
+    if (restoreKey) this.#focus.restore(restoreKey, "control-completed");
   }
 
   #clearRenderBindings(): void {
@@ -912,7 +923,7 @@ class PlannerSurfaceController implements PlannerSurface {
       row.dataset.conflict = String(item.conflict);
       row.dataset.current = String(item.current);
       row.dataset.itemId = item.id;
-      row.dataset.plannerFocusKey = `item-${item.id}`;
+      row.dataset.plannerFocusKey = `row-${item.id}`;
       const name = timelineAccessibleName(this.#messages, item);
       row.setAttribute("aria-label", name);
       const title = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-title");
@@ -1090,7 +1101,7 @@ class PlannerSurfaceController implements PlannerSurface {
       group.setAttribute("tabindex", "0");
       group.setAttribute("focusable", "true");
       group.setAttribute("aria-label", accessibleName);
-      group.dataset.plannerFocusKey = `item-${label.timelineItem.id}`;
+      group.dataset.plannerFocusKey = `label-${label.timelineItem.id}`;
       if (label.timelineItem.current) group.setAttribute("aria-current", "true");
       const text = svgElement(document, "text");
       text.setAttribute("x", String(label.side === "left" ? label.box.x + label.box.width : label.box.x));
@@ -1158,7 +1169,7 @@ class PlannerSurfaceController implements PlannerSurface {
     if (mode === "wide") {
       group.setAttribute("focusable", "true");
       group.setAttribute("aria-label", accessibleName);
-      group.dataset.plannerFocusKey = `item-${item.id}`;
+      group.dataset.plannerFocusKey = `slice-${item.id}`;
       if (item.current) group.setAttribute("aria-current", "true");
       this.#bindProgressTarget(group, item, projection);
       this.#bindTooltip(group, timelineTooltipText(this.#messages, item));

@@ -10,11 +10,7 @@ import {
   createMessages,
   defineLocaleNamespace,
 } from "../../../src/i18n/resolver.ts";
-import type {
-  MessageArguments,
-  MessageKey,
-  PlannerLimitKind,
-} from "../../../src/i18n/types.ts";
+import type { PlannerLimitKind } from "../../../src/i18n/types.ts";
 
 test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal", () => {
   assert.deepEqual(Object.keys(enShared).sort(), Object.keys(zhCNShared).sort());
@@ -157,17 +153,27 @@ test("TC-OBS-I18N-001-002 defaulted message parameters still receive supplied in
   assert.equal(messages.t("execution", "status.named"), "fallback");
 });
 
-test("TC-OBS-I18N-001-002 message keys reject required or optional second parameters", () => {
-  const invalidCatalog = Object.freeze({
-    required: (first: object, second: object) => `${String(first)}${String(second)}`,
-    optional: (first: object, second: object = {}) => `${String(first)}${String(second)}`,
-  });
-  type InvalidKey = MessageKey<typeof invalidCatalog>;
-  type InvalidOptionalArguments = MessageArguments<typeof invalidCatalog.optional>;
-  // @ts-expect-error Functions that can receive two parameters are not message keys.
-  const requiredKey: InvalidKey = "required";
-  // @ts-expect-error A defaulted second parameter is still outside the runtime contract.
-  const optionalArguments: InvalidOptionalArguments = [{}, {}];
-  assert.equal(requiredKey, "required");
-  assert.equal(optionalArguments.length, 2);
+test("TC-OBS-I18N-001-002 callable dispatch follows typed arguments rather than Function.length", () => {
+  const execution = defineLocaleNamespace(
+    "execution",
+    Object.freeze({
+      "status.defaulted": ({ name }: { readonly name: string } = { name: "fallback" }) => name,
+      "status.optional": (parameters?: { readonly name: string }) => parameters?.name ?? "missing",
+      "status.required": ({ name }: { readonly name: string }) => name,
+      "status.zero": () => "zero",
+    }),
+    Object.freeze({
+      "status.defaulted": ({ name }: { readonly name: string } = { name: "后备" }) => name,
+      "status.optional": (parameters?: { readonly name: string }) => parameters?.name ?? "缺失",
+      "status.required": ({ name }: { readonly name: string }) => name,
+      "status.zero": () => "零",
+    }),
+  );
+  const messages = createMessages({ namespaces: { execution } });
+  assert.equal(messages.t("execution", "status.zero"), "zero");
+  assert.equal(messages.t("execution", "status.required", { name: "Ada" }), "Ada");
+  assert.equal(messages.t("execution", "status.defaulted"), "fallback");
+  assert.equal(messages.t("execution", "status.defaulted", { name: "Grace" }), "Grace");
+  assert.equal(messages.t("execution", "status.optional"), "missing");
+  assert.equal(messages.t("execution", "status.optional", { name: "Lin" }), "Lin");
 });

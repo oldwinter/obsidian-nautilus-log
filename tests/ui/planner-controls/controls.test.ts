@@ -208,3 +208,25 @@ test("TC-OBS-A11Y-001-004 progress pointer and shared keyboard activation dispat
   element.dispatchEvent(new Event("click"));
   assert.equal(dispatched.length, 4);
 });
+
+test("TC-OBS-A11Y-001-004 nonactionable progress targets expose information without activation", () => {
+  class FakeTarget extends EventTarget {
+    readonly tagName = "g";
+    readonly attributes = new Map<string, string>();
+    setAttribute(name: string, value: string): void { this.attributes.set(name, value); }
+  }
+  const element = new FakeTarget();
+  const unbind = bindPlannerProgressTarget(
+    element as unknown as SVGElement,
+    () => target({ kind: "fixed-event" }),
+    () => assert.fail("nonactionable target dispatched"),
+  );
+  const key = new Event("keydown", { cancelable: true });
+  Object.defineProperties(key, { key: { value: "Enter" }, repeat: { value: false } });
+  assert.equal(element.dispatchEvent(key), true);
+  assert.equal(key.defaultPrevented, false);
+  element.dispatchEvent(new Event("click"));
+  assert.equal(element.attributes.get("role"), "img");
+  assert.equal(element.attributes.get("tabindex"), "0");
+  unbind();
+});
