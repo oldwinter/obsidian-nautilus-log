@@ -269,7 +269,7 @@ function evidenceKindFor(id) {
   if (id.startsWith("REL-")) return "PACKAGE";
   const obsKinds = {
     "OBS-TRACE-001": "CONTRACT", "OBS-HOST-001": "MANUAL", "OBS-VIS-001": "SCREENSHOT", "OBS-VIS-002": "SCREENSHOT",
-    "OBS-A11Y-001": "A11Y", "OBS-SAFE-001": "VAULT", "OBS-LIFE-001": "LIFECYCLE", "OBS-I18N-001": "SCREENSHOT", "OBS-LOCAL-001": "NETWORK",
+    "OBS-A11Y-001": "A11Y", "OBS-SAFE-001": "VAULT", "OBS-LIFE-001": "LIFECYCLE", "OBS-I18N-001": "SCREENSHOT", "OBS-LOCAL-001": "INTEGRATION",
   };
   if (obsKinds[id]) return obsKinds[id];
   const family = id.split("-")[1];
@@ -282,9 +282,14 @@ function evidenceKindFor(id) {
 
 function gatesFor(id) {
   if (id.startsWith("REL-")) return ["G0", "G7", id === "REL-003" ? "G9" : "G8"];
-  if (id.startsWith("OBS-VIS") || id === "OBS-A11Y-001" || id === "OBS-I18N-001") return ["G5", "G6"];
-  if (id === "OBS-SAFE-001") return ["G3", "G8"];
-  if (["OBS-HOST-001", "OBS-LIFE-001", "OBS-LOCAL-001"].includes(id)) return ["G4", "G8"];
+  if (id.startsWith("UP-DRF-")) return ["G0", "G2", "G8"];
+  if (id.startsWith("OBS-VIS")) return ["G4", "G5", "G6"];
+  if (id === "OBS-A11Y-001") return ["G5", "G6"];
+  if (id === "OBS-I18N-001") return ["G1", "G5", "G6"];
+  if (id === "OBS-SAFE-001") return ["G2", "G3", "G4", "G8"];
+  if (id === "OBS-HOST-001") return ["G4", "G5"];
+  if (id === "OBS-LIFE-001") return ["G1", "G4", "G7", "G8"];
+  if (id === "OBS-LOCAL-001") return ["G4", "G7", "G8"];
   if (id === "OBS-TRACE-001") return ["G0"];
   const family = id.split("-")[1];
   if (["VIS", "CTL", "CMP"].includes(family)) return ["G2", "G5", "G6"];
@@ -320,6 +325,7 @@ const requirementOwners = {
   requirements: ownershipRequirements,
 };
 const requirementManifest = {
+  $schema: "../../scripts/release/schemas/requirements.schema.json",
   schema_version: 1,
   requirement_set: "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
   upstream_baseline_sha: "973a041aa2f59f3b05bf31db8187efbfea07017a",

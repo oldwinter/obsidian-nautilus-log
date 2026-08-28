@@ -216,7 +216,13 @@ function activeRequirements(requirements, path) {
   return active;
 }
 
-function validateResolvedRequirements(candidateRequirements, resolvedRequirements, records, index) {
+function validateResolvedRequirements(
+  candidateRequirements,
+  resolvedRequirements,
+  records,
+  index,
+  requiredRequirementIds,
+) {
   const candidateActive = activeRequirements(candidateRequirements, "candidate requirements");
   for (const row of candidateRequirements.requirements) {
     if (row.evidence.length !== 0) fail(`candidate requirement ${row.id}: repository template evidence must be empty`);
@@ -232,6 +238,17 @@ function validateResolvedRequirements(candidateRequirements, resolvedRequirement
   sameJson(normalized, candidateRequirements, "resolved requirements may differ from the exact candidate object only in evidence arrays");
   if (candidateActive.length !== resolvedActive.length) fail("resolved requirements changed the active requirement universe");
 
+  const activeById = new Map(candidateActive.map((row) => [row.id, row]));
+  const requiredIds = requiredRequirementIds === undefined
+    ? new Set(activeById.keys())
+    : new Set(requiredRequirementIds);
+  if (requiredIds.size === 0) fail("requiredRequirementIds: must include at least one active requirement");
+  for (const requirementId of requiredIds) {
+    if (!activeById.has(requirementId)) {
+      fail(`requiredRequirementIds: unknown or retired requirement ${requirementId}`);
+    }
+  }
+
   const indexByRequirement = new Map(index.requirements.map((entry) => [entry.requirement_id, entry]));
   const recordByEvidence = new Map(records.map((record) => [record.evidence_id, record]));
   for (const row of resolvedActive) {
@@ -245,8 +262,13 @@ function validateResolvedRequirements(candidateRequirements, resolvedRequirement
         fail(`${label}.environments: contains an invalid environment ID`);
       }
     });
-    expectEvidenceIds(row.evidence, `${label}.evidence`);
     const projection = indexByRequirement.get(row.id);
+    if (!requiredIds.has(row.id)) {
+      if (row.evidence.length !== 0) fail(`${label}.evidence: excluded active requirements must remain empty`);
+      if (projection) fail(`${label}: excluded active requirements cannot have an Evidence Index row`);
+      continue;
+    }
+    expectEvidenceIds(row.evidence, `${label}.evidence`);
     if (!projection) fail(`${label}: has no Evidence Index reverse link`);
     sameJson(row.evidence, projection.evidence_ids, `${label}.evidence: does not match Evidence Index`);
     sameJson(row.tests, projection.test_ids, `${label}.tests: each declared test must have exact-candidate evidence`);
@@ -272,7 +294,9 @@ function validateResolvedRequirements(candidateRequirements, resolvedRequirement
       sameJson(sorted(themeClasses), ["community-customized", "high-contrast"], `${label}.environments: ENV-THEME requires high-contrast and community-customized evidence`);
     }
   }
-  if (indexByRequirement.size !== resolvedActive.length) fail("Evidence Index contains an unknown, retired, or duplicate requirement projection");
+  if (indexByRequirement.size !== requiredIds.size) {
+    fail("Evidence Index contains an excluded, unknown, retired, or duplicate requirement projection");
+  }
 }
 
 export function validateEvidenceBundle({
@@ -283,12 +307,14 @@ export function validateEvidenceBundle({
   candidateRequirements,
   candidateRequirementsBlobOid,
   candidateRequirementsSourcePath,
+  requiredRequirementIds,
 }) {
   expectSafeRelativePath(manifestPath, "manifest path");
   const manifestBytes = readBundleFile(bundleDir, manifestPath);
   const manifest = validateManifestShape(parseJson(manifestBytes.toString("utf8"), manifestPath));
   if (manifest.candidate_sha !== candidateSha) fail(`manifest.candidate_sha: expected exact candidate ${candidateSha}, found ${manifest.candidate_sha}`);
-  if (manifest.package.sha256 !== packageSha256) fail(`manifest.package.sha256: expected exact package ${packageSha256}, found ${manifest.package.sha256}`);
+  const expectedPackageSha256 = packageSha256 ?? manifest.package.sha256;
+  if (manifest.package.sha256 !== expectedPackageSha256) fail(`manifest.package.sha256: expected exact package ${expectedPackageSha256}, found ${manifest.package.sha256}`);
   if (manifest.requirements.source_blob_oid !== candidateRequirementsBlobOid) {
     fail(`manifest.requirements.source_blob_oid: stale candidate object ${manifest.requirements.source_blob_oid}`);
   }
@@ -298,14 +324,20 @@ export function validateEvidenceBundle({
   validateManifestBytes(bundleDir, manifest, manifestPath);
   const index = validateIndexShape(readBundleJson(bundleDir, manifest.index.path), manifest.index.path);
   if (index.candidate_sha !== candidateSha) fail(`evidence-index.candidate_sha: stale candidate SHA ${index.candidate_sha}`);
-  if (index.package_sha256 !== packageSha256) fail(`evidence-index.package_sha256: stale package SHA-256 ${index.package_sha256}`);
-  const records = validateRecords(bundleDir, manifest, index, candidateSha, packageSha256);
+  if (index.package_sha256 !== expectedPackageSha256) fail(`evidence-index.package_sha256: stale package SHA-256 ${index.package_sha256}`);
+  const records = validateRecords(bundleDir, manifest, index, candidateSha, expectedPackageSha256);
   validateManifestCoverage(manifest, index);
   const resolvedRequirements = readBundleJson(bundleDir, manifest.requirements.path);
-  validateResolvedRequirements(candidateRequirements, resolvedRequirements, records, index);
+  validateResolvedRequirements(
+    candidateRequirements,
+    resolvedRequirements,
+    records,
+    index,
+    requiredRequirementIds,
+  );
   return {
     candidateSha,
-    packageSha256,
+    packageSha256: expectedPackageSha256,
     manifest,
     manifestSha256: sha256(manifestBytes),
     index,

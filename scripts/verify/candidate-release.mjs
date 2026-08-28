@@ -189,7 +189,7 @@ export function validateG9Signoff(
     || signoff.package_sha256 !== packageSha256 || signoff.decision !== "GO") {
     throw new CandidateError("G9 signoff is missing GO on the exact candidate/package");
   }
-  if (signoff.release_type !== "public" || scope.release_kind !== "public"
+  if (signoff.release_type !== "public" || scope.release_scope !== "public"
     || scope.excluded_requirement_ids.length !== 0 || signoff.remote_head !== candidateSha) {
     throw new CandidateError("G9 public parity requires a public scope with zero exclusions");
   }
@@ -265,17 +265,17 @@ export async function validateReleaseInputs({
   const partition = validateCandidateScope(scope, candidateSha, requirementRows);
   const gates = validateGateResults(gateResults, candidateSha, evidence.package_sha256, evidence.index);
   await validateG7Package(g7, candidateSha, evidence.package_sha256, inputRoot);
-  if (scope.release_kind === "private" && partition.excluded.size === 0) {
+  if (scope.release_scope === "private" && partition.excluded.size === 0) {
     throw new CandidateError("G8 private acceptance must explicitly disclose open requirements");
   }
-  if (scope.release_kind === "private"
+  if (scope.release_scope === "private"
     && g7.release_label !== "private preview" && g7.release_label !== "private milestone") {
     throw new CandidateError("G8 private package has an invalid release label");
   }
-  if (scope.release_kind === "public") {
+  if (scope.release_scope === "public") {
     validateG9Signoff(signoff, candidateSha, evidence.package_sha256, scope, gates);
   } else if (signoff?.decision === "GO") {
     throw new CandidateError("a private candidate cannot receive public parity GO");
   }
-  return { result: "PASS", gates: GATES, release_kind: scope.release_kind };
+  return { result: "PASS", gates: GATES, release_scope: scope.release_scope };
 }

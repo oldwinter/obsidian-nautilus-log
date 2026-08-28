@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
@@ -23,6 +23,19 @@ const expectedInitialIds = [
 const expectedIds = [...expectedUpstreamIds, ...expectedInitialIds];
 const mandatoryPrivateIds = ["OBS-SAFE-001", "OBS-LIFE-001", "OBS-LOCAL-001", "REL-001", "REL-002"];
 
+function filesBelow(directory) {
+  const results = [];
+  function visit(relativeDirectory) {
+    for (const entry of readdirSync(join(root, relativeDirectory), { withFileTypes: true })) {
+      const relativePath = `${relativeDirectory}/${entry.name}`;
+      if (entry.isDirectory()) visit(relativePath);
+      else if (entry.isFile()) results.push(relativePath);
+    }
+  }
+  visit(directory);
+  return results.sort();
+}
+
 function unique(values, label) {
   assert.equal(new Set(values).size, values.length, `${label} contains duplicates`);
 }
@@ -33,6 +46,7 @@ function isOwnedBoundary(path, boundary) {
 }
 
 function validateRequirementManifest(manifest) {
+  assert.equal(manifest.$schema, "../../scripts/release/schemas/requirements.schema.json");
   assert.equal(manifest.schema_version, 1);
   assert.equal(manifest.requirement_set, "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1");
   assert.equal(manifest.upstream_baseline_sha, "973a041aa2f59f3b05bf31db8187efbfea07017a");
@@ -204,6 +218,66 @@ test("scope schema enumerates the exact universe and encodes every partition", (
   assert.deepEqual(schema.$defs.requirementId.enum, expectedIds);
   assert.equal(schema.allOf.filter((entry) => entry.oneOf).length, 126);
   assert.equal(schema.allOf.filter((entry) => entry.if).length, 2);
+});
+
+test("requirements schema covers catalogs, rows, conditionals, and accepted enums", () => {
+  const schema = readJson("scripts/release/schemas/requirements.schema.json");
+  assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
+  assert.equal(schema.additionalProperties, false);
+  assert.ok(schema.required.includes("requirements"));
+  assert.deepEqual(schema.$defs.testEntry.properties.evidence_kind.enum, [
+    "UNIT", "CONTRACT", "VAULT", "INTEGRATION", "SCREENSHOT",
+    "KEYBOARD", "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
+  ]);
+  assert.ok(!schema.$defs.testEntry.properties.evidence_kind.enum.includes("NETWORK"));
+  assert.equal(schema.$defs.requirement.additionalProperties, false);
+  assert.equal(schema.$defs.requirement.allOf.length, 2);
+  assert.equal(schema.$defs.requirement.properties.status.enum.includes("active"), true);
+});
+
+test("accepted evidence kind and release-gate matrix are exact", () => {
+  const testsByRequirement = new Map(requirements.test_catalog.map((entry) => [entry.requirement_id, entry]));
+  for (let index = 1; index <= 9; index += 1) {
+    assert.deepEqual(testsByRequirement.get(`UP-DRF-${String(index).padStart(2, "0")}`).gates, ["G0", "G2", "G8"]);
+  }
+  const expected = new Map([
+    ["OBS-LOCAL-001", ["INTEGRATION", ["G4", "G7", "G8"]]],
+    ["OBS-LIFE-001", ["LIFECYCLE", ["G1", "G4", "G7", "G8"]]],
+    ["OBS-SAFE-001", ["VAULT", ["G2", "G3", "G4", "G8"]]],
+    ["OBS-I18N-001", ["SCREENSHOT", ["G1", "G5", "G6"]]],
+    ["OBS-HOST-001", ["MANUAL", ["G4", "G5"]]],
+    ["OBS-VIS-001", ["SCREENSHOT", ["G4", "G5", "G6"]]],
+    ["OBS-VIS-002", ["SCREENSHOT", ["G4", "G5", "G6"]]],
+  ]);
+  for (const [id, [kind, gates]] of expected) {
+    assert.equal(testsByRequirement.get(id).evidence_kind, kind);
+    assert.deepEqual(testsByRequirement.get(id).gates, gates);
+  }
+});
+
+test("release inventory exhaustively freezes every #31 repository input", () => {
+  const releaseInputs = readJson("scripts/release/release-inputs.json");
+  const contractPaths = [
+    "docs/parity/deviations.json",
+    "docs/parity/requirement-owners.json",
+    "docs/parity/requirement-owners.schema.json",
+    "docs/parity/requirements.json",
+    "docs/parity/scope.schema.json",
+    "docs/parity/ticket-boundaries.json",
+    "docs/parity/ticket-boundaries.schema.json",
+    "docs/parity/trace-reports/README.md",
+  ];
+  assert.deepEqual(
+    releaseInputs.candidate_owned,
+    [...contractPaths, ...filesBelow("scripts/release"), ...filesBelow("scripts/verify")].sort(),
+  );
+  assert.deepEqual(
+    releaseInputs.gates.map((gate) => gate.id),
+    Array.from({ length: 10 }, (_, index) => `G${index}`),
+  );
+  for (const gate of releaseInputs.gates) {
+    assert.deepEqual(gate.command, ["node", "scripts/release/run-gate.mjs", "--gate", gate.id]);
+  }
 });
 
 test("corrupt requirements are rejected deterministically", () => {

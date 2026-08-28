@@ -35,7 +35,8 @@ async function main() {
       result: "PASS",
       candidate_sha: fixture.candidateSha,
       gates: results.map((result) => result.gate),
-      product_implementation_required: false,
+      dry_run_only: true,
+      product_implementation_executed: false,
       issue_31_repository_changes_required: false,
     })}\n`);
   } finally {

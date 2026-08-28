@@ -301,7 +301,7 @@ function rehashRecord(root, recordPath, { syncEntry = true } = {}) {
   rehashManifest(root);
 }
 
-function validate(root, context) {
+function validate(root, context, requiredRequirementIds) {
   return validateEvidenceBundle({
     bundleDir: root,
     candidateSha: context.candidateSha,
@@ -309,7 +309,37 @@ function validate(root, context) {
     candidateRequirements: context.candidateRequirements,
     candidateRequirementsBlobOid: context.blobOid,
     candidateRequirementsSourcePath: "docs/parity/requirements.json",
+    requiredRequirementIds,
   });
+}
+
+function excludeRequirementFromBundle(root, requirementId) {
+  const indexPath = resolve(root, "evidence-index.json");
+  const index = readJson(indexPath);
+  const removedRecords = index.records.filter((record) => record.requirement_ids.includes(requirementId));
+  index.records = index.records.filter((record) => !record.requirement_ids.includes(requirementId));
+  index.requirements = index.requirements.filter((row) => row.requirement_id !== requirementId);
+  index.tests = index.tests.filter((row) => !row.requirement_ids.includes(requirementId));
+  for (const record of removedRecords) {
+    unlinkSync(resolve(root, record.path));
+    for (const artifact of record.artifacts) unlinkSync(resolve(root, artifact.path));
+  }
+  writeJson(indexPath, index);
+
+  const resolvedPath = resolve(root, "resolved-requirements.json");
+  const resolved = readJson(resolvedPath);
+  resolved.requirements.find((row) => row.id === requirementId).evidence = [];
+  writeJson(resolvedPath, resolved);
+
+  const manifestPath = resolve(root, "manifest.json");
+  const manifest = readJson(manifestPath);
+  const removedPaths = new Set(removedRecords.flatMap((record) => [
+    record.path,
+    ...record.artifacts.map((artifact) => artifact.path),
+  ]));
+  manifest.files = manifest.files.filter((file) => !removedPaths.has(file.path));
+  writeJson(manifestPath, manifest);
+  rehashManifest(root);
 }
 
 function mutateScenario(root, id) {
@@ -513,6 +543,31 @@ test("renders deterministic forward and reverse trace paths", () => {
       assert.ok(reverse.requirement_ids.includes(requirement.requirement_id));
       assert.ok(reverse.test_ids.includes(requirement.tests[0].test_id));
     }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("private evidence scopes require complete included rows and empty excluded rows", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-private-"));
+  try {
+    const context = createBundle(root);
+    const excludedId = definitions.at(-1)[3];
+    const requiredIds = definitions.slice(0, -1).map((definition) => definition[3]);
+    excludeRequirementFromBundle(root, excludedId);
+    assert.equal(validate(root, context, requiredIds).records.length, requiredIds.length);
+
+    const resolvedPath = resolve(root, "resolved-requirements.json");
+    const resolved = readJson(resolvedPath);
+    resolved.requirements.find((row) => row.id === excludedId).evidence = [
+      readJson(resolve(root, "evidence-index.json")).records[0].evidence_id,
+    ];
+    writeJson(resolvedPath, resolved);
+    rehashManifest(root);
+    assert.throws(
+      () => validate(root, context, requiredIds),
+      /excluded active requirements must remain empty/,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

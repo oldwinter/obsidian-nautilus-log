@@ -1,4 +1,5 @@
 {
+  "$schema": "../../scripts/release/schemas/requirements.schema.json",
   "schema_version": 1,
   "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
   "upstream_baseline_sha": "973a041aa2f59f3b05bf31db8187efbfea07017a",
@@ -1136,7 +1137,9 @@
       "requirement_id": "UP-DRF-01",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1144,7 +1147,9 @@
       "requirement_id": "UP-DRF-02",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1152,7 +1157,9 @@
       "requirement_id": "UP-DRF-03",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1160,7 +1167,9 @@
       "requirement_id": "UP-DRF-04",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1168,7 +1177,9 @@
       "requirement_id": "UP-DRF-05",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1176,7 +1187,9 @@
       "requirement_id": "UP-DRF-06",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1184,7 +1197,9 @@
       "requirement_id": "UP-DRF-07",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1192,7 +1207,9 @@
       "requirement_id": "UP-DRF-08",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1200,7 +1217,9 @@
       "requirement_id": "UP-DRF-09",
       "evidence_kind": "CONTRACT",
       "gates": [
-        "G2"
+        "G0",
+        "G2",
+        "G8"
       ]
     },
     {
@@ -1217,7 +1236,7 @@
       "evidence_kind": "MANUAL",
       "gates": [
         "G4",
-        "G8"
+        "G5"
       ]
     },
     {
@@ -1225,6 +1244,7 @@
       "requirement_id": "OBS-VIS-001",
       "evidence_kind": "SCREENSHOT",
       "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -1234,6 +1254,7 @@
       "requirement_id": "OBS-VIS-002",
       "evidence_kind": "SCREENSHOT",
       "gates": [
+        "G4",
         "G5",
         "G6"
       ]
@@ -1252,7 +1273,9 @@
       "requirement_id": "OBS-SAFE-001",
       "evidence_kind": "VAULT",
       "gates": [
+        "G2",
         "G3",
+        "G4",
         "G8"
       ]
     },
@@ -1261,7 +1284,9 @@
       "requirement_id": "OBS-LIFE-001",
       "evidence_kind": "LIFECYCLE",
       "gates": [
+        "G1",
         "G4",
+        "G7",
         "G8"
       ]
     },
@@ -1270,6 +1295,7 @@
       "requirement_id": "OBS-I18N-001",
       "evidence_kind": "SCREENSHOT",
       "gates": [
+        "G1",
         "G5",
         "G6"
       ]
@@ -1277,9 +1303,10 @@
     {
       "id": "TC-OBS-LOCAL-001-001",
       "requirement_id": "OBS-LOCAL-001",
-      "evidence_kind": "NETWORK",
+      "evidence_kind": "INTEGRATION",
       "gates": [
         "G4",
+        "G7",
         "G8"
       ]
     },

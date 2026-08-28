@@ -40,9 +40,24 @@ async function git(repository, ...args) {
   return (await execFileAsync("git", args, { cwd: repository })).stdout.trim();
 }
 
+function gatesForRequirement(id) {
+  if (id.startsWith("UP-DRF-")) return ["G0", "G2", "G8"];
+  const mappings = {
+    "OBS-LOCAL-001": ["G4", "G7", "G8"],
+    "OBS-LIFE-001": ["G1", "G4", "G7", "G8"],
+    "OBS-SAFE-001": ["G2", "G3", "G4", "G8"],
+    "OBS-I18N-001": ["G1", "G5", "G6"],
+    "OBS-HOST-001": ["G4", "G5"],
+    "OBS-VIS-001": ["G4", "G5", "G6"],
+    "OBS-VIS-002": ["G4", "G5", "G6"],
+  };
+  return mappings[id] ?? ["G0"];
+}
+
 function requirementManifest() {
   const tests = REQUIRED_REQUIREMENT_IDS.map((id) => `TEST-${id}`);
   return {
+    $schema: "../../scripts/release/schemas/requirements.schema.json",
     schema_version: 1,
     requirement_set: "spiral-day-v1.0.2",
     upstream_baseline_sha: "973a041aa2f59f3b05bf31db8187efbfea07017a",
@@ -52,7 +67,12 @@ function requirementManifest() {
       id: `FX-${String(index + 1).padStart(2, "0")}`,
       path: "tests/fixtures/release/synthetic",
     })),
-    test_catalog: tests.map((id) => ({ id, path: "tests/release/release-gates.test.mjs" })),
+    test_catalog: tests.map((id) => ({
+      id,
+      requirement_id: id.slice("TEST-".length),
+      evidence_kind: id === "TEST-OBS-LOCAL-001" ? "INTEGRATION" : "CONTRACT",
+      gates: gatesForRequirement(id.slice("TEST-".length)),
+    })),
     environment_catalog: ENVIRONMENT_IDS.map((id) => ({
       id,
       description: `${id} exact synthetic dry-run values`,
@@ -68,7 +88,7 @@ function requirementManifest() {
       disposition: id === "UP-INS-01" ? "not-applicable" : "exact",
       fixtures: [`FX-${String((index % 16) + 1).padStart(2, "0")}`],
       tests: [`TEST-${id}`],
-      environments: [ENVIRONMENT_IDS[index % ENVIRONMENT_IDS.length]],
+      environments: [id === "UP-PER-01" ? "ENV-PURE" : ENVIRONMENT_IDS[index % ENVIRONMENT_IDS.length]],
       evidence: [],
       ...(id === "UP-INS-01" ? { not_applicable_approval_id: "NA-001" } : {}),
       status: "active",
@@ -102,7 +122,6 @@ async function createCandidateRepository(root, sourceRoot) {
   await mkdir(path.join(repository, "scripts/release"), { recursive: true });
   await json(path.join(repository, "docs/parity/requirements.json"), requirementManifest());
   await json(path.join(repository, "docs/parity/deviations.json"), deviationsManifest());
-  await json(path.join(repository, "docs/parity/scope.schema.json"), { schema_version: 1, type: "object" });
   await json(path.join(repository, "manifest.json"), {
     id: "spiral-day",
     name: "Spiral Day",
@@ -111,13 +130,14 @@ async function createCandidateRepository(root, sourceRoot) {
     isDesktopOnly: true,
   });
   await json(path.join(repository, "package.json"), { name: "spiral-day", version: "1.0.2" });
-  for (const filename of [
-    "release-inputs.json",
-    "g7-package.template.json",
-    "g8-scope.template.json",
-    "g9-signoff.template.json",
-  ]) {
-    await cp(path.join(sourceRoot, "scripts/release", filename), path.join(repository, "scripts/release", filename));
+  const releaseInputs = JSON.parse(
+    await readFile(path.join(sourceRoot, "scripts/release/release-inputs.json"), "utf8"),
+  );
+  for (const relativePath of releaseInputs.candidate_owned) {
+    if (["docs/parity/requirements.json", "docs/parity/deviations.json"].includes(relativePath)) continue;
+    const destination = path.join(repository, relativePath);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await cp(path.join(sourceRoot, relativePath), destination);
   }
   await git(repository, "init", "-q");
   await git(repository, "config", "user.name", "Spiral Day Dry Run");
@@ -131,82 +151,190 @@ async function createCandidateRepository(root, sourceRoot) {
   return { repository, remote, candidateSha: await git(repository, "rev-parse", "HEAD") };
 }
 
+function environmentFor(profileId, themeClass = "high-contrast") {
+  const os = profileId === "ENV-A11Y" || profileId === "ENV-HOST-MAC"
+    ? ["macOS", "26.0"]
+    : profileId === "ENV-HOST-WIN"
+      ? ["Windows", "11.0"]
+      : ["Ubuntu", "24.04.1"];
+  const common = {
+    profile_id: profileId,
+    os_name: os[0],
+    os_version: os[1],
+    architecture: "x86_64",
+    locale: "en-US",
+    timezone: "UTC",
+  };
+  if (profileId === "ENV-PURE") {
+    return {
+      ...common,
+      tool_versions: { git: "2.54.0", node: "22.23.2", npm: "10.9.8" },
+      parameters: {
+        "ci-image": "ubuntu-24.04-20260828",
+        "dst-boundaries": true,
+        "fake-clock": "2026-08-28T00:00:00Z",
+        locales: ["en", "zh-CN"],
+        timezones: ["America/New_York", "Asia/Shanghai", "UTC"],
+      },
+    };
+  }
+  if (profileId === "ENV-VIS") {
+    return {
+      ...common,
+      tool_versions: { chromium: "140.0.7339.16", playwright: "1.55.0" },
+      parameters: {
+        "content-widths": [320, 360, 519, 520, 521, 900],
+        "device-pixel-ratio": 1,
+        "fake-clock": "2026-08-28T00:00:00Z",
+        fonts: "Noto Sans 2.014",
+        "reduced-motion-values": [false, true],
+        "theme-modes": ["dark", "light"],
+        viewport: "1440x1000",
+        "zoom-percent": 100,
+      },
+    };
+  }
+  if (profileId === "ENV-A11Y") {
+    return {
+      ...common,
+      tool_versions: {
+        chromium: "140.0.7339.16",
+        electron: "32.2.5",
+        obsidian: "1.13.4",
+        "screen-reader": "VoiceOver 26.0",
+      },
+      parameters: { "reduced-motion": true, "zoom-percent": 200 },
+    };
+  }
+  if (["ENV-HOST-MAC", "ENV-HOST-WIN", "ENV-HOST-LINUX"].includes(profileId)) {
+    return {
+      ...common,
+      tool_versions: { chromium: "140.0.7339.16", electron: "32.2.5", obsidian: "1.13.4" },
+      parameters: {
+        locales: ["en", "zh-CN"],
+        "theme-modes": ["dark", "light"],
+        "zoom-percents": [80, 100, 200],
+      },
+    };
+  }
+  if (profileId === "ENV-THEME") {
+    return {
+      ...common,
+      tool_versions: { chromium: "140.0.7339.16", electron: "32.2.5", obsidian: "1.13.4" },
+      parameters: {
+        "theme-class": themeClass,
+        "theme-name": themeClass === "high-contrast" ? "Synthetic Contrast" : "Synthetic Customized",
+        "theme-sha256": sha256(themeClass),
+        "theme-version": "1.0.0",
+        "zoom-percent": 100,
+      },
+    };
+  }
+  return {
+    ...common,
+    tool_versions: { chromium: "140.0.7339.16", electron: "32.2.5", obsidian: "1.13.4" },
+    parameters: { theme: "Obsidian Light 1.13.4", "zoom-percent": 100 },
+  };
+}
+
+function evidenceShape(requirementId, profileId, primaryKind) {
+  if (profileId === "ENV-PURE") {
+    if (requirementId === "UP-PER-01") return ["performance", "CONTRACT"];
+    if (requirementId === "OBS-LOCAL-001") return ["network/privacy", "INTEGRATION"];
+    if (primaryKind === "PACKAGE") return ["package", "PACKAGE"];
+    if (primaryKind === "VAULT") return ["vault", "VAULT"];
+    return ["pure", ["UNIT", "CONTRACT"].includes(primaryKind) ? primaryKind : "CONTRACT"];
+  }
+  if (profileId === "ENV-VIS") {
+    if (primaryKind === "A11Y") return ["accessibility", "A11Y"];
+    if (primaryKind === "KEYBOARD") return ["keyboard", "KEYBOARD"];
+    return ["screenshot", "SCREENSHOT"];
+  }
+  if (profileId === "ENV-A11Y") return ["accessibility", "A11Y"];
+  if (requirementId === "OBS-LOCAL-001") return ["network/privacy", "INTEGRATION"];
+  if (primaryKind === "LIFECYCLE") return ["lifecycle", "LIFECYCLE"];
+  if (primaryKind === "PACKAGE") return ["package", "PACKAGE"];
+  if (primaryKind === "MANUAL") return ["manual", "MANUAL"];
+  return ["host", "INTEGRATION"];
+}
+
 async function createEvidenceBundle(root, repository, candidateSha) {
   const bundleRoot = path.join(root, "evidence-bundle");
-  const recordsRoot = path.join(bundleRoot, "records");
-  const artifactsRoot = path.join(bundleRoot, "artifacts");
-  await mkdir(recordsRoot, { recursive: true });
-  await mkdir(artifactsRoot, { recursive: true });
-  const artifactPath = "artifacts/pass.txt";
-  const artifactBytes = Buffer.from("synthetic dry-run pass\n");
-  await writeFile(path.join(bundleRoot, artifactPath), artifactBytes);
+  await mkdir(path.join(bundleRoot, "records"), { recursive: true });
+  await mkdir(path.join(bundleRoot, "artifacts"), { recursive: true });
   const packageBytes = Buffer.from("synthetic deterministic package\n");
   const packageHash = sha256(packageBytes);
   const packageBundlePath = "artifacts/spiral-day.zip";
   await writeFile(path.join(bundleRoot, packageBundlePath), packageBytes);
-  const candidateRequirements = JSON.parse(
-    await readFile(path.join(repository, "docs/parity/requirements.json"), "utf8"),
-  );
-  const requirementsSha256 = sha256(await readFile(path.join(repository, "docs/parity/requirements.json")));
+  const requirementsBytes = await readFile(path.join(repository, "docs/parity/requirements.json"));
+  const candidateRequirements = JSON.parse(requirementsBytes);
+  const testById = new Map(candidateRequirements.test_catalog.map((entry) => [entry.id, entry]));
   const resolvedRequirements = structuredClone(candidateRequirements);
-  const recordDescriptors = [];
-  const requirementIndex = [];
-  const testIndex = [];
+  const records = [];
   const fileDescriptors = [
-    { path: artifactPath, sha256: sha256(artifactBytes), role: "artifact" },
     { path: packageBundlePath, sha256: packageHash, role: "package" },
   ];
+  let sequence = 0;
 
-  for (const [index, row] of candidateRequirements.requirements.entries()) {
-    const profileId = row.environments[0];
-    const evidenceId = `E-${candidateSha.slice(0, 12)}-${profileId}-UNIT-${String(index + 1).padStart(3, "0")}`;
-    const recordPath = `records/${evidenceId}.json`;
-    const record = {
-      schema_version: 1,
-      evidence_id: evidenceId,
-      record_type: index === 0 ? "performance" : "pure",
-      candidate_sha: candidateSha,
-      package_sha256: packageHash,
-      environment: {
-        profile_id: profileId,
-        os_name: "Synthetic Linux",
-        os_version: "1",
-        architecture: "x64",
-        locale: "en",
-        timezone: "UTC",
-        tool_versions: {
-          node: process.version,
-          obsidian: "1.13.7",
-          electron: "43.3.0",
-          chromium: "142.0.7444.235",
-        },
-        parameters: { "fake-clock": true },
-      },
-      started_at: "2026-08-28T00:00:00.000Z",
-      ended_at: "2026-08-28T00:00:01.000Z",
-      result: "PASS",
-      execution: PASS_EXECUTION,
-      requirement_ids: [row.id],
-      test_ids: row.tests,
-      artifacts: [{ path: artifactPath, sha256: sha256(artifactBytes) }],
-    };
-    const bytes = Buffer.from(`${JSON.stringify(record, null, 2)}\n`);
-    await writeFile(path.join(bundleRoot, recordPath), bytes);
-    fileDescriptors.push({ path: recordPath, sha256: sha256(bytes), role: "record" });
-    recordDescriptors.push({
-      evidence_id: evidenceId,
-      path: recordPath,
-      sha256: sha256(bytes),
-      record_type: record.record_type,
-      requirement_ids: [row.id],
-      test_ids: row.tests,
-      artifacts: record.artifacts,
-    });
-    resolvedRequirements.requirements[index].evidence = [evidenceId];
-    requirementIndex.push({ requirement_id: row.id, test_ids: row.tests, evidence_ids: [evidenceId] });
-    testIndex.push({ test_id: row.tests[0], requirement_ids: [row.id], evidence_ids: [evidenceId] });
+  for (const [rowIndex, row] of candidateRequirements.requirements.entries()) {
+    const primaryKind = testById.get(row.tests[0]).evidence_kind;
+    const environmentVariants = row.environments.flatMap((profileId) => profileId === "ENV-THEME"
+      ? [[profileId, "community-customized"], [profileId, "high-contrast"]]
+      : [[profileId, null]]);
+    const evidenceIds = [];
+    for (const [profileId, themeClass] of environmentVariants) {
+      sequence += 1;
+      const [recordType, kind] = evidenceShape(row.id, profileId, primaryKind);
+      const ordinal = String(sequence).padStart(3, "0");
+      const evidenceId = `E-${candidateSha.slice(0, 12)}-${profileId}-${kind}-${ordinal}`;
+      const artifactPath = `artifacts/${ordinal}.txt`;
+      const artifactBytes = Buffer.from(`synthetic ${row.id} ${profileId} ${themeClass ?? "default"}\n`);
+      await writeFile(path.join(bundleRoot, artifactPath), artifactBytes);
+      const record = {
+        schema_version: 1,
+        evidence_id: evidenceId,
+        record_type: recordType,
+        candidate_sha: candidateSha,
+        package_sha256: packageHash,
+        environment: environmentFor(profileId, themeClass ?? "high-contrast"),
+        started_at: "2026-08-28T00:00:00.000Z",
+        ended_at: "2026-08-28T00:00:01.000Z",
+        result: "PASS",
+        execution: PASS_EXECUTION,
+        requirement_ids: [row.id],
+        test_ids: row.tests,
+        artifacts: [{ path: artifactPath, sha256: sha256(artifactBytes) }],
+      };
+      const recordPath = `records/${ordinal}.json`;
+      const recordBytes = Buffer.from(`${JSON.stringify(record, null, 2)}\n`);
+      await writeFile(path.join(bundleRoot, recordPath), recordBytes);
+      fileDescriptors.push(
+        { path: artifactPath, sha256: sha256(artifactBytes), role: "artifact" },
+        { path: recordPath, sha256: sha256(recordBytes), role: "record" },
+      );
+      records.push({ record, recordPath, recordHash: sha256(recordBytes) });
+      evidenceIds.push(evidenceId);
+    }
+    resolvedRequirements.requirements[rowIndex].evidence = evidenceIds.sort();
   }
 
+  const recordDescriptors = records
+    .map(({ record, recordPath, recordHash }) => ({
+      evidence_id: record.evidence_id,
+      path: recordPath,
+      sha256: recordHash,
+      record_type: record.record_type,
+      requirement_ids: record.requirement_ids,
+      test_ids: record.test_ids,
+      artifacts: record.artifacts,
+    }))
+    .sort((left, right) => left.evidence_id.localeCompare(right.evidence_id));
+  const requirementIndex = resolvedRequirements.requirements
+    .map((row) => ({ requirement_id: row.id, test_ids: row.tests, evidence_ids: row.evidence }))
+    .sort((left, right) => left.requirement_id.localeCompare(right.requirement_id));
+  const testIndex = resolvedRequirements.requirements
+    .map((row) => ({ test_id: row.tests[0], requirement_ids: [row.id], evidence_ids: row.evidence }))
+    .sort((left, right) => left.test_id.localeCompare(right.test_id));
   const resolvedPath = "resolved-requirements.json";
   const resolvedBytes = Buffer.from(`${JSON.stringify(resolvedRequirements, null, 2)}\n`);
   await writeFile(path.join(bundleRoot, resolvedPath), resolvedBytes);
@@ -235,7 +363,7 @@ async function createEvidenceBundle(root, repository, candidateSha) {
       source_path: "docs/parity/requirements.json",
       source_blob_oid: sourceBlobOid,
     },
-    files: fileDescriptors,
+    files: fileDescriptors.sort((left, right) => left.path.localeCompare(right.path)),
   });
   return {
     bundleRoot,
@@ -243,7 +371,8 @@ async function createEvidenceBundle(root, repository, candidateSha) {
     packageHash,
     indexValue,
     candidateRequirements,
-    requirementsSha256,
+    requirementsSha256: sha256(requirementsBytes),
+    deviationsSha256: sha256(await readFile(path.join(repository, "docs/parity/deviations.json"))),
   };
 }
 
@@ -254,8 +383,11 @@ async function createReleaseInputs(root, candidateSha, evidence) {
   await writeFile(packagePath, evidence.packageBytes);
   const scope = {
     schema_version: 1,
-    release_kind: "public",
     candidate_sha: candidateSha,
+    requirements_sha256: evidence.requirementsSha256,
+    deviations_sha256: evidence.deviationsSha256,
+    release_scope: "public",
+    parity_claim: "v1.0.2-parity",
     included_requirement_ids: REQUIRED_REQUIREMENT_IDS,
     excluded_requirement_ids: [],
     approved_deviation_ids: [],

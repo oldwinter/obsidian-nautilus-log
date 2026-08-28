@@ -1,12 +1,31 @@
 {
   "schema_version": 1,
   "candidate_owned": [
-    "docs/parity/requirements.json",
     "docs/parity/deviations.json",
+    "docs/parity/requirement-owners.json",
+    "docs/parity/requirement-owners.schema.json",
+    "docs/parity/requirements.json",
     "docs/parity/scope.schema.json",
+    "docs/parity/ticket-boundaries.json",
+    "docs/parity/ticket-boundaries.schema.json",
+    "docs/parity/trace-reports/README.md",
+    "scripts/release/build-candidate.mjs",
+    "scripts/release/dry-run.mjs",
     "scripts/release/g7-package.template.json",
     "scripts/release/g8-scope.template.json",
-    "scripts/release/g9-signoff.template.json"
+    "scripts/release/g9-signoff.template.json",
+    "scripts/release/release-inputs.json",
+    "scripts/release/run-gate.mjs",
+    "scripts/release/schemas/requirements.schema.json",
+    "scripts/verify/candidate-evidence.mjs",
+    "scripts/verify/candidate-g0.mjs",
+    "scripts/verify/candidate-object.mjs",
+    "scripts/verify/candidate-package.mjs",
+    "scripts/verify/candidate-release.mjs",
+    "scripts/verify/evidence-bundle.mjs",
+    "scripts/verify/evidence-schema.mjs",
+    "scripts/verify/render-trace-report.mjs",
+    "scripts/verify/verify-evidence.mjs"
   ],
   "external_run_inputs": [
     "evidence-bundle/manifest.json",

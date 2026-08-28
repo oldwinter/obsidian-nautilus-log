@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
@@ -114,10 +114,76 @@ test("G0 rejects unknown dispositions, unapproved adaptations, dangling links, a
 
   const rows = new Map(fixture.candidateRequirements.requirements.map((row) => [row.id, row]));
   const privateScope = structuredClone(fixture.scope);
-  privateScope.release_kind = "private";
-  privateScope.included_requirement_ids = privateScope.included_requirement_ids.slice(1);
-  privateScope.excluded_requirement_ids = [];
+  const mandatory = new Set(["OBS-SAFE-001", "OBS-LIFE-001", "OBS-LOCAL-001", "REL-001", "REL-002"]);
+  privateScope.release_scope = "private";
+  privateScope.parity_claim = "private-preview";
+  privateScope.included_requirement_ids = privateScope.included_requirement_ids.filter((id) => mandatory.has(id));
+  privateScope.excluded_requirement_ids = [...rows.keys()].filter((id) => !mandatory.has(id)).slice(1);
   assert.throws(() => validateCandidateScope(privateScope, fixture.candidateSha, rows), /exact partition/);
+});
+
+test("G0 binds canonical scope fields and hashes to exact candidate object bytes", async (t) => {
+  const fixture = await createDryRunFixture(sourceRoot);
+  t.after(() => fixture.cleanup());
+  const scopePath = path.join(fixture.inputRoot, "g8-scope.json");
+  const validate = () => validateG0({
+    repository: fixture.repository,
+    candidateSha: fixture.candidateSha,
+    branch: "candidate",
+    scopePath,
+    bundleRoot: fixture.bundleRoot,
+    checkPushedState: false,
+  });
+
+  const legacy = { ...fixture.scope, release_kind: fixture.scope.release_scope };
+  delete legacy.release_scope;
+  await writeFile(scopePath, `${JSON.stringify(legacy, null, 2)}\n`);
+  await assert.rejects(validate(), /canonical scope fields/);
+
+  const staleHash = { ...fixture.scope, requirements_sha256: "f".repeat(64) };
+  await writeFile(scopePath, `${JSON.stringify(staleHash, null, 2)}\n`);
+  await assert.rejects(validate(), /requirements_sha256.*exact candidate Git object bytes/);
+
+  const staleDeviations = { ...fixture.scope, deviations_sha256: "e".repeat(64) };
+  await writeFile(scopePath, `${JSON.stringify(staleDeviations, null, 2)}\n`);
+  await assert.rejects(validate(), /deviations_sha256.*exact candidate Git object bytes/);
+
+  await writeFile(scopePath, `${JSON.stringify(fixture.scope, null, 2)}\n`);
+  await writeFile(path.join(fixture.repository, "docs/parity/requirements.json"), "{\"dirty\":true}\n");
+  assert.equal((await validate()).result, "PASS");
+});
+
+test("actual G0 rejects extra manifest files and symlinked bundle content", async (t) => {
+  await t.test("extra file", async (st) => {
+    const fixture = await createDryRunFixture(sourceRoot);
+    st.after(() => fixture.cleanup());
+    await writeFile(path.join(fixture.bundleRoot, "undeclared.txt"), "undeclared\n");
+    await assert.rejects(validateG0({
+      repository: fixture.repository,
+      candidateSha: fixture.candidateSha,
+      branch: "candidate",
+      scopePath: path.join(fixture.inputRoot, "g8-scope.json"),
+      bundleRoot: fixture.bundleRoot,
+      checkPushedState: false,
+    }), /exhaustively list every bundle file/);
+  });
+
+  await t.test("symlink artifact", async (st) => {
+    const fixture = await createDryRunFixture(sourceRoot);
+    st.after(() => fixture.cleanup());
+    const artifacts = fixture.indexValue.records.flatMap((record) => record.artifacts);
+    const linkedPath = path.join(fixture.bundleRoot, artifacts[0].path);
+    await unlink(linkedPath);
+    await symlink(path.join(fixture.bundleRoot, artifacts[1].path), linkedPath);
+    await assert.rejects(validateG0({
+      repository: fixture.repository,
+      candidateSha: fixture.candidateSha,
+      branch: "candidate",
+      scopePath: path.join(fixture.inputRoot, "g8-scope.json"),
+      bundleRoot: fixture.bundleRoot,
+      checkPushedState: false,
+    }), /symbolic links are forbidden/);
+  });
 });
 
 test("evidence validation rejects stale records, retry-only results, and hash corruption", async (t) => {
@@ -129,7 +195,7 @@ test("evidence validation rejects stale records, retry-only results, and hash co
       record.candidate_sha = "f".repeat(40);
     });
     await updateRecordDescriptor(fixture, recordPath);
-    await assert.rejects(loadEvidence(fixture), /stale or misidentified/);
+    await assert.rejects(loadEvidence(fixture), /candidate prefix|stale candidate/);
   });
 
   await t.test("retry-only record", async (st) => {
@@ -141,14 +207,15 @@ test("evidence validation rejects stale records, retry-only results, and hash co
       record.execution.retries = 1;
     });
     await updateRecordDescriptor(fixture, recordPath);
-    await assert.rejects(loadEvidence(fixture), /one attempt and zero retries/);
+    await assert.rejects(loadEvidence(fixture), /execution\.attempts: must equal 1/);
   });
 
   await t.test("artifact hash mismatch", async (st) => {
     const fixture = await createDryRunFixture(sourceRoot);
     st.after(() => fixture.cleanup());
-    await writeFile(path.join(fixture.bundleRoot, "artifacts/pass.txt"), "corrupt\n");
-    await assert.rejects(loadEvidence(fixture), /hash mismatch/);
+    const artifactPath = fixture.indexValue.records[0].artifacts[0].path;
+    await writeFile(path.join(fixture.bundleRoot, artifactPath), "corrupt\n");
+    await assert.rejects(loadEvidence(fixture), /SHA-256 mismatch/);
   });
 });
 

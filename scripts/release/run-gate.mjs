@@ -41,8 +41,7 @@ async function main() {
   const repository = path.resolve(args.repository ?? ".");
   const inputRoot = path.resolve(args["input-dir"]);
   const scopePath = path.join(inputRoot, "g8-scope.json");
-  const [declaration, requirements, g0] = await Promise.all([
-    readCandidateJson(repository, args.candidate, "scripts/release/release-inputs.json"),
+  const [requirements, g0] = await Promise.all([
     readCandidateJson(repository, args.candidate, "docs/parity/requirements.json"),
     validateG0({
       repository,
@@ -52,11 +51,6 @@ async function main() {
       bundleRoot: path.resolve(args.bundle),
     }),
   ]);
-  if (declaration.schema_version !== 1
-    || declaration.gates?.length !== 10
-    || !declaration.gates.some((gate) => gate.id === args.gate)) {
-    throw new Error("candidate release-input declaration is malformed");
-  }
   if (args.gate === "G0") {
     process.stdout.write(`${JSON.stringify(g0)}\n`);
     return;
@@ -83,10 +77,10 @@ async function main() {
     g7 = await readJson(path.join(inputRoot, "g7-package.json"));
     await validateG7Package(g7, args.candidate, evidence.package_sha256, inputRoot);
   }
-  if (args.gate === "G8" && scope.release_kind === "private" && scope.excluded_requirement_ids.length === 0) {
+  if (args.gate === "G8" && scope.release_scope === "private" && scope.excluded_requirement_ids.length === 0) {
     throw new Error("G8 private scope must disclose open requirements");
   }
-  if (args.gate === "G8" && scope.release_kind === "private"
+  if (args.gate === "G8" && scope.release_scope === "private"
     && g7.release_label !== "private preview" && g7.release_label !== "private milestone") {
     throw new Error("G8 private package must be labelled private preview or private milestone");
   }

@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
   assertPushedCandidate,
   CandidateError,
   listCandidateFiles,
+  readCandidateFile,
   readCandidateJson,
   requireFullSha,
 } from "./candidate-object.mjs";
@@ -11,6 +13,11 @@ import { validateCandidateEvidenceBundle } from "./candidate-evidence.mjs";
 
 const UPSTREAM_BASELINE = "973a041aa2f59f3b05bf31db8187efbfea07017a";
 const DISPOSITIONS = new Set(["exact", "host-adapted", "approved-improvement", "not-applicable"]);
+const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const EVIDENCE_KINDS = new Set([
+  "UNIT", "CONTRACT", "VAULT", "INTEGRATION", "SCREENSHOT",
+  "KEYBOARD", "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
+]);
 const MANDATORY_PRIVATE_IDS = new Set([
   "OBS-SAFE-001",
   "OBS-LIFE-001",
@@ -44,6 +51,51 @@ const REQUIRED_ENVIRONMENT_IDS = [
   "ENV-THEME",
   "ENV-A11Y",
 ];
+export const REQUIRED_RELEASE_INPUT_PATHS = [
+  "docs/parity/deviations.json",
+  "docs/parity/requirement-owners.json",
+  "docs/parity/requirement-owners.schema.json",
+  "docs/parity/requirements.json",
+  "docs/parity/scope.schema.json",
+  "docs/parity/ticket-boundaries.json",
+  "docs/parity/ticket-boundaries.schema.json",
+  "docs/parity/trace-reports/README.md",
+  "scripts/release/build-candidate.mjs",
+  "scripts/release/dry-run.mjs",
+  "scripts/release/g7-package.template.json",
+  "scripts/release/g8-scope.template.json",
+  "scripts/release/g9-signoff.template.json",
+  "scripts/release/release-inputs.json",
+  "scripts/release/run-gate.mjs",
+  "scripts/release/schemas/requirements.schema.json",
+  "scripts/verify/candidate-evidence.mjs",
+  "scripts/verify/candidate-g0.mjs",
+  "scripts/verify/candidate-object.mjs",
+  "scripts/verify/candidate-package.mjs",
+  "scripts/verify/candidate-release.mjs",
+  "scripts/verify/evidence-bundle.mjs",
+  "scripts/verify/evidence-schema.mjs",
+  "scripts/verify/render-trace-report.mjs",
+  "scripts/verify/verify-evidence.mjs",
+];
+const GATE_IDS = Array.from({ length: 10 }, (_, index) => `G${index}`);
+const ACCEPTED_GATE_MAPPINGS = new Map([
+  ...Array.from({ length: 9 }, (_, index) => [
+    `UP-DRF-${String(index + 1).padStart(2, "0")}`,
+    ["G0", "G2", "G8"],
+  ]),
+  ["OBS-LOCAL-001", ["G4", "G7", "G8"]],
+  ["OBS-LIFE-001", ["G1", "G4", "G7", "G8"]],
+  ["OBS-SAFE-001", ["G2", "G3", "G4", "G8"]],
+  ["OBS-I18N-001", ["G1", "G5", "G6"]],
+  ["OBS-HOST-001", ["G4", "G5"]],
+  ["OBS-VIS-001", ["G4", "G5", "G6"]],
+  ["OBS-VIS-002", ["G4", "G5", "G6"]],
+]);
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
 
 function expand(prefix, count) {
   return Array.from({ length: count }, (_, index) => `UP-${prefix}-${String(index + 1).padStart(2, "0")}`);
@@ -133,6 +185,9 @@ export function validateRequirementManifest(manifest, deviations) {
   if (manifest.row_count !== 126 || manifest.requirements?.length !== 126) {
     throw new CandidateError("requirements manifest must contain exactly 126 rows");
   }
+  if (manifest.$schema !== "../../scripts/release/schemas/requirements.schema.json") {
+    throw new CandidateError("requirements manifest must reference the release requirements schema");
+  }
   const rows = rowMap(manifest.requirements, "id", "requirements");
   if (rows.size !== REQUIRED_REQUIREMENT_IDS.length
     || REQUIRED_REQUIREMENT_IDS.some((id) => !rows.has(id))) {
@@ -155,6 +210,26 @@ export function validateRequirementManifest(manifest, deviations) {
   );
   const usedDeviations = new Set();
   const usedNotApplicableApprovals = new Set();
+
+  for (const [testId, entry] of tests) {
+    if (!rows.has(entry.requirement_id)) {
+      throw new CandidateError(`${testId} links unknown requirement ${String(entry.requirement_id)}`);
+    }
+    if (!EVIDENCE_KINDS.has(entry.evidence_kind)) {
+      throw new CandidateError(`${testId} has unsupported evidence kind ${String(entry.evidence_kind)}`);
+    }
+    const gates = requireStrings(entry.gates, `${testId} gates`);
+    if (gates.some((gate) => !GATE_IDS.includes(gate))) {
+      throw new CandidateError(`${testId} has an unknown release gate`);
+    }
+    const acceptedGates = ACCEPTED_GATE_MAPPINGS.get(entry.requirement_id);
+    if (acceptedGates && JSON.stringify(gates) !== JSON.stringify(acceptedGates)) {
+      throw new CandidateError(`${testId} differs from the accepted release-gate matrix`);
+    }
+    if (entry.requirement_id === "OBS-LOCAL-001" && entry.evidence_kind !== "INTEGRATION") {
+      throw new CandidateError(`${testId} must use accepted INTEGRATION evidence`);
+    }
+  }
 
   for (const [id, row] of rows) {
     for (const field of ["owner_module", "statement"]) {
@@ -184,7 +259,9 @@ export function validateRequirementManifest(manifest, deviations) {
       if (!fixtures.has(fixtureId)) throw new CandidateError(`${id} has dangling fixture ${fixtureId}`);
     }
     for (const testId of rowTests) {
-      if (!tests.has(testId)) throw new CandidateError(`${id} has dangling test ${testId}`);
+      if (!tests.has(testId) || tests.get(testId).requirement_id !== id) {
+        throw new CandidateError(`${id} has dangling or mislinked test ${testId}`);
+      }
     }
     for (const environmentId of rowEnvironments) {
       if (!environments.has(environmentId)) throw new CandidateError(`${id} has dangling environment ${environmentId}`);
@@ -218,12 +295,48 @@ export function validateRequirementManifest(manifest, deviations) {
   return rows;
 }
 
-export function validateCandidateScope(scope, candidateSha, requirementRows) {
+export function validateCandidateScope(
+  scope,
+  candidateSha,
+  requirementRows,
+  expectedHashes = {},
+) {
+  const expectedKeys = [
+    "schema_version",
+    "candidate_sha",
+    "requirements_sha256",
+    "deviations_sha256",
+    "release_scope",
+    "parity_claim",
+    "included_requirement_ids",
+    "excluded_requirement_ids",
+    "approved_deviation_ids",
+  ];
+  if (!scope || typeof scope !== "object" || Array.isArray(scope)
+    || JSON.stringify(Object.keys(scope).sort()) !== JSON.stringify([...expectedKeys].sort())) {
+    throw new CandidateError("scope manifest must contain exactly the canonical scope fields");
+  }
   if (scope.schema_version !== 1 || scope.candidate_sha !== candidateSha) {
     throw new CandidateError("scope manifest schema or candidate SHA is stale");
   }
-  if (scope.release_kind !== "private" && scope.release_kind !== "public") {
-    throw new CandidateError("scope release_kind must be private or public");
+  if (!SHA256_PATTERN.test(scope.requirements_sha256)
+    || !SHA256_PATTERN.test(scope.deviations_sha256)) {
+    throw new CandidateError("scope requirement and deviation hashes must be full SHA-256 values");
+  }
+  if (expectedHashes.requirementsSha256
+    && scope.requirements_sha256 !== expectedHashes.requirementsSha256) {
+    throw new CandidateError("scope requirements_sha256 does not match the exact candidate Git object bytes");
+  }
+  if (expectedHashes.deviationsSha256
+    && scope.deviations_sha256 !== expectedHashes.deviationsSha256) {
+    throw new CandidateError("scope deviations_sha256 does not match the exact candidate Git object bytes");
+  }
+  if (scope.release_scope !== "private" && scope.release_scope !== "public") {
+    throw new CandidateError("scope release_scope must be private or public");
+  }
+  const expectedClaim = scope.release_scope === "public" ? "v1.0.2-parity" : "private-preview";
+  if (scope.parity_claim !== expectedClaim) {
+    throw new CandidateError(`scope parity_claim must be ${expectedClaim} for ${scope.release_scope}`);
   }
   const included = requireStrings(scope.included_requirement_ids, "scope included IDs");
   const excluded = requireStrings(scope.excluded_requirement_ids, "scope excluded IDs", true);
@@ -238,7 +351,7 @@ export function validateCandidateScope(scope, candidateSha, requirementRows) {
     || [...requirementRows.keys()].some((id) => !includedSet.has(id) && !excludedSet.has(id))) {
     throw new CandidateError("scope included/excluded IDs must be an exact partition of active requirements");
   }
-  if (scope.release_kind === "public" && excluded.length !== 0) {
+  if (scope.release_scope === "public" && excluded.length !== 0) {
     throw new CandidateError("public scope cannot exclude an active requirement");
   }
   for (const id of MANDATORY_PRIVATE_IDS) {
@@ -256,29 +369,46 @@ export async function validateG0({
   checkPushedState = true,
 }) {
   requireFullSha(candidateSha);
-  const [requirements, deviations, releaseInputs, scopeSource, candidateFiles] = await Promise.all([
-    readCandidateJson(repository, candidateSha, "docs/parity/requirements.json"),
-    readCandidateJson(repository, candidateSha, "docs/parity/deviations.json"),
+  const [requirementsBytes, deviationsBytes, releaseInputs, scopeSource, candidateFiles] = await Promise.all([
+    readCandidateFile(repository, candidateSha, "docs/parity/requirements.json"),
+    readCandidateFile(repository, candidateSha, "docs/parity/deviations.json"),
     readCandidateJson(repository, candidateSha, "scripts/release/release-inputs.json"),
     readFile(scopePath, "utf8"),
     listCandidateFiles(repository, candidateSha),
   ]);
+  let requirements;
+  let deviations;
   let scope;
   try {
+    requirements = JSON.parse(requirementsBytes);
+    deviations = JSON.parse(deviationsBytes);
     scope = JSON.parse(scopeSource);
   } catch (error) {
-    throw new CandidateError(`scope manifest is malformed JSON: ${error.message}`);
+    throw new CandidateError(`candidate release contract is malformed JSON: ${error.message}`);
   }
-  if (releaseInputs.schema_version !== 1 || releaseInputs.gates?.length !== 10) {
+  if (releaseInputs.schema_version !== 1
+    || JSON.stringify(releaseInputs.candidate_owned) !== JSON.stringify(REQUIRED_RELEASE_INPUT_PATHS)) {
     throw new CandidateError("candidate release input declaration is malformed");
   }
-  for (const requiredInput of ["scripts/release/release-inputs.json", ...releaseInputs.candidate_owned]) {
+  const gates = rowMap(releaseInputs.gates, "id", "release gates");
+  if (gates.size !== GATE_IDS.length || GATE_IDS.some((id) => {
+    const gate = gates.get(id);
+    return !gate || JSON.stringify(gate.command) !== JSON.stringify([
+      "node", "scripts/release/run-gate.mjs", "--gate", id,
+    ]);
+  })) {
+    throw new CandidateError("candidate release gates must declare unique exact G0-G9 commands");
+  }
+  for (const requiredInput of releaseInputs.candidate_owned) {
     if (!candidateFiles.includes(requiredInput)) {
       throw new CandidateError(`candidate is missing release input ${requiredInput}`);
     }
   }
   const requirementRows = validateRequirementManifest(requirements, deviations);
-  const scopePartition = validateCandidateScope(scope, candidateSha, requirementRows);
+  const scopePartition = validateCandidateScope(scope, candidateSha, requirementRows, {
+    requirementsSha256: sha256(requirementsBytes),
+    deviationsSha256: sha256(deviationsBytes),
+  });
   const requiredDeviationIds = [...requirementRows.values()]
     .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
     .map((row) => row.deviation_id)
@@ -298,7 +428,7 @@ export async function validateG0({
       throw new CandidateError(`in-scope requirement ${id} has no Evidence Index row`);
     }
   }
-  if (scope.release_kind === "public") {
+  if (scope.release_scope === "public") {
     const serialized = JSON.stringify(requirements);
     if (serialized.includes("MIN_SUPPORTED") || serialized.includes("CURRENT_STABLE")) {
       throw new CandidateError("public candidate contains unresolved environment version tokens");
@@ -330,7 +460,7 @@ export async function validateG0({
     result: "PASS",
     candidate_sha: candidateSha,
     package_sha256: evidence.package_sha256,
-    release_kind: scope.release_kind,
+    release_scope: scope.release_scope,
     requirement_count: requirementRows.size,
     upstream_count: [...requirementRows].filter(([id]) => id.startsWith("UP-")).length,
     candidate_state: candidateState,
