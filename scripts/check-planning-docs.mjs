@@ -62,6 +62,43 @@ function sameSet(actual, expected, label) {
   );
 }
 
+function sameSequence(actual, expected, label) {
+  assert(
+    JSON.stringify(actual) === JSON.stringify(expected),
+    label + ": expected " + JSON.stringify(expected) + ", found " + JSON.stringify(actual),
+  );
+}
+
+function uniqueStrings(value, label, { allowEmpty = false } = {}) {
+  assert(Array.isArray(value), label + " must be an array");
+  assert(allowEmpty || value.length > 0, label + " must not be empty");
+  assert(
+    value.every((entry) => typeof entry === "string" && entry.trim() !== ""),
+    label + " must contain only non-empty strings",
+  );
+  assert(new Set(value).size === value.length, label + " contains duplicates");
+  return value;
+}
+
+function assertRequiredFields(value, fields, label) {
+  assert(value !== null && typeof value === "object" && !Array.isArray(value), label + " must be an object");
+  for (const field of fields) assert(Object.hasOwn(value, field), label + " is missing " + field);
+}
+
+function assertPinnedGithubRefs(value, label) {
+  for (const ref of uniqueStrings(value, label)) {
+    assert(
+      /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/blob\/[0-9a-f]{40}\/.+/.test(ref),
+      label + " contains a mutable or non-GitHub source reference: " + ref,
+    );
+  }
+}
+
+function isOwnedPath(path, boundary) {
+  return [...boundary.allowed_module_boundaries, ...boundary.allowed_external_boundaries]
+    .some((allowed) => allowed.endsWith("/") ? path.startsWith(allowed) : path === allowed);
+}
+
 function range(prefix, first, last, width = 2) {
   return Array.from(
     { length: last - first + 1 },
@@ -69,9 +106,14 @@ function range(prefix, first, last, width = 2) {
   );
 }
 
-const targetSha = argValue("--sha", git("rev-parse", "HEAD"));
-assert(/^[0-9a-f]{40}$/.test(targetSha), "--sha must be one exact 40-character lowercase commit SHA");
-assert(git("rev-parse", targetSha + "^{commit}") === targetSha, "--sha is not an exact commit object: " + targetSha);
+const requestedTarget = argValue("--sha", "HEAD");
+assert(
+  requestedTarget === "HEAD" || /^[0-9a-f]{40}$/.test(requestedTarget),
+  "--sha must be HEAD or one full lowercase 40-character commit SHA",
+);
+const targetSha = git("rev-parse", "--verify", requestedTarget + "^{commit}");
+assert(/^[0-9a-f]{40}$/.test(targetSha), "--sha must resolve to one full lowercase 40-character commit SHA");
+assert(git("cat-file", "-t", targetSha) === "commit", "--sha does not resolve to a commit object: " + requestedTarget);
 const liveMode = argValue("--live");
 assert(
   liveMode === null || liveMode === "review-draft" || liveMode === "merge-ready",
@@ -124,6 +166,15 @@ const initialIds = [
 ];
 const expectedRequirementIds = [...expectedUpstreamIds.map((id) => "UP-" + id), ...initialIds];
 const expectedFixtureIds = [...range("FX", 1, 16), ...range("OFX-SAFE", 1, 30, 3)];
+const expectedCatalogFixtureIds = [...range("FX", 1, 16), ...range("OFX", 1, 9, 3)];
+const expectedEnvironmentIds = [
+  "ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE", "ENV-HOST-MIN", "ENV-HOST-MAC",
+  "ENV-HOST-WIN", "ENV-HOST-LINUX", "ENV-THEME", "ENV-A11Y",
+];
+const acceptedEvidenceKinds = new Set([
+  "UNIT", "CONTRACT", "INTEGRATION", "VAULT", "SCREENSHOT", "KEYBOARD",
+  "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
+]);
 const expectedDeviationIds = [];
 const objectFiles = listObjectFiles();
 const markdownFiles = objectFiles.filter((path) => path.endsWith(".md")).sort();
@@ -392,6 +443,611 @@ report("offline", "owner-map-boundary-equality", () => {
     "UP-CLK owner module must use execution runtime path",
   );
   return "map/manifest exact equality for #17-#31; all 126 owner modules are inside exclusive boundaries";
+});
+
+report("offline", "requirement-parity-contract", () => {
+  const requirements = readJsonObject("docs/parity/requirements.json");
+  const deviations = readJsonObject("docs/parity/deviations.json");
+  const owners = readJsonObject("docs/parity/requirement-owners.json");
+  const boundaries = readJsonObject("docs/parity/ticket-boundaries.json");
+  const schemaPath = "scripts/release/schemas/requirements.schema.json";
+  const schemaPointer = "../../" + schemaPath;
+  assert(requirements.$schema === schemaPointer, "requirements manifest has the wrong $schema pointer");
+  assert(objectExists(schemaPath), "requirements schema is absent from the target object");
+  const requirementSchema = readJsonObject(schemaPath);
+  assert(
+    requirementSchema.$schema === "https://json-schema.org/draft/2020-12/schema",
+    "requirements schema must use JSON Schema 2020-12",
+  );
+  assert(
+    requirementSchema.$id
+      === "https://github.com/oldwinter/obsidian-nautilus-log/blob/main/scripts/release/schemas/requirements.schema.json",
+    "requirements schema identity mismatch",
+  );
+  const requiredManifestFields = [
+    "$schema", "schema_version", "requirement_set", "upstream_baseline_sha", "row_count", "counts",
+    "evidence_binding", "fixture_catalog", "test_catalog", "environment_catalog", "requirements",
+  ];
+  assertRequiredFields(requirements, requiredManifestFields, "requirements manifest");
+  for (const field of requiredManifestFields) {
+    assert(
+      requirementSchema.required?.includes(field),
+      "requirements schema does not require top-level field " + field,
+    );
+  }
+  const requiredRowFields = [
+    "id", "owner_ticket", "owner_module", "evidence_contributors", "statement", "source_refs",
+    "disposition", "fixtures", "tests", "environments", "evidence", "status",
+  ];
+  const rowSchema = Object.values(requirementSchema.$defs ?? {}).find(
+    (definition) => Array.isArray(definition?.required)
+      && definition.required.includes("owner_ticket")
+      && definition.required.includes("evidence"),
+  );
+  assert(rowSchema, "requirements schema has no requirement-row definition");
+  for (const field of requiredRowFields) {
+    assert(rowSchema.required.includes(field), "requirements schema row does not require " + field);
+    assert(Object.hasOwn(rowSchema.properties ?? {}, field), "requirements schema row does not define " + field);
+  }
+  assert(
+    requirementSchema.$defs?.requirementId?.pattern
+      === "^(?:UP-(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-[0-9]{2}|OBS-(?:TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-[0-9]{3}|REL-[0-9]{3})$",
+    "requirements schema requirement ID pattern mismatch",
+  );
+  const testEntrySchema = Object.values(requirementSchema.$defs ?? {}).find(
+    (definition) => Array.isArray(definition?.required)
+      && definition.required.includes("evidence_kind")
+      && definition.required.includes("gates"),
+  );
+  assert(testEntrySchema, "requirements schema has no test-catalog definition");
+  sameSet(
+    testEntrySchema.properties?.evidence_kind?.enum ?? [],
+    acceptedEvidenceKinds,
+    "requirements schema accepted Evidence ID kinds",
+  );
+
+  assert(requirements.schema_version === 1, "requirements schema_version must be 1");
+  assert(
+    requirements.requirement_set === "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
+    "requirements requirement_set mismatch",
+  );
+  assert(
+    requirements.upstream_baseline_sha === "973a041aa2f59f3b05bf31db8187efbfea07017a",
+    "requirements upstream baseline mismatch",
+  );
+  assert(requirements.row_count === 126, "requirements row_count must be 126");
+  sameSequence(
+    [requirements.counts?.upstream, requirements.counts?.obsidian, requirements.counts?.release],
+    [114, 9, 3],
+    "requirements 114 + 9 + 3 partition",
+  );
+  assert(requirements.evidence_binding === "candidate-evidence-index", "requirements evidence binding mismatch");
+  assert(Array.isArray(requirements.requirements), "requirements rows must be an array");
+  assert(requirements.requirements.length === 126, "requirements manifest must contain exactly 126 rows");
+  const requirementIds = requirements.requirements.map((row) => row?.id);
+  assert(new Set(requirementIds).size === 126, "requirements manifest contains duplicate IDs");
+  sameSet(requirementIds, expectedRequirementIds, "requirements exact 126-ID partition");
+
+  const fixtureCatalog = requirements.fixture_catalog;
+  const testCatalog = requirements.test_catalog;
+  const environmentCatalog = requirements.environment_catalog;
+  assert(Array.isArray(fixtureCatalog), "fixture_catalog must be an array");
+  assert(Array.isArray(testCatalog), "test_catalog must be an array");
+  assert(Array.isArray(environmentCatalog), "environment_catalog must be an array");
+  const fixtureIds = fixtureCatalog.map((entry) => entry?.id);
+  const testIds = testCatalog.map((entry) => entry?.id);
+  const environmentIds = environmentCatalog.map((entry) => entry?.id);
+  assert(new Set(fixtureIds).size === fixtureIds.length, "fixture_catalog contains duplicate IDs");
+  assert(new Set(testIds).size === testIds.length, "test_catalog contains duplicate IDs");
+  assert(new Set(environmentIds).size === environmentIds.length, "environment_catalog contains duplicate IDs");
+  sameSet(fixtureIds, expectedCatalogFixtureIds, "fixture catalog exact ID set");
+  sameSet(environmentIds, expectedEnvironmentIds, "environment catalog exact ID set");
+  sameSet(testIds, expectedRequirementIds.map((id) => "TC-" + id + "-001"), "test catalog exact ID set");
+  for (const [catalogName, catalog] of [
+    ["fixture_catalog", fixtureCatalog],
+    ["environment_catalog", environmentCatalog],
+  ]) {
+    for (const entry of catalog) {
+      assertRequiredFields(entry, ["id", "statement", "source_refs"], catalogName + " " + String(entry?.id));
+      assert(typeof entry.statement === "string" && /\S/.test(entry.statement), entry.id + " has no statement");
+      assertPinnedGithubRefs(entry.source_refs, entry.id + " source_refs");
+    }
+  }
+  const requirementIdSet = new Set(requirementIds);
+  const testById = new Map();
+  for (const entry of testCatalog) {
+    assertRequiredFields(entry, ["id", "requirement_id", "evidence_kind", "gates"], "test catalog entry");
+    assert(
+      /^TC-(?:UP-[A-Z]{3}-[0-9]{2}|OBS-[A-Z0-9]+-[0-9]{3}|REL-[0-9]{3})-001$/.test(entry.id),
+      "invalid stable test ID " + entry.id,
+    );
+    assert(requirementIdSet.has(entry.requirement_id), entry.id + " points to an unknown requirement");
+    assert(
+      entry.id === "TC-" + entry.requirement_id + "-001",
+      entry.id + " does not encode its requirement reverse link",
+    );
+    assert(acceptedEvidenceKinds.has(entry.evidence_kind), entry.id + " has unsupported evidence_kind " + entry.evidence_kind);
+    const gates = uniqueStrings(entry.gates, entry.id + " gates");
+    assert(gates.every((gate) => /^G[0-9]$/.test(gate)), entry.id + " references an unknown release gate");
+    testById.set(entry.id, entry);
+  }
+
+  assert(deviations.schema_version === 1, "deviations schema_version must be 1");
+  assert(deviations.requirement_set === requirements.requirement_set, "deviation requirement_set mismatch");
+  assert(Array.isArray(deviations.deviations), "deviations must be an array");
+  assert(Array.isArray(deviations.not_applicable_approvals), "not_applicable_approvals must be an array");
+  const deviationById = new Map();
+  for (const entry of deviations.deviations) {
+    assert(/^DEV-[0-9]{3}$/.test(entry?.id ?? ""), "invalid deviation ID " + String(entry?.id));
+    assert(!deviationById.has(entry.id), "duplicate deviation ID " + entry.id);
+    assert(entry.status === "approved", entry.id + " is not approved");
+    uniqueStrings(entry.requirement_ids, entry.id + " requirement_ids");
+    assert(
+      entry.requirement_ids.every((id) => requirementIdSet.has(id)),
+      entry.id + " points to an unknown requirement",
+    );
+    const approvals = Array.isArray(entry.approvals)
+      ? entry.approvals
+      : Object.entries(entry.approvals ?? {}).map(([role, approval]) => ({ role, ...approval }));
+    const approvedRoles = new Set(approvals
+      .filter((approval) => typeof approval?.reviewer === "string" && approval.reviewer.trim() !== ""
+        && Number.isFinite(Date.parse(approval.approved_at)))
+      .map((approval) => String(approval.role).replaceAll("_", "-").toLowerCase()));
+    assert([...approvedRoles].some((role) => role.includes("parity")), entry.id + " lacks parity approval");
+    assert(
+      [...approvedRoles].some((role) => role.includes("release") || role.includes("product")),
+      entry.id + " lacks product/release approval",
+    );
+    deviationById.set(entry.id, entry);
+  }
+  const approvalById = new Map();
+  for (const entry of deviations.not_applicable_approvals) {
+    assert(/^NA-[0-9]{3}$/.test(entry?.id ?? ""), "invalid not-applicable approval ID " + String(entry?.id));
+    assert(!approvalById.has(entry.id), "duplicate not-applicable approval ID " + entry.id);
+    assert(entry.status === "approved", entry.id + " is not approved");
+    uniqueStrings(entry.requirement_ids, entry.id + " requirement_ids");
+    assert(typeof entry.reason === "string" && /\S/.test(entry.reason), entry.id + " has no reason");
+    assert(typeof entry.reviewer === "string" && /\S/.test(entry.reviewer), entry.id + " has no reviewer");
+    assert(Number.isFinite(Date.parse(entry.approved_at)), entry.id + " has an invalid approval timestamp");
+    assertPinnedGithubRefs(entry.source_refs, entry.id + " source_refs");
+    approvalById.set(entry.id, entry);
+  }
+
+  const ownerById = new Map(owners.requirements.map((entry) => [entry.id, entry]));
+  const boundaryByTicket = new Map(boundaries.tickets.map((entry) => [entry.ticket, entry]));
+  const fixtureIdSet = new Set(fixtureIds);
+  const environmentIdSet = new Set(environmentIds);
+  const usedDeviations = new Set();
+  const usedApprovals = new Set();
+  for (const row of requirements.requirements) {
+    assertRequiredFields(row, requiredRowFields, "requirement " + String(row?.id));
+    assert(row.status === "active", row.id + " must be active in the initial manifest");
+    assert(typeof row.statement === "string" && /\S/.test(row.statement), row.id + " has no statement");
+    assertPinnedGithubRefs(row.source_refs, row.id + " source_refs");
+    assert(
+      ["exact", "host-adapted", "approved-improvement", "not-applicable"].includes(row.disposition),
+      row.id + " has unsupported disposition " + String(row.disposition),
+    );
+    const fixtures = uniqueStrings(row.fixtures, row.id + " fixtures");
+    const tests = uniqueStrings(row.tests, row.id + " tests");
+    const environments = uniqueStrings(row.environments, row.id + " environments");
+    const evidence = uniqueStrings(row.evidence, row.id + " repository evidence", { allowEmpty: true });
+    assert(evidence.length === 0, row.id + " repository evidence must be empty until exact-candidate resolution");
+    assert(fixtures.every((id) => fixtureIdSet.has(id)), row.id + " has a dangling fixture");
+    assert(environments.every((id) => environmentIdSet.has(id)), row.id + " has a dangling environment");
+    assert(
+      tests.every((id) => testById.get(id)?.requirement_id === row.id),
+      row.id + " has a dangling or mislinked test",
+    );
+    assert(Array.isArray(row.evidence_contributors), row.id + " evidence_contributors must be an array");
+    assert(
+      row.evidence_contributors.every((ticket) => Number.isInteger(ticket) && ticket >= 17 && ticket <= 31),
+      row.id + " has an invalid evidence contributor",
+    );
+    assert(
+      new Set(row.evidence_contributors).size === row.evidence_contributors.length,
+      row.id + " has duplicate evidence contributors",
+    );
+    assert(!row.evidence_contributors.includes(row.owner_ticket), row.id + " repeats its owner as contributor");
+    const projection = ownerById.get(row.id);
+    assert(projection, row.id + " is missing from the owner projection");
+    assert(row.owner_ticket === projection.owner_ticket, row.id + " owner_ticket differs from projection");
+    assert(row.owner_module === projection.owner_module, row.id + " owner_module differs from projection");
+    sameSequence(
+      row.evidence_contributors,
+      projection.evidence_contributors ?? [],
+      row.id + " evidence contributors vs owner projection",
+    );
+    const boundary = boundaryByTicket.get(row.owner_ticket);
+    assert(boundary && isOwnedPath(row.owner_module, boundary), row.id + " owner_module is outside its ticket boundary");
+    assert(boundary.primary_requirement_ids.includes(row.id), row.id + " lacks its reverse boundary link");
+
+    if (row.disposition === "host-adapted" || row.disposition === "approved-improvement") {
+      const deviation = deviationById.get(row.deviation_id);
+      assert(deviation?.requirement_ids.includes(row.id), row.id + " lacks an approved bidirectional deviation");
+      usedDeviations.add(row.deviation_id);
+    } else {
+      assert(!Object.hasOwn(row, "deviation_id"), row.id + " has an inapplicable deviation_id");
+    }
+    if (row.disposition === "not-applicable") {
+      const approval = approvalById.get(row.not_applicable_approval_id);
+      assert(
+        approval?.requirement_ids.length === 1 && approval.requirement_ids[0] === row.id,
+        row.id + " lacks a reviewed bidirectional not-applicable approval",
+      );
+      usedApprovals.add(row.not_applicable_approval_id);
+    } else {
+      assert(
+        !Object.hasOwn(row, "not_applicable_approval_id"),
+        row.id + " has an inapplicable not_applicable_approval_id",
+      );
+    }
+  }
+  sameSet(usedDeviations, deviationById.keys(), "used vs registered deviations");
+  sameSet(usedApprovals, approvalById.keys(), "used vs registered not-applicable approvals");
+  return "126 rows, required schema fields, closed catalogs/owners/sources/deviations, and empty repository evidence";
+});
+
+function scopePartition(id) {
+  return {
+    oneOf: [
+      {
+        properties: {
+          included_requirement_ids: { type: "array", contains: { const: id } },
+          excluded_requirement_ids: {
+            type: "array",
+            not: { type: "array", contains: { const: id } },
+          },
+        },
+      },
+      {
+        properties: {
+          included_requirement_ids: {
+            type: "array",
+            not: { type: "array", contains: { const: id } },
+          },
+          excluded_requirement_ids: { type: "array", contains: { const: id } },
+        },
+      },
+    ],
+  };
+}
+
+report("offline", "release-scope-schema", () => {
+  const schema = readJsonObject("docs/parity/scope.schema.json");
+  const requiredFields = [
+    "schema_version", "candidate_sha", "requirements_sha256", "deviations_sha256",
+    "release_scope", "parity_claim", "included_requirement_ids", "excluded_requirement_ids",
+    "approved_deviation_ids",
+  ];
+  assert(schema.$schema === "https://json-schema.org/draft/2020-12/schema", "scope schema draft mismatch");
+  assert(
+    schema.$id === "https://github.com/oldwinter/obsidian-nautilus-log/blob/main/docs/parity/scope.schema.json",
+    "scope schema identity mismatch",
+  );
+  assert(schema.type === "object" && schema.additionalProperties === false, "scope root must be a closed object");
+  sameSet(schema.required ?? [], requiredFields, "scope required fields");
+  sameSet(Object.keys(schema.properties ?? {}), requiredFields, "scope property names");
+  assert(schema.properties.schema_version?.const === 1, "scope schema_version contract mismatch");
+  assert(schema.properties.candidate_sha?.pattern === "^[0-9a-f]{40}$", "scope candidate SHA pattern mismatch");
+  assert(schema.properties.requirements_sha256?.pattern === "^[0-9a-f]{64}$", "scope requirements hash pattern mismatch");
+  assert(schema.properties.deviations_sha256?.pattern === "^[0-9a-f]{64}$", "scope deviations hash pattern mismatch");
+  sameSet(schema.properties.release_scope?.enum ?? [], ["private", "public"], "scope release_scope values");
+  sameSet(
+    schema.properties.parity_claim?.enum ?? [],
+    ["private-preview", "v1.0.2-parity"],
+    "scope parity_claim values",
+  );
+  for (const field of ["included_requirement_ids", "excluded_requirement_ids"]) {
+    assert(schema.properties[field]?.uniqueItems === true, "scope " + field + " must reject duplicates");
+    assert(schema.properties[field]?.items?.$ref === "#/$defs/requirementId", "scope " + field + " has wrong ID schema");
+  }
+  assert(schema.properties.approved_deviation_ids?.uniqueItems === true, "approved deviations must be unique");
+  assert(
+    schema.properties.approved_deviation_ids?.items?.pattern === "^DEV-[0-9]{3}$",
+    "approved deviation ID pattern mismatch",
+  );
+  const schemaIds = schema.$defs?.requirementId?.enum;
+  assert(Array.isArray(schemaIds) && new Set(schemaIds).size === 126, "scope requirement enum must contain 126 unique IDs");
+  sameSet(schemaIds, expectedRequirementIds, "scope exact requirement universe");
+  const partitions = (schema.allOf ?? []).filter((entry) => Array.isArray(entry.oneOf));
+  assert(partitions.length === 126, "scope schema must encode 126 exact include/exclude partitions");
+  const requirementIdSetForScope = new Set(expectedRequirementIds);
+  const partitionIds = [];
+  for (const entry of partitions) {
+    const id = entry.oneOf?.[0]?.properties?.included_requirement_ids?.contains?.const;
+    assert(requirementIdSetForScope.has(id), "scope partition has an unknown requirement " + String(id));
+    sameSequence(entry, scopePartition(id), "scope partition " + id);
+    partitionIds.push(id);
+  }
+  sameSet(partitionIds, expectedRequirementIds, "scope partition ID set");
+  const conditionals = (schema.allOf ?? []).filter((entry) => entry.if);
+  assert(conditionals.length === 2, "scope schema must contain public and private conditionals");
+  const byReleaseScope = new Map(conditionals.map((entry) => [entry.if?.properties?.release_scope?.const, entry]));
+  const publicRule = byReleaseScope.get("public");
+  assert(publicRule?.then?.properties?.parity_claim?.const === "v1.0.2-parity", "public parity claim mismatch");
+  assert(publicRule?.then?.properties?.included_requirement_ids?.minItems === 126, "public scope must include 126 IDs");
+  assert(publicRule?.then?.properties?.included_requirement_ids?.maxItems === 126, "public scope cannot exceed 126 IDs");
+  assert(publicRule?.then?.properties?.excluded_requirement_ids?.maxItems === 0, "public scope cannot exclude requirements");
+  const privateRule = byReleaseScope.get("private");
+  assert(privateRule?.then?.properties?.parity_claim?.const === "private-preview", "private parity claim mismatch");
+  const mandatoryPrivateIds = (privateRule?.then?.allOf ?? [])
+    .map((entry) => entry.properties?.included_requirement_ids?.contains?.const);
+  sameSet(
+    mandatoryPrivateIds,
+    ["OBS-SAFE-001", "OBS-LIFE-001", "OBS-LOCAL-001", "REL-001", "REL-002"],
+    "mandatory private requirement IDs",
+  );
+  return "canonical fields, 126 exact partitions, public full parity, and mandatory private safety scope";
+});
+
+report("offline", "release-input-inventory", () => {
+  const declaration = readJsonObject("scripts/release/release-inputs.json");
+  assert(declaration.schema_version === 1, "release-input declaration schema_version must be 1");
+  const candidateOwned = uniqueStrings(declaration.candidate_owned, "candidate_owned");
+  const externalInputs = uniqueStrings(declaration.external_run_inputs, "external_run_inputs");
+  const requiredContractInputs = [
+    "docs/parity/requirements.json",
+    "docs/parity/deviations.json",
+    "docs/parity/requirement-owners.json",
+    "docs/parity/requirement-owners.schema.json",
+    "docs/parity/scope.schema.json",
+    "docs/parity/ticket-boundaries.json",
+    "docs/parity/ticket-boundaries.schema.json",
+    "docs/parity/trace-reports/README.md",
+    "scripts/release/schemas/requirements.schema.json",
+  ];
+  for (const path of requiredContractInputs) {
+    assert(candidateOwned.includes(path), "candidate_owned omits required contract " + path);
+  }
+  for (const path of candidateOwned) assert(objectExists(path), "candidate_owned path is absent from target: " + path);
+  const relevantScriptInputs = objectFiles.filter(
+    (path) => path.startsWith("scripts/release/") || path.startsWith("scripts/verify/"),
+  );
+  const declaredScriptInputs = candidateOwned.filter(
+    (path) => path.startsWith("scripts/release/") || path.startsWith("scripts/verify/"),
+  );
+  sameSet(declaredScriptInputs, relevantScriptInputs, "declared executable/schema/template release inputs");
+  sameSet(
+    externalInputs,
+    ["evidence-bundle/manifest.json", "gate-results.json", "g7-package.json", "g8-scope.json", "g9-signoff.json"],
+    "external release-run inputs",
+  );
+  assert(Array.isArray(declaration.preparation_commands), "preparation_commands must be an array");
+  assert(declaration.preparation_commands.length === 1, "exactly one package preparation command is required");
+  sameSequence(
+    declaration.preparation_commands[0],
+    { id: "deterministic-package", command: ["node", "scripts/release/build-candidate.mjs"] },
+    "deterministic package preparation command",
+  );
+  assert(Array.isArray(declaration.gates), "release gates must be an array");
+  assert(declaration.gates.length === 10, "release declaration must contain G0-G9 exactly once");
+  const gateIds = declaration.gates.map((gate) => gate?.id);
+  sameSequence(gateIds, Array.from({ length: 10 }, (_, index) => "G" + index), "G0-G9 gate order");
+  assert(new Set(gateIds).size === 10, "release declaration contains duplicate gates");
+  for (const gate of declaration.gates) {
+    sameSequence(
+      gate.command,
+      ["node", "scripts/release/run-gate.mjs", "--gate", gate.id],
+      gate.id + " command",
+    );
+  }
+
+  const zeroSha = "0".repeat(40);
+  const zeroHash = "0".repeat(64);
+  const g7 = readJsonObject("scripts/release/g7-package.template.json");
+  assertRequiredFields(
+    g7,
+    [
+      "schema_version", "gate", "result", "candidate_sha", "version", "release_label",
+      "package_filename", "package_path", "package_sha256", "builds", "smoke_workflows",
+      "policy", "release_assets",
+    ],
+    "G7 template",
+  );
+  assert(g7.schema_version === 1 && g7.gate === "G7", "G7 template identity mismatch");
+  assert(g7.candidate_sha === zeroSha && g7.package_sha256 === zeroHash, "G7 template must use explicit zero identities");
+  assert(g7.version === "1.0.2", "G7 template version mismatch");
+  assert(Array.isArray(g7.builds) && g7.builds.length === 0, "G7 template builds must begin unresolved");
+  assert(Array.isArray(g7.smoke_workflows) && g7.smoke_workflows.length === 0, "G7 smoke workflows must begin unresolved");
+  assert(Array.isArray(g7.release_assets) && g7.release_assets.length === 0, "G7 release assets must begin unresolved");
+  for (const field of [
+    "name_available", "license_present", "notices_present", "provenance_passed", "sbom_present", "banner_passed",
+  ]) {
+    assert(g7.policy?.[field] === false, "G7 policy " + field + " must fail closed in the template");
+  }
+  assert(g7.policy?.fork_policy_status === "unverified", "G7 fork policy must begin unverified");
+
+  const g8 = readJsonObject("scripts/release/g8-scope.template.json");
+  const canonicalScopeFields = [
+    "schema_version", "candidate_sha", "requirements_sha256", "deviations_sha256",
+    "release_scope", "parity_claim", "included_requirement_ids", "excluded_requirement_ids",
+    "approved_deviation_ids",
+  ];
+  sameSet(Object.keys(g8), canonicalScopeFields, "G8 canonical scope template fields");
+  assert(g8.schema_version === 1 && g8.candidate_sha === zeroSha, "G8 template identity mismatch");
+  assert(g8.requirements_sha256 === zeroHash && g8.deviations_sha256 === zeroHash, "G8 revision hashes must begin unresolved");
+  assert(g8.release_scope === "private" && g8.parity_claim === "private-preview", "G8 template must default to private preview");
+  assert(
+    [g8.included_requirement_ids, g8.excluded_requirement_ids, g8.approved_deviation_ids]
+      .every((value) => Array.isArray(value) && value.length === 0),
+    "G8 scope arrays must begin unresolved",
+  );
+
+  const g9 = readJsonObject("scripts/release/g9-signoff.template.json");
+  assertRequiredFields(
+    g9,
+    [
+      "schema_version", "gate", "decision", "release_type", "version", "candidate_sha",
+      "remote_head", "package_filename", "package_sha256", "requirements", "gate_results",
+      "evidence_bundle", "approved_deviation_ids", "scope_exclusions", "manual_workflows",
+      "attestations", "repository_state",
+    ],
+    "G9 template",
+  );
+  assert(g9.schema_version === 1 && g9.gate === "G9" && g9.decision === "NO-GO", "G9 template must fail closed");
+  assert(g9.candidate_sha === zeroSha && g9.remote_head === zeroSha, "G9 candidate identities must begin unresolved");
+  assert(g9.package_sha256 === zeroHash, "G9 package identity must begin unresolved");
+  assert(g9.repository_state?.before === null && g9.repository_state?.after === null, "G9 repository states must begin unresolved");
+
+  const runGate = readObject("scripts/release/run-gate.mjs");
+  const dryRun = readObject("scripts/release/dry-run.mjs");
+  const buildCandidate = readObject("scripts/release/build-candidate.mjs");
+  for (const phrase of [
+    "validateG0",
+    "validateCandidateEvidenceBundle",
+    "validateGateResults",
+    "validateG7Package",
+    "validateG9Signoff",
+  ]) {
+    assert(runGate.includes(phrase), "run-gate is missing exact-candidate stage " + phrase);
+  }
+  const candidateG0 = readObject("scripts/verify/candidate-g0.mjs");
+  assert(
+    candidateG0.includes('readCandidateJson(repository, candidateSha, "scripts/release/release-inputs.json")'),
+    "G0 does not read the release-input declaration from the exact candidate object",
+  );
+  assert(dryRun.includes("index <= 9"), "dry-run does not traverse G0-G9");
+  assert(dryRun.includes("issue_31_repository_changes_required: false"), "dry-run does not prove #31 input completeness");
+  assert(buildCandidate.includes("assertPushedCandidate"), "candidate builder does not require a clean pushed candidate");
+
+  const workflow = readObject(".github/workflows/issue-22-release-evidence.yml");
+  for (const phrase of [
+    "implement/issue-22-evidence",
+    "fetch-depth: 0",
+    "node-version: 22.23.2",
+    "node --test tests/release/*.test.mjs",
+    "node scripts/release/dry-run.mjs",
+    "node scripts/check-planning-docs.mjs --sha HEAD",
+    "npm run verify",
+    "npm run validate:provenance",
+  ]) {
+    assert(workflow.includes(phrase), "issue #22 workflow is missing: " + phrase);
+  }
+  assert(workflow.includes('"scripts/check-planning-docs.mjs"'), "workflow paths omit the planning checker");
+  return candidateOwned.length + " immutable candidate inputs, five run inputs, exact G0-G9 commands, and fail-closed templates/workflow";
+});
+
+report("offline", "evidence-and-trace-contract", () => {
+  const requiredVerifierFiles = [
+    "scripts/verify/candidate-evidence.mjs",
+    "scripts/verify/candidate-g0.mjs",
+    "scripts/verify/candidate-object.mjs",
+    "scripts/verify/candidate-package.mjs",
+    "scripts/verify/candidate-release.mjs",
+    "scripts/verify/evidence-bundle.mjs",
+    "scripts/verify/evidence-schema.mjs",
+    "scripts/verify/render-trace-report.mjs",
+    "scripts/verify/verify-evidence.mjs",
+    "tests/fixtures/evidence/scenarios.json",
+    "tests/fixtures/release/create-dry-run-fixture.mjs",
+    "tests/release/evidence-harness.test.mjs",
+    "tests/release/release-gates.test.mjs",
+    "tests/release/requirements-contract.test.mjs",
+  ];
+  for (const path of requiredVerifierFiles) assert(objectExists(path), "required evidence/release verifier is absent: " + path);
+
+  const candidateObject = readObject("scripts/verify/candidate-object.mjs");
+  assert(candidateObject.includes('${candidateSha}^{commit}'), "candidate verifier does not peel the exact commit object");
+  assert(candidateObject.includes('["show", `${candidateSha}:${repositoryPath}`]'), "candidate verifier does not read candidate paths by Git object");
+  assert(candidateObject.includes("assertPushedCandidate"), "candidate verifier lacks pushed/clean equality enforcement");
+  for (const phrase of ["local HEAD", "tracking ref", "ls-remote", "worktree is dirty"]) {
+    assert(candidateObject.includes(phrase), "candidate equality verifier lacks " + phrase);
+  }
+
+  const evidenceSchema = readObject("scripts/verify/evidence-schema.mjs");
+  const recordTypes = [
+    "pure", "vault", "host", "screenshot", "keyboard", "accessibility", "lifecycle",
+    "network/privacy", "performance", "package", "manual",
+  ];
+  for (const recordType of recordTypes) {
+    assert(evidenceSchema.includes(recordType + ":") || evidenceSchema.includes('"' + recordType + '":'), "evidence schema lacks " + recordType);
+  }
+  for (const kind of acceptedEvidenceKinds) {
+    assert(evidenceSchema.includes('"' + kind + '"'), "evidence schema lacks accepted Evidence ID kind " + kind);
+  }
+  for (const phrase of [
+    "candidate_sha", "package_sha256", "started_at", "ended_at", "artifacts",
+    "requirement_ids", "test_ids", "attempts", "retries", "skipped", "quarantined",
+    "expected_failure", "source_blob_oid",
+  ]) {
+    assert(evidenceSchema.includes(phrase), "evidence schema lacks fail-closed field " + phrase);
+  }
+
+  const scenarios = readJsonObject("tests/fixtures/evidence/scenarios.json");
+  assert(scenarios.schema_version === 1 && scenarios.passing === "all-record-types", "evidence scenario identity mismatch");
+  const expectedNegativeScenarios = [
+    "malformed-record", "missing-record", "duplicate-evidence", "stale-candidate", "stale-package",
+    "corrupted-artifact", "corrupted-package", "corrupted-owner", "missing-evidence", "duplicate-test",
+    "path-traversal", "symlink-artifact", "skipped", "quarantined", "retry", "expected-failure",
+    "failed-result", "symbolic-tool-version", "min-supported-token", "current-stable-token",
+    "incomplete-host-profile", "invalid-visual-dpr", "invalid-a11y-zoom", "invalid-timestamp",
+    "stale-requirements-object", "invalid-object-id-length", "alternate-requirements-path", "corrupted-index",
+  ];
+  assert(Array.isArray(scenarios.failing), "evidence failing scenarios must be an array");
+  const negativeIds = scenarios.failing.map((entry) => entry?.id);
+  assert(new Set(negativeIds).size === negativeIds.length, "evidence scenarios contain duplicate IDs");
+  sameSet(negativeIds, expectedNegativeScenarios, "evidence negative scenario set");
+  assert(
+    scenarios.failing.every((entry) => typeof entry.expected === "string" && entry.expected.trim() !== ""),
+    "every negative evidence scenario needs a deterministic rejection",
+  );
+
+  const verifyEvidence = readObject("scripts/verify/verify-evidence.mjs");
+  assert(verifyEvidence.includes('${candidateSha}^{commit}'), "evidence verifier does not resolve the exact candidate commit");
+  assert(verifyEvidence.includes('git(root, ["show", objectSpec])'), "evidence verifier does not read requirements from the candidate object");
+  const evidenceBundle = readObject("scripts/verify/evidence-bundle.mjs");
+  for (const phrase of [
+    "repository template evidence must be empty",
+    "may differ from the exact candidate object only in evidence arrays",
+    "source_blob_oid",
+    "stale candidate object",
+    "validateManifestCoverage",
+  ]) {
+    assert(evidenceBundle.includes(phrase), "evidence bundle verifier lacks: " + phrase);
+  }
+  const requirementsTests = readObject("tests/release/requirements-contract.test.mjs");
+  for (const phrase of [
+    "corrupt requirements are rejected deterministically",
+    "src/not-owned.ts",
+    "blob/main/file.ts",
+    "FX-DOES-NOT-EXIST",
+    "TC-DANGLING-001",
+    'disposition = "deferred"',
+    'deviation_id = "DEV-999"',
+  ]) {
+    assert(requirementsTests.includes(phrase), "requirements negative tests lack: " + phrase);
+  }
+  const releaseTests = readObject("tests/release/release-gates.test.mjs");
+  for (const phrase of [
+    "dirty and unpushed states fail",
+    "unknown dispositions, unapproved adaptations, dangling links, and incomplete private scope",
+    "stale records, retry-only results, and hash corruption",
+    "missing, malformed, duplicate, skipped, and corrupt package data",
+    "same-SHA invariant",
+  ]) {
+    assert(releaseTests.includes(phrase), "release negative tests lack: " + phrase);
+  }
+
+  const renderer = readObject("scripts/verify/render-trace-report.mjs");
+  for (const phrase of [
+    "schema_version: 1", "candidate_sha:", "package_sha256:", "manifest_sha256:",
+    "requirements_source_blob_oid:", "forward: { requirements }", "reverse: { tests, evidence, artifacts }",
+    "assertTraceOutputOutsideBundle", 'flag: "wx"',
+  ]) {
+    assert(renderer.includes(phrase), "trace renderer lacks immutable trace field/behavior " + phrase);
+  }
+  assert(!renderer.includes("generated_at"), "trace report must not depend on a wall-clock generation timestamp");
+  const traceContract = readObject("docs/parity/trace-reports/README.md");
+  for (const phrase of [
+    "exact-candidate evidence verifier", "outside the immutable bundle", "candidate SHA",
+    "package SHA-256", "source manifest", "Evidence Index", "resolved requirement overlay",
+    "requirement -> test -> evidence -> artifact", "reverse.tests", "reverse.evidence",
+    "reverse.artifacts", "Generation is deterministic",
+  ]) {
+    assert(traceContract.includes(phrase), "trace report contract lacks: " + phrase);
+  }
+  return "11 record types, 10 accepted Evidence ID kinds, 28 negative cases, exact-object verification, and bidirectional trace semantics";
 });
 
 const expectedLedger = [
