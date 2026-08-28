@@ -114,19 +114,16 @@
     {
       "ticket": 23,
       "allowed_module_boundaries": [
-        "src/adapters/planner-view.ts",
         "src/ui/planner/diagnostics.ts",
         "src/ui/planner/geometry.ts",
         "src/ui/planner/planner-state.ts",
         "src/ui/planner/responsive-layout.ts",
         "src/ui/planner/spiral.ts",
-        "src/ui/planner/view.ts",
         "styles/planner.css",
         "tests/ui/planner/"
       ],
       "allowed_external_boundaries": [],
       "primary_requirement_ids": [
-        "UP-INS-03",
         "UP-VIS-01", "UP-VIS-02", "UP-VIS-03", "UP-VIS-04", "UP-VIS-05", "UP-VIS-06", "UP-VIS-07",
         "UP-CMP-01", "UP-CMP-02", "UP-CMP-03", "UP-ERR-01", "UP-ERR-02", "OBS-VIS-001"
       ]
@@ -134,6 +131,7 @@
     {
       "ticket": 24,
       "allowed_module_boundaries": [
+        "src/adapters/planner-view.ts",
         "src/i18n/locales/en/planner.ts",
         "src/i18n/locales/en/shared.ts",
         "src/i18n/locales/zh-CN/planner.ts",
@@ -144,12 +142,14 @@
         "src/ui/planner/disclosures.ts",
         "src/ui/planner/focus.ts",
         "src/ui/planner/playback.ts",
+        "src/ui/planner/view.ts",
         "styles/a11y.css",
         "styles/theme.css",
         "tests/ui/planner-controls/"
       ],
       "allowed_external_boundaries": [],
       "primary_requirement_ids": [
+        "UP-INS-03",
         "UP-CTL-01", "UP-CTL-02", "UP-CTL-03", "UP-CTL-04", "UP-CTL-05",
         "UP-ERR-09", "UP-DRF-06", "OBS-VIS-002", "OBS-A11Y-001", "OBS-I18N-001"
       ]

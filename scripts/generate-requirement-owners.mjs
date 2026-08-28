@@ -113,7 +113,7 @@ function own(ids, ownerModule, evidenceContributors = []) {
 
 own(["INS-01"], "README.md", [22, 30]);
 own(["INS-02"], "src/main.ts", [22, 30]);
-own(["INS-03"], "src/ui/planner/view.ts", [17, 21, 30]);
+own(["INS-03"], "src/ui/planner/view.ts", [17, 21, 23, 30]);
 own(["INS-04", "INS-05"], "src/runtime/lifecycle.ts", [17, 23, 30]);
 own(range("SET", 1, 13), "src/adapters/settings.ts", [21, 24, 26, 30]);
 own(range("PAR", 1, 12), "src/core/grammar-v1.ts", [20, 22]);

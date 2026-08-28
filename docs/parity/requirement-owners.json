@@ -24,11 +24,12 @@
     },
     {
       "id": "UP-INS-03",
-      "owner_ticket": 23,
+      "owner_ticket": 24,
       "owner_module": "src/ui/planner/view.ts",
       "evidence_contributors": [
         17,
         21,
+        23,
         30
       ]
     },
