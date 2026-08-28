@@ -1103,14 +1103,6 @@ function currentFileRunningFacts(
     const parsed = parseGrammar({ version: resolved.region.version, candidates: resolved.candidates });
     for (const item of parsed.items) {
       const ownerIdentity = item.source.blockId ? index.identity(item.source.blockId) : undefined;
-      const selectedRepair = expectation.selectedRepair;
-      const selectedOwnerRepair = expectation.action === "repair-plan-item-identity"
-        && item.source.blockId === selectedRepair?.id
-        && item.source.itemSpan.fromOffset === selectedRepair?.selectedSpan.fromOffset
-        && item.source.itemSpan.toOffset === selectedRepair?.selectedSpan.toOffset;
-      if (item.source.blockId) {
-        if (!selectedOwnerRepair && (ownerIdentity?.kind !== "unique" || ownerIdentity.location.path !== path)) continue;
-      }
       const logbook = readLogbook(text, {
         path,
         itemFromOffset: item.source.itemSpan.fromOffset,

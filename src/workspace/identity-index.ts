@@ -470,7 +470,7 @@ function isValidStructuredClock(clock: LogbookClock, path: string, text: string)
     && text.slice(clock.fromOffset, clock.toOffset) === clock.text;
 }
 
-function isAnonymousLegacyRunningFact(clock: LogbookClock): boolean {
+function isSafetyRelevantOwnerlessClock(clock: LogbookClock): boolean {
   if (clock.ownerId) return false;
   if (clock.parsed.kind === "record") {
     return clock.parsed.record.format === "legacy"
@@ -915,9 +915,7 @@ export class WorkspaceIndex {
             blockIds,
           });
         }
-        if (clock.ownerId) {
-          if (lookup.lookup(clock.ownerId).kind !== "unique") continue;
-        } else if (!isAnonymousLegacyRunningFact(clock)) continue;
+        if (!clock.ownerId && !isSafetyRelevantOwnerlessClock(clock)) continue;
         if (clock.parsed.kind === "not-clock") continue;
         const entry: IndexedClockSource = Object.freeze({
           path: clock.path,
