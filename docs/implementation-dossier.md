@@ -130,6 +130,16 @@ this amendment. The reviewed host-assembly handoff assigns `src/main.ts`,
 retains the completed toolchain and policy foundation and contributes its
 exact-SHA evidence to those two requirements.
 
+The reviewed Review-composition seam assigns the future
+`src/adapters/review-entry.ts` to ticket #27 for its initial implementation.
+This narrow port accepts only execution commands, confirmed snapshots, source
+navigation, the i18n resolver, and a lifecycle disposer from #27's composition
+root and Execution surface; those modules must not import ticket #29's Review UI
+internals. After #27 is complete at one exact SHA and closed, but before #29
+starts, a second reviewed handoff must transfer only `review-entry.ts` from #27
+to #29. `src/main.ts`, `esbuild.config.mjs`, the Execution panel/entry, and
+source navigation remain owned by #27.
+
 The full implementation source of truth will be
 `docs/parity/requirements.json`. Every row must retain its mapped primary owner
 and have exactly one disposition (`exact`, `host-adapted`,
@@ -203,7 +213,7 @@ store, screen-owned domain logic, or per-view runtime.
 | Surface adapters | `ItemView`, commands, ribbon/actions, editor menu, settings, notices, focus/scroll/transient presentation | Markdown reads/writes, core calls, active-task state, success inference |
 | `ActiveTaskView` | One singleton `ItemView` leaf projecting current Active Task, read-only unavailable states, source navigation by authoritative block ID, keyboard/focus behavior, narrow-dock presentation | Canonical active state, Markdown writes, planner selection, stale source navigation |
 | Planner surface assembly | Production Planner adapter and view wiring owned by #24, consuming #23's render primitives and exposing typed localized actions and approved state/style hooks | Host/package registration, Markdown reads/writes, duplicated geometry or scheduler semantics |
-| Host composition and package styles | Public registrations and deterministic root `styles.css` aggregation owned by #27 through `src/main.ts` and `esbuild.config.mjs` | Network, telemetry, Markdown reads/writes, duplicated domain or surface behavior |
+| Host composition and package styles | Public registrations, the narrow Review composition port, and deterministic root `styles.css` aggregation owned by #27 through `src/main.ts`, `src/adapters/review-entry.ts`, and `esbuild.config.mjs` | Network, telemetry, Markdown reads/writes, duplicated domain/surface behavior, or imports of #29 Review UI internals |
 | i18n base/shared | Typed resolver, locale selection/fallback, and equal `shared` catalogs owned by #24 | Planner, Execution, or Review namespace content |
 | i18n feature namespaces | Equal `planner` catalogs owned by #24, `execution` catalogs owned by #27, and `review` catalogs owned by #29 | Domain decisions, source text, edits to another ticket's namespace |
 
@@ -473,8 +483,12 @@ change invalidates the freeze and returns the candidate to #30 for G0-G6 before
 
 The package allowlist is `manifest.json`, `main.js`, and optional `styles.css`.
 Ticket #27 owns the composition-root registrations and deterministic build
-aggregation of Planner, Execution, theme, and accessibility styles into that
-single root stylesheet without introducing network or telemetry behavior.
+aggregation of every feature stylesheet matched by `styles/**/*.css` (or an
+equivalent complete owned-feature input set) into that single root stylesheet.
+The aggregation may not hardcode only the currently present Planner/Execution
+files: a later owned `styles/review.css` must enter the root bundle without an
+edit to #27's closed build contract. Loading and building introduce no network
+or telemetry behavior.
 GitHub release assets additionally carry `LICENSE` and
 `THIRD_PARTY_NOTICES.md`. The exact-package manual workflows cover install and
 settings; planning/Overflow/progress; CLOCK switch/Complete/reload; standalone
@@ -506,7 +520,7 @@ Implementation root issue:
 | Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Production Planner adapter/view assembly and `UP-INS-03`; controls, i18n resolver/shared/planner namespaces, a11y/theme styles |
 | Execution Layer | [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Workspace commit/mutations/conflicts plus vault-wide identity/CLOCK safety indexing |
 | Execution Layer | [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21); [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | Runtime commands, mutation queue, execution/recovery/POMO |
-| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Host composition/build aggregation, commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView`, source navigation, and local-only evidence |
+| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Host composition/build aggregation, narrow Review composition port, commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView`, source navigation, and local-only evidence |
 | Review | [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Sole primary owner of `UP-HIS-01..05`; history index and Review core projection |
 | Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review UI/styles, review locale namespace, and Review host QA |
 | Hardening | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26); [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Last bounded fixes, clean push, G0-G6 evidence, and exact-SHA candidate freeze |

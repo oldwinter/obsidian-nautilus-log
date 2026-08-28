@@ -194,6 +194,7 @@
         "src/adapters/editor-menu.ts",
         "src/adapters/execution-entry.ts",
         "src/adapters/notices.ts",
+        "src/adapters/review-entry.ts",
         "src/adapters/settings.ts",
         "src/adapters/source-navigation.ts",
         "src/i18n/locales/en/execution.ts",
