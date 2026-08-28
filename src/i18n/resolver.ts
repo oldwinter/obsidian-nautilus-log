@@ -124,11 +124,10 @@ class MessageResolver<Namespaces extends object> implements Messages<Namespaces>
       throw new MessageContractError(`Missing message ${String(namespace)}.${String(key)}`);
     }
     if (typeof message === "function") {
-      const parameters = arguments_[0];
-      if (parameters === undefined) {
-        throw new MessageContractError(`Missing interpolation values for ${String(namespace)}.${String(key)}`);
-      }
-      return message(parameters as object);
+      const parameters = (arguments_ as readonly unknown[])[0];
+      if (parameters !== undefined) return message(parameters as object);
+      if (message.length === 0) return (message as () => string)();
+      throw new MessageContractError(`Missing interpolation values for ${String(namespace)}.${String(key)}`);
     }
     return message;
   }

@@ -10,7 +10,11 @@ import {
   createMessages,
   defineLocaleNamespace,
 } from "../../../src/i18n/resolver.ts";
-import type { PlannerLimitKind } from "../../../src/i18n/types.ts";
+import type {
+  MessageArguments,
+  MessageKey,
+  PlannerLimitKind,
+} from "../../../src/i18n/types.ts";
 
 test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal", () => {
   assert.deepEqual(Object.keys(enShared).sort(), Object.keys(zhCNShared).sort());
@@ -124,4 +128,46 @@ test("TC-OBS-I18N-001-001 registered catalogs are immutable snapshots", () => {
   assert.equal(messages.t("later", "state"), "Ready");
   messages.setLocale("zh-CN");
   assert.equal(messages.t("later", "state"), "就绪");
+});
+
+test("TC-OBS-I18N-001-002 zero-argument message functions match their callable type", () => {
+  const execution = defineLocaleNamespace(
+    "execution",
+    Object.freeze({ "status.ready": () => "Ready" }),
+    Object.freeze({ "status.ready": () => "就绪" }),
+  );
+  const messages = createMessages({ namespaces: { execution } });
+  assert.equal(messages.t("execution", "status.ready"), "Ready");
+  messages.setLocale("zh-CN");
+  assert.equal(messages.t("execution", "status.ready"), "就绪");
+});
+
+test("TC-OBS-I18N-001-002 defaulted message parameters still receive supplied interpolation", () => {
+  const execution = defineLocaleNamespace(
+    "execution",
+    Object.freeze({
+      "status.named": ({ name }: { readonly name: string } = { name: "fallback" }) => name,
+    }),
+    Object.freeze({
+      "status.named": ({ name }: { readonly name: string } = { name: "后备" }) => name,
+    }),
+  );
+  const messages = createMessages({ namespaces: { execution } });
+  assert.equal(messages.t("execution", "status.named", { name: "Ada" }), "Ada");
+  assert.equal(messages.t("execution", "status.named"), "fallback");
+});
+
+test("TC-OBS-I18N-001-002 message keys reject required or optional second parameters", () => {
+  const invalidCatalog = Object.freeze({
+    required: (first: object, second: object) => `${String(first)}${String(second)}`,
+    optional: (first: object, second: object = {}) => `${String(first)}${String(second)}`,
+  });
+  type InvalidKey = MessageKey<typeof invalidCatalog>;
+  type InvalidOptionalArguments = MessageArguments<typeof invalidCatalog.optional>;
+  // @ts-expect-error Functions that can receive two parameters are not message keys.
+  const requiredKey: InvalidKey = "required";
+  // @ts-expect-error A defaulted second parameter is still outside the runtime contract.
+  const optionalArguments: InvalidOptionalArguments = [{}, {}];
+  assert.equal(requiredKey, "required");
+  assert.equal(optionalArguments.length, 2);
 });

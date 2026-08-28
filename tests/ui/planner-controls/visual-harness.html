@@ -194,9 +194,12 @@
       body[data-zoom="2"] .harness-stage {
         grid-template-columns: max-content;
         justify-content: start;
-        transform-origin: top left;
       }
       body[data-zoom="2"] .planner-secondary { display: none; }
+      .planner-adapter-evidence { grid-column: 1 / -1; inline-size: 544px; justify-self: start; }
+      .planner-adapter-evidence[hidden] { display: none; }
+      body[data-layout-viewport="medium"] .harness-stage-shell { padding: 0; }
+      body[data-layout-viewport="small"] .harness-stage-shell { padding: 10px; }
       @media (max-width: 1300px) {
         .harness-stage { grid-template-columns: max-content; justify-content: start; }
         .planner-secondary { display: none; }
@@ -243,6 +246,10 @@
         <section id="secondary-leaf" class="planner-leaf planner-secondary">
           <div class="planner-leaf__title">Spiral Day - 2026-08-28 <span>Independent planner</span></div>
           <div id="secondary-planner"></div>
+        </section>
+        <section id="adapter-leaf" class="planner-leaf planner-adapter-evidence" hidden>
+          <div class="planner-leaf__title">Spiral Day - 2026-08-28 <span>Obsidian ItemView seam</span></div>
+          <div id="adapter-planner"></div>
         </section>
       </div>
     </main>

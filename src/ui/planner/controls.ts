@@ -1,3 +1,5 @@
+import { isPlannerActivationKey } from "./focus";
+
 export type PlannerControlKind = "collapse" | "completed" | "debug" | "playback";
 
 export interface PlannerControlsState {
@@ -238,10 +240,6 @@ export function dispatchPlannerProgress(
   return true;
 }
 
-function isActivationKey(event: KeyboardEvent): boolean {
-  return event.key === "Enter" || event.key === " " || event.key === "Spacebar";
-}
-
 export function bindPlannerProgressTarget(
   element: HTMLElement | SVGElement,
   getTarget: () => PlannerProgressTarget,
@@ -258,7 +256,7 @@ export function bindPlannerProgressTarget(
   const click = (): void => activate();
   const keydown = (event: Event): void => {
     const keyboardEvent = event as KeyboardEvent;
-    if (nativeButton || !isActivationKey(keyboardEvent) || keyboardEvent.repeat) return;
+    if (nativeButton || !isPlannerActivationKey(keyboardEvent.key) || keyboardEvent.repeat) return;
     keyboardEvent.preventDefault();
     activate();
   };

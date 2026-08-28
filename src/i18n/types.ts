@@ -7,12 +7,12 @@ export type PlannerLimitKind =
   | "plan-item-bytes"
   | "plan-items"
   | "plan-region-bytes";
-export type MessageFunction<Parameters extends object = object> = (
-  parameters: Readonly<Parameters>,
-) => string;
+export type MessageFunction<Parameters extends object | void = object> = [Parameters] extends [void]
+  ? () => string
+  : (parameters: Readonly<Extract<Parameters, object>>) => string;
 // `any` is intentional in this type predicate: concrete parameter types remain
 // preserved on each catalog entry and are recovered by `MessageArguments`.
-export type MessageValue = string | ((parameters: any) => string);
+export type MessageValue = string | (() => string) | ((parameters: any) => string);
 
 export type SharedCatalog = Readonly<{
   "action.close": string;
@@ -131,12 +131,19 @@ export type RegisteredNamespaces<Registration extends NamespaceRegistration> = R
     : never;
 }>;
 
+type SupportedMessageArguments<Arguments extends readonly unknown[]> =
+  Exclude<Arguments["length"], 0 | 1> extends never ? Arguments : never;
+
 export type MessageKey<Catalog> = Extract<{
-  [Key in keyof Catalog]: Catalog[Key] extends MessageValue ? Key : never;
+  [Key in keyof Catalog]: Catalog[Key] extends string
+    ? Key
+    : Catalog[Key] extends (...arguments_: infer Arguments) => string
+      ? SupportedMessageArguments<Arguments> extends never ? never : Key
+      : never;
 }[keyof Catalog], string>;
 
 export type MessageArguments<Value> = Value extends (...args: infer Arguments) => string
-  ? Arguments
+  ? SupportedMessageArguments<Arguments>
   : readonly [];
 
 export interface Messages<Namespaces extends object = CoreMessageNamespaces> {

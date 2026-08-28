@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { constrainedPlannerContentWidth } from "./harness-layout.ts";
+
 function luminance(hex: string): number {
   const channels = hex.match(/[0-9a-f]{2}/gi)!.map((channel) => Number.parseInt(channel, 16) / 255);
   const [red, green, blue] = channels.map((channel) => channel <= 0.04045
@@ -35,9 +37,16 @@ test("TC-OBS-A11Y-001-002 a11y layer separates focus, stabilizes controls, and r
   assert.match(css, /0 0 0 4px var\(--spiral-day-focus\)/);
   assert.match(css, /block-size: 32px/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /\[data-reduced-motion="true"\]/);
   assert.match(css, /animation: none !important/);
   assert.match(css, /transition: none !important/);
   assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(css, /@container spiral-day-planner \(max-width: 360px\)/);
+  assert.match(css, /overview-body[\s\S]*metric-label[\s\S]*white-space: normal/);
+  assert.equal(constrainedPlannerContentWidth(900, 800), 777);
+  assert.equal(constrainedPlannerContentWidth(521, 800), 521);
+  assert.equal(constrainedPlannerContentWidth(520, 800), 520);
+  assert.equal(constrainedPlannerContentWidth(900, 2_000), 900);
 });
 
 test("TC-OBS-VIS-002-001 fallback semantic text and focus/control boundaries meet contrast floors", () => {

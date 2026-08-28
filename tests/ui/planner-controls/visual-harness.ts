@@ -2,6 +2,11 @@ import { calculateCapacity } from "../../../src/core/capacity.ts";
 import { projectDay, type LogicalDate } from "../../../src/core/day.ts";
 import type { PlanItem, PlanItemStatus } from "../../../src/core/model.ts";
 import { schedulePlan } from "../../../src/core/scheduler.ts";
+import {
+  createPlannerViewFactory,
+  type PlannerItemViewDependencies,
+  type SpiralDayPlannerView,
+} from "../../../src/adapters/planner-view.ts";
 import { createMessages } from "../../../src/i18n/resolver.ts";
 import type { SupportedLocale } from "../../../src/i18n/types.ts";
 import type {
@@ -11,6 +16,7 @@ import type {
 import {
   confirmedSnapshot,
   createProjectionRevision,
+  loadingSnapshot,
   type RuntimeSnapshot,
 } from "../../../src/runtime/snapshots.ts";
 import {
@@ -25,6 +31,7 @@ import {
   type PlannerRuntimePort,
   type PlannerSurface,
 } from "../../../src/ui/planner/view.ts";
+import { constrainedPlannerContentWidth } from "./harness-layout.ts";
 
 type Theme = "custom" | "dark" | "high-contrast" | "light";
 
@@ -53,27 +60,34 @@ interface HarnessSurfaceState {
   readonly focusKey: string | null;
   readonly horizontalOverflow: boolean;
   readonly layout: string | undefined;
+  readonly motionTransitionsDisabled: boolean;
+  readonly overviewMetricClipped: boolean;
+  readonly overviewMetricLabels: readonly string[];
+  readonly overviewOpen: boolean;
   readonly semanticTargetCount: number;
   readonly surfaceRole: string | null;
   readonly playbackRunning: boolean;
   readonly tooltipVisible: boolean;
+  readonly visible: boolean;
   readonly viewportClipped: boolean;
-  readonly width: number;
+  readonly width: number | null;
   readonly warningsText: string;
 }
 
 interface HarnessState {
+  readonly documentHorizontalOverflow: boolean;
   readonly forbiddenControls: number;
   readonly intentCount: number;
   readonly items: readonly Readonly<Pick<HarnessItem, "blockId" | "progressRaw" | "status">>[];
   readonly liveText: string;
   readonly locale: SupportedLocale;
-  readonly parseCount: number;
   readonly primary: HarnessSurfaceState;
-  readonly projectionCount: number;
+  readonly projectionCallCount: number;
   readonly reducedMotion: boolean;
   readonly secondary: HarnessSurfaceState;
+  readonly stageHorizontalOverflow: boolean;
   readonly theme: Theme;
+  readonly tooltipViewportClipped: boolean;
   readonly width: number;
   readonly zoom: number;
 }
@@ -82,11 +96,18 @@ declare global {
   interface Window {
     issue24Harness: {
       activateProgress(id?: string): boolean;
+      assertAdapterLifecycle(): Promise<boolean>;
       assertAcceptance(): HarnessState;
       assertConnectFailureState(): boolean;
       assertExternalFocusPreserved(): boolean;
+      assertKeyboardPointerParity(): Promise<boolean>;
+      assertLayoutFocusRestoration(): Promise<boolean>;
+      assertLifecycleReparenting(): Promise<boolean>;
+      assertPlaybackStopsOnContextChange(): Promise<boolean>;
+      assertPlaybackStopsOnRuntimeState(): Promise<boolean>;
       assertReplicaRemount(): boolean;
       assertTooltipClearsWhenHidden(): Promise<boolean>;
+      closeAdapterEvidence(): Promise<void>;
       focusProgress(id?: string): boolean;
       openDisclosure(key: "overflow" | "overview" | "schedule" | "warnings"): boolean;
       runMatrix(): Promise<readonly HarnessState[]>;
@@ -112,10 +133,13 @@ const zoomSelect = document.querySelector<HTMLSelectElement>("#zoom")!;
 const motionInput = document.querySelector<HTMLInputElement>("#motion")!;
 const debugEntryInput = document.querySelector<HTMLInputElement>("#debug-entry")!;
 const stage = document.querySelector<HTMLElement>("#harness-stage")!;
+const stageShell = document.querySelector<HTMLElement>(".harness-stage-shell")!;
 const primaryLeaf = document.querySelector<HTMLElement>("#primary-leaf")!;
 const secondaryLeaf = document.querySelector<HTMLElement>("#secondary-leaf")!;
 const primaryRoot = document.querySelector<HTMLElement>("#primary-planner")!;
 const secondaryRoot = document.querySelector<HTMLElement>("#secondary-planner")!;
+const adapterLeaf = document.querySelector<HTMLElement>("#adapter-leaf")!;
+const adapterRoot = document.querySelector<HTMLElement>("#adapter-planner")!;
 
 const messages = createMessages();
 const collapseStore = createMemoryPlannerCollapseStore();
@@ -128,8 +152,12 @@ let reducedMotion = motionPreference.matches;
 let debugEntry = false;
 let generation = 0;
 let intentCount = 0;
-let projectionCount = 1;
-const parseCount = 1;
+let projectionCallCount = 0;
+let revisionSequence = 1;
+let adapterView: SpiralDayPlannerView | undefined;
+let adapterIntentCount = 0;
+let adapterLocale: SupportedLocale = "en";
+const adapterLocaleListeners = new Set<(locale: string) => void>();
 
 const items: HarnessItem[] = [
   {
@@ -234,6 +262,7 @@ function planItem(item: HarnessItem): PlanItem<RuntimePlanItemSource> {
 }
 
 function projection(): RuntimePlanProjection {
+  projectionCallCount += 1;
   const projectedItems = Object.freeze(items.map(planItem));
   const day = projectDay({
     displayedDate: DISPLAYED_DATE,
@@ -245,7 +274,7 @@ function projection(): RuntimePlanProjection {
   return Object.freeze({
     contextKey: "2026-08-28",
     sourcePath: SOURCE_PATH,
-    sourceFingerprint: `sha256:harness-${projectionCount}`,
+    sourceFingerprint: `sha256:harness-${revisionSequence}`,
     displayedDate: DISPLAYED_DATE,
     today: DISPLAYED_DATE,
     items: projectedItems,
@@ -265,7 +294,7 @@ function currentSnapshot(): RuntimeSnapshot<RuntimePlanProjection> {
   return confirmedSnapshot(createProjectionRevision({
     generation,
     path: SOURCE_PATH,
-    sourceFingerprint: `sha256:harness-${projectionCount}`,
+    sourceFingerprint: `sha256:harness-${revisionSequence}`,
     settingsVersion: 1,
     logicalDate: DISPLAYED_DATE,
     minuteBucket: 13 * 60,
@@ -275,7 +304,7 @@ function currentSnapshot(): RuntimeSnapshot<RuntimePlanProjection> {
 }
 
 function emitProjection(): void {
-  projectionCount += 1;
+  revisionSequence += 1;
   const snapshot = currentSnapshot();
   for (const listener of listeners) listener(snapshot);
 }
@@ -383,9 +412,14 @@ function mountSurfaces(): void {
 }
 
 function applyWidth(): void {
-  primaryRoot.style.width = `${width + 20}px`;
+  const shellStyle = getComputedStyle(stageShell);
+  const availableInlineSize = stageShell.clientWidth
+    - Number.parseFloat(shellStyle.paddingLeft)
+    - Number.parseFloat(shellStyle.paddingRight);
+  const contentWidth = constrainedPlannerContentWidth(width, availableInlineSize);
+  primaryRoot.style.width = `${contentWidth + 20}px`;
   secondaryRoot.style.width = "340px";
-  primaryLeaf.style.width = `${width + 23}px`;
+  primaryLeaf.style.width = `${contentWidth + 23}px`;
   secondaryLeaf.style.width = "343px";
   primary?.measure();
   secondary?.measure();
@@ -398,8 +432,18 @@ function applyTheme(): void {
 }
 
 function applyZoom(): void {
+  const layoutViewportWidth = window.innerWidth / zoom;
   document.body.dataset.zoom = String(zoom);
-  stage.style.zoom = String(zoom);
+  document.body.dataset.layoutViewport = layoutViewportWidth <= 760
+    ? "small"
+    : layoutViewportWidth <= 940
+      ? "medium"
+      : "wide";
+  document.body.style.inlineSize = `${layoutViewportWidth}px`;
+  document.body.style.minBlockSize = `${window.innerHeight / zoom}px`;
+  document.body.style.zoom = String(zoom);
+  stage.style.zoom = "";
+  applyWidth();
 }
 
 function overlaps(left: DOMRect, right: DOMRect): boolean {
@@ -413,12 +457,19 @@ function measuredWidth(root: HTMLElement): number {
 }
 
 function surfaceState(root: HTMLElement): HarnessSurfaceState {
+  const visible = root.getClientRects().length > 0;
   const rootBox = root.getBoundingClientRect();
   const candidates = [...root.querySelectorAll<Element>(
     "button, summary, [data-planner-focus-key], .spiral-day-planner__debug-overlay",
   )].filter((entry) => entry.getClientRects().length > 0);
   const controlBoxes = [...root.querySelectorAll<HTMLElement>(".spiral-day-planner__controls button")]
     .map((entry) => entry.getBoundingClientRect());
+  const overview = root.querySelector<HTMLDetailsElement>(".spiral-day-planner__overview");
+  const overviewMetricLabels = [...root.querySelectorAll<HTMLElement>(
+    ".spiral-day-planner__overview .spiral-day-planner__metric-label",
+  )];
+  const overviewBox = overview?.getBoundingClientRect();
+  const icon = root.querySelector<HTMLElement>(".spiral-day-planner__icon-button");
   let controlOverlaps = 0;
   for (let left = 0; left < controlBoxes.length; left += 1) {
     for (let right = left + 1; right < controlBoxes.length; right += 1) {
@@ -440,8 +491,19 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     focusKey: root.contains(document.activeElement)
       ? (document.activeElement as HTMLElement).dataset.plannerFocusKey ?? null
       : null,
-    horizontalOverflow: root.scrollWidth > root.clientWidth,
+    horizontalOverflow: visible && root.scrollWidth > root.clientWidth,
     layout: root.dataset.layout,
+    motionTransitionsDisabled: icon === null || getComputedStyle(icon).transitionDuration
+      .split(",").every((duration) => Number.parseFloat(duration) === 0),
+    overviewMetricClipped: Boolean(overview?.open && overviewBox) && overviewMetricLabels.some((label) => {
+      const box = label.getBoundingClientRect();
+      return label.getClientRects().length === 0
+        || label.scrollWidth > label.clientWidth + 1
+        || box.left < overviewBox!.left - 1
+        || box.right > overviewBox!.right + 1;
+    }),
+    overviewMetricLabels: Object.freeze(overviewMetricLabels.map((label) => label.textContent ?? "")),
+    overviewOpen: overview?.open ?? false,
     semanticTargetCount: root.querySelectorAll(
       'svg[role="group"] [data-planner-focus-key][aria-label][role]',
     ).length,
@@ -449,15 +511,25 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     playbackRunning: root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") === "true",
     tooltipVisible: [...document.querySelectorAll<HTMLElement>(".spiral-day-planner__tooltip")]
       .some((tooltip) => !tooltip.hidden),
-    viewportClipped: rootBox.width > 0
+    visible,
+    viewportClipped: visible && rootBox.width > 0
       && (rootBox.left < -1 || rootBox.right > window.innerWidth + 1),
-    width: measuredWidth(root),
+    width: visible ? measuredWidth(root) : null,
     warningsText: root.querySelector(".spiral-day-planner__warnings")?.textContent ?? "",
   });
 }
 
 function state(): HarnessState {
+  const tooltipViewportClipped = [...document.querySelectorAll<HTMLElement>(
+    ".spiral-day-planner__tooltip",
+  )].some((tooltip) => {
+    if (tooltip.hidden) return false;
+    const box = tooltip.getBoundingClientRect();
+    return box.left < -1 || box.right > window.innerWidth + 1
+      || box.top < -1 || box.bottom > window.innerHeight + 1;
+  });
   return Object.freeze({
+    documentHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
     forbiddenControls: document.querySelectorAll('[data-control="tidy"], [data-control="undo"]').length,
     intentCount,
     items: Object.freeze(items.map((item) => Object.freeze({
@@ -468,12 +540,13 @@ function state(): HarnessState {
     liveText: [...document.querySelectorAll<HTMLElement>(".spiral-day-planner__live-region")]
       .map((region) => region.textContent ?? "").filter(Boolean).join(" | "),
     locale: messages.locale,
-    parseCount,
     primary: surfaceState(primaryRoot),
-    projectionCount,
+    projectionCallCount,
     reducedMotion,
     secondary: surfaceState(secondaryRoot),
+    stageHorizontalOverflow: stageShell.scrollWidth > stageShell.clientWidth,
     theme,
+    tooltipViewportClipped,
     width,
     zoom,
   });
@@ -481,17 +554,44 @@ function state(): HarnessState {
 
 function assertAcceptance(): HarnessState {
   const result = state();
-  const expectedLayout = width <= 520 ? "compact" : "wide";
-  if (result.primary.width !== width || result.primary.layout !== expectedLayout) {
+  const shellStyle = getComputedStyle(stageShell);
+  const expectedWidth = constrainedPlannerContentWidth(
+    width,
+    stageShell.clientWidth
+      - Number.parseFloat(shellStyle.paddingLeft)
+      - Number.parseFloat(shellStyle.paddingRight),
+  );
+  const expectedLayout = expectedWidth <= 520 ? "compact" : "wide";
+  if (!result.primary.visible
+    || result.primary.width !== expectedWidth
+    || result.primary.layout !== expectedLayout) {
     throw new Error(`boundary mismatch: ${JSON.stringify(result.primary)}`);
   }
   if (result.primary.horizontalOverflow || result.primary.clippedElements > 0
     || result.primary.controlOverlaps > 0 || result.primary.viewportClipped
-    || result.forbiddenControls > 0) {
+    || result.documentHorizontalOverflow || result.stageHorizontalOverflow
+    || result.tooltipViewportClipped || result.forbiddenControls > 0) {
     throw new Error(`visual contract failed: ${JSON.stringify(result)}`);
   }
-  if (result.parseCount !== 1 || result.primary.buttonLabels.some((label) => label === "")) {
+  if (zoom === 2 && (result.secondary.visible || result.secondary.width !== null)) {
+    throw new Error(`hidden secondary measurement failed: ${JSON.stringify(result.secondary)}`);
+  }
+  if (result.primary.buttonLabels.some((label) => label === "")) {
     throw new Error(`i18n/control contract failed: ${JSON.stringify(result)}`);
+  }
+  if (result.projectionCallCount < 1) {
+    throw new Error(`runtime projection contract failed: ${JSON.stringify(result)}`);
+  }
+  if (reducedMotion && (!result.primary.motionTransitionsDisabled
+    || primaryRoot.dataset.reducedMotion !== "true")) {
+    throw new Error(`reduced-motion contract failed: ${JSON.stringify(result.primary)}`);
+  }
+  if ([300, 320, 360].includes(expectedWidth)
+    && (!result.primary.overviewOpen
+      || result.primary.overviewMetricLabels.length !== 4
+      || result.primary.overviewMetricLabels.some((label) => label.trim() === "")
+      || result.primary.overviewMetricClipped)) {
+    throw new Error(`overview metric contract failed: ${JSON.stringify(result.primary)}`);
   }
   if (result.primary.surfaceRole !== "group"
     || (expectedLayout === "wide" && result.primary.semanticTargetCount === 0)) {
@@ -505,8 +605,16 @@ function assertAcceptance(): HarnessState {
   return result;
 }
 
-function progressElement(id: string): HTMLElement | null {
-  return primaryRoot.querySelector<HTMLElement>(`[data-item-id="${id}"]`);
+function progressElement(id: string): HTMLElement | SVGElement | null {
+  return primaryRoot.querySelector<HTMLElement | SVGElement>(`[data-item-id="${id}"]`);
+}
+
+function dispatchPointerActivation(target: Element | null): boolean {
+  return target?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })) ?? false;
+}
+
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
 }
 
 localeSelect.addEventListener("change", () => window.issue24Harness.setLocale(localeSelect.value as SupportedLocale));
@@ -517,16 +625,82 @@ motionInput.addEventListener("change", () => window.issue24Harness.setReducedMot
 debugEntryInput.addEventListener("change", () => window.issue24Harness.setDebugEntry(debugEntryInput.checked));
 motionPreference.addEventListener("change", (event) => window.issue24Harness.setReducedMotion(event.matches));
 
-applyWidth();
 applyTheme();
 applyZoom();
 mountSurfaces();
+window.addEventListener("resize", applyZoom);
 
 window.issue24Harness = {
   activateProgress(id = "nl-urgent") {
     const target = progressElement(id);
-    target?.click();
+    dispatchPointerActivation(target);
     return target !== null;
+  },
+  async assertAdapterLifecycle() {
+    await this.closeAdapterEvidence();
+    this.setZoom(1);
+    this.setWidth(521);
+    adapterLeaf.hidden = false;
+    adapterIntentCount = 0;
+    adapterLocale = "en";
+    const identitySuffix = String(Date.now());
+    const identityA = `browser-adapter-a-${identitySuffix}`;
+    const identityB = `browser-adapter-b-${identitySuffix}`;
+    const leaf = {
+      contentEl: adapterRoot,
+      getViewState: () => ({ state: {} }),
+    };
+    const dependencies: PlannerItemViewDependencies = {
+      runtime,
+      defaultLogicalDate: () => DISPLAYED_DATE,
+      dispatchPlannerProgress: () => { adapterIntentCount += 1; },
+      locale: () => adapterLocale,
+      subscribeLocale(listener) {
+        adapterLocaleListeners.add(listener);
+        return () => adapterLocaleListeners.delete(listener);
+      },
+      resolveContext: (logicalDate) => ({ logicalDate, bounds: BOUNDS, hostContext: "main" }),
+    };
+    adapterView = createPlannerViewFactory(dependencies)(leaf as never);
+    await adapterView.setState({
+      logicalDate: DISPLAYED_DATE,
+      plannerInstanceId: identityA,
+    }, {} as never);
+    await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
+    await nextFrame();
+    const opened = adapterRoot.classList.contains("spiral-day-planner")
+      && adapterRoot.querySelectorAll("[data-obsidian-icon]").length >= 3;
+    dispatchPointerActivation(adapterRoot.querySelector('[data-item-id="nl-urgent"]'));
+    const progressBound = adapterIntentCount === 1;
+    adapterLocale = "zh-CN";
+    for (const listener of adapterLocaleListeners) listener(adapterLocale);
+    await nextFrame();
+    const localeBound = adapterRoot.querySelector('[aria-label="折叠规划器"]') !== null;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
+    const collapsedA = adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
+
+    await adapterView.setState({
+      logicalDate: DISPLAYED_DATE,
+      plannerInstanceId: identityB,
+    }, {} as never);
+    await nextFrame();
+    const remountedB = adapterView.getState().plannerInstanceId === identityB
+      && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") === null;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
+    const collapsedB = adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
+
+    await (adapterView as unknown as { onClose(): Promise<void> }).onClose();
+    const tornDown = adapterLocaleListeners.size === 0
+      && adapterRoot.childElementCount === 0
+      && !adapterRoot.classList.contains("spiral-day-planner");
+    await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
+    await nextFrame();
+    const restoredB = adapterView.getState().plannerInstanceId === identityB
+      && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
+    await nextFrame();
+    return opened && progressBound && localeBound && collapsedA && remountedB
+      && collapsedB && tornDown && restoredB && Number(adapterLocaleListeners.size) === 1;
   },
   assertAcceptance,
   assertConnectFailureState() {
@@ -557,6 +731,143 @@ window.issue24Harness = {
     const preserved = document.activeElement === localeSelect;
     messages.setLocale(before);
     return preserved;
+  },
+  async assertKeyboardPointerParity() {
+    this.setWidth(521);
+    await nextFrame();
+    const item = items.find((candidate) => candidate.blockId === "nl-draft")!;
+    const originalProgress = item.progressRaw;
+    const before = intentCount;
+    dispatchPointerActivation(progressElement("nl-draft"));
+    await nextFrame();
+    const pointerDispatched = intentCount === before + 1;
+    const keyboardTarget = progressElement("nl-draft");
+    keyboardTarget?.focus();
+    const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    keyboardTarget?.dispatchEvent(event);
+    await nextFrame();
+    const keyboardDispatched = intentCount === before + 2 && event.defaultPrevented;
+    const announced = state().liveText.trim() !== "";
+    const focusPreserved = state().primary.focusKey?.startsWith("item-") === true;
+    item.progressRaw = originalProgress;
+    emitProjection();
+    await nextFrame();
+    return pointerDispatched && keyboardDispatched && announced && focusPreserved;
+  },
+  async assertLayoutFocusRestoration() {
+    this.setWidth(521);
+    await nextFrame();
+    const externalLabel = primaryRoot.querySelector<SVGElement>(
+      ".spiral-day-planner__external-label[data-planner-focus-key^='item-']",
+    );
+    externalLabel?.focus();
+    const wideBefore = state().primary.focusKey;
+    this.setWidth(520);
+    await nextFrame();
+    const compact = state().primary.focusKey;
+    this.setWidth(521);
+    await nextFrame();
+    const wideAfter = state().primary.focusKey;
+    return externalLabel !== null && wideBefore !== null
+      && compact === wideBefore && wideAfter === wideBefore;
+  },
+  async assertLifecycleReparenting() {
+    const firstParent = document.createElement("section");
+    const secondParent = document.createElement("section");
+    const root = document.createElement("div");
+    root.style.width = "600px";
+    firstParent.append(root);
+    document.body.append(firstParent, secondParent);
+    const visibility: boolean[] = [];
+    let disconnectCount = 0;
+    const lifecycleRuntime: PlannerRuntimePort = {
+      state: "ready",
+      connect(_context, listener, visible = true) {
+        if (visible) listener(currentSnapshot());
+        return Object.freeze({
+          setContext() {},
+          setVisible(nextVisible: boolean) {
+            visibility.push(nextVisible);
+            if (nextVisible) listener(currentSnapshot());
+          },
+          refresh() { listener(currentSnapshot()); },
+          disconnect() { disconnectCount += 1; },
+        });
+      },
+    };
+    const surface = mountPlannerSurface(root, lifecycleRuntime, {
+      logicalDate: DISPLAYED_DATE,
+      bounds: BOUNDS,
+      hostContext: "main",
+    }, { instanceId: "issue24-lifecycle", messages, renderIcon });
+    root.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    const playbackStarted = root.querySelector('[data-control="play"]')
+      ?.getAttribute("aria-disabled") === "true";
+    root.remove();
+    await nextFrame();
+    await nextFrame();
+    const detached = visibility.at(-1) === false;
+    secondParent.append(root);
+    await nextFrame();
+    await nextFrame();
+    const reattached = visibility.at(-1) === true;
+    const playbackStopped = root.querySelector('[data-control="play"]')
+      ?.getAttribute("aria-disabled") !== "true";
+    secondParent.hidden = true;
+    await nextFrame();
+    await nextFrame();
+    const reparentedAncestorHidden = visibility.at(-1) === false;
+    secondParent.hidden = false;
+    await nextFrame();
+    await nextFrame();
+    const reparentedAncestorShown = visibility.at(-1) === true;
+    surface.destroy();
+    firstParent.remove();
+    secondParent.remove();
+    return playbackStarted && detached && reattached && playbackStopped
+      && reparentedAncestorHidden && reparentedAncestorShown && disconnectCount === 1;
+  },
+  async assertPlaybackStopsOnContextChange() {
+    this.setWidth(900);
+    await nextFrame();
+    primaryRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    const started = state().primary.playbackRunning;
+    primary.setContext({
+      logicalDate: { year: 2026, month: 8, day: 29 },
+      bounds: BOUNDS,
+      hostContext: "main",
+    });
+    await nextFrame();
+    const stopped = !state().primary.playbackRunning;
+    primary.setContext({ logicalDate: DISPLAYED_DATE, bounds: BOUNDS, hostContext: "main" });
+    await nextFrame();
+    return started && stopped;
+  },
+  async assertPlaybackStopsOnRuntimeState() {
+    this.setWidth(900);
+    await nextFrame();
+    primaryRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    const started = state().primary.playbackRunning;
+    generation += 1;
+    const loading = loadingSnapshot(createProjectionRevision({
+      generation,
+      path: SOURCE_PATH,
+      sourceFingerprint: `sha256:harness-${revisionSequence}`,
+      settingsVersion: 1,
+      logicalDate: DISPLAYED_DATE,
+      minuteBucket: 13 * 60,
+      timeZone: "Asia/Shanghai",
+      grammarVersion: "v1",
+    }));
+    for (const listener of listeners) listener(loading);
+    await nextFrame();
+    await nextFrame();
+    const stopped = !state().primary.playbackRunning
+      && primaryRoot.querySelector('[data-state="loading"]') !== null;
+    const confirmed = currentSnapshot();
+    for (const listener of listeners) listener(confirmed);
+    await nextFrame();
+    return started && stopped && !state().primary.playbackRunning;
   },
   assertReplicaRemount() {
     const root = document.createElement("div");
@@ -610,15 +921,23 @@ window.issue24Harness = {
     this.setDebugEntry(false);
     return cleared;
   },
+  async closeAdapterEvidence() {
+    if (adapterView) {
+      await (adapterView as unknown as { onClose(): Promise<void> }).onClose();
+      adapterView = undefined;
+    }
+    adapterLocaleListeners.clear();
+    adapterLeaf.hidden = true;
+  },
   focusProgress(id = "nl-urgent") {
     const target = progressElement(id);
     target?.focus();
     return target !== null;
   },
   openDisclosure(key) {
-    const summary = primaryRoot.querySelector<HTMLElement>(`.spiral-day-planner__${key} summary`);
-    summary?.click();
-    return summary !== null;
+    const details = primaryRoot.querySelector<HTMLDetailsElement>(`.spiral-day-planner__${key}`);
+    if (details && !details.open) details.querySelector<HTMLElement>("summary")?.click();
+    return details !== null;
   },
   async runMatrix() {
     const results: HarnessState[] = [];
@@ -629,9 +948,21 @@ window.issue24Harness = {
             this.setWidth(nextWidth);
             this.setLocale(locale);
             this.setTheme(nextTheme);
+            this.setReducedMotion(nextTheme === "high-contrast");
             this.setZoom(nextZoom);
-            await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+            await nextFrame();
+            if ([300, 320, 360].includes(nextWidth)) {
+              const overview = primaryRoot.querySelector<HTMLDetailsElement>(
+                ".spiral-day-planner__overview",
+              );
+              if (overview && !overview.open) overview.querySelector<HTMLElement>("summary")?.click();
+              await nextFrame();
+            }
+            const tooltipTarget = primaryRoot.querySelector<HTMLElement>("[aria-describedby]");
+            tooltipTarget?.focus();
+            await nextFrame();
             results.push(assertAcceptance());
+            tooltipTarget?.blur();
           }
         }
       }
@@ -644,9 +975,13 @@ window.issue24Harness = {
     mountSurfaces();
   },
   setLocale(locale) {
+    const beforeProjectionCalls = projectionCallCount;
     localeSelect.value = locale;
     document.documentElement.lang = locale;
     messages.setLocale(locale);
+    if (projectionCallCount !== beforeProjectionCalls) {
+      throw new Error("Locale changes must not regenerate the runtime projection");
+    }
   },
   setReducedMotion(enabled) {
     reducedMotion = enabled;
@@ -673,8 +1008,6 @@ window.issue24Harness = {
     zoom = nextZoom;
     zoomSelect.value = String(nextZoom);
     applyZoom();
-    primary.measure();
-    secondary.measure();
   },
   state,
 };

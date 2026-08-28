@@ -5,6 +5,41 @@ import process from "node:process";
 import { build } from "esbuild";
 
 const port = Number(process.env.SPIRAL_DAY_ISSUE24_HARNESS_PORT ?? 43125);
+const obsidianBrowserStub = {
+  name: "issue24-browser-obsidian-stub",
+  setup(build) {
+    build.onResolve({ filter: /^obsidian$/ }, () => ({
+      path: "obsidian",
+      namespace: "issue24-browser-obsidian",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "issue24-browser-obsidian" }, () => ({
+      contents: `
+        export class ItemView {
+          constructor(leaf) {
+            this.leaf = leaf;
+            this.contentEl = leaf.contentEl;
+          }
+        }
+        export function setIcon(element, icon) {
+          element.dataset.obsidianIcon = icon;
+          const glyph = element.ownerDocument.createElement("span");
+          glyph.className = "planner-icon";
+          glyph.setAttribute("aria-hidden", "true");
+          glyph.textContent = ({
+            "chevron-down": "v",
+            "chevron-up": "^",
+            "bug": "#",
+            "eye": "x",
+            "eye-off": "o",
+            "play": ">",
+          })[icon] ?? "?";
+          element.replaceChildren(glyph);
+        }
+      `,
+      loader: "js",
+    }));
+  },
+};
 const [bundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
   build({
     absWorkingDir: process.cwd(),
@@ -13,6 +48,7 @@ const [bundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
     format: "esm",
     logLevel: "silent",
     platform: "browser",
+    plugins: [obsidianBrowserStub],
     target: "es2021",
     write: false,
   }),

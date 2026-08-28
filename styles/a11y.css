@@ -59,6 +59,28 @@
   overflow-wrap: anywhere;
 }
 
+.spiral-day-planner[data-reduced-motion="true"],
+.spiral-day-planner[data-reduced-motion="true"] *,
+.spiral-day-planner[data-reduced-motion="true"] *::before,
+.spiral-day-planner[data-reduced-motion="true"] *::after {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+
+.spiral-day-planner__overview-body .spiral-day-planner__metric-label {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+@container spiral-day-planner (max-width: 360px) {
+  .spiral-day-planner__overview-body .spiral-day-planner__metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spiral-day-planner,
   .spiral-day-planner *,

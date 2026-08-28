@@ -141,13 +141,12 @@ export function bindPlannerTooltip(
   target.setAttribute("aria-describedby", tooltip.id);
   tooltip.setAttribute("role", "tooltip");
   tooltip.hidden = true;
-  const show = (): void => {
-    tooltip.textContent = text;
-    tooltip.hidden = false;
+  const view = target.ownerDocument.defaultView;
+  let viewportListenersBound = false;
+  const position = (): void => {
+    if (tooltip.hidden || !view) return;
     const targetBox = target.getBoundingClientRect();
     const tooltipBox = tooltip.getBoundingClientRect();
-    const view = target.ownerDocument.defaultView;
-    if (!view) return;
     const margin = 8;
     const preferredX = targetBox.left + targetBox.width / 2 - tooltipBox.width / 2;
     const x = Math.max(margin, Math.min(view.innerWidth - tooltipBox.width - margin, preferredX));
@@ -156,12 +155,37 @@ export function bindPlannerTooltip(
       view.innerHeight - tooltipBox.height - margin,
       targetBox.bottom + margin,
     );
+    const positionScale = tooltip.offsetWidth > 0
+      ? tooltipBox.width / tooltip.offsetWidth
+      : 1;
+    const safePositionScale = Number.isFinite(positionScale) && positionScale > 0
+      ? positionScale
+      : 1;
     tooltip.dataset.side = above >= margin ? "top" : "bottom";
-    tooltip.style.left = `${Math.round(x)}px`;
-    tooltip.style.top = `${Math.round(Math.max(margin, y))}px`;
+    tooltip.style.left = `${Math.round(x / safePositionScale)}px`;
+    tooltip.style.top = `${Math.round(Math.max(margin, y) / safePositionScale)}px`;
+  };
+  const unbindViewport = (): void => {
+    if (!view || !viewportListenersBound) return;
+    viewportListenersBound = false;
+    view.removeEventListener("resize", position);
+    view.removeEventListener("scroll", position, true);
+  };
+  const bindViewport = (): void => {
+    if (!view || viewportListenersBound) return;
+    viewportListenersBound = true;
+    view.addEventListener("resize", position);
+    view.addEventListener("scroll", position, true);
+  };
+  const show = (): void => {
+    tooltip.textContent = text;
+    tooltip.hidden = false;
+    position();
+    bindViewport();
   };
   const hide = (): void => {
     tooltip.hidden = true;
+    unbindViewport();
   };
   const keydown = (event: Event): void => {
     if ((event as KeyboardEvent).key === "Escape") hide();

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   FORBIDDEN_LATER_MAIN_PLANNER_CONTROLS,
+  bindPlannerProgressTarget,
   createMemoryPlannerCollapseStore,
   createPlannerControls,
   createPlannerDebugStore,
@@ -176,4 +177,34 @@ test("TC-UP-CTL-05-001 debug state is shared, memory-only, and gated from ordina
 
 test("TC-UP-DRF-06-001 v1.0.2 control surface explicitly excludes Tidy and Undo", () => {
   assert.deepEqual(FORBIDDEN_LATER_MAIN_PLANNER_CONTROLS, ["tidy", "undo"]);
+});
+
+test("TC-OBS-A11Y-001-004 progress pointer and shared keyboard activation dispatch equally", () => {
+  class FakeTarget extends EventTarget {
+    readonly tagName = "g";
+    readonly attributes = new Map<string, string>();
+    setAttribute(name: string, value: string): void { this.attributes.set(name, value); }
+  }
+  const element = new FakeTarget();
+  const dispatched: unknown[] = [];
+  const unbind = bindPlannerProgressTarget(
+    element as unknown as SVGElement,
+    () => target(),
+    (progress) => dispatched.push(progress),
+    () => `intent-${dispatched.length + 1}`,
+  );
+  for (const key of ["Enter", " ", "Spacebar"]) {
+    const event = new Event("keydown", { cancelable: true });
+    Object.defineProperties(event, { key: { value: key }, repeat: { value: false } });
+    assert.equal(element.dispatchEvent(event), false);
+  }
+  element.dispatchEvent(new Event("click"));
+  const repeat = new Event("keydown", { cancelable: true });
+  Object.defineProperties(repeat, { key: { value: "Enter" }, repeat: { value: true } });
+  element.dispatchEvent(repeat);
+  assert.equal(dispatched.length, 4);
+  assert.equal(element.attributes.get("role"), "button");
+  unbind();
+  element.dispatchEvent(new Event("click"));
+  assert.equal(dispatched.length, 4);
 });

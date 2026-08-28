@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  bindPlannerTooltip,
   bindRovingTabs,
   isPlannerActivationKey,
   nextRovingIndex,
@@ -87,4 +88,76 @@ test("TC-UP-ERR-09-001 invalid initial roving indices fail safe to the first tab
     assert.equal(secondPanel.hidden, true);
     tabs.destroy();
   }
+});
+
+test("TC-OBS-A11Y-001-003 tooltip coordinates compensate for a zoomed fixed containing block", () => {
+  class FakeViewport extends EventTarget {
+    readonly innerHeight = 1_200;
+    readonly innerWidth = 1_600;
+  }
+  const viewport = new FakeViewport();
+  class FakeTooltipTarget extends EventTarget {
+    readonly attributes = new Map<string, string>();
+    readonly ownerDocument = { defaultView: viewport };
+    box = { bottom: 901, height: 18, left: 686, right: 724, top: 883, width: 38 };
+
+    getBoundingClientRect(): DOMRect {
+      return this.box as DOMRect;
+    }
+
+    removeAttribute(name: string): void {
+      this.attributes.delete(name);
+    }
+
+    setAttribute(name: string, value: string): void {
+      this.attributes.set(name, value);
+    }
+  }
+
+  class FakeTooltip extends EventTarget {
+    readonly dataset: Record<string, string> = {};
+    hidden = true;
+    id = "planner-tooltip";
+    offsetWidth = 120;
+    readonly style: Record<string, string> = {};
+    textContent = "";
+
+    getBoundingClientRect(): DOMRect {
+      return { bottom: 102, height: 102, left: 0, right: 240, top: 0, width: 240 } as DOMRect;
+    }
+
+    setAttribute(): void {}
+  }
+
+  const target = new FakeTooltipTarget();
+  const tooltip = new FakeTooltip();
+  const unbind = bindPlannerTooltip(
+    target as unknown as HTMLElement,
+    tooltip as unknown as HTMLElement,
+    "Urgent item",
+  );
+  target.dispatchEvent(new Event("focus"));
+  assert.equal(tooltip.hidden, false);
+  assert.equal(tooltip.style.left, "293px");
+  assert.equal(tooltip.style.top, "387px");
+  assert.equal(tooltip.dataset.side, "top");
+
+  target.box = { bottom: 28, height: 18, left: 0, right: 18, top: 10, width: 18 };
+  viewport.dispatchEvent(new Event("scroll"));
+  assert.equal(tooltip.style.left, "4px");
+  assert.equal(tooltip.style.top, "18px");
+  assert.equal(tooltip.dataset.side, "bottom");
+
+  target.box = { bottom: 1_118, height: 18, left: 1_580, right: 1_598, top: 1_100, width: 18 };
+  viewport.dispatchEvent(new Event("resize"));
+  assert.equal(tooltip.style.left, "676px");
+  assert.equal(tooltip.style.top, "495px");
+  assert.equal(tooltip.dataset.side, "top");
+
+  unbind();
+  assert.equal(tooltip.hidden, true);
+  assert.equal(target.attributes.has("aria-describedby"), false);
+  target.box = { bottom: 118, height: 18, left: 100, right: 118, top: 100, width: 18 };
+  viewport.dispatchEvent(new Event("scroll"));
+  assert.equal(tooltip.style.left, "676px");
 });

@@ -62,6 +62,8 @@ export function createPlannerPlayback(options: PlannerPlaybackOptions): PlannerP
   let startedAt: number | null = null;
   let bounds: PlannerPlaybackBounds | null = null;
   let frameHandle: number | null = null;
+  let runSequence = 0;
+  let activeRun = 0;
 
   const running = (): boolean => startedAt !== null;
   const clearFrame = (): void => {
@@ -83,23 +85,26 @@ export function createPlannerPlayback(options: PlannerPlaybackOptions): PlannerP
     clearFrame();
     startedAt = null;
     bounds = null;
+    activeRun = 0;
     options.onFinish?.(reason);
     return true;
   };
-  const tick = (): void => {
+  const tick = (run: number): void => {
     frameHandle = null;
-    if (destroyed || !visible || startedAt === null || bounds === null) return;
+    if (destroyed || !visible || activeRun !== run || startedAt === null || bounds === null) return;
     const elapsed = Math.max(0, scheduler.now() - startedAt);
     const progress = Math.min(1, elapsed / PLANNER_PLAYBACK_DURATION_MILLISECONDS);
     options.onFrame(frameFor(progress, elapsed));
+    if (destroyed || !visible || activeRun !== run || startedAt === null || bounds === null) return;
     if (progress >= 1) {
       finish("completed");
       return;
     }
-    frameHandle = scheduler.requestFrame(tick);
+    frameHandle = scheduler.requestFrame(() => tick(run));
   };
-  const finishReducedMotion = (): void => {
+  const finishReducedMotion = (run: number): void => {
     options.onFrame(frameFor(1, 0));
+    if (destroyed || activeRun !== run || startedAt === null || bounds === null) return;
     finish("completed");
   };
 
@@ -114,12 +119,17 @@ export function createPlannerPlayback(options: PlannerPlaybackOptions): PlannerP
       if (destroyed || !visible || running()) return false;
       bounds = validateBounds(nextBounds);
       startedAt = scheduler.now();
+      runSequence += 1;
+      activeRun = runSequence;
+      const run = activeRun;
       options.onStart?.();
+      if (destroyed || !visible || activeRun !== run || startedAt === null || bounds === null) return true;
       options.onFrame(frameFor(0, 0));
+      if (destroyed || !visible || activeRun !== run || startedAt === null || bounds === null) return true;
       if (reducedMotion) {
-        finishReducedMotion();
+        finishReducedMotion(run);
       } else {
-        frameHandle = scheduler.requestFrame(tick);
+        frameHandle = scheduler.requestFrame(() => tick(run));
       }
       return true;
     },
@@ -129,7 +139,7 @@ export function createPlannerPlayback(options: PlannerPlaybackOptions): PlannerP
     setReducedMotion(next: boolean) {
       if (destroyed || next === reducedMotion) return;
       reducedMotion = next;
-      if (reducedMotion && running()) finishReducedMotion();
+      if (reducedMotion && running()) finishReducedMotion(activeRun);
     },
     setVisible(next: boolean) {
       if (destroyed || next === visible) return;

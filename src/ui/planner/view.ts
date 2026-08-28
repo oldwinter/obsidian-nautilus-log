@@ -372,6 +372,8 @@ class PlannerSurfaceController implements PlannerSurface {
   #layout: PlannerResponsiveLayout;
   #resize: PlannerResizeSubscription | undefined;
   #visibilityObserver: MutationObserver | undefined;
+  #topologyObserver: MutationObserver | undefined;
+  #visibilityAncestors: readonly HTMLElement[] = [];
   #documentVisibilityListener: (() => void) | undefined;
   #probeTimer: number | undefined;
   #localeUnsubscribe: (() => void) | undefined;
@@ -413,6 +415,7 @@ class PlannerSurfaceController implements PlannerSurface {
     const view = root.ownerDocument.defaultView;
     this.#motionPreference = view?.matchMedia("(prefers-reduced-motion: reduce)");
     const reducedMotion = options.reducedMotion ?? this.#motionPreference?.matches ?? false;
+    this.#root.dataset.reducedMotion = String(reducedMotion);
     this.#playback = createPlannerPlayback({
       reducedMotion,
       onStart: () => {
@@ -450,6 +453,13 @@ class PlannerSurfaceController implements PlannerSurface {
   setContext(context: PlannerViewContext): void {
     if (this.#destroyed) return;
     const validated = validatePlannerViewContext(context);
+    const contextChanged = validated.logicalDate.year !== this.#context.logicalDate.year
+      || validated.logicalDate.month !== this.#context.logicalDate.month
+      || validated.logicalDate.day !== this.#context.logicalDate.day
+      || validated.bounds.startMinutes !== this.#context.bounds.startMinutes
+      || validated.bounds.endMinutes !== this.#context.bounds.endMinutes
+      || validated.hostContext !== this.#context.hostContext;
+    if (contextChanged) this.#playback.cancel("cancelled");
     const wasReplica = this.#context.hostContext === "replica";
     const hostChanged = validated.hostContext !== this.#context.hostContext;
     this.#context = validated;
@@ -474,7 +484,9 @@ class PlannerSurfaceController implements PlannerSurface {
   }
 
   setReducedMotion(reducedMotion: boolean): void {
-    if (!this.#destroyed) this.#playback.setReducedMotion(reducedMotion);
+    if (this.#destroyed) return;
+    this.#root.dataset.reducedMotion = String(reducedMotion);
+    this.#playback.setReducedMotion(reducedMotion);
   }
 
   measure(): void {
@@ -489,6 +501,7 @@ class PlannerSurfaceController implements PlannerSurface {
           { logicalDate: this.#context.logicalDate },
           (snapshot) => {
             if (this.#destroyed) return;
+            if (snapshot.state !== "confirmed") this.#playback.cancel("cancelled");
             this.#snapshot = snapshot;
             this.#render();
           },
@@ -516,6 +529,9 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#resize = undefined;
     this.#visibilityObserver?.disconnect();
     this.#visibilityObserver = undefined;
+    this.#topologyObserver?.disconnect();
+    this.#topologyObserver = undefined;
+    this.#visibilityAncestors = [];
     if (this.#documentVisibilityListener) {
       this.#root.ownerDocument.removeEventListener("visibilitychange", this.#documentVisibilityListener);
     }
@@ -538,6 +554,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#root.removeAttribute("aria-label");
     delete this.#root.dataset.layout;
     delete this.#root.dataset.narrow;
+    delete this.#root.dataset.reducedMotion;
   }
 
   #scheduleProbe(): void {
@@ -567,14 +584,39 @@ class PlannerSurfaceController implements PlannerSurface {
     const ViewMutationObserver = this.#root.ownerDocument.defaultView?.MutationObserver;
     if (ViewMutationObserver) {
       this.#visibilityObserver = new ViewMutationObserver(publish);
-      let ancestor: HTMLElement | null = this.#root;
-      while (ancestor) {
-        this.#visibilityObserver.observe(ancestor, {
-          attributes: true,
-          attributeFilter: ["class", "hidden", "style"],
-        });
-        ancestor = ancestor.parentElement;
-      }
+      this.#topologyObserver = new ViewMutationObserver(() => {
+        const ancestors = this.#currentVisibilityAncestors();
+        const changed = ancestors.length !== this.#visibilityAncestors.length
+          || ancestors.some((ancestor, index) => ancestor !== this.#visibilityAncestors[index]);
+        if (changed) this.#rebuildVisibilityObservation(ancestors);
+        publish();
+      });
+      this.#topologyObserver.observe(this.#root.ownerDocument.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+      this.#rebuildVisibilityObservation(this.#currentVisibilityAncestors());
+    }
+  }
+
+  #currentVisibilityAncestors(): readonly HTMLElement[] {
+    const ancestors: HTMLElement[] = [];
+    let ancestor: HTMLElement | null = this.#root;
+    while (ancestor) {
+      ancestors.push(ancestor);
+      ancestor = ancestor.parentElement;
+    }
+    return ancestors;
+  }
+
+  #rebuildVisibilityObservation(ancestors: readonly HTMLElement[]): void {
+    this.#visibilityObserver?.disconnect();
+    this.#visibilityAncestors = ancestors;
+    for (const ancestor of ancestors) {
+      this.#visibilityObserver?.observe(ancestor, {
+        attributes: true,
+        attributeFilter: ["class", "hidden", "style"],
+      });
     }
   }
 
@@ -602,6 +644,9 @@ class PlannerSurfaceController implements PlannerSurface {
       this.#context.hostContext,
     ));
     const focusedKey = this.#focus.capture();
+    if (focusedKey?.startsWith("item-") && this.#layout.mode === "compact") {
+      this.#disclosures.setOpen("schedule", true);
+    }
     this.#clearRenderBindings();
     this.#content.replaceChildren();
     this.#root.dataset.layout = this.#layout.mode;
@@ -867,7 +912,7 @@ class PlannerSurfaceController implements PlannerSurface {
       row.dataset.conflict = String(item.conflict);
       row.dataset.current = String(item.current);
       row.dataset.itemId = item.id;
-      row.dataset.plannerFocusKey = `schedule-item-${item.id}`;
+      row.dataset.plannerFocusKey = `item-${item.id}`;
       const name = timelineAccessibleName(this.#messages, item);
       row.setAttribute("aria-label", name);
       const title = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-title");
@@ -1045,7 +1090,7 @@ class PlannerSurfaceController implements PlannerSurface {
       group.setAttribute("tabindex", "0");
       group.setAttribute("focusable", "true");
       group.setAttribute("aria-label", accessibleName);
-      group.dataset.plannerFocusKey = `label-${label.id}`;
+      group.dataset.plannerFocusKey = `item-${label.timelineItem.id}`;
       if (label.timelineItem.current) group.setAttribute("aria-current", "true");
       const text = svgElement(document, "text");
       text.setAttribute("x", String(label.side === "left" ? label.box.x + label.box.width : label.box.x));

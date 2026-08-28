@@ -154,12 +154,17 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   override async setState(state: unknown, _result: ViewStateResult): Promise<void> {
+    const previousInstanceId = this.#plannerInstanceId;
     this.#logicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
     this.#plannerInstanceId = stateInstanceId(state) ?? this.#plannerInstanceId;
     const context = validatePlannerViewContext(
       this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
     );
-    this.#surface?.setContext(context);
+    if (this.#surface && previousInstanceId !== this.#plannerInstanceId) {
+      this.#mountSurface(context);
+    } else {
+      this.#surface?.setContext(context);
+    }
   }
 
   override onResize(): void {
@@ -172,6 +177,18 @@ export class SpiralDayPlannerView extends ItemView {
     const context = validatePlannerViewContext(
       this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
     );
+    this.#localeUnsubscribe?.();
+    this.#localeUnsubscribe = undefined;
+    this.#mountSurface(context);
+    this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
+      this.#surface?.setLocale(locale);
+    });
+  }
+
+  #mountSurface(context: PlannerViewContext): void {
+    const previous = this.#surface;
+    this.#surface = undefined;
+    previous?.destroy();
     this.#surface = mountPlannerSurface(
       this.contentEl,
       this.#dependencies.runtime,
@@ -187,16 +204,13 @@ export class SpiralDayPlannerView extends ItemView {
         renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
       },
     );
-    this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
-      this.#surface?.setLocale(locale);
-    });
   }
 
   protected override async onClose(): Promise<void> {
-    this.#surface?.destroy();
-    this.#surface = undefined;
     this.#localeUnsubscribe?.();
     this.#localeUnsubscribe = undefined;
+    this.#surface?.destroy();
+    this.#surface = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
   }
 }
