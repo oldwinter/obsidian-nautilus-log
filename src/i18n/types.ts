@@ -53,7 +53,16 @@ export type PlannerCatalog = Readonly<{
   "control.play": string;
   "control.playbackRunning": string;
   "control.showCompleted": string;
-  "debug.geometry": MessageFunction<{ centerX: number; centerY: number; minute: number }>;
+  "debug.geometry": MessageFunction<{
+    centerX: number;
+    centerY: number;
+    width: number;
+    height: number;
+    innerRadius: number;
+    outerRadius: number;
+    bandWidth: number;
+    minute: number;
+  }>;
   "disclosure.overflow": MessageFunction<{ count: number; duration: string }>;
   "disclosure.overview": string;
   "disclosure.schedule": MessageFunction<{ count: number }>;

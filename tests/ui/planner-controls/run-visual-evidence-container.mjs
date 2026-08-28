@@ -168,7 +168,14 @@ async function applyCaptureState(page, capture) {
       && await root.locator(".spiral-day-planner__collapsed-control").count() === 1,
     "Collapsed capture lacks the expand-only control");
   } else if (capture.state === "topbar-debug") {
-    failUnless(captureState.primary.debugEnabled, "Debug capture does not show the enabled debug state");
+    failUnless(captureState.primary.debugEnabled
+      && captureState.primary.debugGeometryGroups === 1
+      && captureState.primary.debugRectangles === 2
+      && captureState.primary.debugCenterMarkers === 1
+      && captureState.primary.debugGuideCircles === 1
+      && captureState.primary.debugValues
+        === "center 300,210; size 600x420; radii 50/150; band 16; minute 780",
+    `Debug capture lacks complete geometry evidence: ${JSON.stringify(captureState.primary)}`);
   } else if (capture.state === "playback") {
     failUnless(captureState.primary.playbackRunning, "Playback capture is not running");
   } else if (capture.state === "tooltip") {
@@ -315,6 +322,7 @@ try {
   await page.evaluate(() => window.issue24Harness.closeAdapterEvidence());
   const interactionNames = [
     "assertConnectFailureState",
+    "assertRuntimeProbeInterval",
     "assertExternalFocusPreserved",
     "assertKeyboardPointerParity",
     "assertLayoutFocusRestoration",

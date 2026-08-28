@@ -17,6 +17,20 @@ test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal
   assert.deepEqual(Object.keys(enPlanner).sort(), Object.keys(zhCNPlanner).sort());
 });
 
+test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
+  const messages = createMessages({ locale: "en" });
+  assert.equal(enShared["status.loading"], "Loading Nautilus Log...");
+  assert.equal(messages.t("shared", "status.loading"), "Loading Nautilus Log...");
+  assert.equal(
+    enShared["status.unavailable"],
+    "Extension not installed. To use Nautilus Log, install it from Roam Depot.",
+  );
+  assert.equal(
+    messages.t("shared", "status.unavailable"),
+    "Extension not installed. To use Nautilus Log, install it from Roam Depot.",
+  );
+});
+
 test("TC-OBS-I18N-001-001 resolver keeps interpolation typed and falls back to English locale", () => {
   const messages = createMessages({ locale: "fr-FR" });
   assert.equal(messages.locale, "en");

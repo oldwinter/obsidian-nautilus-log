@@ -31,7 +31,8 @@ export const zhCNPlanner = Object.freeze({
   "control.play": "回放一天",
   "control.playbackRunning": "正在回放一天",
   "control.showCompleted": "显示完成项",
-  "debug.geometry": ({ centerX, centerY, minute }) => `中心 ${centerX},${centerY}；分钟 ${minute}`,
+  "debug.geometry": ({ centerX, centerY, width, height, innerRadius, outerRadius, bandWidth, minute }) =>
+    `中心 ${centerX},${centerY}；尺寸 ${width}x${height}；半径 ${innerRadius}/${outerRadius}；带宽 ${bandWidth}；分钟 ${minute}`,
   "disclosure.overflow": ({ count, duration }) => `今日未排期 | ${duration} | ${count}项`,
   "disclosure.overview": "概览",
   "disclosure.schedule": ({ count }) => `日程 | ${count}项`,

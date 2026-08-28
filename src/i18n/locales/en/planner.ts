@@ -31,7 +31,8 @@ export const enPlanner = Object.freeze({
   "control.play": "Play day",
   "control.playbackRunning": "Day playback running",
   "control.showCompleted": "Show completed items",
-  "debug.geometry": ({ centerX, centerY, minute }) => `center ${centerX},${centerY}; minute ${minute}`,
+  "debug.geometry": ({ centerX, centerY, width, height, innerRadius, outerRadius, bandWidth, minute }) =>
+    `center ${centerX},${centerY}; size ${width}x${height}; radii ${innerRadius}/${outerRadius}; band ${bandWidth}; minute ${minute}`,
   "disclosure.overflow": ({ count, duration }) => `Unscheduled today | ${duration} | ${count} ${count === 1 ? "item" : "items"}`,
   "disclosure.overview": "Overview",
   "disclosure.schedule": ({ count }) => `Schedule | ${count} ${count === 1 ? "item" : "items"}`,

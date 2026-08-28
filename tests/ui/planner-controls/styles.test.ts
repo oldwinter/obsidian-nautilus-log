@@ -6,6 +6,7 @@ import { constrainedPlannerContentWidth } from "./harness-layout.ts";
 
 test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast, and non-color cues", async () => {
   const css = await readFile("styles/theme.css", "utf8");
+  const viewSource = await readFile("src/ui/planner/view.ts", "utf8");
   const profile = JSON.parse(await readFile(
     "tests/ui/planner-controls/env-vis-profile.json",
     "utf8",
@@ -44,6 +45,19 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.match(css, /@media \(forced-colors: active\)/);
   assert.match(css, /stroke-dasharray/);
   assert.match(css, /text-decoration: line-through/);
+  for (const className of [
+    "spiral-day-planner__debug-geometry",
+    "spiral-day-planner__debug-rectangle",
+    "spiral-day-planner__debug-center-marker",
+    "spiral-day-planner__debug-guide-circle",
+  ]) {
+    assert.match(viewSource, new RegExp(className));
+    assert.match(css, new RegExp(`\\.${className}`));
+  }
+  for (const marker of ["canvas-bounds", "radial-bounds", "center", "guide-circle"]) {
+    assert.match(viewSource, new RegExp(`debugMarker = \\"${marker}\\"`));
+  }
+  assert.match(viewSource, /debug\.geometry[\s\S]*width:[\s\S]*height:[\s\S]*innerRadius:[\s\S]*outerRadius:[\s\S]*bandWidth:/);
   assert.deepEqual(profile.image, {
     repository: "mcr.microsoft.com/playwright",
     tag: "v1.62.1-noble",
@@ -101,6 +115,7 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   );
   for (const interaction of [
     "assertConnectFailureState",
+    "assertRuntimeProbeInterval",
     "assertExternalFocusPreserved",
     "assertKeyboardPointerParity",
     "assertLayoutFocusRestoration",
@@ -113,6 +128,7 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   ]) {
     assert.match(containerRunner, new RegExp(`\\"${interaction}\\"`));
   }
+  assert.match(await readFile("tests/ui/planner-controls/visual-harness.ts", "utf8"), /probeDelay === 5_000/);
   for (const initiationApi of ["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon"]) {
     assert.match(containerRunner, new RegExp(initiationApi));
   }

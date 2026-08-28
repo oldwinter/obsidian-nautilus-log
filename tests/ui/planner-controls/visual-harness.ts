@@ -58,6 +58,11 @@ interface HarnessSurfaceState {
   readonly controlOverlaps: number;
   readonly debugControlVisible: boolean;
   readonly debugEnabled: boolean;
+  readonly debugCenterMarkers: number;
+  readonly debugGeometryGroups: number;
+  readonly debugGuideCircles: number;
+  readonly debugRectangles: number;
+  readonly debugValues: string;
   readonly duplicateFocusKeys: number;
   readonly focusKey: string | null;
   readonly horizontalOverflow: boolean;
@@ -107,6 +112,7 @@ declare global {
       assertAdapterLifecycle(): Promise<Readonly<Record<string, boolean>>>;
       assertAcceptance(): HarnessState;
       assertConnectFailureState(): boolean;
+      assertRuntimeProbeInterval(): boolean;
       assertExternalFocusPreserved(): boolean;
       assertKeyboardPointerParity(): Promise<boolean>;
       assertLayoutFocusRestoration(): Promise<boolean>;
@@ -595,6 +601,19 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     controlOverlaps,
     debugControlVisible: Boolean(root.querySelector('[data-control="debug"]')),
     debugEnabled: Boolean(root.querySelector(".spiral-day-planner__debug-overlay")),
+    debugCenterMarkers: root.querySelectorAll(
+      'svg.spiral-day-planner__spiral .spiral-day-planner__debug-center-marker[data-debug-marker="center"]',
+    ).length,
+    debugGeometryGroups: root.querySelectorAll(
+      'svg.spiral-day-planner__spiral .spiral-day-planner__debug-geometry[data-debug-geometry="true"]',
+    ).length,
+    debugGuideCircles: root.querySelectorAll(
+      'svg.spiral-day-planner__spiral .spiral-day-planner__debug-guide-circle[data-debug-marker="guide-circle"]',
+    ).length,
+    debugRectangles: root.querySelectorAll(
+      'svg.spiral-day-planner__spiral .spiral-day-planner__debug-rectangle[data-debug-marker]',
+    ).length,
+    debugValues: root.querySelector(".spiral-day-planner__debug-overlay")?.textContent ?? "",
     duplicateFocusKeys: focusKeys.length - new Set(focusKeys).size,
     focusKey: root.contains(document.activeElement)
       ? (document.activeElement as HTMLElement).dataset.plannerFocusKey ?? null
@@ -808,7 +827,13 @@ window.issue24Harness = {
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
     await nextFrame();
-    const debugEnabled = adapterRoot.querySelector(".spiral-day-planner__debug-overlay") !== null;
+    const debugState = surfaceState(adapterRoot);
+    const debugEnabled = debugState.debugEnabled
+      && debugState.debugGeometryGroups === 1
+      && debugState.debugRectangles === 2
+      && debugState.debugCenterMarkers === 1
+      && debugState.debugGuideCircles === 1
+      && debugState.debugValues === "center 225,158; size 450x315; radii 35/105; band 11; minute 780";
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
     const playbackStarted = adapterRoot.querySelector('[data-control="play"]')
@@ -871,16 +896,95 @@ window.issue24Harness = {
         throw new Error("intentional harness connection failure");
       },
     };
+    const englishMessages = createMessages({ locale: "en" });
     const surface = mountPlannerSurface(root, unavailableRuntime, {
       logicalDate: DISPLAYED_DATE,
       bounds: BOUNDS,
       hostContext: "main",
-    }, { instanceId: "issue24-connect-failure", messages, renderIcon });
+    }, { instanceId: "issue24-connect-failure", messages: englishMessages, renderIcon });
     const status = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
-    const passed = status?.textContent?.includes(messages.t("shared", "status.unavailable")) === true;
+    const passed = status?.querySelector(".spiral-day-planner__status-heading")?.textContent
+        === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+      && status.querySelector(".spiral-day-planner__status-message")?.textContent === ""
+      && status.textContent === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
     surface.destroy();
     root.remove();
     return passed;
+  },
+  assertRuntimeProbeInterval() {
+    const originalSetInterval = window.setInterval;
+    const originalClearInterval = window.clearInterval;
+    const timerId = 42_124;
+    let probeCallback: (() => void) | undefined;
+    let probeDelay: number | undefined;
+    let clearedTimer: number | undefined;
+    let runtimeState: PlannerRuntimePort["state"] = "starting";
+    let connectCount = 0;
+    const root = document.createElement("div");
+    root.style.width = "920px";
+    document.body.append(root);
+    Object.defineProperty(window, "setInterval", {
+      configurable: true,
+      value: (handler: TimerHandler, timeout?: number) => {
+        probeCallback = typeof handler === "function" ? handler : undefined;
+        probeDelay = timeout;
+        return timerId;
+      },
+    });
+    Object.defineProperty(window, "clearInterval", {
+      configurable: true,
+      value: (intervalId?: number) => { clearedTimer = intervalId; },
+    });
+    let surface: PlannerSurface | undefined;
+    try {
+      const probeRuntime: PlannerRuntimePort = {
+        get state() { return runtimeState; },
+        connect(_context, listener, visible = true) {
+          connectCount += 1;
+          if (visible) listener(currentSnapshot());
+          return Object.freeze({
+            setContext() {},
+            setVisible() {},
+            refresh() { listener(currentSnapshot()); },
+            disconnect() {},
+          });
+        },
+      };
+      surface = mountPlannerSurface(root, probeRuntime, {
+        logicalDate: DISPLAYED_DATE,
+        bounds: BOUNDS,
+        hostContext: "main",
+      }, {
+        instanceId: "issue24-runtime-probe",
+        messages: createMessages({ locale: "en" }),
+        renderIcon,
+      });
+      const loading = root.querySelector<HTMLElement>('[data-state="loading"][role="status"]');
+      const exactLoading = loading?.querySelector(".spiral-day-planner__status-heading")?.textContent
+          === "Loading Nautilus Log..."
+        && loading.querySelector(".spiral-day-planner__status-message")?.textContent === ""
+        && loading.textContent === "Loading Nautilus Log...";
+      runtimeState = "unloaded";
+      probeCallback?.();
+      const unavailable = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
+      const exactUnavailable = unavailable?.querySelector(".spiral-day-planner__status-heading")?.textContent
+          === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+        && unavailable.querySelector(".spiral-day-planner__status-message")?.textContent === ""
+        && unavailable.textContent
+          === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
+      runtimeState = "ready";
+      probeCallback?.();
+      return probeDelay === 5_000
+        && exactLoading
+        && exactUnavailable
+        && connectCount === 1
+        && clearedTimer === timerId;
+    } finally {
+      surface?.destroy();
+      root.remove();
+      Object.defineProperty(window, "setInterval", { configurable: true, value: originalSetInterval });
+      Object.defineProperty(window, "clearInterval", { configurable: true, value: originalClearInterval });
+    }
   },
   assertExternalFocusPreserved() {
     localeSelect.focus();

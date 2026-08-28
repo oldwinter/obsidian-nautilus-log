@@ -691,7 +691,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#renderStatus(
       pending ? "loading" : "unavailable",
       this.#messages.t("shared", pending ? "status.loading" : "status.unavailable"),
-      this.#messages.t("planner", pending ? "status.loadingDetail" : "status.unavailableDetail"),
+      "",
     );
   }
 
@@ -843,6 +843,11 @@ class PlannerSurfaceController implements PlannerSurface {
     if (controlsState.debugEnabled) {
       const debug = element(this.#root.ownerDocument, "pre", "spiral-day-planner__debug-overlay");
       debug.textContent = this.#messages.t("planner", "debug.geometry", {
+        width: Math.round(spiral.geometry.width),
+        height: Math.round(spiral.geometry.height),
+        innerRadius: Math.round(spiral.geometry.innerRadius),
+        outerRadius: Math.round(spiral.geometry.outerRadius),
+        bandWidth: Math.round(spiral.geometry.bandWidth),
         centerX: Math.round(spiral.geometry.center.x),
         centerY: Math.round(spiral.geometry.center.y),
         minute: Math.round(playbackMinute ?? projection.day.elapsedUntilMinutes ?? this.#context.bounds.startMinutes),
@@ -1135,6 +1140,35 @@ class PlannerSurfaceController implements PlannerSurface {
       center.append(time);
     }
     svg.append(center);
+    if (this.#controls.state.debugEnabled) {
+      const debugGeometry = svgElement(document, "g", "spiral-day-planner__debug-geometry");
+      debugGeometry.dataset.debugGeometry = "true";
+      debugGeometry.setAttribute("aria-hidden", "true");
+      const canvasBounds = svgElement(document, "rect", "spiral-day-planner__debug-rectangle");
+      canvasBounds.dataset.debugMarker = "canvas-bounds";
+      canvasBounds.setAttribute("x", "0.5");
+      canvasBounds.setAttribute("y", "0.5");
+      canvasBounds.setAttribute("width", String(model.geometry.width - 1));
+      canvasBounds.setAttribute("height", String(model.geometry.height - 1));
+      const radialBounds = svgElement(document, "rect", "spiral-day-planner__debug-rectangle");
+      radialBounds.dataset.debugMarker = "radial-bounds";
+      radialBounds.setAttribute("x", String(model.geometry.center.x - model.geometry.outerRadius));
+      radialBounds.setAttribute("y", String(model.geometry.center.y - model.geometry.outerRadius));
+      radialBounds.setAttribute("width", String(model.geometry.outerRadius * 2));
+      radialBounds.setAttribute("height", String(model.geometry.outerRadius * 2));
+      const guideCircle = svgElement(document, "circle", "spiral-day-planner__debug-guide-circle");
+      guideCircle.dataset.debugMarker = "guide-circle";
+      guideCircle.setAttribute("cx", String(model.geometry.center.x));
+      guideCircle.setAttribute("cy", String(model.geometry.center.y));
+      guideCircle.setAttribute("r", String(model.geometry.outerRadius + model.geometry.bandWidth / 2));
+      const centerMarker = svgElement(document, "circle", "spiral-day-planner__debug-center-marker");
+      centerMarker.dataset.debugMarker = "center";
+      centerMarker.setAttribute("cx", String(model.geometry.center.x));
+      centerMarker.setAttribute("cy", String(model.geometry.center.y));
+      centerMarker.setAttribute("r", "7");
+      debugGeometry.append(canvasBounds, radialBounds, guideCircle, centerMarker);
+      svg.append(debugGeometry);
+    }
     return svg;
   }
 
