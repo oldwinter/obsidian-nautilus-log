@@ -4961,9 +4961,10 @@
     },
     {
       "id": "UP-INS-02",
-      "owner_ticket": 17,
+      "owner_ticket": 27,
       "owner_module": "src/main.ts",
       "evidence_contributors": [
+        17,
         22,
         30
       ],
@@ -4996,11 +4997,12 @@
     },
     {
       "id": "UP-INS-03",
-      "owner_ticket": 23,
+      "owner_ticket": 24,
       "owner_module": "src/ui/planner/view.ts",
       "evidence_contributors": [
         17,
         21,
+        23,
         30
       ],
       "statement": "Given Renderer block mounted; when Extension startup pending / unavailable; the observable result is Pending text is `Loading Nautilus Log...`; unavailable text is red `Extension not installed. To use Nautilus Log, install it from Roam Depot.`; Acceptance also requires Running state is polled every 5 seconds.",
@@ -9026,9 +9028,10 @@
     },
     {
       "id": "OBS-LOCAL-001",
-      "owner_ticket": 17,
+      "owner_ticket": 27,
       "owner_module": "src/main.ts",
       "evidence_contributors": [
+        17,
         22,
         30,
         31

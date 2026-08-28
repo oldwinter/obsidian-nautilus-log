@@ -120,6 +120,25 @@ exclusive allowed module boundaries and complete primary requirement set.
 The owner map, boundary manifest, and live ticket JSON sections must be exact
 set-equal. `UP-HIS-01..05` belong to ticket #28: ticket #28 is their sole
 primary owner, while ticket #19 contributes history primitives as evidence only.
+The reviewed Planner seam amendment assigns `src/adapters/planner-view.ts`,
+`src/ui/planner/view.ts`, and primary `UP-INS-03` ownership to ticket #24.
+Ticket #23 retains the spiral geometry, state, responsive, diagnostic, and style
+primitives and contributes their exact-SHA evidence to #24's production Planner
+assembly; host registration and package/style-bundle assembly remain outside
+this amendment. The reviewed host-assembly handoff assigns `src/main.ts`,
+`esbuild.config.mjs`, `UP-INS-02`, and `OBS-LOCAL-001` to ticket #27. Ticket #17
+retains the completed toolchain and policy foundation and contributes its
+exact-SHA evidence to those two requirements.
+
+The reviewed Review-composition seam assigns the future
+`src/adapters/review-entry.ts` to ticket #27 for its initial implementation.
+This narrow port accepts only execution commands, confirmed snapshots, source
+navigation, the i18n resolver, and a lifecycle disposer from #27's composition
+root and Execution surface; those modules must not import ticket #29's Review UI
+internals. After #27 is complete at one exact SHA and closed, but before #29
+starts, a second reviewed handoff must transfer only `review-entry.ts` from #27
+to #29. `src/main.ts`, `esbuild.config.mjs`, the Execution panel/entry, and
+source navigation remain owned by #27.
 
 The full implementation source of truth will be
 `docs/parity/requirements.json`. Every row must retain its mapped primary owner
@@ -193,12 +212,30 @@ store, screen-owned domain logic, or per-view runtime.
 | `NautilusRuntime` | One vault-scoped lifecycle, settings/POMO saves, one mutation queue, refresh generations, snapshots, active-CLOCK projection, cancellation/reconciliation | Markdown syntax, concrete views, a durable projection or command journal |
 | Surface adapters | `ItemView`, commands, ribbon/actions, editor menu, settings, notices, focus/scroll/transient presentation | Markdown reads/writes, core calls, active-task state, success inference |
 | `ActiveTaskView` | One singleton `ItemView` leaf projecting current Active Task, read-only unavailable states, source navigation by authoritative block ID, keyboard/focus behavior, narrow-dock presentation | Canonical active state, Markdown writes, planner selection, stale source navigation |
+| Planner surface assembly | Production Planner adapter and view wiring owned by #24, consuming #23's render primitives and exposing typed localized actions and approved state/style hooks | Host/package registration, Markdown reads/writes, duplicated geometry or scheduler semantics |
+| Host composition and package styles | Public registrations, the narrow Review composition port, and deterministic root `styles.css` aggregation owned by #27 through `src/main.ts`, `src/adapters/review-entry.ts`, and `esbuild.config.mjs` | Network, telemetry, Markdown reads/writes, duplicated domain/surface behavior, or imports of #29 Review UI internals |
 | i18n base/shared | Typed resolver, locale selection/fallback, and equal `shared` catalogs owned by #24 | Planner, Execution, or Review namespace content |
 | i18n feature namespaces | Equal `planner` catalogs owned by #24, `execution` catalogs owned by #27, and `review` catalogs owned by #29 | Domain decisions, source text, edits to another ticket's namespace |
 
 Production adapters use public Obsidian APIs only. `MemoryTextAdapter`, fake
 clock, in-memory plugin data, and scripted runtime adapters must execute the same
 contracts as production seams.
+
+The reviewed CLOCK-index safety handoff assigns
+`src/workspace/identity-index.ts` to ticket #25. Ticket #20 retains completed
+Daily Note, Plan Region, read, source-version, TextAccess, CLOCK-parser, and
+LOGBOOK-reader responsibilities and all three of its primary requirements.
+Ticket #25 may extend the vault-wide identity/CLOCK safety index so anonymous
+Plan Items with idless legacy running CLOCKs are admitted to conflict checks;
+this transfer changes no dependency edge or requirement owner.
+
+The reviewed time-continuity handoff assigns `src/runtime/system-clock.ts` to
+ticket #26. Completed ticket #21 remains the evidence contributor for the
+initial wall-time, time-zone, and timer seam and retains all lifecycle/projection
+primary requirements. Ticket #26 owns the paired wall/monotonic extension and
+the clock-sampling contract used by time-continuity decisions; product logic
+must consume that injected contract rather than read a global clock directly.
+This transfer changes no dependency edge or requirement owner.
 
 ## State machines
 
@@ -344,6 +381,14 @@ own only equal `execution` and `review` catalogs respectively. Integration
 imports namespaces through the resolver; no ticket edits another namespace,
 and #30 verifies union-key equality plus cross-locale action/state parity.
 
+Ticket #24 also owns the production Planner adapter/view seam. Its acceptance
+must prove that controls, disclosures, focus/playback behavior, typed locale
+actions, and semantic style hooks are reachable through that production seam,
+not only through a test harness. Rolling back #24 removes that assembly and its
+controls/i18n/theme/a11y additions together while leaving #23's pure rendering
+primitives available for tests. Host registration and final package stylesheet
+bundling are qualified separately by the downstream host-assembly boundary.
+
 ## Privacy and offline contract
 
 Spiral Day is local-only. It initiates zero network requests and emits zero
@@ -445,6 +490,13 @@ change invalidates the freeze and returns the candidate to #30 for G0-G6 before
 | G9 public | Zero exclusions; 114/114 plus every active ID/environment; exact G7 package; five workflows; named final sign-off |
 
 The package allowlist is `manifest.json`, `main.js`, and optional `styles.css`.
+Ticket #27 owns the composition-root registrations and deterministic build
+aggregation of every feature stylesheet matched by `styles/**/*.css` (or an
+equivalent complete owned-feature input set) into that single root stylesheet.
+The aggregation may not hardcode only the currently present Planner/Execution
+files: a later owned `styles/review.css` must enter the root bundle without an
+edit to #27's closed build contract. Loading and building introduce no network
+or telemetry behavior.
 GitHub release assets additionally carry `LICENSE` and
 `THIRD_PARTY_NOTICES.md`. The exact-package manual workflows cover install and
 settings; planning/Overflow/progress; CLOCK switch/Complete/reload; standalone
@@ -466,17 +518,17 @@ Implementation root issue:
 
 | Phase | Task | Blocked by | Owning boundary |
 | --- | --- | --- | --- |
-| Foundation | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | None | Toolchain, manifest, license/notices/provenance baseline; requirement-schema consumer/bootstrap only |
+| Foundation | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | None | Manifest, package metadata, license/notices/provenance, and toolchain foundation; contributor to downstream host assembly |
 | Scheduler | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | `src/core/model`, parser, diagnostics |
 | Scheduler | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19) | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | Pure scheduler/capacity/day plus history primitives contributed as evidence to #28; no `UP-HIS` primary ownership |
-| Scheduler | [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | Workspace grammar/read/index/TextAccess |
-| Scheduler | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | Runtime snapshots, cache, clock, plugin data, lifecycle |
+| Scheduler | [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | [Scheduler: implement Grammar v1 semantic parsing and core value types](https://github.com/oldwinter/obsidian-nautilus-log/issues/18) | Workspace grammar/read/Daily Notes/TextAccess and LOGBOOK read primitives; identity/CLOCK safety index transferred to #25 without changing #20 primary ownership |
+| Scheduler | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20) | Runtime snapshots, cache, plugin data, and lifecycle; completed initial clock seam contributes evidence to #26, which owns its time-continuity extension |
 | Cross-cutting | [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | [Foundation: bootstrap the Spiral Day plugin and provenance controls](https://github.com/oldwinter/obsidian-nautilus-log/issues/17) | Requirement map/schema/manifest plus all reusable release scripts, fixtures, scanners, schemas, templates, and evidence tooling |
-| Planner UI | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | ItemView, spiral geometry, planner state rendering |
-| Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Planner controls, i18n resolver/shared/planner namespaces, a11y/theme styles |
-| Execution Layer | [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Workspace commit/mutations/conflicts |
-| Execution Layer | [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21); [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | Runtime commands, mutation queue, execution/recovery/POMO |
-| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView` and source navigation |
+| Planner UI | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21) | Spiral geometry, responsive/state/diagnostic rendering primitives, and planner styles; evidence contributor to #24's production assembly |
+| Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Production Planner adapter/view assembly and `UP-INS-03`; controls, i18n resolver/shared/planner namespaces, a11y/theme styles |
+| Execution Layer | [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Workspace commit/mutations/conflicts plus vault-wide identity/CLOCK safety indexing |
+| Execution Layer | [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21); [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | Runtime commands, mutation queue, execution/recovery/POMO, paired wall/monotonic clock sampling, and time continuity |
+| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Host composition/build aggregation, narrow Review composition port, commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView`, source navigation, and local-only evidence |
 | Review | [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Sole primary owner of `UP-HIS-01..05`; history index and Review core projection |
 | Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review UI/styles, review locale namespace, and Review host QA |
 | Hardening | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26); [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Last bounded fixes, clean push, G0-G6 evidence, and exact-SHA candidate freeze |
