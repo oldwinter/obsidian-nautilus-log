@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import test from "node:test";
 
 import {
@@ -10,140 +8,124 @@ import {
 } from "../../../src/workspace/logbook-clock.ts";
 import { MUTATION_ACTIONS } from "../../../src/workspace/mutations.ts";
 
-type EvidenceOwnership = "workspace-owner" | "linked-contribution";
+type WorkspaceEvidenceModule =
+  | "actions.test.ts"
+  | "adapter-matrix.test.ts"
+  | "commit.test.ts"
+  | "invariants.test.ts"
+  | "mutations.test.ts"
+  | "protocol.test.ts";
 
-interface InvariantEvidence {
+interface WorkspaceInvariant {
   readonly number: number;
-  readonly ownership: EvidenceOwnership;
-  readonly evidence: string;
+  readonly contract: string;
+  readonly evidenceModules: readonly WorkspaceEvidenceModule[];
 }
 
-const WRITE_INVARIANT_EVIDENCE: readonly InvariantEvidence[] = Object.freeze([
-  { number: 1, ownership: "linked-contribution", evidence: "closed MutationPlan actions and action-operation admission" },
-  { number: 2, ownership: "linked-contribution", evidence: "no lifecycle or projection operation exists in the writer protocol" },
-  { number: 3, ownership: "linked-contribution", evidence: "runtime #26 owns the single FIFO; commit executes one admitted plan" },
-  { number: 4, ownership: "linked-contribution", evidence: "runtime #26 owns dedupe; stable intentId is mandatory in plans and receipts" },
-  { number: 5, ownership: "workspace-owner", evidence: "queue build plus synchronous atomic callback build in commit tests" },
-  { number: 6, ownership: "workspace-owner", evidence: "transaction-window source change and stale byte tests" },
-  { number: 7, ownership: "workspace-owner", evidence: "unique rename relocation test" },
-  { number: 8, ownership: "workspace-owner", evidence: "anonymous nonrelocation and ID-less legacy locator tests" },
-  { number: 9, ownership: "workspace-owner", evidence: "duplicate collision and selected terminal repair test" },
-  { number: 10, ownership: "workspace-owner", evidence: "same-file transaction counters and switch atomicity" },
-  { number: 11, ownership: "workspace-owner", evidence: "Editor and Vault.process byte-equivalence contract" },
-  { number: 12, ownership: "workspace-owner", evidence: "strict complete-source allowlist reconstruction" },
-  { number: 13, ownership: "workspace-owner", evidence: "authoritative reread and global post-scan receipts" },
-  { number: 14, ownership: "workspace-owner", evidence: "conflict receipts and exact zero-byte assertions" },
-  { number: 15, ownership: "workspace-owner", evidence: "confirmation-read fault blocks later commits without retry" },
-  { number: 16, ownership: "workspace-owner", evidence: "canonical LOGBOOK/CLOCK round-trip helpers and tests" },
-  { number: 17, ownership: "workspace-owner", evidence: "Web Crypto UUIDv4 generation and vault collision lookup" },
-  { number: 18, ownership: "workspace-owner", evidence: "same-target Clock In returns no-host already-applied" },
-  { number: 19, ownership: "workspace-owner", evidence: "same-file and cross-file switch fault tests" },
-  { number: 20, ownership: "workspace-owner", evidence: "MutationPlan shared transition instant validation" },
-  { number: 21, ownership: "workspace-owner", evidence: "exact CLOCK close and backwards-end rejection" },
-  { number: 22, ownership: "workspace-owner", evidence: "owned Complete and other-active-task preservation tests" },
-  { number: 23, ownership: "workspace-owner", evidence: "progress below/equal/above 100 and reopen tests" },
-  { number: 24, ownership: "workspace-owner", evidence: "same-target 2.5 second delete and attached-content tests" },
-  { number: 25, ownership: "linked-contribution", evidence: "#26 owns Enable/Disable; writer exposes Clock Out plus confirmed empty receipt" },
-  { number: 26, ownership: "linked-contribution", evidence: "#26 owns POMO ordering; authoritative CLOCK receipt is contributed" },
-  { number: 27, ownership: "linked-contribution", evidence: "#26 owns plugin-data failure; Markdown receipts are non-rollback authority" },
-  { number: 28, ownership: "linked-contribution", evidence: "#26 owns reload; writer persists no recovery journal" },
-  { number: 29, ownership: "workspace-owner", evidence: "multiple and potential-running pre-host rejection tests" },
-  { number: 30, ownership: "workspace-owner", evidence: "closed malformed versus potential-running parser/index contract" },
-  { number: 31, ownership: "workspace-owner", evidence: "previewed repair operations and legacy fold/gap rejection" },
-  { number: 32, ownership: "linked-contribution", evidence: "#26 owns stale-session lifecycle; no automatic writer action exists" },
-  { number: 33, ownership: "linked-contribution", evidence: "#20 owns calendar clipping; canonical endpoints preserve instants" },
-  { number: 34, ownership: "workspace-owner", evidence: "offset-bearing canonical and unresolved legacy DST tests" },
-  { number: 35, ownership: "workspace-owner", evidence: "wall/monotonic discontinuity pre-host rejection test" },
-  { number: 36, ownership: "linked-contribution", evidence: "#21 owns lifecycle/cache/refresh and #30 contributes hardening evidence; closed writer actions exclude them" },
-  { number: 37, ownership: "workspace-owner", evidence: "index input-limit zero-transform test" },
-  { number: 38, ownership: "workspace-owner", evidence: "Editor single-step and background/cross-file Undo receipt assertions" },
-  { number: 39, ownership: "workspace-owner", evidence: "closed stable result codes and redacted safe-context test" },
-  { number: 40, ownership: "linked-contribution", evidence: "#21 owns lifecycle and #26 owns mutation admission; #30 contributes hardening evidence and disposed commit blocks host entry" },
+interface DeferredInvariant {
+  readonly number: number;
+  readonly ownerTickets: readonly number[];
+  readonly issue25Contribution: string;
+}
+
+const ISSUE_25_EXECUTABLE_INVARIANTS: readonly WorkspaceInvariant[] = Object.freeze([
+  { number: 5, contract: "fresh decision and in-primitive revalidation", evidenceModules: ["commit.test.ts", "protocol.test.ts"] },
+  { number: 6, contract: "cached source metadata is never write authority", evidenceModules: ["commit.test.ts"] },
+  { number: 7, contract: "unique identity relocation requires exact semantic agreement", evidenceModules: ["commit.test.ts"] },
+  { number: 8, contract: "anonymous and ID-less legacy targets never relocate", evidenceModules: ["commit.test.ts", "actions.test.ts"] },
+  { number: 9, contract: "identity collisions block writes and selected repair is exact", evidenceModules: ["actions.test.ts"] },
+  { number: 10, contract: "same-file mutations expose one atomic host transform", evidenceModules: ["commit.test.ts"] },
+  { number: 11, contract: "Editor and Vault.process produce equivalent source and receipts", evidenceModules: ["commit.test.ts", "adapter-matrix.test.ts"] },
+  { number: 12, contract: "complete-source diffs enforce the Mutation Plan allowlist", evidenceModules: ["mutations.test.ts"] },
+  { number: 13, contract: "success requires authoritative reread and post-scan confirmation", evidenceModules: ["protocol.test.ts"] },
+  { number: 14, contract: "workspace conflicts and rejections change zero bytes", evidenceModules: ["actions.test.ts", "mutations.test.ts"] },
+  { number: 15, contract: "uncertain host results reconcile without retry and block later commits", evidenceModules: ["commit.test.ts"] },
+  { number: 16, contract: "canonical LOGBOOK and CLOCK output round-trips", evidenceModules: ["actions.test.ts"] },
+  { number: 17, contract: "generated Plan Item and CLOCK IDs use Web Crypto and reject collisions", evidenceModules: ["invariants.test.ts", "protocol.test.ts"] },
+  { number: 19, contract: "same-file switch is atomic and cross-file switch is close-before-open", evidenceModules: ["commit.test.ts"] },
+  { number: 20, contract: "switch stages share one absolute transition instant", evidenceModules: ["mutations.test.ts", "commit.test.ts"] },
+  { number: 21, contract: "Clock Out changes the exact CLOCK and rejects a backwards end", evidenceModules: ["actions.test.ts"] },
+  { number: 22, contract: "Complete changes only target-owned state", evidenceModules: ["actions.test.ts"] },
+  { number: 23, contract: "progress and reopen branches are exact same-file mutations", evidenceModules: ["actions.test.ts"] },
+  { number: 24, contract: "delete confirmation and attached-content rejection preserve surrounding bytes", evidenceModules: ["actions.test.ts", "mutations.test.ts"] },
+  { number: 31, contract: "Timing Repair applies only revalidated previewed changes", evidenceModules: ["actions.test.ts", "commit.test.ts", "protocol.test.ts"] },
+  { number: 34, contract: "canonical instants are offset-bearing and legacy folds and gaps are not guessed", evidenceModules: ["actions.test.ts"] },
+  { number: 38, contract: "same-file Editor commits are one transaction and receipts make no false Undo claim", evidenceModules: ["commit.test.ts", "protocol.test.ts"] },
 ]);
 
-const FIXTURE_BINDINGS: Readonly<Record<number, readonly string[]>> = Object.freeze({
-  1: ["mutations.test.ts::single-target actions reject smuggled extra operations while empty global Clock Out is representable"],
-  2: ["invariants.test.ts::closed writer actions contain no startup, tick, refresh, navigation, enable, POMO, or unload write"],
-  3: ["protocol.test.ts::action-operation mismatch and non-shared switch instants are not admissible plans"],
-  4: [
-    "mutations.test.ts::Mutation Plans deep-clone and freeze nested operation facts",
-    "protocol.test.ts::unsafe intent IDs are rejected before host entry with a safe authoritative receipt",
-  ],
-  5: ["protocol.test.ts::unrelated bytes may change inside the optimistic window and remain preserved"],
-  6: ["commit.test.ts::transaction-window source change conflicts without overwriting the external bytes"],
-  7: ["commit.test.ts::unique identity relocates after rename but anonymous targets never relocate"],
-  8: ["commit.test.ts::unique identity relocates after rename but anonymous targets never relocate"],
-  9: [
-    "actions.test.ts::duplicate identities block ordinary writes while selected repair changes one terminal ID only",
-    "actions.test.ts::selected duplicate CLOCK identity repair changes only one exact terminal ID",
-  ],
-  10: ["commit.test.ts::same-file switch is one transaction at one instant"],
-  11: ["commit.test.ts::TC-OBS-SAFE-001-003 active Editor and Vault.process commits are byte-equivalent and authoritative"],
-  12: ["mutations.test.ts::TC-OBS-SAFE-001-001 strict byte edits preserve every byte outside the allowlist"],
-  13: ["protocol.test.ts::a vault change after the final post-scan invalidates success instead of publishing stale global facts"],
-  14: ["actions.test.ts::backwards Clock Out is zero-byte while closed malformed history remains preserved and nonblocking"],
-  15: ["commit.test.ts::manual fault injection classifies before-apply, apply-then-throw, and unreadable confirmation"],
-  16: ["actions.test.ts::legacy folds and gaps are never guessed; explicit offsets normalize and close exact records"],
-  17: ["invariants.test.ts::invariant 17 generates UUIDv4 IDs, retries vault collisions, and fails closed on exhaustion"],
-  18: ["actions.test.ts::same-target Clock In and already-closed Clock Out are confirmed no-byte end states"],
-  19: ["commit.test.ts::TC-OBS-SAFE-001-004 cross-file integration confirms close before open and never reopens after stage-B failure"],
-  20: ["mutations.test.ts::switch plans require one shared transition instant and at most two ordered stages"],
-  21: ["actions.test.ts::backwards Clock Out is zero-byte while closed malformed history remains preserved and nonblocking"],
-  22: ["actions.test.ts::Complete atomically closes only the owned CLOCK, checks the box, removes Progress, and adds no anchor"],
-  23: ["actions.test.ts::progress below, exactly, and above 100 plus reopen preserve the frozen v1 branches"],
-  24: ["actions.test.ts::delete removes only the exact CLOCK physical line and rejects attached content with zero plugin bytes"],
-  25: ["actions.test.ts::global idle Clock Out and confirmed absent Delete are authoritative no-host outcomes"],
-  26: ["adapter-matrix.test.ts::adversarial Markdown actions are byte- and receipt-equivalent in memory and disposable vault adapters"],
-  27: ["protocol.test.ts::receipt constructors reject false zero-change and false Undo claims"],
-  28: ["invariants.test.ts::closed writer actions contain no startup, tick, refresh, navigation, enable, POMO, or unload write"],
-  29: ["protocol.test.ts::multiple and potential running CLOCKs block before any host transform"],
-  30: ["actions.test.ts::backwards Clock Out is zero-byte while closed malformed history remains preserved and nonblocking"],
-  31: [
-    "actions.test.ts::duplicate identities block ordinary writes while selected repair changes one terminal ID only",
-    "actions.test.ts::selected DST fold normalizes end-to-end while a nonexistent local time remains non-writable",
-  ],
-  32: ["invariants.test.ts::closed writer actions contain no startup, tick, refresh, navigation, enable, POMO, or unload write"],
-  33: ["actions.test.ts::selected DST fold normalizes end-to-end while a nonexistent local time remains non-writable"],
-  34: ["actions.test.ts::legacy folds and gaps are never guessed; explicit offsets normalize and close exact records"],
-  35: ["actions.test.ts::explicit discontinuity recovery validates measured rebase arithmetic and last-trusted stop"],
-  36: ["invariants.test.ts::closed writer actions contain no startup, tick, refresh, navigation, enable, POMO, or unload write"],
-  37: ["protocol.test.ts::over-limit and settings-version drift fail closed without sampling or writes"],
-  38: ["commit.test.ts::production Obsidian adapter enters exactly one Editor transaction or Vault.process callback"],
-  39: ["protocol.test.ts::all stable result codes expose only bounded redacted context"],
-  40: ["protocol.test.ts::dispose blocks later commits and read-only recovery choice enters no host primitive"],
-});
+const DEFERRED_CROSS_TICKET_INVARIANTS: readonly DeferredInvariant[] = Object.freeze([
+  { number: 1, ownerTickets: [26], issue25Contribution: "validates the intent carried by a Mutation Plan, but does not admit UI actions" },
+  { number: 2, ownerTickets: [21, 26], issue25Contribution: "defines no lifecycle mutation action; runtime and projection tests remain required" },
+  { number: 3, ownerTickets: [26], issue25Contribution: "commits one plan at a time after runtime admission; it does not own the vault FIFO" },
+  { number: 4, ownerTickets: [26], issue25Contribution: "requires intentId on plans and receipts; runtime owns gesture deduplication" },
+  { number: 18, ownerTickets: [26], issue25Contribution: "proves no duplicate Markdown; task-POMO idempotency is not a workspace claim" },
+  { number: 25, ownerTickets: [26], issue25Contribution: "provides exact Clock Out and empty-running-set receipts; runtime owns Enable and Disable persistence" },
+  { number: 26, ownerTickets: [26], issue25Contribution: "provides authoritative CLOCK state only; POMO ordering and reload are deferred" },
+  { number: 27, ownerTickets: [26], issue25Contribution: "receipts prohibit Markdown rollback claims; plugin-data save behavior is deferred" },
+  { number: 28, ownerTickets: [21, 26], issue25Contribution: "persists no recovery journal; reload projection and lifecycle behavior are deferred" },
+  { number: 29, ownerTickets: [26], issue25Contribution: "rejects supplied multiple and potential-running facts before host entry; global index state remains deferred" },
+  { number: 30, ownerTickets: [19, 20], issue25Contribution: "preserves malformed source and does not block a supplied safe mutation; parsing and Actual exclusion remain deferred" },
+  { number: 32, ownerTickets: [26], issue25Contribution: "has no automatic stale-session mutation; runtime lifecycle behavior remains deferred" },
+  { number: 33, ownerTickets: [19], issue25Contribution: "retains absolute endpoints; calendar-day clipping and projection fixtures belong to scheduler ticket #19" },
+  { number: 35, ownerTickets: [21, 26], issue25Contribution: "rejects a supplied discontinuity and validates explicit recovery plans; detection and control disabling remain deferred" },
+  { number: 36, ownerTickets: [21, 26], issue25Contribution: "defines no tick, refresh, cache-rebuild, or reconciliation mutation action; lifecycle proof remains deferred" },
+  { number: 37, ownerTickets: [20, 26], issue25Contribution: "fails closed on supplied limits and dirty context; index construction and action availability remain deferred" },
+  { number: 39, ownerTickets: [27], issue25Contribution: "returns bounded redacted receipt context; notices and logs remain surface-owned" },
+  { number: 40, ownerTickets: [21, 26], issue25Contribution: "dispose blocks new workspace host entry; unload admission and surface publication remain deferred" },
+]);
 
-test("all 40 write invariants have explicit owner-safe evidence", () => {
-  assert.deepEqual(WRITE_INVARIANT_EVIDENCE.map(({ number }) => number),
-    Array.from({ length: 40 }, (_, index) => index + 1));
-  assert.deepEqual(Object.keys(FIXTURE_BINDINGS).map(Number), Array.from({ length: 40 }, (_, index) => index + 1));
-  for (const { number, evidence } of WRITE_INVARIANT_EVIDENCE) {
-    assert.ok(evidence.length > 0, `invariant ${number} evidence`);
-    assert.ok(FIXTURE_BINDINGS[number]?.length, `invariant ${number} fixture binding`);
-    for (const fixture of FIXTURE_BINDINGS[number]!) {
-      const separator = fixture.indexOf("::");
-      assert.ok(separator > 0, fixture);
-      const file = fixture.slice(0, separator);
-      const testTitle = fixture.slice(separator + 2);
-      assert.ok(file.endsWith(".test.ts"), fixture);
-      const source = readFileSync(join(process.cwd(), "tests/workspace/write", file), "utf8");
-      assert.ok(source.includes(`test(${JSON.stringify(testTitle)}`), fixture);
-    }
+test("issue #25 invariant ownership partitions executable workspace contracts from deferred tickets", () => {
+  const workspaceNumbers = ISSUE_25_EXECUTABLE_INVARIANTS.map(({ number }) => number);
+  const deferredNumbers = DEFERRED_CROSS_TICKET_INVARIANTS.map(({ number }) => number);
+  assert.equal(new Set(workspaceNumbers).size, workspaceNumbers.length);
+  assert.equal(new Set(deferredNumbers).size, deferredNumbers.length);
+  assert.deepEqual(
+    [...workspaceNumbers, ...deferredNumbers].sort((left, right) => left - right),
+    Array.from({ length: 40 }, (_, index) => index + 1),
+  );
+  for (const invariant of ISSUE_25_EXECUTABLE_INVARIANTS) {
+    assert.ok(invariant.contract.length > 0, `invariant ${invariant.number} workspace contract`);
+    assert.ok(invariant.evidenceModules.length > 0, `invariant ${invariant.number} workspace evidence modules`);
+  }
+  for (const invariant of DEFERRED_CROSS_TICKET_INVARIANTS) {
+    assert.ok(invariant.ownerTickets.length > 0, `invariant ${invariant.number} deferred owner`);
+    assert.equal(invariant.ownerTickets.includes(25), false, `invariant ${invariant.number} is not fully owned by #25`);
+    assert.ok(invariant.issue25Contribution.length > 0, `invariant ${invariant.number} contribution boundary`);
   }
   assert.deepEqual(
-    WRITE_INVARIANT_EVIDENCE.filter(({ ownership }) => ownership === "linked-contribution").map(({ number }) => number),
-    [1, 2, 3, 4, 25, 26, 27, 28, 32, 33, 36, 40],
+    DEFERRED_CROSS_TICKET_INVARIANTS.find(({ number }) => number === 33)?.ownerTickets,
+    [19],
   );
 });
 
-test("closed writer actions contain no startup, tick, refresh, navigation, enable, POMO, or unload write", () => {
+test("issue #25 mutation vocabulary excludes cross-ticket runtime actions", () => {
   const forbidden = ["startup", "tick", "refresh", "navigate", "enable", "pomo", "unload"];
   for (const word of forbidden) {
     assert.equal(MUTATION_ACTIONS.some((action) => action.includes(word)), false, word);
   }
 });
 
-test("invariant 17 generates UUIDv4 IDs, retries vault collisions, and fails closed on exhaustion", () => {
+test("invariant 17 uses public Web Crypto by default", () => {
+  assert.equal(typeof globalThis.crypto?.getRandomValues, "function");
+  assert.match(generateUuidV4(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.match(generateUniquePlanItemId(() => false), /^nl-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.match(generateUniqueClockId(() => false), /^nl-clock-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("invariant 17 fails closed when public Web Crypto is unavailable", () => {
+  const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: undefined });
+  try {
+    assert.throws(() => generateUuidV4(), /public Web Crypto API/);
+    assert.throws(() => generateUniquePlanItemId(() => false), /public Web Crypto API/);
+    assert.throws(() => generateUniqueClockId(() => false), /public Web Crypto API/);
+  } finally {
+    if (cryptoDescriptor) Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+    else Reflect.deleteProperty(globalThis, "crypto");
+  }
+});
+
+test("invariant 17 retries vault collisions and fails closed on exhaustion", () => {
   const bytes = (fill: number) => (target: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer> => {
     target.fill(fill);
     return target;

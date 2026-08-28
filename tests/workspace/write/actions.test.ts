@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { WorkspaceCommitter, legacyRunningClockKey } from "../../../src/workspace/commit.ts";
 import { parseClockText } from "../../../src/workspace/clock-parser.ts";
+import { createMutationExpectation, type MutationExpectation } from "../../../src/workspace/expectation.ts";
 import {
   createCloseRunningClockEdit,
   createNormalizeLegacyClockEdit,
@@ -14,6 +15,7 @@ import { applyAllowedByteEdits, createMutationPlan, type MutationPlan } from "..
 import { MemoryAtomicTextAccess } from "./adapters.ts";
 import {
   CLOCK_A,
+  CLOCK_B,
   CLOCK_NEW,
   CLOSE,
   CONTEXT,
@@ -30,6 +32,14 @@ const START = NOW - 30 * 60_000;
 
 function writer(access: MemoryAtomicTextAccess, context = CONTEXT): WorkspaceCommitter {
   return new WorkspaceCommitter(access, { readContext: () => context });
+}
+
+function expectationWithTime(
+  expectation: MutationExpectation,
+  time: Partial<MutationExpectation["time"]>,
+): MutationExpectation {
+  const { expectationToken: _expectationToken, ...input } = expectation;
+  return createMutationExpectation({ ...input, time: { ...expectation.time, ...time } });
 }
 
 function plan(
@@ -128,13 +138,14 @@ test("Complete atomically closes only the owned CLOCK, checks the box, removes P
   const committer = writer(access);
   const receipt = await committer.commit(mutation, expectation);
   const after = await access.readText(PATH);
-  assert.equal(receipt.outcome, "applied");
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
   assert.equal(access.transactionCounts.get(PATH), 1);
   assert.ok(after?.includes("- [x] Task  ^"));
   assert.equal(after?.includes("d30%"), false);
   assert.equal(/Task\s+d\d{1,2}:\d{1,2}/.test(after!), false);
   assert.ok(after?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)));
   assert.deepEqual(receipt.globalCheck.runningClockIds, []);
+  assert.deepEqual(receipt.sources[0]?.locations, [{ line: 1 }, { line: 3 }]);
   committer.dispose();
 });
 
@@ -149,7 +160,7 @@ test("Complete on another task leaves the authoritative active CLOCK byte-identi
   const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B], expectedRunningClockIds: [CLOCK_A] });
   const committer = writer(access);
   const receipt = await committer.commit(mutation, expectation);
-  assert.equal(receipt.outcome, "applied");
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
   assert.ok((await access.readText(PATH))?.includes(`- ${running}`));
   assert.deepEqual(receipt.globalCheck.runningClockIds, [CLOCK_A]);
   committer.dispose();
@@ -202,6 +213,7 @@ test("delete removes only the exact CLOCK physical line and rejects attached con
   assert.equal(after?.includes(CLOCK_A), false);
   assert.ok(after?.includes("- LOGBOOK::"));
   assert.ok(after?.includes("- sibling"));
+  assert.deepEqual(receipt.sources[0]?.locations, [{ line: 3 }]);
   committer.dispose();
 
   const attached = base.replace(`    - sibling`, "      continuation\n    - sibling");
@@ -317,6 +329,53 @@ test("Assign Plan Item identity retry confirms the exact stable end state withou
   committer.dispose();
 });
 
+test("Clock In inserts newest-first in an existing LOGBOOK and preserves surrounding Markdown bytes", async () => {
+  const oldClock = formatCanonicalClosedClock(START - 60_000, 480, START, 480, CLOCK_A);
+  const openedClock = formatCanonicalRunningClock(NOW, 480, CLOCK_NEW);
+  const source = `${OPEN}\r\n+ [ ] Task opaque-suffix ^${PLAN_A}  \r\n  * LOGBOOK::\r\n    + ${oldClock}\r\n- [ ] Sibling ^${PLAN_B}\r\n${CLOSE}\r\nunowned suffix\r\n`;
+  const access = new MemoryAtomicTextAccess({ [PATH]: source });
+  const mutation = plan("clock-in-existing-logbook", "clock-in", [{
+    kind: "clock-in",
+    target: { kind: "plan-item", id: PLAN_A },
+    clock: { clockId: CLOCK_NEW, startEpochMs: NOW, offsetMinutes: 480 },
+  }]);
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_A] });
+  const committer = writer(access);
+  const receipt = await committer.commit(mutation, expectation);
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
+  assert.equal(await access.readText(PATH), source.replace(
+    "  * LOGBOOK::\r\n",
+    `  * LOGBOOK::\r\n    - ${openedClock}\r\n`,
+  ));
+  assert.deepEqual(receipt.sources[0]?.locations, [{ line: 3 }]);
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  committer.dispose();
+});
+
+test("Clock In places a new LOGBOOK after attached content and before the next sibling", async () => {
+  const openedClock = formatCanonicalRunningClock(NOW, 480, CLOCK_NEW);
+  const beforeSibling = `${OPEN}\r\n+ [ ] Task opaque-suffix ^${PLAN_A}  \r\n  continuation with  preserved spacing  \r\n  * nested alternate bullet\r\n  <!-- attached comment -->`;
+  const siblingAndSuffix = `\r\n- [ ] Sibling ^${PLAN_B}\r\n${CLOSE}\r\nunowned suffix\r\n`;
+  const source = beforeSibling + siblingAndSuffix;
+  const access = new MemoryAtomicTextAccess({ [PATH]: source });
+  const mutation = plan("clock-in-new-logbook-after-content", "clock-in", [{
+    kind: "clock-in",
+    target: { kind: "plan-item", id: PLAN_A },
+    clock: { clockId: CLOCK_NEW, startEpochMs: NOW, offsetMinutes: 480 },
+  }]);
+  const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_A] });
+  const committer = writer(access);
+  const receipt = await committer.commit(mutation, expectation);
+  assert.equal(receipt.outcome, "applied", JSON.stringify(receipt));
+  assert.equal(
+    await access.readText(PATH),
+    `${beforeSibling}\r\n  - LOGBOOK::\r\n    - ${openedClock}${siblingAndSuffix}`,
+  );
+  assert.deepEqual(receipt.sources[0]?.locations, [{ line: 5 }, { line: 6 }]);
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  committer.dispose();
+});
+
 test("selected duplicate running CLOCK repair unlocks a fresh overlap repair", async () => {
   const newerStart = START + 10 * 60_000;
   const source = `${OPEN}\n- [ ] First ^${PLAN_A}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(START, 480, CLOCK_A)}\n- [ ] Second ^${PLAN_B}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(newerStart, 480, CLOCK_A)}\n${CLOSE}\n`;
@@ -422,6 +481,59 @@ test("same-file overlap repair distinguishes repeated ID-less legacy CLOCKs by e
   committer.dispose();
 });
 
+test("overlap repair validates the exact close offset across a DST fold", async () => {
+  const zoneId = "America/New_York";
+  const olderStart = Date.UTC(2026, 10, 1, 4, 30);
+  const newestStart = Date.UTC(2026, 10, 1, 5, 30);
+  const source = `${OPEN}\n- [ ] Older ^${PLAN_A}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(olderStart, -240, CLOCK_A)}\n- [ ] Newest ^${PLAN_B}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(newestStart, -240, CLOCK_B)}\n${CLOSE}\n`;
+  const repair = (intentId: string, offsetMinutes: number) => createMutationPlan({
+    intentId,
+    action: "repair-overlap",
+    stages: [{
+      path: PATH,
+      confirmationRequired: true,
+      operations: [{
+        kind: "clock-out",
+        target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
+        close: { clockId: CLOCK_A, endEpochMs: newestStart, offsetMinutes },
+      }],
+    }],
+    expectedRunningClockIds: [CLOCK_A, CLOCK_B],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId,
+  });
+  const context = { ...CONTEXT, zoneId };
+
+  const invalidAccess = new MemoryAtomicTextAccess({ [PATH]: source });
+  const invalid = repair("repair-fold-wrong-offset", -300);
+  const invalidExpectation = await mutationExpectation(invalidAccess, invalid, {
+    clockIds: [CLOCK_A, CLOCK_B],
+    expectedRunningClockIds: [CLOCK_A, CLOCK_B],
+  });
+  const invalidWriter = writer(invalidAccess, context);
+  const rejected = await invalidWriter.commit(invalid, invalidExpectation);
+  assert.equal(rejected.outcome, "rejected");
+  assert.equal(rejected.result?.code, "clock-discontinuity");
+  assert.equal(invalidAccess.transactionCounts.size, 0);
+  assert.equal(await invalidAccess.readText(PATH), source);
+  invalidWriter.dispose();
+
+  const validAccess = new MemoryAtomicTextAccess({ [PATH]: source });
+  const valid = repair("repair-fold-exact-offset", -240);
+  const validExpectation = await mutationExpectation(validAccess, valid, {
+    clockIds: [CLOCK_A, CLOCK_B],
+    expectedRunningClockIds: [CLOCK_A, CLOCK_B],
+  });
+  const validWriter = writer(validAccess, context);
+  const applied = await validWriter.commit(valid, validExpectation);
+  assert.equal(applied.outcome, "applied", JSON.stringify(applied));
+  assert.ok((await validAccess.readText(PATH))?.includes(
+    formatCanonicalClosedClock(olderStart, -240, newestStart, -240, CLOCK_A),
+  ));
+  assert.deepEqual(applied.globalCheck.runningClockIds, [CLOCK_B]);
+  validWriter.dispose();
+});
+
 test("selected duplicate owner identity repair preserves its running CLOCK and is idempotent", async () => {
   const source = `${OPEN}\n- [ ] Timed ^${PLAN_A}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(START, 480, CLOCK_A)}\n- [ ] Duplicate ^${PLAN_A}\n${CLOSE}\n`;
   const access = new MemoryAtomicTextAccess({ [PATH]: source });
@@ -512,6 +624,72 @@ test("Initialize is atomic and unsupported old Plan grammars remain zero-write o
     }]), /Unsupported migration source grammar/);
   assert.equal(migrateAccess.transactionCounts.size, 0);
   assert.equal(await migrateAccess.readText(PATH), old);
+});
+
+test("Initialize preserves a byte-zero BOM for LF and CRLF and retries its exact end state", async () => {
+  for (const [name, lineEnding] of [["lf", "\n"], ["crlf", "\r\n"]] as const) {
+    for (const primitive of ["editor", "vault-process"] as const) {
+      const label = `${name}/${primitive}`;
+      const source = `\uFEFF# Daily${lineEnding}body${lineEnding}`;
+      const access = new MemoryAtomicTextAccess({ [PATH]: source }, primitive);
+      const initialize = plan(`initialize-bom-${name}-${primitive}`, "initialize-plan", [{
+        kind: "initialize-plan",
+        insertionOffset: 1,
+        lineEnding,
+        expectedSource: source,
+      }]);
+      const expectation = await mutationExpectation(access, initialize, {});
+      const firstWriter = writer(access);
+      const first = await firstWriter.commit(initialize, expectation);
+      const expected = `\uFEFF${OPEN}${lineEnding}${CLOSE}${lineEnding}# Daily${lineEnding}body${lineEnding}`;
+      assert.equal(first.outcome, "applied", label);
+      assert.equal(first.sources[0]?.primitive, primitive, label);
+      assert.equal(await access.readText(PATH), expected, label);
+      assert.equal(access.transactionCounts.get(PATH), 1, label);
+      const sameWriterRetry = await firstWriter.commit(initialize, expectation);
+      assert.equal(sameWriterRetry.outcome, "already-applied", label);
+      assert.equal(access.transactionCounts.get(PATH), 1, label);
+      firstWriter.dispose();
+
+      const newWriter = writer(access);
+      const newWriterRetry = await newWriter.commit(initialize, expectation);
+      assert.equal(newWriterRetry.outcome, "already-applied", label);
+      assert.equal(access.transactionCounts.get(PATH), 1, label);
+      assert.equal(await access.readText(PATH), expected, label);
+      const externallyExtended = `${expected}Outside-region edit${lineEnding}`;
+      access.modify(PATH, externallyExtended);
+      const extendedRetry = await newWriter.commit(initialize, expectation);
+      assert.equal(extendedRetry.outcome, "already-applied", label);
+      assert.equal(access.transactionCounts.get(PATH), 1, label);
+      assert.equal(await access.readText(PATH), externallyExtended, label);
+      newWriter.dispose();
+    }
+  }
+});
+
+test("Initialize rejects non-boundaries, mixed EOL, and offsets splitting CRLF with zero changed bytes", async () => {
+  const crlf = "# Daily\r\nbody\r\n";
+  for (const candidate of [
+    { name: "mid-line", source: "# Daily\n", insertionOffset: 2, lineEnding: "\n" as const },
+    { name: "mixed-eol", source: "# Daily\r\nbody\n", insertionOffset: 14, lineEnding: "\r\n" as const },
+    { name: "split-crlf", source: crlf, insertionOffset: crlf.indexOf("\n"), lineEnding: "\r\n" as const },
+  ]) {
+    const access = new MemoryAtomicTextAccess({ [PATH]: candidate.source });
+    const initialize = plan(`initialize-reject-${candidate.name}`, "initialize-plan", [{
+      kind: "initialize-plan",
+      insertionOffset: candidate.insertionOffset,
+      lineEnding: candidate.lineEnding,
+      expectedSource: candidate.source,
+    }]);
+    const expectation = await mutationExpectation(access, initialize, {});
+    const committer = writer(access);
+    const receipt = await committer.commit(initialize, expectation);
+    assert.equal(receipt.outcome, "rejected", candidate.name);
+    assert.equal(receipt.result?.code, "action-no-longer-applicable", candidate.name);
+    assert.equal(access.transactionCounts.size, 0, candidate.name);
+    assert.equal(await access.readText(PATH), candidate.source, candidate.name);
+    committer.dispose();
+  }
 });
 
 test("Complete rejects zero-byte when its target-owned running CLOCK was not included in the mutation plan", async () => {
@@ -709,7 +887,7 @@ test("same-target Clock In and already-closed Clock Out are confirmed no-byte en
   closedWriter.dispose();
 });
 
-test("duplicate owner IDs make canonical Clock Out and Delete zero-host conflicts", async () => {
+test("duplicate owner IDs block ordinary writes but exact canonical Clock Out and Delete remain recoverable", async () => {
   const source = `${OPEN}\n- [ ] Timed ^${PLAN_A}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(START, 480, CLOCK_A)}\n${CLOSE}\n`;
   const duplicate = `${OPEN}\n- [ ] Duplicate owner ^${PLAN_A}\n${CLOSE}\n`;
   for (const action of ["clock-out", "delete-clock"] as const) {
@@ -736,10 +914,15 @@ test("duplicate owner IDs make canonical Clock Out and Delete zero-host conflict
     });
     const committer = writer(access);
     const receipt = await committer.commit(mutation, expectation);
-    assert.equal(receipt.outcome, "conflict", action);
-    assert.equal(receipt.result?.code, "clock-owner-invalid", action);
-    assert.equal(access.transactionCounts.size, 0, action);
-    assert.equal(await access.readText(PATH), source, action);
+    assert.equal(receipt.outcome, "applied", `${action}: ${JSON.stringify(receipt)}`);
+    assert.equal(access.transactionCounts.get(PATH), 1, action);
+    const expected = action === "clock-out"
+      ? source.replace(
+          formatCanonicalRunningClock(START, 480, CLOCK_A),
+          formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A),
+        )
+      : source.replace(`    - ${formatCanonicalRunningClock(START, 480, CLOCK_A)}\n`, "");
+    assert.equal(await access.readText(PATH), expected, action);
     assert.equal(await access.readText("Daily/Duplicate.md"), duplicate, action);
     committer.dispose();
   }
@@ -1014,8 +1197,9 @@ test("selected DST fold normalizes end-to-end while a nonexistent local time rem
 
   const identifiedFold = fold.replace("[2026-11-01 01:30]", `[2026-11-01 01:30] ^${CLOCK_A}`);
   const identifiedAccess = new MemoryAtomicTextAccess({ [PATH]: identifiedFold });
+  const { previewToken: _foldPreviewToken, ...foldInput } = mutation;
   const identifiedMutation = createMutationPlan({
-    ...mutation,
+    ...foldInput,
     intentId: "normalize-identified-fold",
     stages: [{ path: PATH, confirmationRequired: true, operations: [{
       ...mutation.stages[0]!.operations[0]!,
@@ -1220,8 +1404,9 @@ test("stale click timestamps cannot drive normal timing endpoints or completion 
   assert.equal(await switchAccess.readText(PATH), switchSource);
   switchWriter.dispose();
 
+  const { previewToken: _switchPreviewToken, ...switchInput } = staleSwitch;
   const sameOwnerSwitch = createMutationPlan({
-    ...staleSwitch,
+    ...switchInput,
     intentId: "same-owner-switch",
     stages: [{ path: PATH, confirmationRequired: false, operations: [
       { kind: "clock-out", target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A }, close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 } },
@@ -1252,10 +1437,7 @@ test("nonzero-millisecond wall anchors retain an integral zone offset", async ()
     clock: { clockId: CLOCK_NEW, startEpochMs: wallEpochMs, offsetMinutes: 480 },
   }]);
   const baseline = await mutationExpectation(access, mutation, { planIds: [PLAN_A] });
-  const expectation = Object.freeze({
-    ...baseline,
-    time: Object.freeze({ ...baseline.time, wallEpochMs }),
-  });
+  const expectation = expectationWithTime(baseline, { wallEpochMs });
   const context = Object.freeze({ ...CONTEXT, wallEpochMs });
   const committer = writer(access, context);
   const receipt = await committer.commit(mutation, expectation);
@@ -1293,6 +1475,27 @@ test("explicit discontinuity recovery validates measured rebase arithmetic and l
   const rebasedStart = recoveryContext.wallEpochMs - trustedElapsed;
   const source = `${OPEN}\n- [ ] Task ^${PLAN_A}\n  - LOGBOOK::\n    - ${formatCanonicalRunningClock(START, 480, CLOCK_A)}\n${CLOSE}\n`;
 
+  const stableContext = Object.freeze({ ...CONTEXT, discontinuity: true });
+  const stableAccess = new MemoryAtomicTextAccess({ [PATH]: source });
+  const stable = plan("recovery-keep-stable", "keep-measured-time", [{
+    kind: "rebase-clock",
+    target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
+    startEpochMs: START,
+    offsetMinutes: 480,
+  }], [CLOCK_A]);
+  const stableBase = await mutationExpectation(stableAccess, stable, {
+    clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
+  });
+  const stableExpectation = expectationWithTime(stableBase, { discontinuity: true });
+  const stableWriter = writer(stableAccess, stableContext);
+  const stableReceipt = await stableWriter.commit(stable, stableExpectation);
+  assert.equal(stableReceipt.outcome, "already-applied");
+  assert.deepEqual(stableReceipt.sources, []);
+  assert.deepEqual(stableReceipt.semanticChanges, []);
+  assert.equal(stableAccess.transactionCounts.size, 0);
+  assert.equal(await stableAccess.readText(PATH), source);
+  stableWriter.dispose();
+
   const keepAccess = new MemoryAtomicTextAccess({ [PATH]: source });
   const keep = plan("recovery-keep", "keep-measured-time", [{
     kind: "rebase-clock",
@@ -1303,10 +1506,7 @@ test("explicit discontinuity recovery validates measured rebase arithmetic and l
   const keepBase = await mutationExpectation(keepAccess, keep, {
     clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
   });
-  const keepExpectation = Object.freeze({
-    ...keepBase,
-    time: Object.freeze({ ...keepBase.time, discontinuity: true }),
-  });
+  const keepExpectation = expectationWithTime(keepBase, { discontinuity: true });
   const keepWriter = writer(keepAccess, recoveryContext);
   const keepReceipt = await keepWriter.commit(keep, keepExpectation);
   assert.equal(keepReceipt.outcome, "applied");
@@ -1323,10 +1523,7 @@ test("explicit discontinuity recovery validates measured rebase arithmetic and l
   const wrongBase = await mutationExpectation(wrongAccess, wrong, {
     clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
   });
-  const wrongExpectation = Object.freeze({
-    ...wrongBase,
-    time: Object.freeze({ ...wrongBase.time, discontinuity: true }),
-  });
+  const wrongExpectation = expectationWithTime(wrongBase, { discontinuity: true });
   const wrongWriter = writer(wrongAccess, recoveryContext);
   const wrongReceipt = await wrongWriter.commit(wrong, wrongExpectation);
   assert.equal(wrongReceipt.outcome, "conflict");
@@ -1345,10 +1542,7 @@ test("explicit discontinuity recovery validates measured rebase arithmetic and l
   const wrongOffsetBase = await mutationExpectation(wrongOffsetAccess, wrongOffset, {
     clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
   });
-  const wrongOffsetExpectation = Object.freeze({
-    ...wrongOffsetBase,
-    time: Object.freeze({ ...wrongOffsetBase.time, discontinuity: true }),
-  });
+  const wrongOffsetExpectation = expectationWithTime(wrongOffsetBase, { discontinuity: true });
   const wrongOffsetWriter = writer(wrongOffsetAccess, recoveryContext);
   const wrongOffsetReceipt = await wrongOffsetWriter.commit(wrongOffset, wrongOffsetExpectation);
   assert.equal(wrongOffsetReceipt.outcome, "rejected");
@@ -1361,34 +1555,28 @@ test("explicit discontinuity recovery validates measured rebase arithmetic and l
   const stop = plan("recovery-stop", "stop-at-trusted-time", [{
     kind: "clock-out",
     target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
-    close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
+    close: { clockId: CLOCK_A, endEpochMs: NOW + 10_000, offsetMinutes: 480 },
   }], [CLOCK_A]);
   const stopBase = await mutationExpectation(stopAccess, stop, {
     clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
   });
-  const stopExpectation = Object.freeze({
-    ...stopBase,
-    time: Object.freeze({ ...stopBase.time, discontinuity: true }),
-  });
+  const stopExpectation = expectationWithTime(stopBase, { discontinuity: true });
   const stopWriter = writer(stopAccess, recoveryContext);
   const stopReceipt = await stopWriter.commit(stop, stopExpectation);
   assert.equal(stopReceipt.outcome, "applied");
-  assert.ok((await stopAccess.readText(PATH))?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)));
+  assert.ok((await stopAccess.readText(PATH))?.includes(formatCanonicalClosedClock(START, 480, NOW + 10_000, 480, CLOCK_A)));
   stopWriter.dispose();
 
   const wrongStopAccess = new MemoryAtomicTextAccess({ [PATH]: source });
   const wrongStop = plan("recovery-stop-wrong-offset", "stop-at-trusted-time", [{
     kind: "clock-out",
     target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
-    close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: -300 },
+    close: { clockId: CLOCK_A, endEpochMs: NOW + 10_000, offsetMinutes: -300 },
   }], [CLOCK_A]);
   const wrongStopBase = await mutationExpectation(wrongStopAccess, wrongStop, {
     clockIds: [CLOCK_A], expectedRunningClockIds: [CLOCK_A],
   });
-  const wrongStopExpectation = Object.freeze({
-    ...wrongStopBase,
-    time: Object.freeze({ ...wrongStopBase.time, discontinuity: true }),
-  });
+  const wrongStopExpectation = expectationWithTime(wrongStopBase, { discontinuity: true });
   const wrongStopWriter = writer(wrongStopAccess, recoveryContext);
   const wrongStopReceipt = await wrongStopWriter.commit(wrongStop, wrongStopExpectation);
   assert.equal(wrongStopReceipt.outcome, "rejected");

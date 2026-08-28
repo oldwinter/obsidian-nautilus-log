@@ -28,11 +28,21 @@ import {
   type Unsubscribe,
 } from "../../../src/workspace/text-access.ts";
 
-export type AtomicFault = "before-callback" | "before-apply" | "apply-then-throw";
+export type AtomicFault =
+  | "before-callback"
+  | "before-apply"
+  | "apply-then-throw"
+  | "partial-prefix"
+  | "divergent-resolve"
+  | "silent-noop";
 
-const DISPOSABLE_VAULT_PASS = process.env.OBS_SAFE_ADAPTER_PASS === "disposable-vault";
+const DISPOSABLE_PASS = process.env.OBS_SAFE_ADAPTER_PASS === "disposable-vault"
+  || process.env.OBS_SAFE_ADAPTER_PASS === "disposable-editor";
+const DEFAULT_PRIMITIVE: SourceWritePrimitive = process.env.OBS_SAFE_ADAPTER_PASS === "disposable-editor"
+  ? "editor"
+  : "vault-process";
 const disposableRoots = new Set<string>();
-if (DISPOSABLE_VAULT_PASS) {
+if (DISPOSABLE_PASS) {
   process.once("exit", () => {
     for (const root of disposableRoots) rmSync(root, { recursive: true, force: true });
   });
@@ -45,16 +55,22 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
   readonly transactionCounts = new Map<string, number>();
   readonly callbackCounts = new Map<string, number>();
   readonly #races = new Map<string, (source: string) => string>();
+  readonly #beforeCallbackGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
+  readonly #primitiveReadGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
+  readonly #afterApplyGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
   #failNextConfirmationRead = false;
   #failConfirmationAfterTransform = false;
   #insideAtomic = false;
   readonly #disposableRoot: string | undefined;
   #afterTransformReadRace: { remaining: number; armed: boolean; mutate: () => void } | undefined;
 
-  constructor(files: Readonly<Record<string, string>>, primitive: SourceWritePrimitive = "vault-process") {
+  constructor(files: Readonly<Record<string, string>>, primitive: SourceWritePrimitive = DEFAULT_PRIMITIVE) {
     super(files);
     for (const path of Object.keys(files)) this.#primitives.set(normalizeVaultRelativePath(path), primitive);
-    if (DISPOSABLE_VAULT_PASS) {
+    if (!DISPOSABLE_PASS) {
+      super.onChange((change) => this.#emit(change));
+    }
+    if (DISPOSABLE_PASS) {
       this.#disposableRoot = mkdtempSync(join(tmpdir(), "obs-safe-fixture-"));
       disposableRoots.add(this.#disposableRoot);
       for (const [path, text] of Object.entries(files)) {
@@ -108,7 +124,6 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
   }
 
   override onChange(listener: SourceChangeListener): Unsubscribe {
-    if (!this.#disposableRoot) return super.onChange(listener);
     this.#productionListeners.add(listener);
     return () => this.#productionListeners.delete(listener);
   }
@@ -174,6 +189,28 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     this.#races.set(normalizeVaultRelativePath(path), mutate);
   }
 
+  pauseBeforeCallback(path: string): { readonly entered: Promise<void>; readonly release: () => void } {
+    const normalized = normalizeVaultRelativePath(path);
+    let signalEntered!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => { signalEntered = resolve; });
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    this.#beforeCallbackGates.set(normalized, { entered: signalEntered, wait });
+    return Object.freeze({ entered, release });
+  }
+
+  pauseNextPrimitiveRead(path: string): { readonly entered: Promise<void>; readonly release: () => void } {
+    return this.#installGate(this.#primitiveReadGates, path);
+  }
+
+  pauseAfterApply(path: string): { readonly entered: Promise<void>; readonly release: () => void } {
+    return this.#installGate(this.#afterApplyGates, path);
+  }
+
+  emitSyntheticChange(change: SourceChange): void {
+    this.#emit(change);
+  }
+
   failNextConfirmationRead(): void {
     this.#failNextConfirmationRead = true;
   }
@@ -202,15 +239,22 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     return this.#primitives.get(normalizeVaultRelativePath(path)) ?? "vault-process";
   }
 
+  async readTextForPrimitive(path: string, _primitive: SourceWritePrimitive): Promise<string | undefined> {
+    await this.#waitForGate(this.#primitiveReadGates, normalizeVaultRelativePath(path));
+    return this.readText(path);
+  }
+
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
+    onEnter?: (primitive: SourceWritePrimitive) => void,
   ): Promise<AtomicTransformResult<T>> {
     const normalized = normalizeVaultRelativePath(path);
-    if (this.#disposableRoot) return this.#productionAtomicTransform(normalized, transform);
+    if (this.#disposableRoot) return this.#productionAtomicTransform(normalized, transform, onEnter);
     this.transactionCounts.set(normalized, (this.transactionCounts.get(normalized) ?? 0) + 1);
     const fault = this.#faults.get(normalized)?.shift();
     if (fault === "before-callback") throw new Error("injected before callback");
+    await this.#waitBeforeCallback(normalized);
     let current = await super.readText(normalized);
     if (current === undefined) throw new Error("source disappeared");
     const race = this.#races.get(normalized);
@@ -219,6 +263,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       current = race(current);
       super.modify(normalized, current);
     }
+    onEnter?.(this.primitiveFor(normalized));
     this.#insideAtomic = true;
     let decision: AtomicTransformDecision<T>;
     try {
@@ -228,23 +273,30 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       this.#insideAtomic = false;
     }
     if (fault === "before-apply") throw new Error("injected before apply");
-    if (decision.text !== current) super.modify(normalized, decision.text);
+    if (fault === "silent-noop") return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value });
+    const written = fault === "partial-prefix" || fault === "divergent-resolve"
+      ? this.#partialPrefix(current, decision.text)
+      : decision.text;
+    if (written !== current) super.modify(normalized, written);
+    await this.#waitForGate(this.#afterApplyGates, normalized);
     if (this.#afterTransformReadRace) this.#afterTransformReadRace.armed = true;
     if (this.#failConfirmationAfterTransform) {
       this.#failConfirmationAfterTransform = false;
       this.#failNextConfirmationRead = true;
     }
-    if (fault === "apply-then-throw") throw new Error("injected after apply");
+    if (fault === "apply-then-throw" || fault === "partial-prefix") throw new Error("injected after apply");
     return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value });
   }
 
   async #productionAtomicTransform<T>(
     normalized: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
+    onEnter?: (primitive: SourceWritePrimitive) => void,
   ): Promise<AtomicTransformResult<T>> {
     this.transactionCounts.set(normalized, (this.transactionCounts.get(normalized) ?? 0) + 1);
     const fault = this.#faults.get(normalized)?.shift();
     if (fault === "before-callback") throw new Error("injected before callback");
+    await this.#waitBeforeCallback(normalized);
     const race = this.#races.get(normalized);
     if (race) {
       this.#races.delete(normalized);
@@ -271,16 +323,21 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
           const current = readFileSync(this.#absolute(normalized), "utf8");
           const next = mutate(current);
           if (fault === "before-apply") throw new Error("injected before apply");
-          if (next !== current) {
-            writeFileSync(this.#absolute(normalized), next, "utf8");
+          if (fault === "silent-noop") return current;
+          const written = fault === "partial-prefix" || fault === "divergent-resolve"
+            ? this.#partialPrefix(current, next)
+            : next;
+          if (written !== current) {
+            writeFileSync(this.#absolute(normalized), written, "utf8");
             this.#emit({ kind: "modify", path: normalized });
           }
-          if (fault === "apply-then-throw") throw new Error("injected after apply");
-          return next;
+          if (fault === "apply-then-throw" || fault === "partial-prefix") throw new Error("injected after apply");
+          return written;
         },
       } as never,
     });
-    const result = await access.atomicTransform(normalized, countedTransform);
+    const result = await access.atomicTransform(normalized, countedTransform, onEnter);
+    await this.#waitForGate(this.#afterApplyGates, normalized);
     if (this.#afterTransformReadRace) this.#afterTransformReadRace.armed = true;
     if (this.#failConfirmationAfterTransform) {
       this.#failConfirmationAfterTransform = false;
@@ -314,22 +371,75 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     return {
       getValue: () => readFileSync(this.#absolute(normalized), "utf8"),
       transaction: ({ changes = [] }) => {
-        let current = readFileSync(this.#absolute(normalized), "utf8");
+        const before = readFileSync(this.#absolute(normalized), "utf8");
         if (fault === "before-apply") throw new Error("injected before apply");
-        for (const change of changes) {
-          const from = offsetAt(current, change.from);
-          const to = offsetAt(current, change.to);
+        if (fault === "silent-noop") return;
+        let current = before;
+        const withOffsets = changes.map((change) => ({
+          change,
+          from: offsetAt(before, change.from),
+          to: offsetAt(before, change.to),
+        })).sort((left, right) => right.from - left.from || right.to - left.to);
+        for (const { change, from, to } of withOffsets) {
           current = current.slice(0, from) + change.text + current.slice(to);
         }
-        writeFileSync(this.#absolute(normalized), current, "utf8");
+        const written = fault === "partial-prefix" || fault === "divergent-resolve"
+          ? this.#partialPrefix(before, current)
+          : current;
+        writeFileSync(this.#absolute(normalized), written, "utf8");
         this.#emit({ kind: "editor", path: normalized });
-        if (fault === "apply-then-throw") throw new Error("injected after apply");
+        if (fault === "apply-then-throw" || fault === "partial-prefix") throw new Error("injected after apply");
       },
     };
   }
 
   #absolute(path: string): string {
     return join(this.#disposableRoot!, normalizeVaultRelativePath(path));
+  }
+
+  async #waitBeforeCallback(normalized: string): Promise<void> {
+    const gate = this.#beforeCallbackGates.get(normalized);
+    if (!gate) return;
+    this.#beforeCallbackGates.delete(normalized);
+    gate.entered();
+    await gate.wait;
+  }
+
+  #installGate(
+    gates: Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>,
+    path: string,
+  ): { readonly entered: Promise<void>; readonly release: () => void } {
+    const normalized = normalizeVaultRelativePath(path);
+    let signalEntered!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => { signalEntered = resolve; });
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    gates.set(normalized, { entered: signalEntered, wait });
+    return Object.freeze({ entered, release });
+  }
+
+  async #waitForGate(
+    gates: Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>,
+    normalized: string,
+  ): Promise<void> {
+    const gate = gates.get(normalized);
+    if (!gate) return;
+    gates.delete(normalized);
+    gate.entered();
+    await gate.wait;
+  }
+
+  #partialPrefix(before: string, intended: string): string {
+    if (before === intended) return before;
+    const commonPrefix = (() => {
+      let offset = 0;
+      while (offset < before.length && offset < intended.length && before[offset] === intended[offset]) offset += 1;
+      return offset;
+    })();
+    const writtenLength = Math.min(intended.length, Math.max(commonPrefix + 1, Math.ceil(intended.length / 2)));
+    const partial = intended.slice(0, writtenLength) + before.slice(writtenLength);
+    if (partial !== before && partial !== intended) return partial;
+    return `${intended.slice(0, Math.max(0, intended.length - 1))}${before.slice(Math.max(0, intended.length - 1))}`;
   }
 
   #emit(change: SourceChange): void {
@@ -389,13 +499,19 @@ export class TempVaultAtomicTextAccess implements AtomicTextAccess {
     return this.primitive;
   }
 
+  readTextForPrimitive(path: string, _primitive: SourceWritePrimitive): Promise<string | undefined> {
+    return this.readText(path);
+  }
+
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
+    onEnter?: (primitive: SourceWritePrimitive) => void,
   ): Promise<AtomicTransformResult<T>> {
     const normalized = normalizeVaultRelativePath(path);
     const current = await this.readText(normalized);
     if (current === undefined) throw new Error("source disappeared");
+    onEnter?.(this.primitive);
     this.transactionCounts.set(normalized, (this.transactionCounts.get(normalized) ?? 0) + 1);
     const decision = transform(current);
     if (decision.text !== current) {

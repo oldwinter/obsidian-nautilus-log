@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 if (!process.env.OBS_SAFE_ADAPTER_PASS) {
-  for (const pass of ["memory", "disposable-vault"]) {
+  for (const pass of ["memory", "disposable-vault", "disposable-editor"]) {
     const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
       env: { ...process.env, OBS_SAFE_ADAPTER_PASS: pass },
       stdio: "inherit",

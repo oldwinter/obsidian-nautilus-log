@@ -17,6 +17,7 @@ import {
   type PlanItemSelector,
   type RevalidatedClock,
   type RevalidatedPlanItem,
+  type SelectedRepairAdmission,
 } from "./expectation";
 import { WorkspaceIndex, type IdentityLookup, type IndexedClockSource, type WorkspaceIndexOptions } from "./identity-index";
 import {
@@ -78,9 +79,11 @@ export interface AtomicTransformResult<T> {
  */
 export interface AtomicTextAccess extends TextAccess {
   primitiveFor(path: string): SourceWritePrimitive;
+  readTextForPrimitive(path: string, primitive: SourceWritePrimitive): Promise<string | undefined>;
   atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
+    onEnter?: (primitive: SourceWritePrimitive) => void,
   ): Promise<AtomicTransformResult<T>>;
 }
 
@@ -113,6 +116,7 @@ function editorPositionAtOffset(text: string, targetOffset: number): { readonly 
 /** Active buffers use one Editor transaction; background files use one Vault.process transform. */
 export class ObsidianAtomicTextAccess implements AtomicTextAccess {
   readonly #options: ObsidianAtomicTextAccessOptions;
+  readonly #enteredEditors = new Map<string, Pick<Editor, "getValue" | "transaction">>();
 
   constructor(options: ObsidianAtomicTextAccessOptions) {
     this.#options = options;
@@ -136,20 +140,41 @@ export class ObsidianAtomicTextAccess implements AtomicTextAccess {
     return this.#options.editorForPath(path) ? "editor" : "vault-process";
   }
 
+  async readTextForPrimitive(path: string, primitive: SourceWritePrimitive): Promise<string | undefined> {
+    if (primitive === "editor") {
+      const editor = this.#enteredEditors.get(path);
+      this.#enteredEditors.delete(path);
+      return editor?.getValue();
+    }
+    return this.#options.text.readText(path);
+  }
+
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
+    onEnter?: (primitive: SourceWritePrimitive) => void,
   ): Promise<AtomicTransformResult<T>> {
     const editor = this.#options.editorForPath(path);
     if (editor) {
+      this.#enteredEditors.set(path, editor);
+      onEnter?.("editor");
       const current = editor.getValue();
       const decision = transform(current);
       if (decision.text !== current) {
         if (applyAllowedByteEdits(current, decision.edits).text !== decision.text) {
           throw new Error("Editor transaction edits do not reconstruct the validated transform");
         }
-        const changes = [...decision.edits]
-          .sort((left, right) => right.fromOffset - left.fromOffset || right.toOffset - left.toOffset)
+        const descending = [...decision.edits]
+          .sort((left, right) => right.fromOffset - left.fromOffset || right.toOffset - left.toOffset);
+        const coalesced = descending.flatMap((edit, index) => {
+          if (edit.fromOffset !== edit.toOffset) return [edit];
+          if (index > 0 && descending[index - 1]?.fromOffset === edit.fromOffset
+            && descending[index - 1]?.toOffset === edit.toOffset) return [];
+          const atOffset = descending.filter((candidate) => candidate.fromOffset === edit.fromOffset
+            && candidate.toOffset === edit.toOffset);
+          return [Object.freeze({ ...edit, replacement: [...atOffset].reverse().map((candidate) => candidate.replacement).join("") })];
+        });
+        const changes = coalesced
           .map((edit) => Object.freeze({
             from: editorPositionAtOffset(current, edit.fromOffset),
             to: editorPositionAtOffset(current, edit.toOffset),
@@ -167,6 +192,7 @@ export class ObsidianAtomicTextAccess implements AtomicTextAccess {
     let value: T | undefined;
     let entered = false;
     await this.#options.vault.process(file, (current) => {
+      onEnter?.("vault-process");
       const decision = transform(current);
       value = decision.value;
       entered = true;
@@ -280,15 +306,22 @@ function parsedPlanItemsIn(path: string, text: string): readonly PlanItem<Worksp
   return parsed.supported ? parsed.items : Object.freeze([]);
 }
 
-function selectedCollisionIdentity(
+function selectedRepairAdmission(
+  identity: IdentityLookup,
+  expectation: MutationExpectation,
   id: string,
-  path: string,
-  fromOffset: number,
-  toOffset: number,
-): IdentityLookup {
+): SelectedRepairAdmission | undefined {
+  const selected = expectation.selectedRepair;
+  if (!selected || selected.id !== id || identity.kind !== "collision") return undefined;
+  const locationKey = (location: { readonly id: string; readonly path: string; readonly fromOffset: number; readonly toOffset: number }): string =>
+    `${location.id}\0${location.path}\0${location.fromOffset}\0${location.toOffset}`;
+  const current = identity.locations.map(locationKey).sort();
+  const confirmed = selected.locations.map(locationKey).sort();
+  if (!arraysEqual(current, confirmed)) return undefined;
   return Object.freeze({
-    kind: "collision" as const,
-    locations: Object.freeze([Object.freeze({ id, path, fromOffset, toOffset, line: 0, column: 0 })]),
+    kind: "selected-repair" as const,
+    identity,
+    selectedSpan: selected.selectedSpan,
   });
 }
 
@@ -486,6 +519,7 @@ function contextMatches(expectation: MutationExpectation, context: CommitContext
   const wallElapsed = context.wallEpochMs - expectation.time.wallEpochMs;
   const monotonicElapsed = context.monotonicMs - expectation.time.monotonicMs;
   return monotonicElapsed >= 0
+    && monotonicElapsed <= expectation.time.maximumQueueDelayMs
     && Math.abs(wallElapsed - monotonicElapsed) <= expectation.time.maximumDriftMs;
 }
 
@@ -532,6 +566,17 @@ function planContextMatches(
   const isAnchorEndpoint = (epochMs: number, offsetMinutes: number): boolean => anchor !== undefined
     && epochMs === expectation.time.wallEpochMs
     && offsetMinutes === anchor.offsetMinutes;
+  for (const operation of operations) {
+    if (operation.kind === "clock-out"
+      && localMinuteInZone(operation.close.endEpochMs, plan.zoneId)?.offsetMinutes !== operation.close.offsetMinutes) {
+      return false;
+    }
+    if (operation.kind === "normalize-legacy-clock"
+      && operation.endEpochMs !== undefined
+      && localMinuteInZone(operation.endEpochMs, plan.zoneId)?.offsetMinutes !== operation.endOffsetMinutes) {
+      return false;
+    }
+  }
   if (plan.action === "clock-in") {
     if (operations.length !== 1 || operations[0]?.kind !== "clock-in"
       || !isAnchorEndpoint(operations[0].clock.startEpochMs, operations[0].clock.offsetMinutes)) return false;
@@ -559,8 +604,13 @@ function planContextMatches(
       && !isAnchorEndpoint(operations[0].closeClock.endEpochMs, operations[0].closeClock.offsetMinutes)) return false;
   }
   if (plan.action === "stop-at-trusted-time") {
-    if (operations.length !== 1 || operations[0]?.kind !== "clock-out"
-      || !isAnchorEndpoint(operations[0].close.endEpochMs, operations[0].close.offsetMinutes)) return false;
+    if (operations.length !== 1 || operations[0]?.kind !== "clock-out") return false;
+    const plannedDelta = operations[0].close.endEpochMs - expectation.time.wallEpochMs;
+    const currentDelta = context.monotonicMs - expectation.time.monotonicMs;
+    if (!Number.isFinite(plannedDelta)
+      || plannedDelta < 0
+      || currentDelta < plannedDelta
+      || currentDelta - plannedDelta > expectation.time.maximumQueueDelayMs) return false;
   }
   if (plan.action === "keep-measured-time") {
     if (operations.length !== 1 || operations[0]?.kind !== "rebase-clock"
@@ -569,6 +619,30 @@ function planContextMatches(
       || localMinuteInZone(operations[0].startEpochMs, plan.zoneId)?.offsetMinutes !== operations[0].offsetMinutes) return false;
   }
   return true;
+}
+
+function initializeLineEnding(text: string): "\n" | "\r\n" | "mixed" | "invalid" | undefined {
+  let sawLf = false;
+  let sawCrLf = false;
+  for (let offset = 0; offset < text.length; offset += 1) {
+    if (text[offset] === "\r") {
+      if (text[offset + 1] !== "\n") return "invalid";
+      sawCrLf = true;
+      offset += 1;
+    } else if (text[offset] === "\n") {
+      sawLf = true;
+    }
+    if (sawLf && sawCrLf) return "mixed";
+  }
+  return sawCrLf ? "\r\n" : sawLf ? "\n" : undefined;
+}
+
+function initializeInsertionIsPhysicalLineBoundary(text: string, insertionOffset: number): boolean {
+  if (!Number.isSafeInteger(insertionOffset) || insertionOffset < 0 || insertionOffset > text.length) return false;
+  const logicalStart = text.startsWith("\uFEFF") ? 1 : 0;
+  if (insertionOffset === logicalStart) return true;
+  if (insertionOffset < logicalStart || insertionOffset === 0) return false;
+  return text[insertionOffset - 1] === "\n";
 }
 
 export function legacyRunningClockKey(path: string, fromOffset: number, text: string): string {
@@ -1015,6 +1089,8 @@ function currentFileRunningFacts(
   path: string,
   text: string,
   logbookOptions: LogbookReadOptions,
+  index: StageIndexFacts,
+  expectation: MutationExpectation,
 ): {
   readonly fingerprints: readonly string[];
   readonly potentialFingerprints: readonly string[];
@@ -1030,6 +1106,14 @@ function currentFileRunningFacts(
   if (resolved.region && !planInvalid) {
     const parsed = parseGrammar({ version: resolved.region.version, candidates: resolved.candidates });
     for (const item of parsed.items) {
+      const ownerIdentity = item.source.blockId ? index.identity(item.source.blockId) : undefined;
+      const selectedRepair = expectation.selectedRepair;
+      const selectedOwnerRepair = expectation.action === "repair-plan-item-identity"
+        && item.source.blockId === selectedRepair?.id
+        && item.source.itemSpan.fromOffset === selectedRepair?.selectedSpan.fromOffset
+        && item.source.itemSpan.toOffset === selectedRepair?.selectedSpan.toOffset;
+      if (!item.source.blockId
+        || (!selectedOwnerRepair && (ownerIdentity?.kind !== "unique" || ownerIdentity.location.path !== path))) continue;
       const logbook = readLogbook(text, {
         path,
         itemFromOffset: item.source.itemSpan.fromOffset,
@@ -1062,13 +1146,13 @@ function currentFileRunningFacts(
   }
 
   for (const line of synchronousOutsideFenceLines(text)) {
-    const idMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(line.content);
-    const clockOffset = line.content.indexOf("CLOCK: [");
-    if (idMatch && isCanonicalClockId(idMatch[1]!) && clockOffset >= 0) {
-      const raw = line.content.slice(clockOffset);
-      const clockText = raw.slice(0, raw.length - /[ \t]*$/.exec(raw)![0].length);
+    const prefix = /^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?/.exec(line.content)?.[0] ?? "";
+    const raw = line.content.slice(prefix.length);
+    const clockText = raw.slice(0, raw.length - /[ \t]*$/.exec(raw)![0].length);
+    const idMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)$/.exec(clockText);
+    if (clockText.startsWith("CLOCK: [") && idMatch && isCanonicalClockId(idMatch[1]!)) {
       const parsed = parseClockText(clockText);
-      const fromOffset = line.start + clockOffset;
+      const fromOffset = line.start + prefix.length;
       const toOffset = fromOffset + clockText.length;
       if (structuredLocations.has(`${fromOffset}\0${toOffset}`)) continue;
       if (parsed.kind === "record" && parsed.record.state === "running") {
@@ -1165,6 +1249,83 @@ function reconciledClockFacts(
   });
 }
 
+function actionAllowsInvalidClockOwnerRecovery(action: MutationAction): boolean {
+  return action === "clock-out"
+    || action === "delete-clock"
+    || action === "stop-at-trusted-time"
+    || action === "normalize-legacy-clock"
+    || action === "repair-overlap"
+    || action === "repair-done-owner-clock"
+    || action === "repair-plan-item-identity"
+    || action === "repair-clock-identity";
+}
+
+function runningClockIsSelectedRecovery(
+  clock: IndexedClockSource,
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+): boolean {
+  if (!actionAllowsInvalidClockOwnerRecovery(plan.action)) return false;
+  const clockKey = indexedClockKey(clock);
+  return plan.stages.some((stage) => stage.operations.some((operation) => {
+    if (operation.kind === "repair-plan-item-identity") {
+      const expected = findPlanExpectation(expectation, operation.target, stage.path);
+      return expected !== undefined
+        && clock.ownerId === operation.target.id
+        && clock.path === expected.path
+        && clock.fromOffset >= expected.itemSpan.fromOffset
+        && clock.toOffset <= expected.itemSpan.toOffset;
+    }
+    if (operation.kind !== "clock-out"
+      && operation.kind !== "delete-clock"
+      && operation.kind !== "normalize-legacy-clock"
+      && operation.kind !== "repair-clock-identity") return false;
+    const expected = findClockExpectation(expectation, operation.target, stage.path);
+    if (!expected || expected.text !== clock.text) return false;
+    const expectedKey = expected.target.id
+      ?? legacyRunningClockKey(expected.path, expected.span.fromOffset, expected.text);
+    return expectedKey === clockKey;
+  }));
+}
+
+async function invalidClockOwnerPrecondition(
+  index: WorkspaceIndex,
+  access: Pick<TextAccess, "readText">,
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+  logbookOptions: LogbookReadOptions,
+  stopped: () => boolean,
+): Promise<CommitConflict | undefined> {
+  const facts = reconciledClockFacts(index, expectation, logbookOptions);
+  const texts = new Map<string, string>();
+  for (const clock of facts.running) {
+    let valid = false;
+    if (clock.ownerId) {
+      const identity = index.identity(clock.ownerId);
+      if (identity.kind === "unique" && identity.location.path === clock.path) {
+        let text = texts.get(clock.path);
+        if (text === undefined) {
+          try {
+            text = await access.readText(clock.path);
+          } catch {
+            text = undefined;
+          }
+          if (stopped()) return conflict("action-no-longer-applicable", plan.action, clock.path);
+          if (text !== undefined) texts.set(clock.path, text);
+        }
+        if (text !== undefined && !index.dirty) {
+          const owners = parsedPlanItemsIn(clock.path, text).filter((item) => item.source.blockId === clock.ownerId);
+          valid = owners.length === 1 && owners[0]!.kind === "flexible-task" && owners[0]!.status === "open";
+        }
+      }
+    }
+    if (!valid && !runningClockIsSelectedRecovery(clock, plan, expectation)) {
+      return conflict("clock-owner-invalid", plan.action, clock.path);
+    }
+  }
+  return undefined;
+}
+
 function globalPrecondition(
   index: WorkspaceIndex,
   expectation: MutationExpectation,
@@ -1211,8 +1372,10 @@ function globalPrecondition(
   ) {
     return conflict("multiple-running-clocks", action, running[0]?.path);
   }
-  if (running.some((clock) => !clock.ownerId)) {
-    return conflict("clock-owner-invalid", action, running.find((clock) => !clock.ownerId)?.path);
+  const unselectedInvalidOwner = running.find((clock) => !clock.ownerId
+    && !runningClockIsSelectedRecovery(clock, plan, expectation));
+  if (unselectedInvalidOwner) {
+    return conflict("clock-owner-invalid", action, unselectedInvalidOwner.path);
   }
   const actual = sortedRunningKeys(running);
   const expected = [...expectation.expectedRunningClockIds].sort();
@@ -1433,17 +1596,20 @@ async function identityEndStateAdmission(
     } else if (operation.kind === "repair-plan-item-identity") {
       const expected = findPlanExpectation(expectation, operation.target, stage.path);
       if (!expected || !operation.target.id) return conflict("source-conflict", plan.action, stage.path);
+      const selected = expectation.selectedRepair;
+      if (!selected || selected.id !== operation.target.id) {
+        return conflict("action-no-longer-applicable", plan.action, stage.path);
+      }
       const target = revalidatePlanItemExpectation(
         expected.path,
         expected.sourceText,
         expected,
         plan.action,
-        selectedCollisionIdentity(
-          operation.target.id,
-          expected.path,
-          expected.itemSpan.fromOffset,
-          expected.itemSpan.toOffset,
-        ),
+        Object.freeze({
+          kind: "selected-repair" as const,
+          identity: Object.freeze({ kind: "collision" as const, locations: selected.locations }),
+          selectedSpan: selected.selectedSpan,
+        }),
         logbookOptions,
       );
       if (!target.ok) return target.conflict;
@@ -1454,17 +1620,20 @@ async function identityEndStateAdmission(
     } else if (operation.kind === "repair-clock-identity") {
       const expected = findClockExpectation(expectation, operation.target, stage.path);
       if (!expected || !operation.target.id) return conflict("source-conflict", plan.action, stage.path);
+      const selected = expectation.selectedRepair;
+      if (!selected || selected.id !== operation.target.id) {
+        return conflict("action-no-longer-applicable", plan.action, stage.path);
+      }
       const target = revalidateClockExpectation(
         expected.path,
         expected.sourceText,
         expected,
         plan.action,
-        selectedCollisionIdentity(
-          operation.target.id,
-          expected.path,
-          expected.span.fromOffset,
-          expected.span.toOffset,
-        ),
+        Object.freeze({
+          kind: "selected-repair" as const,
+          identity: Object.freeze({ kind: "collision" as const, locations: selected.locations }),
+          selectedSpan: selected.selectedSpan,
+        }),
         logbookOptions,
       );
       if (!target.ok) return target.conflict;
@@ -1724,8 +1893,9 @@ function captureStageIndexFacts(
       }
     }
   }
-  const identities = new Map([...ids].map((id) => [id, index.identity(id)]));
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
+  for (const clock of [...facts.running, ...facts.potentialRunning]) if (clock.ownerId) ids.add(clock.ownerId);
+  const identities = new Map([...ids].map((id) => [id, index.identity(id)]));
   return Object.freeze({
     identity: (id: string) => identities.get(id) ?? Object.freeze({ kind: "unavailable" as const, reason: "source-changed" as const }),
     liveIdentity: (id: string) => index.identity(id),
@@ -1762,7 +1932,7 @@ function buildStage(
     .filter((clock) => clock.path === currentPath)
     .map(indexedRunningFingerprint)
     .sort();
-  const actualFileRunning = currentFileRunningFacts(currentPath, currentText, logbookOptions);
+  const actualFileRunning = currentFileRunningFacts(currentPath, currentText, logbookOptions, index, expectation);
   const permitsOldPlan = plan.action === "migrate-plan";
   if (
     (actualFileRunning.planInvalid && !permitsOldPlan)
@@ -1800,7 +1970,9 @@ function buildStage(
       currentText,
       expected,
       plan.action,
-      identityFor(index, selector.id),
+      plan.action === "repair-plan-item-identity" && selector.id
+        ? selectedRepairAdmission(index.liveIdentity(selector.id), expectation, selector.id)
+        : identityFor(index, selector.id),
       logbookOptions,
     );
     return checked.ok ? checked.value : checked.conflict;
@@ -1820,7 +1992,7 @@ function buildStage(
         return conflict("identity-collision", plan.action, currentPath);
       }
     }
-    if (expected.ownerId) {
+    if (expected.ownerId && !actionAllowsInvalidClockOwnerRecovery(plan.action)) {
       const ownerIdentity = index.identity(expected.ownerId);
       if (
         currentIdentityCount(expected.ownerId) !== 1
@@ -1833,7 +2005,9 @@ function buildStage(
       currentText,
       expected,
       plan.action,
-      identityFor(index, selector.id),
+      plan.action === "repair-clock-identity" && selector.id
+        ? selectedRepairAdmission(index.liveIdentity(selector.id), expectation, selector.id)
+        : identityFor(index, selector.id),
       logbookOptions,
     );
     return checked.ok ? checked.value : checked.conflict;
@@ -1912,11 +2086,31 @@ function buildStage(
     for (const operation of stage.operations) {
       switch (operation.kind) {
         case "initialize-plan": {
-          if (currentPath !== originalPath || currentText !== operation.expectedSource) {
+          if (currentPath !== originalPath) {
             return { ok: false, conflict: conflict("anonymous-source-changed", plan.action, originalPath) };
           }
-          const scan = scanPrimaryPlanRegion(currentText);
-          if (scan.region && scan.diagnostics.length === 0) break;
+          const expectedLineEnding = initializeLineEnding(operation.expectedSource);
+          if (
+            expectedLineEnding === "mixed"
+            || expectedLineEnding === "invalid"
+            || (expectedLineEnding !== undefined && expectedLineEnding !== operation.lineEnding)
+            || !initializeInsertionIsPhysicalLineBoundary(operation.expectedSource, operation.insertionOffset)
+          ) {
+            return { ok: false, conflict: conflict("action-no-longer-applicable", plan.action, currentPath) };
+          }
+          const inserted = `${PLAN_OPEN_MARKER_V1}${operation.lineEnding}${PLAN_CLOSE_MARKER}${operation.lineEnding}`;
+          const expectedAfter = operation.expectedSource.slice(0, operation.insertionOffset)
+            + inserted
+            + operation.expectedSource.slice(operation.insertionOffset);
+          const endState = scanPrimaryPlanRegion(currentText);
+          if (endState.region?.version === "v1" && endState.diagnostics.length === 0) break;
+          if (currentText !== operation.expectedSource) {
+            return { ok: false, conflict: conflict("anonymous-source-changed", plan.action, originalPath) };
+          }
+          const scan = endState;
+          if (scan.region && scan.diagnostics.length === 0) {
+            return { ok: false, conflict: conflict("action-no-longer-applicable", plan.action, currentPath) };
+          }
           const outsideMarker = synchronousOutsideFenceLines(currentText).some((line, index) => {
             const content = index === 0 && line.content.startsWith("\uFEFF") ? line.content.slice(1) : line.content;
             return /^<!-- nautilus-log:plan\/v[0-9]+ -->[ \t]*$/.test(content)
@@ -1928,11 +2122,7 @@ function buildStage(
           ) {
             return { ok: false, conflict: conflict("action-no-longer-applicable", plan.action, currentPath) };
           }
-          if (operation.insertionOffset < 0 || operation.insertionOffset > currentText.length) {
-            return { ok: false, conflict: conflict("source-conflict", plan.action, currentPath) };
-          }
-          const inserted = `${PLAN_OPEN_MARKER_V1}${operation.lineEnding}${PLAN_CLOSE_MARKER}${operation.lineEnding}`;
-          const candidate = currentText.slice(0, operation.insertionOffset) + inserted + currentText.slice(operation.insertionOffset);
+          const candidate = expectedAfter;
           const candidateScan = scanPrimaryPlanRegion(candidate);
           if (!candidateScan.region || candidateScan.region.version !== "v1" || candidateScan.diagnostics.length !== 0) {
             return { ok: false, conflict: conflict("action-no-longer-applicable", plan.action, currentPath) };
@@ -2345,6 +2535,15 @@ function buildStage(
             || operation.startEpochMs !== expectedRebasedStart
             || localMinuteInZone(expectedRebasedStart, plan.zoneId)?.offsetMinutes !== operation.offsetMinutes
           ) return { ok: false, conflict: conflict("clock-discontinuity", plan.action, currentPath) };
+          const currentId = target.clock.parsed.record.clockId;
+          if (
+            currentId
+            && target.clock.text === formatCanonicalRunningClock(
+              operation.startEpochMs,
+              operation.offsetMinutes,
+              currentId,
+            )
+          ) break;
           edits.push(createRebaseRunningClockEdit(currentText, target.clock, operation.startEpochMs, operation.offsetMinutes));
           alreadyApplied = false;
           break;
@@ -2402,12 +2601,70 @@ async function sourceReceipt(
   primitive: SourceWritePrimitive,
   beforeText: string,
   afterText: string,
+  edits: readonly ByteEdit[],
 ): Promise<SourceReceiptInput> {
+  const physicalLineAt = (text: string, offset: number): number => {
+    let line = 0;
+    for (let index = 0; index < Math.min(offset, text.length); index += 1) {
+      if (text[index] === "\r") {
+        if (text[index + 1] === "\n") index += 1;
+        line += 1;
+      } else if (text[index] === "\n") line += 1;
+    }
+    return line;
+  };
+  const locations = (() => {
+    if (beforeText === afterText) return Object.freeze([]);
+    try {
+      if (applyAllowedByteEdits(beforeText, edits).text === afterText) {
+        const appliedOrder = [...edits]
+          .sort((left, right) => right.fromOffset - left.fromOffset || right.toOffset - left.toOffset)
+          .reverse();
+        let sourceCursor = 0;
+        let afterCursor = 0;
+        const lines: number[] = [];
+        for (const edit of appliedOrder) {
+          afterCursor += edit.fromOffset - sourceCursor;
+          const replacementStart = afterCursor;
+          const locationCountBeforeEdit = lines.length;
+          let segmentStart = 0;
+          for (let index = 0; index < edit.replacement.length; index += 1) {
+            const width = edit.replacement[index] === "\r" && edit.replacement[index + 1] === "\n" ? 2
+              : edit.replacement[index] === "\r" || edit.replacement[index] === "\n" ? 1 : 0;
+            if (width === 0) continue;
+            if (index > segmentStart) lines.push(physicalLineAt(afterText, replacementStart + segmentStart));
+            index += width - 1;
+            segmentStart = index + 1;
+          }
+          if (segmentStart < edit.replacement.length) {
+            lines.push(physicalLineAt(afterText, replacementStart + segmentStart));
+          } else if (edit.replacement.length === 0) {
+            lines.push(physicalLineAt(afterText, replacementStart));
+          } else if (lines.length === locationCountBeforeEdit) {
+            lines.push(physicalLineAt(afterText, replacementStart));
+          }
+          afterCursor += edit.replacement.length;
+          sourceCursor = edit.toOffset;
+        }
+        return Object.freeze([...new Set(lines)].map((line) => Object.freeze({ line })));
+      }
+    } catch {
+      // A divergent host result is located from its actual confirmed bytes below.
+    }
+    let commonPrefix = 0;
+    while (
+      commonPrefix < beforeText.length
+      && commonPrefix < afterText.length
+      && beforeText[commonPrefix] === afterText[commonPrefix]
+    ) commonPrefix += 1;
+    return Object.freeze([Object.freeze({ line: physicalLineAt(afterText, commonPrefix) })]);
+  })();
   return Object.freeze({
     path,
     primitive,
     before: await createSourceVersion(path, beforeText),
     after: await createSourceVersion(path, afterText),
+    locations,
   });
 }
 
@@ -2416,26 +2673,61 @@ export class WorkspaceCommitter {
   readonly #index: WorkspaceIndex;
   readonly #logbookOptions: LogbookReadOptions;
   readonly #readContext: () => CommitContext;
-  readonly #changedPaths: string[] = [];
+  readonly #pathChangeGenerations = new Map<string, number>();
   readonly #unsubscribeChanges: Unsubscribe;
+  #changeGeneration = 0;
   #blocked = false;
+  #disposed = false;
 
   constructor(access: AtomicTextAccess, options: WorkspaceCommitterOptions) {
     this.#access = access;
     this.#index = new WorkspaceIndex(access, options.index);
     this.#logbookOptions = options.logbook ?? {};
     this.#readContext = options.readContext;
-    this.#unsubscribeChanges = access.onChange((change) => this.#changedPaths.push(change.path));
+    this.#unsubscribeChanges = access.onChange((change) => {
+      this.#recordChange(change.path);
+      if (change.kind === "rename" && change.oldPath !== undefined && change.oldPath !== change.path) {
+        this.#recordChange(change.oldPath);
+      }
+    });
   }
 
   get blocked(): boolean {
-    return this.#blocked;
+    return this.#blocked || this.#disposed;
   }
 
   dispose(): void {
+    this.#disposed = true;
     this.#blocked = true;
     this.#unsubscribeChanges();
     this.#index.dispose();
+  }
+
+  #recordChange(path: string): void {
+    this.#changeGeneration += 1;
+    const generation = (this.#pathChangeGenerations.get(path) ?? 0) + 1;
+    this.#pathChangeGenerations.delete(path);
+    this.#pathChangeGenerations.set(path, generation);
+    if (this.#pathChangeGenerations.size > 1_024) {
+      const oldest = this.#pathChangeGenerations.keys().next().value as string | undefined;
+      if (oldest !== undefined) this.#pathChangeGenerations.delete(oldest);
+    }
+  }
+
+  #changeCursor(path: string): { readonly all: number; readonly path: number } {
+    return Object.freeze({
+      all: this.#changeGeneration,
+      path: this.#pathChangeGenerations.get(path) ?? 0,
+    });
+  }
+
+  #otherSourceChanged(
+    path: string,
+    cursor: { readonly all: number; readonly path: number },
+  ): boolean {
+    const allChanges = this.#changeGeneration - cursor.all;
+    const pathChanges = (this.#pathChangeGenerations.get(path) ?? 0) - cursor.path;
+    return allChanges > pathChanges;
   }
 
   async #stoppedReceipt(
@@ -2467,6 +2759,41 @@ export class WorkspaceCommitter {
     });
   }
 
+  #unloadAfterHostStage(
+    plan: MutationPlan,
+    path: string,
+    stageNumber: number,
+    sources: readonly SourceReceiptInput[] = [],
+  ): StageStopped {
+    this.#blocked = true;
+    return {
+      kind: "stopped",
+      outcome: "uncertain",
+      sources,
+      result: conflict("write-outcome-uncertain", plan.action, path, stageNumber),
+    };
+  }
+
+  #unloadAfterHostReceipt(
+    plan: MutationPlan,
+    sources: readonly SourceReceiptInput[] = [],
+    semanticChanges: readonly SemanticChange[] = [],
+    resultingIdentities: readonly ResultingIdentity[] = [],
+  ): CommitReceipt {
+    this.#blocked = true;
+    return createCommitReceipt({
+      intentId: plan.intentId,
+      action: plan.action,
+      outcome: "uncertain",
+      sources,
+      semanticChanges,
+      resultingIdentities,
+      confirmation: "unconfirmed",
+      globalCheck: { status: "unavailable", runningClockIds: [] },
+      result: conflict("write-outcome-uncertain", plan.action),
+    });
+  }
+
   async #executeStage(
     plan: MutationPlan,
     expectation: MutationExpectation,
@@ -2474,6 +2801,9 @@ export class WorkspaceCommitter {
     stageNumber: number,
     priorTouchedPaths: readonly string[],
   ): Promise<StageResult> {
+    if (this.#disposed) {
+      return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, stage.path, stageNumber) };
+    }
     if (this.#index.dirty) {
       return { kind: "stopped", outcome: "conflict", sources: [], result: conflict("source-conflict", plan.action, stage.path, stageNumber) };
     }
@@ -2490,16 +2820,17 @@ export class WorkspaceCommitter {
         result: conflict("action-no-longer-applicable", plan.action, path, stageNumber),
       };
     }
-    const changeCursor = this.#changedPaths.length;
-    const otherSourceChanged = (): boolean => this.#changedPaths
-      .slice(changeCursor)
-      .some((changedPath) => changedPath !== path);
+    const changeCursor = this.#changeCursor(path);
+    const otherSourceChanged = (): boolean => this.#otherSourceChanged(path, changeCursor);
     const indexFacts = captureStageIndexFacts(this.#index, plan, expectation, this.#logbookOptions);
     let queuedText: string | undefined;
     try {
       queuedText = await this.#access.readText(path);
     } catch {
       queuedText = undefined;
+    }
+    if (this.#disposed) {
+      return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, path, stageNumber) };
     }
     if (queuedText === undefined) {
       const result = conflict("plan-item-not-found", plan.action, path, stageNumber);
@@ -2537,6 +2868,9 @@ export class WorkspaceCommitter {
         observed = await this.#access.readText(path);
       } catch {
         observed = undefined;
+      }
+      if (this.#disposed) {
+        return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, path, stageNumber) };
       }
       if (observed === undefined) {
         this.#blocked = true;
@@ -2582,9 +2916,16 @@ export class WorkspaceCommitter {
     let callbackBefore = queuedText;
     let intended = queued.value;
     let primitive = this.#access.primitiveFor(path);
+    let hostEntered = false;
+    if (this.#disposed) {
+      return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, path, stageNumber) };
+    }
     try {
       const host = await this.#access.atomicTransform(path, (currentText) => {
         callbackBefore = currentText;
+        if (this.#disposed) {
+          throw new StageConflictError(conflict("action-no-longer-applicable", plan.action, path, stageNumber));
+        }
         if (otherSourceChanged()) {
           throw new StageConflictError(conflict("source-conflict", plan.action, path, stageNumber));
         }
@@ -2606,21 +2947,38 @@ export class WorkspaceCommitter {
         if (!rebuilt.ok) throw new StageConflictError(rebuilt.conflict);
         intended = rebuilt.value;
         return Object.freeze({ text: rebuilt.value.text, edits: rebuilt.value.byteEdits, value: rebuilt.value });
+      }, (enteredPrimitive) => {
+        hostEntered = true;
+        primitive = enteredPrimitive;
       });
       primitive = host.primitive;
       intended = host.value;
     } catch (error) {
+      if (this.#disposed) {
+        if (error instanceof StageConflictError && error.conflict.code === "action-no-longer-applicable") {
+          return { kind: "stopped", outcome: "rejected", sources: [], result: error.conflict };
+        }
+        if (hostEntered) {
+          this.#blocked = true;
+          return { kind: "stopped", outcome: "uncertain", sources: [], result: conflict("write-outcome-uncertain", plan.action, path, stageNumber) };
+        }
+        return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, path, stageNumber) };
+      }
       let observed: string | undefined;
       try {
-        observed = await this.#access.readText(path);
+        observed = await this.#access.readTextForPrimitive(path, primitive);
       } catch {
         observed = undefined;
+      }
+      if (this.#disposed) {
+        return this.#unloadAfterHostStage(plan, path, stageNumber);
       }
       if (observed === undefined) {
         this.#blocked = true;
         return { kind: "stopped", outcome: "uncertain", sources: [], result: conflict("write-outcome-uncertain", plan.action, path, stageNumber) };
       }
-      const receipt = await sourceReceipt(path, primitive, callbackBefore, observed);
+      const receipt = await sourceReceipt(path, primitive, callbackBefore, observed, intended.byteEdits);
+      if (this.#disposed) return this.#unloadAfterHostStage(plan, path, stageNumber);
       if (observed === intended.text && observed !== callbackBefore) {
         return {
           kind: "success",
@@ -2642,18 +3000,30 @@ export class WorkspaceCommitter {
       return { kind: "stopped", outcome: "uncertain", sources: [receipt], result: conflict("write-outcome-uncertain", plan.action, path, stageNumber) };
     }
 
+    if (this.#disposed) {
+      this.#blocked = true;
+      return { kind: "stopped", outcome: "uncertain", sources: [], result: conflict("write-outcome-uncertain", plan.action, path, stageNumber) };
+    }
+
     let observed: string | undefined;
     try {
-      observed = await this.#access.readText(path);
+      observed = await this.#access.readTextForPrimitive(path, primitive);
     } catch {
       observed = undefined;
+    }
+    if (this.#disposed) {
+      return this.#unloadAfterHostStage(plan, path, stageNumber);
     }
     if (observed === undefined) {
       this.#blocked = true;
       return { kind: "stopped", outcome: "uncertain", sources: [], result: conflict("write-outcome-uncertain", plan.action, path, stageNumber) };
     }
-    const receipt = await sourceReceipt(path, primitive, callbackBefore, observed);
+    const receipt = await sourceReceipt(path, primitive, callbackBefore, observed, intended.byteEdits);
+    if (this.#disposed) return this.#unloadAfterHostStage(plan, path, stageNumber);
     if (observed !== intended.text) {
+      if (observed === callbackBefore) {
+        return { kind: "stopped", outcome: "failed-no-change", sources: [receipt], result: conflict("write-failed-no-change", plan.action, path, stageNumber) };
+      }
       this.#blocked = true;
       return { kind: "stopped", outcome: "invariant-broken", sources: [receipt], result: conflict("write-invariant-broken", plan.action, path, stageNumber) };
     }
@@ -2669,6 +3039,9 @@ export class WorkspaceCommitter {
   }
 
   async commit(plan: MutationPlan, expectation: MutationExpectation): Promise<CommitReceipt> {
+    if (this.#disposed) {
+      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
+    }
     if (this.#blocked) {
       return this.#stoppedReceipt(plan, "uncertain", conflict("write-outcome-uncertain", plan.action));
     }
@@ -2698,7 +3071,22 @@ export class WorkspaceCommitter {
       });
     }
     const snapshot = await this.#index.rebuild();
+    if (this.#disposed) {
+      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
+    }
     if (!snapshot.complete) return this.#stoppedReceipt(plan, "rejected", conflict("source-over-limit", plan.action));
+    const invalidOwner = await invalidClockOwnerPrecondition(
+      this.#index,
+      this.#access,
+      plan,
+      expectation,
+      this.#logbookOptions,
+      () => this.#disposed,
+    );
+    if (this.#disposed) {
+      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
+    }
+    if (invalidOwner) return this.#stoppedReceipt(plan, isConflictOutcome(invalidOwner), invalidOwner, [], expectation);
     const initialFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
     if (deleteIsAuthoritativelyAbsent(plan, expectation, this.#index, this.#logbookOptions)) {
       return createCommitReceipt({
@@ -2716,6 +3104,9 @@ export class WorkspaceCommitter {
       expectation,
       this.#logbookOptions,
     );
+    if (this.#disposed) {
+      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+    }
     if (admittedSwitch && admittedSwitch !== "ready" && admittedSwitch !== "already-applied") {
       return this.#stoppedReceipt(plan, isConflictOutcome(admittedSwitch), admittedSwitch, [], expectation);
     }
@@ -2735,6 +3126,9 @@ export class WorkspaceCommitter {
       expectation,
       this.#logbookOptions,
     );
+    if (this.#disposed) {
+      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+    }
     if (identityEndState && identityEndState !== "already-applied") {
       return this.#stoppedReceipt(plan, isConflictOutcome(identityEndState), identityEndState, [], expectation);
     }
@@ -2772,8 +3166,41 @@ export class WorkspaceCommitter {
     const legacyKeyRelocations = new Map<string, string>();
     let allAlreadyApplied = true;
     for (const [stageIndex, stage] of plan.stages.entries()) {
+      if (this.#disposed) {
+        if (sources.length === 0) {
+          return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action, stage.path, stageIndex), [], expectation);
+        }
+        return createCommitReceipt({
+          intentId: plan.intentId,
+          action: plan.action,
+          outcome: "partial-safe",
+          sources,
+          semanticChanges,
+          resultingIdentities: identities,
+          confirmation: "partial",
+          globalCheck: { status: "unavailable", runningClockIds: [] },
+          result: plan.action === "switch-task"
+            ? conflict("partial-switch", plan.action, stage.path, stageIndex)
+            : conflict("action-no-longer-applicable", plan.action, stage.path, stageIndex),
+        });
+      }
       if (stageIndex > 0) {
         const intermediate = await this.#index.rebuild();
+        if (this.#disposed) {
+          return createCommitReceipt({
+            intentId: plan.intentId,
+            action: plan.action,
+            outcome: "partial-safe",
+            sources,
+            semanticChanges,
+            resultingIdentities: identities,
+            confirmation: "partial",
+            globalCheck: { status: "unavailable", runningClockIds: [] },
+            result: plan.action === "switch-task"
+              ? conflict("partial-switch", plan.action, stage.path, stageIndex)
+              : conflict("action-no-longer-applicable", plan.action, stage.path, stageIndex),
+          });
+        }
         const intermediateFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
         const unsafeSwitch = plan.action === "switch-task"
           && (intermediateFacts.potentialRunning.length > 0 || intermediateFacts.running.length !== 0);
@@ -2813,8 +3240,47 @@ export class WorkspaceCommitter {
       const result = await this.#executeStage(plan, expectation, stage, stageIndex, touchedPaths);
       if (result.kind === "stopped") {
         if (sources.length > 0) {
+          if (this.#disposed) {
+            if (result.outcome === "rejected" && result.sources.length === 0) {
+              return createCommitReceipt({
+                intentId: plan.intentId,
+                action: plan.action,
+                outcome: "partial-safe",
+                sources,
+                semanticChanges,
+                resultingIdentities: identities,
+                confirmation: "partial",
+                globalCheck: { status: "unavailable", runningClockIds: [] },
+                result: plan.action === "switch-task"
+                  ? conflict("partial-switch", plan.action, stage.path, stageIndex)
+                  : result.result,
+              });
+            }
+            return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+          }
           const latest = await this.#index.rebuild();
           const latestFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
+          if (result.outcome === "uncertain" || result.outcome === "invariant-broken") {
+            this.#blocked = true;
+            return createCommitReceipt({
+              intentId: plan.intentId,
+              action: plan.action,
+              outcome: result.outcome,
+              sources: [...sources, ...result.sources],
+              semanticChanges,
+              resultingIdentities: identities,
+              confirmation: result.outcome === "uncertain" ? "unconfirmed" : "invariant-broken",
+              globalCheck: {
+                status: !latest.complete
+                  ? "unavailable"
+                  : latestFacts.potentialRunning.length > 0 || latestFacts.running.length > 1
+                    ? "violated"
+                    : "confirmed",
+                runningClockIds: latest.complete ? receiptRunningKeys(latestFacts.running) : [],
+              },
+              result: result.result,
+            });
+          }
           return createCommitReceipt({
             intentId: plan.intentId,
             action: plan.action,
@@ -2850,6 +3316,9 @@ export class WorkspaceCommitter {
     }
 
     const finalSnapshot = await this.#index.rebuild();
+    if (this.#disposed) {
+      return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+    }
     const finalGeneration = finalSnapshot.generation;
     const plannedFinal = finalGlobalExpectation(plan, expectation, expectation.expectedRunningClockIds);
     const expectedFinal = plannedFinal === undefined
@@ -2874,11 +3343,17 @@ export class WorkspaceCommitter {
       } catch {
         current = undefined;
       }
+      if (this.#disposed) {
+        return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+      }
       if (current === undefined) {
         sourceConfirmationBroken = true;
         break;
       }
       const version = await createSourceVersion(confirmed.file, current);
+      if (this.#disposed) {
+        return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+      }
       if (
         version.contentDigest !== confirmed.contentDigest
         || version.contentLength !== confirmed.contentLength
@@ -2888,7 +3363,8 @@ export class WorkspaceCommitter {
       }
     }
     const stableTargets = plan.stages.flatMap((stage, stageIndex) => stage.operations.flatMap((operation) => {
-      const boundOwnerId = "target" in operation && operation.target.kind === "clock"
+      const boundOwnerId = !actionAllowsInvalidClockOwnerRecovery(plan.action)
+        && "target" in operation && operation.target.kind === "clock"
         ? findClockExpectation(expectation, operation.target, stage.path)?.ownerId
         : undefined;
       return stableTargetIds(operation, boundOwnerId, allAlreadyApplied && plan.action === "clock-in")
@@ -2906,6 +3382,9 @@ export class WorkspaceCommitter {
     const missingTargetBroken = missingTargets.some((id) => this.#index.identity(id).kind !== "missing");
     const liveSnapshot = this.#index.snapshot;
     const finalIndexStillCurrent = liveSnapshot.complete && liveSnapshot.generation === finalGeneration;
+    if (this.#disposed) {
+      return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+    }
     if (
       !finalSnapshot.complete
       || !finalIndexStillCurrent

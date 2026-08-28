@@ -10,6 +10,7 @@ import {
 } from "../../../src/workspace/expectation.ts";
 import { readLogbook } from "../../../src/workspace/logbook-reader.ts";
 import type { LogbookReadOptions } from "../../../src/workspace/logbook-reader.ts";
+import { WorkspaceIndex } from "../../../src/workspace/identity-index.ts";
 import type { MutationPlan } from "../../../src/workspace/mutations.ts";
 import { resolvePrimaryPlan } from "../../../src/workspace/primary-plan-resolver.ts";
 import { createSourceVersion } from "../../../src/workspace/source-version.ts";
@@ -67,7 +68,6 @@ export async function mutationExpectation(
         planItems.push(createPlanItemExpectation({
           target: { kind: "plan-item", ...(item.source.blockId ? { id: item.source.blockId } : {}) },
           path,
-          sourceVersion,
           sourceText,
           item,
           drawerCount: logbook.drawers.length,
@@ -94,7 +94,6 @@ export async function mutationExpectation(
             ...(item.source.blockId ? { ownerId: item.source.blockId } : {}),
           },
           path,
-          sourceVersion,
           sourceText,
           clock,
         }));
@@ -105,6 +104,33 @@ export async function mutationExpectation(
   if (wantedPlans.length > 0 || wantedClocks.length > 0) {
     throw new Error(`fixture targets not found: ${String(wantedPlans)} ${String(wantedClocks)}`);
   }
+  const selectedOperation = plan.action === "repair-plan-item-identity" || plan.action === "repair-clock-identity"
+    ? plan.stages[0]?.operations[0]
+    : undefined;
+  let selectedRepair: MutationExpectation["selectedRepair"];
+  if (selectedOperation?.kind === "repair-plan-item-identity" || selectedOperation?.kind === "repair-clock-identity") {
+    const index = new WorkspaceIndex(access);
+    try {
+      const snapshot = await index.rebuild();
+      const identity = index.identity(selectedOperation.target.id);
+      const selected = selectedOperation.kind === "repair-plan-item-identity"
+        ? planItems.find((item) => item.target.id === selectedOperation.target.id)
+        : clocks.find((clock) => clock.target.id === selectedOperation.target.id);
+      const span = selected && "itemSpan" in selected ? selected.itemSpan : selected?.span;
+      if (!snapshot.complete || !selected || !span) {
+        throw new Error("fixture selected repair target is unavailable");
+      }
+      if (identity.kind === "collision") {
+        selectedRepair = Object.freeze({
+          id: selectedOperation.target.id,
+          locations: identity.locations,
+          selectedSpan: Object.freeze({ path: selected.path, fromOffset: span.fromOffset, toOffset: span.toOffset }),
+        });
+      }
+    } finally {
+      index.dispose();
+    }
+  }
   return createMutationExpectation({
     intentId: plan.intentId,
     action: plan.action,
@@ -113,13 +139,15 @@ export async function mutationExpectation(
     expectedRunningClockIds: targets.expectedRunningClockIds ?? [],
     settingsVersion: plan.settingsVersion,
     zoneId: plan.zoneId,
-    indexGeneration: 0,
     indexComplete: true,
     time: {
       wallEpochMs: CONTEXT.wallEpochMs,
       monotonicMs: CONTEXT.monotonicMs,
       maximumDriftMs: 1_000,
+      maximumQueueDelayMs: 1_000,
       discontinuity: false,
     },
+    previewToken: plan.previewToken,
+    ...(selectedRepair ? { selectedRepair } : {}),
   });
 }

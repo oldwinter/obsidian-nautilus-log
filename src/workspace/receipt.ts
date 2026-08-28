@@ -1,6 +1,11 @@
 import type { WriteResult } from "./conflicts";
 import { createWriteResult, isWriteResult } from "./conflicts";
-import type { MutationAction, SemanticChange } from "./mutations";
+import {
+  MUTATION_ACTIONS,
+  SEMANTIC_CHANGES,
+  type MutationAction,
+  type SemanticChange,
+} from "./mutations";
 import type { SourceVersion } from "./source-version";
 
 export const COMMIT_OUTCOMES = Object.freeze([
@@ -30,6 +35,11 @@ export const SOURCE_UNDO_SEMANTICS = Object.freeze([
 
 export type SourceUndoSemantics = (typeof SOURCE_UNDO_SEMANTICS)[number];
 
+export interface SourceReceiptLocation {
+  /** Zero-based physical line in the confirmed post-transform source. */
+  readonly line: number;
+}
+
 export interface SourceReceipt {
   readonly path: string;
   readonly primitive: SourceWritePrimitive;
@@ -37,6 +47,7 @@ export interface SourceReceipt {
   readonly after: SourceVersion;
   readonly changed: boolean;
   readonly undo: SourceUndoSemantics;
+  readonly locations: readonly SourceReceiptLocation[];
 }
 
 export interface SourceReceiptInput {
@@ -45,6 +56,7 @@ export interface SourceReceiptInput {
   readonly before: SourceVersion;
   readonly after: SourceVersion;
   readonly undo?: SourceUndoSemantics;
+  readonly locations: readonly SourceReceiptLocation[];
 }
 
 export const RESULTING_IDENTITY_KINDS = Object.freeze([
@@ -128,7 +140,11 @@ function freezeVersion(version: SourceVersion): SourceVersion {
     throw new TypeError("Source version digest must be a lowercase SHA-256 digest");
   }
   assertNonnegativeInteger("source contentLength", version.contentLength);
-  return Object.freeze({ ...version });
+  return Object.freeze({
+    file: version.file,
+    contentDigest: version.contentDigest,
+    contentLength: version.contentLength,
+  });
 }
 
 function versionsDiffer(before: SourceVersion, after: SourceVersion): boolean {
@@ -164,14 +180,28 @@ export function createSourceReceipt(input: SourceReceiptInput): SourceReceipt {
   if (undo !== expectedUndo) {
     throw new TypeError(`${input.primitive} source receipts must use ${expectedUndo} undo semantics`);
   }
+  const locations = Object.freeze(input.locations.map((location) => {
+    if (!Number.isSafeInteger(location.line) || location.line < 0) {
+      throw new TypeError("Source receipt locations require nonnegative physical lines");
+    }
+    return Object.freeze({ line: location.line });
+  }));
+  if (new Set(locations.map(({ line }) => line)).size !== locations.length) {
+    throw new TypeError("Source receipt locations must be unique");
+  }
+  const changed = versionsDiffer(before, after);
+  if (changed !== (locations.length > 0)) {
+    throw new TypeError("Source receipt locations must identify every changed source and no unchanged source");
+  }
 
   return Object.freeze({
     path: input.path,
     primitive: input.primitive,
     before,
     after,
-    changed: versionsDiffer(before, after),
+    changed,
     undo,
+    locations,
   });
 }
 
@@ -214,6 +244,9 @@ function assertOutcomeConsistency(receipt: {
       throw new TypeError(`${receipt.outcome} receipts must report zero source changes`);
     }
   }
+  if (receipt.outcome === "applied" && !anyChanged) {
+    throw new TypeError("applied receipts require at least one changed source");
+  }
   if ((receipt.outcome === "applied" || receipt.outcome === "already-applied")
     && receipt.confirmation !== "confirmed") {
     throw new TypeError(`${receipt.outcome} receipts require confirmed postconditions`);
@@ -236,6 +269,9 @@ function assertOutcomeConsistency(receipt: {
 
 export function createCommitReceipt(input: CommitReceiptInput): CommitReceipt {
   assertNonempty("intentId", input.intentId);
+  if (!(MUTATION_ACTIONS as readonly string[]).includes(input.action)) {
+    throw new TypeError(`Unsupported receipt action: ${String(input.action)}`);
+  }
   if (!isCommitOutcome(input.outcome)) {
     throw new TypeError(`Unsupported commit outcome: ${String(input.outcome)}`);
   }
@@ -253,6 +289,9 @@ export function createCommitReceipt(input: CommitReceiptInput): CommitReceipt {
     paths.add(source.path);
   }
   const semanticChanges = Object.freeze([...(input.semanticChanges ?? [])]);
+  if (!semanticChanges.every((change) => (SEMANTIC_CHANGES as readonly string[]).includes(change))) {
+    throw new TypeError("Commit receipt contains an unsupported semantic change");
+  }
   const resultingIdentities = Object.freeze((input.resultingIdentities ?? []).map(freezeIdentity));
   const globalCheck = freezeGlobalCheck(input.globalCheck);
   const result = input.result === undefined
@@ -280,16 +319,121 @@ export function createCommitReceipt(input: CommitReceiptInput): CommitReceipt {
 }
 
 export function isCommitReceipt(value: unknown): value is CommitReceipt {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<CommitReceipt>;
-  return typeof candidate.intentId === "string"
-    && isCommitOutcome(candidate.outcome)
-    && Array.isArray(candidate.sources)
-    && Array.isArray(candidate.semanticChanges)
-    && Array.isArray(candidate.resultingIdentities)
-    && typeof candidate.confirmation === "string"
-    && typeof candidate.globalCheck === "object"
-    && candidate.globalCheck !== null;
+  if (!isRecord(value) || !hasOnlyKeys(value, [
+    "intentId",
+    "action",
+    "outcome",
+    "sources",
+    "semanticChanges",
+    "resultingIdentities",
+    "confirmation",
+    "globalCheck",
+    "result",
+  ])) return false;
+  if (
+    !isSafeString(value.intentId)
+    || typeof value.action !== "string"
+    || !(MUTATION_ACTIONS as readonly string[]).includes(value.action)
+    || !isCommitOutcome(value.outcome)
+    || !Array.isArray(value.sources)
+    || !value.sources.every(isSourceReceipt)
+    || new Set(value.sources.map((source) => source.path)).size !== value.sources.length
+    || !Array.isArray(value.semanticChanges)
+    || !value.semanticChanges.every((change) =>
+      typeof change === "string" && (SEMANTIC_CHANGES as readonly string[]).includes(change))
+    || !Array.isArray(value.resultingIdentities)
+    || !value.resultingIdentities.every(isResultingIdentity)
+    || typeof value.confirmation !== "string"
+    || !(CONFIRMATION_STATUSES as readonly string[]).includes(value.confirmation)
+    || !isGlobalCheck(value.globalCheck)
+    || (hasOwn(value, "result") && !isWriteResult(value.result))
+  ) return false;
+  try {
+    assertOutcomeConsistency({
+      outcome: value.outcome,
+      sources: value.sources,
+      semanticChanges: value.semanticChanges,
+      confirmation: value.confirmation as ConfirmationStatus,
+      globalCheck: value.globalCheck,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  return Object.keys(value).every((key) => keys.includes(key));
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function isSafeString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && !value.includes("\0");
+}
+
+function isNonnegativeInteger(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
+}
+
+function isSourceVersion(value: unknown): value is SourceVersion {
+  return isRecord(value)
+    && hasOnlyKeys(value, ["file", "contentDigest", "contentLength"])
+    && isSafeString(value.file)
+    && typeof value.contentDigest === "string"
+    && /^[0-9a-f]{64}$/.test(value.contentDigest)
+    && isNonnegativeInteger(value.contentLength);
+}
+
+function isSourceReceipt(value: unknown): value is SourceReceipt {
+  if (!isRecord(value) || !hasOnlyKeys(value, [
+    "path", "primitive", "before", "after", "changed", "undo", "locations",
+  ])) return false;
+  if (
+    !isSafeString(value.path)
+    || !isSourceWritePrimitive(value.primitive)
+    || !isSourceVersion(value.before)
+    || !isSourceVersion(value.after)
+    || value.before.file !== value.path
+    || value.after.file !== value.path
+    || typeof value.changed !== "boolean"
+    || !Array.isArray(value.locations)
+    || !value.locations.every((location) => isRecord(location)
+      && hasOnlyKeys(location, ["line"])
+      && isNonnegativeInteger(location.line))
+    || new Set(value.locations.map((location) => (location as SourceReceiptLocation).line)).size !== value.locations.length
+  ) return false;
+  const expectedUndo: SourceUndoSemantics = value.primitive === "editor"
+    ? "single-native-step"
+    : "not-guaranteed";
+  return value.undo === expectedUndo
+    && value.changed === versionsDiffer(value.before, value.after)
+    && value.changed === (value.locations.length > 0);
+}
+
+function isResultingIdentity(value: unknown): value is ResultingIdentity {
+  return isRecord(value)
+    && hasOnlyKeys(value, ["kind", "id", "path", "line"])
+    && typeof value.kind === "string"
+    && (RESULTING_IDENTITY_KINDS as readonly string[]).includes(value.kind)
+    && isSafeString(value.id)
+    && isSafeString(value.path)
+    && (!hasOwn(value, "line") || isNonnegativeInteger(value.line));
+}
+
+function isGlobalCheck(value: unknown): value is GlobalCheckReceipt {
+  return isRecord(value)
+    && hasOnlyKeys(value, ["status", "runningClockIds"])
+    && typeof value.status === "string"
+    && (GLOBAL_CHECK_STATUSES as readonly string[]).includes(value.status)
+    && Array.isArray(value.runningClockIds)
+    && value.runningClockIds.every(isSafeString);
 }
 
 export function receiptChangedSources(receipt: CommitReceipt): readonly SourceReceipt[] {

@@ -73,7 +73,7 @@ function oneStage(
 function comparableReceipt(receipt: CommitReceipt): unknown {
   return {
     ...receipt,
-    sources: receipt.sources.map(({ path, before, after }) => ({ path, before, after })),
+    sources: receipt.sources.map(({ path, before, after, locations }) => ({ path, before, after, locations })),
   };
 }
 

@@ -3,8 +3,11 @@ import test from "node:test";
 
 import {
   applyAllowedByteEdits,
+  createCanonicalPreviewToken,
   createMutationPlan,
+  createMutationPreviewToken,
   deleteConfirmationIsCurrent,
+  mutationPlanIsValid,
 } from "../../../src/workspace/mutations.ts";
 
 test("TC-OBS-SAFE-001-001 strict byte edits preserve every byte outside the allowlist", () => {
@@ -165,4 +168,84 @@ test("Mutation Plans deep-clone and freeze nested operation facts", () => {
   assert.equal((frozen.stages[0]!.operations[0] as { readonly close: { readonly endEpochMs: number } }).close.endEpochMs, 10);
   assert.equal(Object.isFrozen(frozen.stages[0]!.operations[0]), true);
   assert.equal(Object.isFrozen((frozen.stages[0]!.operations[0] as { readonly target: object }).target), true);
+  assert.match(frozen.previewToken, /^sha256:[0-9a-f]{64}$/);
+});
+
+test("preview tokens bind every normalized plan field and reject post-preview mutation", () => {
+  assert.equal(
+    createCanonicalPreviewToken({}),
+    "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  );
+  const plan = createMutationPlan({
+    intentId: "preview-bound",
+    action: "initialize-plan",
+    stages: [{
+      path: "today.md",
+      confirmationRequired: true,
+      operations: [{
+        kind: "initialize-plan",
+        insertionOffset: 8,
+        lineEnding: "\r\n",
+        expectedSource: "# Today\r\n",
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: 4,
+    zoneId: "Asia/Shanghai",
+  });
+  assert.equal(createMutationPreviewToken(plan), plan.previewToken);
+  assert.equal(mutationPlanIsValid(plan), true);
+
+  const operation = plan.stages[0]!.operations[0];
+  assert.equal(operation.kind, "initialize-plan");
+  const mutated = {
+    ...plan,
+    stages: [{
+      ...plan.stages[0]!,
+      operations: [{ ...operation, expectedSource: "# Replaced\r\n" }],
+    }],
+  } as typeof plan;
+  assert.equal(mutationPlanIsValid(mutated), false);
+  assert.throws(() => createMutationPlan(mutated), /confirmed preview token/);
+
+  const fieldVariants = [
+    { ...plan, intentId: "different-intent" },
+    { ...plan, settingsVersion: 5 },
+    { ...plan, zoneId: "UTC" },
+    { ...plan, stages: [{ ...plan.stages[0]!, path: "tomorrow.md" }] },
+    { ...plan, stages: [{ ...plan.stages[0]!, confirmationRequired: false }] },
+    { ...plan, stages: [{ ...plan.stages[0]!, operations: [{ ...operation, insertionOffset: 7 }] }] },
+    { ...plan, stages: [{ ...plan.stages[0]!, operations: [{ ...operation, lineEnding: "\n" as const }] }] },
+  ];
+  for (const variant of fieldVariants) assert.notEqual(createMutationPreviewToken(variant), plan.previewToken);
+
+  assert.throws(() => createMutationPlan({
+    ...plan,
+    previewToken: undefined,
+    stages: [{ ...plan.stages[0]!, confirmationRequired: "not-confirmed" as never }],
+  }), /confirmationRequired must be boolean/);
+  assert.equal(mutationPlanIsValid({
+    ...plan,
+    stages: [{ ...plan.stages[0]!, confirmationRequired: "not-confirmed" as never }],
+  }), false);
+});
+
+test("Initialize rejects bare carriage-return line endings", () => {
+  assert.throws(() => createMutationPlan({
+    intentId: "bare-cr",
+    action: "initialize-plan",
+    stages: [{
+      path: "today.md",
+      confirmationRequired: true,
+      operations: [{
+        kind: "initialize-plan",
+        insertionOffset: 0,
+        lineEnding: "\r" as "\n",
+        expectedSource: "",
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: 1,
+    zoneId: "UTC",
+  }), /recognized Markdown line ending/);
 });

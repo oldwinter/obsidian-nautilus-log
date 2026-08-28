@@ -1,10 +1,16 @@
 import { parseGrammar } from "../core/grammar-v1";
 import type { PlanItem, PlanItemStatus } from "../core/model";
-import { isCanonicalClockId } from "./clock-parser";
+import { isCanonicalClockId, parseClockText } from "./clock-parser";
 import { createCommitConflict, type CommitConflict } from "./conflicts";
-import type { IdentityLookup } from "./identity-index";
+import type { BlockIdLocation, IdentityLookup } from "./identity-index";
 import { readLogbook, type LogbookClock, type LogbookReadOptions, type LogbookReadResult } from "./logbook-reader";
-import type { MutationAction } from "./mutations";
+import {
+  createCanonicalPreviewToken,
+  isMutationPreviewToken,
+  mutationPlanPreviewTokenMatches,
+  type MutationAction,
+  type MutationPlan,
+} from "./mutations";
 import { resolvePrimaryPlan, type WorkspacePlanItemSource } from "./primary-plan-resolver";
 import type { SourceSpan, SourceVersion } from "./source-version";
 
@@ -25,7 +31,6 @@ export type PlanItemWatch = "first-line" | "complete-item" | "identity-and-state
 export interface PlanItemExpectation {
   readonly target: PlanItemSelector;
   readonly path: string;
-  readonly sourceVersion: SourceVersion;
   readonly sourceText: string;
   readonly itemSpan: SourceSpan;
   readonly firstLineText: string;
@@ -40,7 +45,6 @@ export interface PlanItemExpectation {
 export interface ClockExpectation {
   readonly target: ClockSelector;
   readonly path: string;
-  readonly sourceVersion: SourceVersion;
   readonly sourceText: string;
   readonly span: SourceSpan;
   readonly text: string;
@@ -52,6 +56,7 @@ export interface TrustedTimeExpectation {
   readonly wallEpochMs: number;
   readonly monotonicMs: number;
   readonly maximumDriftMs: number;
+  readonly maximumQueueDelayMs: number;
   readonly discontinuity: boolean;
 }
 
@@ -63,15 +68,26 @@ export interface MutationExpectation {
   readonly expectedRunningClockIds: readonly string[];
   readonly settingsVersion: number;
   readonly zoneId: string;
-  readonly indexGeneration: number;
   readonly indexComplete: boolean;
   readonly time: TrustedTimeExpectation;
+  readonly previewToken: string;
+  readonly expectationToken: string;
+  readonly selectedRepair?: SelectedRepairEvidence;
 }
+
+export interface SelectedRepairEvidence {
+  readonly id: string;
+  readonly locations: readonly BlockIdLocation[];
+  readonly selectedSpan: Pick<SourceSpan, "fromOffset" | "toOffset"> & { readonly path: string };
+}
+
+export type MutationExpectationInput = Omit<MutationExpectation, "expectationToken"> & {
+  readonly expectationToken?: string;
+};
 
 export interface CreatePlanItemExpectationInput {
   readonly target: PlanItemSelector;
   readonly path: string;
-  readonly sourceVersion: SourceVersion;
   readonly sourceText: string;
   readonly item: PlanItem<WorkspacePlanItemSource>;
   readonly drawerCount: number;
@@ -81,7 +97,6 @@ export interface CreatePlanItemExpectationInput {
 export interface CreateClockExpectationInput {
   readonly target: ClockSelector;
   readonly path: string;
-  readonly sourceVersion: SourceVersion;
   readonly sourceText: string;
   readonly clock: LogbookClock;
 }
@@ -100,6 +115,14 @@ export interface RevalidatedClock {
 export type RevalidationResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly conflict: CommitConflict };
+
+export interface SelectedRepairAdmission {
+  readonly kind: "selected-repair";
+  readonly identity: Extract<IdentityLookup, { readonly kind: "collision" }>;
+  readonly selectedSpan: Pick<SourceSpan, "fromOffset" | "toOffset"> & { readonly path: string };
+}
+
+export type TargetIdentityAdmission = IdentityLookup | SelectedRepairAdmission;
 
 function freezeSpan(span: SourceSpan): SourceSpan {
   return Object.freeze({ ...span });
@@ -162,7 +185,7 @@ function itemWatchedText(
 
 export function createPlanItemExpectation(input: CreatePlanItemExpectationInput): PlanItemExpectation {
   assertNonempty("Plan Item expectation path", input.path);
-  if (input.item.source.version.file !== input.path || input.sourceVersion.file !== input.path) {
+  if (input.item.source.version.file !== input.path) {
     throw new TypeError("Plan Item expectation source path mismatch");
   }
   if (input.target.id !== undefined && input.item.source.blockId !== input.target.id) {
@@ -175,7 +198,6 @@ export function createPlanItemExpectation(input: CreatePlanItemExpectationInput)
   return Object.freeze({
     target: Object.freeze({ ...input.target }),
     path: input.path,
-    sourceVersion: Object.freeze({ ...input.sourceVersion }),
     sourceText: input.sourceText,
     itemSpan: freezeSpan(input.item.source.itemSpan),
     firstLineText: input.item.source.firstLineText,
@@ -221,7 +243,6 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
       ...(observedId === undefined ? { fromOffset: input.clock.fromOffset } : {}),
     }),
     path: input.path,
-    sourceVersion: Object.freeze({ ...input.sourceVersion }),
     sourceText: input.sourceText,
     span: Object.freeze({
       fromOffset: input.clock.fromOffset,
@@ -237,39 +258,145 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
   });
 }
 
-export function createMutationExpectation(input: MutationExpectation): MutationExpectation {
+function freezeSelectedRepairEvidence(
+  evidence: SelectedRepairEvidence,
+  planItems: readonly PlanItemExpectation[],
+  clocks: readonly ClockExpectation[],
+): SelectedRepairEvidence {
+  assertNonempty("selected repair identity", evidence.id);
+  assertNonempty("selected repair path", evidence.selectedSpan.path);
+  if (
+    evidence.locations.length < 2
+    || !Number.isSafeInteger(evidence.selectedSpan.fromOffset)
+    || !Number.isSafeInteger(evidence.selectedSpan.toOffset)
+    || evidence.selectedSpan.fromOffset < 0
+    || evidence.selectedSpan.toOffset < evidence.selectedSpan.fromOffset
+  ) throw new TypeError("selected repair evidence requires a collision and a valid exact span");
+  const locations = evidence.locations.map((location) => {
+    if (
+      location.id !== evidence.id
+      || location.path.length === 0
+      || !Number.isSafeInteger(location.fromOffset)
+      || !Number.isSafeInteger(location.toOffset)
+      || !Number.isSafeInteger(location.line)
+      || !Number.isSafeInteger(location.column)
+      || location.fromOffset < 0
+      || location.toOffset <= location.fromOffset
+      || location.line < 0
+      || location.column < 0
+    ) throw new TypeError("selected repair collision locations must be exact and internally valid");
+    return Object.freeze({ ...location });
+  });
+  if (new Set(locations.map((location) =>
+    `${location.path}\0${String(location.fromOffset)}\0${String(location.toOffset)}`)).size !== locations.length) {
+    throw new TypeError("selected repair collision locations must be distinct");
+  }
+  const selectedLocation = locations.find((location) =>
+    location.path === evidence.selectedSpan.path
+    && location.fromOffset >= evidence.selectedSpan.fromOffset
+    && location.toOffset <= evidence.selectedSpan.toOffset);
+  const selectedTarget = [...planItems, ...clocks].some((target) =>
+    target.target.id === evidence.id
+    && target.path === evidence.selectedSpan.path
+    && ("itemSpan" in target ? target.itemSpan : target.span).fromOffset === evidence.selectedSpan.fromOffset
+    && ("itemSpan" in target ? target.itemSpan : target.span).toOffset === evidence.selectedSpan.toOffset);
+  if (!selectedLocation || !selectedTarget) {
+    throw new TypeError("selected repair span must bind one expected collision occurrence");
+  }
+  return Object.freeze({
+    id: evidence.id,
+    locations: Object.freeze(locations),
+    selectedSpan: Object.freeze({ ...evidence.selectedSpan }),
+  });
+}
+
+function expectationTokenPayload(expectation: MutationExpectationInput): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(expectation).filter(([key]) => key !== "expectationToken"));
+}
+
+export function createMutationExpectationToken(expectation: MutationExpectationInput): string {
+  return createCanonicalPreviewToken(expectationTokenPayload(expectation));
+}
+
+export function mutationExpectationTokenMatches(expectation: MutationExpectation): boolean {
+  return isMutationPreviewToken(expectation.expectationToken)
+    && createMutationExpectationToken(expectation) === expectation.expectationToken;
+}
+
+export function createMutationExpectation(input: MutationExpectationInput): MutationExpectation {
   assertNonempty("expectation intentId", input.intentId);
   assertNonempty("expectation zoneId", input.zoneId);
   if (!Number.isSafeInteger(input.settingsVersion) || input.settingsVersion < 0) {
     throw new RangeError("expectation settingsVersion must be a nonnegative safe integer");
   }
-  if (!Number.isSafeInteger(input.indexGeneration) || input.indexGeneration < 0) {
-    throw new RangeError("expectation indexGeneration must be a nonnegative safe integer");
+  if (!isMutationPreviewToken(input.previewToken)) {
+    throw new TypeError("expectation previewToken must be a SHA-256 preview token");
   }
-  return Object.freeze({
-    ...input,
-    planItems: Object.freeze([...input.planItems]),
-    clocks: Object.freeze([...input.clocks]),
+  if (
+    !Number.isFinite(input.time.wallEpochMs)
+    || !Number.isFinite(input.time.monotonicMs)
+    || !Number.isFinite(input.time.maximumDriftMs)
+    || input.time.maximumDriftMs < 0
+    || typeof input.time.discontinuity !== "boolean"
+  ) throw new TypeError("expectation time facts must be finite and internally valid");
+  if (!Number.isSafeInteger(input.time.maximumQueueDelayMs) || input.time.maximumQueueDelayMs < 0) {
+    throw new RangeError("expectation maximumQueueDelayMs must be a nonnegative safe integer");
+  }
+  const planItems = Object.freeze([...input.planItems]);
+  const clocks = Object.freeze([...input.clocks]);
+  const selectedRepair = input.selectedRepair === undefined
+    ? undefined
+    : freezeSelectedRepairEvidence(input.selectedRepair, planItems, clocks);
+  const normalized: MutationExpectationInput = Object.freeze({
+    intentId: input.intentId,
+    action: input.action,
+    planItems,
+    clocks,
     expectedRunningClockIds: Object.freeze([...input.expectedRunningClockIds].sort()),
+    settingsVersion: input.settingsVersion,
+    zoneId: input.zoneId,
+    indexComplete: input.indexComplete,
     time: Object.freeze({ ...input.time }),
+    previewToken: input.previewToken,
+    ...(selectedRepair ? { selectedRepair } : {}),
   });
+  const expectationToken = createMutationExpectationToken(normalized);
+  if (input.expectationToken !== undefined && input.expectationToken !== expectationToken) {
+    throw new TypeError("Mutation expectation no longer matches its confirmed preview token");
+  }
+  return Object.freeze({ ...normalized, expectationToken });
 }
 
 function identityPermitsTarget(
-  identity: IdentityLookup | undefined,
+  admission: TargetIdentityAdmission | undefined,
   expectation: { readonly target: { readonly id?: string }; readonly path: string },
+  expectedSpan: Pick<SourceSpan, "fromOffset" | "toOffset">,
   action: MutationAction,
 ): RevalidationResult<true> {
   const id = expectation.target.id;
   if (!id) return Object.freeze({ ok: true, value: true });
-  if (!identity || identity.kind === "unavailable") return conflict("source-conflict", action, expectation.path, id);
   const isSelectedRepair = action === "repair-plan-item-identity" || action === "repair-clock-identity";
   if (isSelectedRepair) {
-    if (identity.kind === "collision" && identity.locations.some((location) => location.path === expectation.path)) {
+    if (
+      admission?.kind === "selected-repair"
+      && admission.selectedSpan.path === expectation.path
+      && admission.selectedSpan.fromOffset === expectedSpan.fromOffset
+      && admission.selectedSpan.toOffset === expectedSpan.toOffset
+      && admission.identity.locations.length > 1
+      && admission.identity.locations.some((location) =>
+        location.id === id
+        && location.path === admission.selectedSpan.path
+        && location.fromOffset >= admission.selectedSpan.fromOffset
+        && location.toOffset <= admission.selectedSpan.toOffset)
+    ) {
       return Object.freeze({ ok: true, value: true });
     }
     return conflict("action-no-longer-applicable", action, expectation.path, id);
   }
+  if (!admission || admission.kind === "unavailable" || admission.kind === "selected-repair") {
+    return conflict("source-conflict", action, expectation.path, id);
+  }
+  const identity = admission;
   if (identity.kind === "collision") {
     return conflict("identity-collision", action, expectation.path, id);
   }
@@ -282,10 +409,10 @@ export function revalidatePlanItemExpectation(
   currentText: string,
   expectation: PlanItemExpectation,
   action: MutationAction,
-  identity?: IdentityLookup,
+  identity?: TargetIdentityAdmission,
   logbookOptions: LogbookReadOptions = {},
 ): RevalidationResult<RevalidatedPlanItem> {
-  const identityCheck = identityPermitsTarget(identity, expectation, action);
+  const identityCheck = identityPermitsTarget(identity, expectation, expectation.itemSpan, action);
   if (!identityCheck.ok) return identityCheck;
   if (!expectation.target.id) {
     if (currentPath !== expectation.path || currentText !== expectation.sourceText) {
@@ -346,15 +473,83 @@ function clocksInItems(
   return Object.freeze(found);
 }
 
+const ORPHAN_CLOCK_RECOVERY_ACTIONS: ReadonlySet<MutationAction> = new Set([
+  "clock-out",
+  "delete-clock",
+  "stop-at-trusted-time",
+  "repair-overlap",
+  "repair-done-owner-clock",
+  "repair-clock-identity",
+  "normalize-legacy-clock",
+]);
+
+function exactCanonicalClockPhysicalLine(
+  source: string,
+  expectedText: string,
+  identity: BlockIdLocation,
+): { readonly fromOffset: number; readonly toOffset: number } | undefined {
+  const lineStart = source.lastIndexOf("\n", Math.max(0, identity.fromOffset - 1)) + 1;
+  const newlineOffset = source.indexOf("\n", identity.toOffset);
+  const physicalEnd = newlineOffset < 0 ? source.length : newlineOffset;
+  const lineEnd = source[physicalEnd - 1] === "\r" ? physicalEnd - 1 : physicalEnd;
+  const line = source.slice(lineStart, lineEnd);
+  const prefix = /^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?/.exec(line)?.[0] ?? "";
+  const fromOffset = lineStart + prefix.length;
+  const toOffset = fromOffset + expectedText.length;
+  if (
+    source.slice(fromOffset, toOffset) !== expectedText
+    || !/^[ \t]*$/.test(source.slice(toOffset, lineEnd))
+    || identity.fromOffset < fromOffset
+    || identity.toOffset > toOffset
+  ) return undefined;
+  return Object.freeze({ fromOffset, toOffset });
+}
+
+function exactCanonicalOrphanClock(
+  currentPath: string,
+  currentText: string,
+  expectation: ClockExpectation,
+  action: MutationAction,
+  identity: TargetIdentityAdmission | undefined,
+): RevalidationResult<RevalidatedClock> | undefined {
+  if (
+    !ORPHAN_CLOCK_RECOVERY_ACTIONS.has(action)
+    || expectation.target.id === undefined
+    || expectation.ownerId !== undefined
+  ) return undefined;
+  if (!identity || identity.kind !== "unique" || identity.location.path !== currentPath) {
+    return conflict("source-conflict", action, currentPath, expectation.target.id);
+  }
+  const matchingSpan = exactCanonicalClockPhysicalLine(currentText, expectation.text, identity.location);
+  if (!matchingSpan) {
+    return conflict("source-conflict", action, currentPath, expectation.target.id);
+  }
+  const parsed = parseClockText(expectation.text);
+  if (
+    parsed.kind !== "record"
+    || parsed.record.format !== "canonical"
+    || parsed.record.clockId !== expectation.target.id
+    || parsed.record.state !== expectation.state
+  ) return conflict("action-no-longer-applicable", action, expectation.path, expectation.target.id);
+  const clock: LogbookClock = Object.freeze({
+    path: currentPath,
+    fromOffset: matchingSpan.fromOffset,
+    toOffset: matchingSpan.toOffset,
+    text: expectation.text,
+    parsed,
+  });
+  return Object.freeze({ ok: true, value: Object.freeze({ clock }) });
+}
+
 export function revalidateClockExpectation(
   currentPath: string,
   currentText: string,
   expectation: ClockExpectation,
   action: MutationAction,
-  identity?: IdentityLookup,
+  identity?: TargetIdentityAdmission,
   logbookOptions: LogbookReadOptions = {},
 ): RevalidationResult<RevalidatedClock> {
-  const identityCheck = identityPermitsTarget(identity, expectation, action);
+  const identityCheck = identityPermitsTarget(identity, expectation, expectation.span, action);
   if (!identityCheck.ok) return identityCheck;
   if (!expectation.target.id && (currentPath !== expectation.path || currentText !== expectation.sourceText)) {
     return conflict("anonymous-source-changed", action, expectation.path);
@@ -383,6 +578,10 @@ export function revalidateClockExpectation(
         && clock.text === expectation.text;
   });
   if (found.length !== 1) {
+    if (found.length === 0) {
+      const orphan = exactCanonicalOrphanClock(currentPath, currentText, expectation, action, identity);
+      if (orphan) return orphan;
+    }
     return conflict(found.length > 1 ? "identity-collision" : "plan-item-not-found", action, currentPath, expectation.target.id);
   }
   const result = found[0]!;
@@ -411,22 +610,21 @@ export function timeExpectationIsTrusted(time: TrustedTimeExpectation): boolean 
     && Number.isFinite(time.wallEpochMs)
     && Number.isFinite(time.monotonicMs)
     && Number.isFinite(time.maximumDriftMs)
-    && time.maximumDriftMs >= 0;
+    && Number.isSafeInteger(time.maximumQueueDelayMs)
+    && time.maximumDriftMs >= 0
+    && time.maximumQueueDelayMs >= 0;
 }
 
 export function expectationMatchesPlan(
   expectation: MutationExpectation,
-  plan: {
-    readonly intentId: string;
-    readonly action: MutationAction;
-    readonly expectedRunningClockIds: readonly string[];
-    readonly settingsVersion: number;
-    readonly zoneId: string;
-  },
+  plan: MutationPlan,
 ): boolean {
   return expectation.intentId === plan.intentId
     && expectation.action === plan.action
     && expectation.settingsVersion === plan.settingsVersion
     && expectation.zoneId === plan.zoneId
-    && expectation.expectedRunningClockIds.join("\0") === [...plan.expectedRunningClockIds].sort().join("\0");
+    && expectation.expectedRunningClockIds.join("\0") === [...plan.expectedRunningClockIds].sort().join("\0")
+    && expectation.previewToken === plan.previewToken
+    && mutationPlanPreviewTokenMatches(plan)
+    && mutationExpectationTokenMatches(expectation);
 }

@@ -10,7 +10,11 @@ import {
   formatCanonicalRunningClock,
 } from "../../../src/workspace/logbook-clock.ts";
 import { createMutationPlan, type MutationPlan } from "../../../src/workspace/mutations.ts";
-import { MemoryAtomicTextAccess, TempVaultAtomicTextAccess } from "./adapters.ts";
+import {
+  MemoryAtomicTextAccess,
+  TempVaultAtomicTextAccess,
+  type AtomicFault,
+} from "./adapters.ts";
 import {
   CLOCK_A,
   CLOCK_B,
@@ -42,9 +46,15 @@ function activeSource(planId = PLAN_A, clockId = CLOCK_A, title = "Alpha"): stri
   return `${OPEN}\n- [ ] ${title} 30m ^${planId}\n  - LOGBOOK::\n    - ${clock}\n${CLOSE}\n`;
 }
 
-function clockInPlan(path: string, planId: string | undefined, generatedPlanItemId?: string): MutationPlan {
+function clockInPlan(
+  path: string,
+  planId: string | undefined,
+  generatedPlanItemId?: string,
+  clockId = CLOCK_NEW,
+  intentId = `intent-clock-in-${planId ?? "anonymous"}`,
+): MutationPlan {
   return createMutationPlan({
-    intentId: `intent-clock-in-${planId ?? "anonymous"}`,
+    intentId,
     action: "clock-in",
     stages: [{
       path,
@@ -53,12 +63,51 @@ function clockInPlan(path: string, planId: string | undefined, generatedPlanItem
         kind: "clock-in",
         target: { kind: "plan-item", ...(planId ? { id: planId } : {}) },
         ...(generatedPlanItemId ? { generatedPlanItemId } : {}),
-        clock: { clockId: CLOCK_NEW, startEpochMs: NOW, offsetMinutes: 480 },
+        clock: { clockId, startEpochMs: NOW, offsetMinutes: 480 },
       }],
     }],
     expectedRunningClockIds: [],
     settingsVersion: CONTEXT.settingsVersion,
     zoneId: CONTEXT.zoneId,
+  });
+}
+
+function crossFileSwitchPlan(intentId: string): MutationPlan {
+  return createMutationPlan({
+    intentId,
+    action: "switch-task",
+    stages: [
+      {
+        path: PATH_A,
+        confirmationRequired: false,
+        operations: [{
+          kind: "clock-out",
+          target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
+          close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
+        }],
+      },
+      {
+        path: PATH_B,
+        confirmationRequired: false,
+        operations: [{
+          kind: "clock-in",
+          target: { kind: "plan-item", id: PLAN_B },
+          clock: { clockId: CLOCK_B, startEpochMs: NOW, offsetMinutes: 480 },
+        }],
+      },
+    ],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+    transitionEpochMs: NOW,
+  });
+}
+
+async function crossFileExpectation(access: MemoryAtomicTextAccess, plan: MutationPlan) {
+  return mutationExpectation(access, plan, {
+    planIds: [PLAN_B],
+    clockIds: [CLOCK_A],
+    expectedRunningClockIds: [CLOCK_A],
   });
 }
 
@@ -127,9 +176,13 @@ test("production Obsidian adapter enters exactly one Editor transaction or Vault
       }[] }) => {
         editorTransactions += 1;
         observedEditorChanges = transaction.changes ?? [];
-        for (const change of observedEditorChanges) {
-          const from = offsetAt(editorText, change.from);
-          const to = offsetAt(editorText, change.to);
+        const before = editorText;
+        const withOffsets = observedEditorChanges.map((change) => ({
+          change,
+          from: offsetAt(before, change.from),
+          to: offsetAt(before, change.to),
+        })).sort((left, right) => right.from - left.from || right.to - left.to);
+        for (const { change, from, to } of withOffsets) {
           editorText = editorText.slice(0, from) + change.text + editorText.slice(to);
         }
       },
@@ -223,6 +276,276 @@ test("transaction-window source change conflicts without overwriting the externa
   assert.ok(after?.includes("Externally changed"));
   assert.equal(after?.includes("CLOCK:"), false);
   writer.dispose();
+});
+
+test("dispose while paused before the host callback rejects with zero changed bytes and no retry", async () => {
+  for (const primitive of ["editor", "vault-process"] as const) {
+    const source = idleSource();
+    const access = new MemoryAtomicTextAccess({ [PATH_A]: source }, primitive);
+    const plan = clockInPlan(
+      PATH_A,
+      PLAN_A,
+      undefined,
+      CLOCK_NEW,
+      `dispose-before-host-${primitive}`,
+    );
+    const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+    const gate = access.pauseBeforeCallback(PATH_A);
+    const writer = committer(access);
+    const pending = writer.commit(plan, expectation);
+    await gate.entered;
+    writer.dispose();
+    gate.release();
+
+    const receipt = await pending;
+    assert.equal(receipt.outcome, "rejected", primitive);
+    assert.equal(receipt.result?.code, "action-no-longer-applicable", primitive);
+    assert.deepEqual(receipt.sources, [], primitive);
+    assert.equal(await access.readText(PATH_A), source, primitive);
+    assert.equal(access.transactionCounts.get(PATH_A), 1, primitive);
+
+    const retry = await writer.commit(plan, expectation);
+    assert.equal(retry.outcome, "rejected", primitive);
+    assert.equal(access.transactionCounts.get(PATH_A), 1, primitive);
+    assert.equal(await access.readText(PATH_A), source, primitive);
+  }
+});
+
+test("dispose after host entry or during authoritative reread never publishes confirmed success", async () => {
+  for (const primitive of ["editor", "vault-process"] as const) {
+    for (const point of ["after-apply", "primitive-read"] as const) {
+      const source = idleSource();
+      const access = new MemoryAtomicTextAccess({ [PATH_A]: source }, primitive);
+      const plan = clockInPlan(
+        PATH_A,
+        PLAN_A,
+        undefined,
+        CLOCK_NEW,
+        `dispose-${point}-${primitive}`,
+      );
+      const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+      const gate = point === "after-apply"
+        ? access.pauseAfterApply(PATH_A)
+        : access.pauseNextPrimitiveRead(PATH_A);
+      const writer = committer(access);
+      const pending = writer.commit(plan, expectation);
+      await gate.entered;
+      writer.dispose();
+      gate.release();
+
+      const receipt = await pending;
+      assert.equal(receipt.outcome, "uncertain", `${primitive}/${point}`);
+      assert.equal(receipt.confirmation, "unconfirmed", `${primitive}/${point}`);
+      assert.equal(receipt.result?.code, "write-outcome-uncertain", `${primitive}/${point}`);
+      assert.equal(writer.blocked, true, `${primitive}/${point}`);
+      assert.ok((await access.readText(PATH_A))?.includes(CLOCK_NEW), `${primitive}/${point}`);
+      assert.equal(access.transactionCounts.get(PATH_A), 1, `${primitive}/${point}`);
+      assert.deepEqual(receipt.sources, [], `${primitive}/${point}`);
+
+      const retry = await writer.commit(plan, expectation);
+      assert.equal(retry.outcome, "rejected", `${primitive}/${point}`);
+      assert.equal(access.transactionCounts.get(PATH_A), 1, `${primitive}/${point}`);
+    }
+  }
+});
+
+test("host fault matrix preserves exact outcome, bytes, receipts, and writer blocking for both primitives", async () => {
+  const cases: readonly {
+    readonly fault: AtomicFault;
+    readonly outcome: "applied" | "failed-no-change" | "uncertain" | "invariant-broken";
+    readonly confirmation: "confirmed" | "confirmed-no-change" | "unconfirmed" | "invariant-broken";
+    readonly changed: boolean;
+    readonly blocked: boolean;
+    readonly code?: "write-failed-no-change" | "write-outcome-uncertain" | "write-invariant-broken";
+  }[] = [
+    { fault: "before-callback", outcome: "failed-no-change", confirmation: "confirmed-no-change", changed: false, blocked: false, code: "write-failed-no-change" },
+    { fault: "before-apply", outcome: "failed-no-change", confirmation: "confirmed-no-change", changed: false, blocked: false, code: "write-failed-no-change" },
+    { fault: "apply-then-throw", outcome: "applied", confirmation: "confirmed", changed: true, blocked: false },
+    { fault: "partial-prefix", outcome: "uncertain", confirmation: "unconfirmed", changed: true, blocked: true, code: "write-outcome-uncertain" },
+    { fault: "divergent-resolve", outcome: "invariant-broken", confirmation: "invariant-broken", changed: true, blocked: true, code: "write-invariant-broken" },
+    { fault: "silent-noop", outcome: "failed-no-change", confirmation: "confirmed-no-change", changed: false, blocked: false, code: "write-failed-no-change" },
+  ];
+
+  for (const primitive of ["editor", "vault-process"] as const) {
+    for (const scenario of cases) {
+      const source = idleSource();
+      const access = new MemoryAtomicTextAccess({ [PATH_A]: source }, primitive);
+      const plan = clockInPlan(
+        PATH_A,
+        PLAN_A,
+        undefined,
+        CLOCK_NEW,
+        `fault-${primitive}-${scenario.fault}`,
+      );
+      const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+      access.fault(PATH_A, scenario.fault);
+      const writer = committer(access);
+      const receipt = await writer.commit(plan, expectation);
+      const after = await access.readText(PATH_A);
+
+      assert.equal(receipt.outcome, scenario.outcome, `${primitive}/${scenario.fault}`);
+      assert.equal(receipt.confirmation, scenario.confirmation, `${primitive}/${scenario.fault}`);
+      assert.equal(receipt.result?.code, scenario.code, `${primitive}/${scenario.fault}`);
+      assert.equal(receipt.sources.length, 1, `${primitive}/${scenario.fault}`);
+      assert.deepEqual(receipt.sources.map((entry) => ({
+        path: entry.path,
+        primitive: entry.primitive,
+        changed: entry.changed,
+      })), [{ path: PATH_A, primitive, changed: scenario.changed }], `${primitive}/${scenario.fault}`);
+      assert.equal(writer.blocked, scenario.blocked, `${primitive}/${scenario.fault}`);
+      assert.equal(access.transactionCounts.get(PATH_A), 1, `${primitive}/${scenario.fault}`);
+      assert.equal(access.callbackCounts.get(PATH_A) ?? 0, scenario.fault === "before-callback" ? 0 : 1, `${primitive}/${scenario.fault}`);
+      if (scenario.changed) assert.notEqual(after, source, `${primitive}/${scenario.fault}`);
+      else assert.equal(after, source, `${primitive}/${scenario.fault}`);
+      if (scenario.outcome === "applied") assert.ok(after?.includes(CLOCK_NEW), primitive);
+      writer.dispose();
+    }
+  }
+});
+
+test("unreadable post-write confirmation is uncertain for Vault.process and active Editor", async () => {
+  {
+    const source = idleSource();
+    const access = new MemoryAtomicTextAccess({ [PATH_A]: source }, "vault-process");
+    const plan = clockInPlan(PATH_A, PLAN_A, undefined, CLOCK_NEW, "vault-confirmation-unreadable");
+    const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+    access.failConfirmationAfterNextTransform();
+    const writer = committer(access);
+    const receipt = await writer.commit(plan, expectation);
+    assert.equal(receipt.outcome, "uncertain");
+    assert.equal(receipt.confirmation, "unconfirmed");
+    assert.equal(receipt.result?.code, "write-outcome-uncertain");
+    assert.deepEqual(receipt.sources, []);
+    assert.equal(writer.blocked, true);
+    assert.ok((await access.readText(PATH_A))?.includes(CLOCK_NEW));
+    assert.equal(access.transactionCounts.get(PATH_A), 1);
+    writer.dispose();
+  }
+
+  {
+    const source = idleSource();
+    const delegate = new MemoryAtomicTextAccess({ [PATH_A]: source });
+    let editorText = source;
+    let confirmationUnreadable = false;
+    let transactions = 0;
+    const offsetAt = (text: string, position: { readonly line: number; readonly ch: number }): number => {
+      const lines = text.split(/\r\n|\r|\n/);
+      let offset = 0;
+      for (let line = 0; line < position.line; line += 1) {
+        offset += lines[line]!.length;
+        if (text.slice(offset, offset + 2) === "\r\n") offset += 2;
+        else offset += 1;
+      }
+      return offset + position.ch;
+    };
+    const editor = {
+      getValue: () => {
+        if (confirmationUnreadable) {
+          confirmationUnreadable = false;
+          throw new Error("injected Editor confirmation failure");
+        }
+        return editorText;
+      },
+      transaction: (transaction: { readonly changes?: readonly {
+        readonly from: { readonly line: number; readonly ch: number };
+        readonly to: { readonly line: number; readonly ch: number };
+        readonly text: string;
+      }[] }) => {
+        transactions += 1;
+        const before = editorText;
+        const changes = (transaction.changes ?? []).map((change) => ({
+          change,
+          from: offsetAt(before, change.from),
+          to: offsetAt(before, change.to),
+        })).sort((left, right) => right.from - left.from || right.to - left.to);
+        for (const { change, from, to } of changes) {
+          editorText = editorText.slice(0, from) + change.text + editorText.slice(to);
+        }
+        confirmationUnreadable = true;
+      },
+    };
+    const access = new ObsidianAtomicTextAccess({
+      text: delegate,
+      vault: { process: async () => undefined } as never,
+      editorForPath: () => editor as never,
+      fileForPath: () => ({ path: PATH_A }) as never,
+    });
+    const plan = clockInPlan(PATH_A, PLAN_A, undefined, CLOCK_NEW, "editor-confirmation-unreadable");
+    const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+    const receipt = await writer.commit(plan, expectation);
+    assert.equal(receipt.outcome, "uncertain");
+    assert.equal(receipt.confirmation, "unconfirmed");
+    assert.equal(receipt.result?.code, "write-outcome-uncertain");
+    assert.deepEqual(receipt.sources, []);
+    assert.equal(writer.blocked, true);
+    assert.ok(editorText.includes(CLOCK_NEW));
+    assert.equal(transactions, 1);
+    writer.dispose();
+  }
+});
+
+test("production Vault.process missing-file and skipped-callback failures are confirmed unchanged and reusable", async () => {
+  for (const failure of ["missing-file", "skipped-callback"] as const) {
+    const source = idleSource();
+    const delegate = new MemoryAtomicTextAccess({ [PATH_A]: source });
+    let fileAvailable = failure !== "missing-file";
+    let enterTransform = failure !== "skipped-callback";
+    let processCalls = 0;
+    const access = new ObsidianAtomicTextAccess({
+      text: delegate,
+      editorForPath: () => undefined,
+      fileForPath: () => fileAvailable ? ({ path: PATH_A }) as never : undefined,
+      vault: {
+        process: async (_file: unknown, transform: (text: string) => string) => {
+          processCalls += 1;
+          const current = (await delegate.readText(PATH_A))!;
+          if (!enterTransform) return current;
+          const next = transform(current);
+          if (next !== current) delegate.modify(PATH_A, next);
+          return next;
+        },
+      } as never,
+    });
+    const failedPlan = clockInPlan(
+      PATH_A,
+      PLAN_A,
+      undefined,
+      CLOCK_NEW,
+      `production-${failure}`,
+    );
+    const failedExpectation = await mutationExpectation(access, failedPlan, { planIds: [PLAN_A] });
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+    const failed = await writer.commit(failedPlan, failedExpectation);
+
+    assert.equal(failed.outcome, "failed-no-change", failure);
+    assert.equal(failed.confirmation, "confirmed-no-change", failure);
+    assert.equal(failed.result?.code, "write-failed-no-change", failure);
+    assert.deepEqual(failed.sources.map((entry) => ({
+      path: entry.path,
+      primitive: entry.primitive,
+      changed: entry.changed,
+    })), [{ path: PATH_A, primitive: "vault-process", changed: false }], failure);
+    assert.equal(await delegate.readText(PATH_A), source, failure);
+    assert.equal(processCalls, failure === "missing-file" ? 0 : 1, failure);
+    assert.equal(writer.blocked, false, failure);
+
+    fileAvailable = true;
+    enterTransform = true;
+    const recoveryPlan = clockInPlan(
+      PATH_A,
+      PLAN_A,
+      undefined,
+      CLOCK_B,
+      `production-${failure}-next-intent`,
+    );
+    const recoveryExpectation = await mutationExpectation(access, recoveryPlan, { planIds: [PLAN_A] });
+    const recovered = await writer.commit(recoveryPlan, recoveryExpectation);
+    assert.equal(recovered.outcome, "applied", failure);
+    assert.ok((await delegate.readText(PATH_A))?.includes(CLOCK_B), failure);
+    assert.equal(processCalls, failure === "missing-file" ? 1 : 2, failure);
+    writer.dispose();
+  }
 });
 
 test("manual fault injection classifies before-apply, apply-then-throw, and unreadable confirmation", async () => {
@@ -333,6 +656,180 @@ test("same-file switch rejects a closed planned old CLOCK plus an unrelated runn
   assert.equal(access.transactionCounts.size, 0);
   assert.equal(await access.readText(PATH_A), source);
   writer.dispose();
+});
+
+test("cross-file dispose after confirmed stage A prevents stage B and reports only the changed source", async () => {
+  for (const primitive of ["editor", "vault-process"] as const) {
+    const sourceA = activeSource();
+    const sourceB = idleSource(PLAN_B, "Beta");
+    const access = new MemoryAtomicTextAccess({
+      [PATH_A]: sourceA,
+      [PATH_B]: sourceB,
+    }, primitive);
+    const plan = crossFileSwitchPlan(`dispose-between-stages-${primitive}`);
+    const expectation = await crossFileExpectation(access, plan);
+    const gate = access.pauseBeforeCallback(PATH_B);
+    const writer = committer(access);
+    const pending = writer.commit(plan, expectation);
+    await gate.entered;
+
+    const closedA = await access.readText(PATH_A);
+    assert.ok(closedA?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)), primitive);
+    assert.equal(await access.readText(PATH_B), sourceB, primitive);
+    writer.dispose();
+    gate.release();
+
+    const receipt = await pending;
+    assert.equal(receipt.outcome, "partial-safe", primitive);
+    assert.equal(receipt.confirmation, "partial", primitive);
+    assert.equal(receipt.result?.code, "partial-switch", primitive);
+    assert.deepEqual(receipt.sources.map((entry) => ({
+      path: entry.path,
+      primitive: entry.primitive,
+      changed: entry.changed,
+    })), [{ path: PATH_A, primitive, changed: true }], primitive);
+    assert.equal(await access.readText(PATH_B), sourceB, primitive);
+    assert.equal(access.transactionCounts.get(PATH_A), 1, primitive);
+    assert.equal(access.transactionCounts.get(PATH_B), 1, primitive);
+
+    const retry = await writer.commit(plan, expectation);
+    assert.equal(retry.outcome, "rejected", primitive);
+    assert.equal(access.transactionCounts.get(PATH_A), 1, primitive);
+    assert.equal(access.transactionCounts.get(PATH_B), 1, primitive);
+  }
+});
+
+test("cross-file disposal after stage B host entry defers stage B observation until reload", async () => {
+  for (const primitive of ["editor", "vault-process"] as const) {
+    for (const point of ["after-apply", "primitive-read"] as const) {
+      const access = new MemoryAtomicTextAccess({
+        [PATH_A]: activeSource(),
+        [PATH_B]: idleSource(PLAN_B, "Beta"),
+      }, primitive);
+      const plan = crossFileSwitchPlan(`dispose-stage-b-${point}-${primitive}`);
+      const expectation = await crossFileExpectation(access, plan);
+      const gate = point === "after-apply"
+        ? access.pauseAfterApply(PATH_B)
+        : access.pauseNextPrimitiveRead(PATH_B);
+      const writer = committer(access);
+      const pending = writer.commit(plan, expectation);
+      await gate.entered;
+      writer.dispose();
+      gate.release();
+
+      const receipt = await pending;
+      assert.equal(receipt.outcome, "uncertain", `${primitive}/${point}`);
+      assert.equal(receipt.confirmation, "unconfirmed", `${primitive}/${point}`);
+      assert.equal(receipt.result?.code, "write-outcome-uncertain", `${primitive}/${point}`);
+      assert.deepEqual(receipt.sources.map((source) => ({ path: source.path, changed: source.changed })), [
+        { path: PATH_A, changed: true },
+      ], `${primitive}/${point}`);
+      assert.ok((await access.readText(PATH_A))?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)));
+      assert.ok((await access.readText(PATH_B))?.includes(CLOCK_B));
+      assert.equal(access.transactionCounts.get(PATH_A), 1, `${primitive}/${point}`);
+      assert.equal(access.transactionCounts.get(PATH_B), 1, `${primitive}/${point}`);
+
+      const retry = await writer.commit(plan, expectation);
+      assert.equal(retry.outcome, "rejected", `${primitive}/${point}`);
+      assert.equal(access.transactionCounts.get(PATH_B), 1, `${primitive}/${point}`);
+    }
+  }
+});
+
+test("cross-file disposal during stage-A confirmation remains uncertain and stops before stage B enters", async () => {
+  for (const primitive of ["editor", "vault-process"] as const) {
+    const sourceB = idleSource(PLAN_B, "Beta");
+    const access = new MemoryAtomicTextAccess({
+      [PATH_A]: activeSource(),
+      [PATH_B]: sourceB,
+    }, primitive);
+    const plan = crossFileSwitchPlan(`dispose-after-stage-a-${primitive}`);
+    const expectation = await crossFileExpectation(access, plan);
+    let writer!: WorkspaceCommitter;
+    access.raceAfterTransformReads(1, () => writer.dispose());
+    writer = committer(access);
+
+    const receipt = await writer.commit(plan, expectation);
+    assert.equal(receipt.outcome, "uncertain", primitive);
+    assert.equal(receipt.confirmation, "unconfirmed", primitive);
+    assert.equal(receipt.result?.code, "write-outcome-uncertain", primitive);
+    assert.deepEqual(receipt.sources, [], primitive);
+    assert.ok((await access.readText(PATH_A))?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)), primitive);
+    assert.equal(await access.readText(PATH_B), sourceB, primitive);
+    assert.equal(access.transactionCounts.get(PATH_A), 1, primitive);
+    assert.equal(access.transactionCounts.get(PATH_B), undefined, primitive);
+    assert.equal(access.callbackCounts.get(PATH_B), undefined, primitive);
+
+    const retry = await writer.commit(plan, expectation);
+    assert.equal(retry.outcome, "rejected", primitive);
+    assert.equal(access.transactionCounts.get(PATH_B), undefined, primitive);
+    assert.equal(await access.readText(PATH_B), sourceB, primitive);
+  }
+});
+
+test("cross-file stage-B classification preserves uncertainty, invariant failure, and confirmed no-apply", async () => {
+  const cases: readonly {
+    readonly fault: "before-apply" | "partial-prefix" | "divergent-resolve";
+    readonly outcome: "partial-safe" | "uncertain" | "invariant-broken";
+    readonly confirmation: "partial" | "unconfirmed" | "invariant-broken";
+    readonly code: "partial-switch" | "write-outcome-uncertain" | "write-invariant-broken";
+    readonly stageBChanged: boolean;
+    readonly blocked: boolean;
+  }[] = [
+    { fault: "before-apply", outcome: "partial-safe", confirmation: "partial", code: "partial-switch", stageBChanged: false, blocked: false },
+    { fault: "partial-prefix", outcome: "uncertain", confirmation: "unconfirmed", code: "write-outcome-uncertain", stageBChanged: true, blocked: true },
+    { fault: "divergent-resolve", outcome: "invariant-broken", confirmation: "invariant-broken", code: "write-invariant-broken", stageBChanged: true, blocked: true },
+  ];
+
+  for (const primitive of ["editor", "vault-process"] as const) {
+    for (const scenario of cases) {
+      const sourceB = idleSource(PLAN_B, "Beta");
+      const access = new MemoryAtomicTextAccess({
+        [PATH_A]: activeSource(),
+        [PATH_B]: sourceB,
+      }, primitive);
+      access.fault(PATH_B, scenario.fault);
+      const plan = crossFileSwitchPlan(`stage-b-${primitive}-${scenario.fault}`);
+      const expectation = await crossFileExpectation(access, plan);
+      const writer = committer(access);
+      const receipt = await writer.commit(plan, expectation);
+      const afterA = await access.readText(PATH_A);
+      const afterB = await access.readText(PATH_B);
+
+      assert.equal(receipt.outcome, scenario.outcome, `${primitive}/${scenario.fault}`);
+      assert.equal(receipt.confirmation, scenario.confirmation, `${primitive}/${scenario.fault}`);
+      assert.equal(receipt.result?.code, scenario.code, `${primitive}/${scenario.fault}`);
+      assert.deepEqual(receipt.sources.map((entry) => ({
+        path: entry.path,
+        primitive: entry.primitive,
+        changed: entry.changed,
+      })), [
+        { path: PATH_A, primitive, changed: true },
+        { path: PATH_B, primitive, changed: scenario.stageBChanged },
+      ], `${primitive}/${scenario.fault}`);
+      assert.ok(afterA?.includes(formatCanonicalClosedClock(START, 480, NOW, 480, CLOCK_A)), `${primitive}/${scenario.fault}`);
+      assert.equal(afterB === sourceB, !scenario.stageBChanged, `${primitive}/${scenario.fault}`);
+      assert.equal(writer.blocked, scenario.blocked, `${primitive}/${scenario.fault}`);
+      assert.equal(access.transactionCounts.get(PATH_A), 1, `${primitive}/${scenario.fault}`);
+      assert.equal(access.transactionCounts.get(PATH_B), 1, `${primitive}/${scenario.fault}`);
+
+      const countsBeforeReload = [...access.transactionCounts.entries()];
+      const bytesBeforeReload = [afterA, afterB];
+      writer.dispose();
+      const reloaded = committer(access);
+      await Promise.resolve();
+      assert.deepEqual([...access.transactionCounts.entries()], countsBeforeReload, `${primitive}/${scenario.fault}`);
+      assert.deepEqual([await access.readText(PATH_A), await access.readText(PATH_B)], bytesBeforeReload, `${primitive}/${scenario.fault}`);
+      if (scenario.outcome === "uncertain" || scenario.outcome === "invariant-broken") {
+        const staleReplay = await reloaded.commit(plan, expectation);
+        assert.notEqual(staleReplay.outcome, "applied", `${primitive}/${scenario.fault}`);
+        assert.notEqual(staleReplay.outcome, "partial-safe", `${primitive}/${scenario.fault}`);
+        assert.deepEqual([...access.transactionCounts.entries()], countsBeforeReload, `${primitive}/${scenario.fault}`);
+        assert.deepEqual([await access.readText(PATH_A), await access.readText(PATH_B)], bytesBeforeReload, `${primitive}/${scenario.fault}`);
+      }
+      reloaded.dispose();
+    }
+  }
 });
 
 test("TC-OBS-SAFE-001-004 cross-file integration confirms close before open and never reopens after stage-B failure", async () => {
