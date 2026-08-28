@@ -1,5 +1,4 @@
 import type { SourceSpan } from "./source-version";
-import { createSourceSpan } from "./source-version";
 
 export const PLAN_OPEN_MARKER_V1 = "<!-- nautilus-log:plan/v1 -->";
 export const PLAN_CLOSE_MARKER = "<!-- /nautilus-log:plan -->";
@@ -30,6 +29,7 @@ export interface PlanRegionScanResult {
 
 export interface PhysicalLine {
   readonly text: string;
+  readonly lineNumber: number;
   readonly fromOffset: number;
   readonly toOffset: number;
   readonly toOffsetWithEnding: number;
@@ -61,6 +61,7 @@ export function physicalLines(content: string): readonly PhysicalLine[] {
     if (content[toOffsetWithEnding] === "\n") toOffsetWithEnding += 1;
     lines.push(Object.freeze({
       text: content.slice(fromOffset, toOffset),
+      lineNumber: lines.length,
       fromOffset,
       toOffset,
       toOffsetWithEnding,
@@ -70,12 +71,24 @@ export function physicalLines(content: string): readonly PhysicalLine[] {
   if (content.length === 0 || /(?:\r\n|\r|\n)$/.test(content)) {
     lines.push(Object.freeze({
       text: "",
+      lineNumber: lines.length,
       fromOffset: content.length,
       toOffset: content.length,
       toOffsetWithEnding: content.length,
     }));
   }
   return Object.freeze(lines);
+}
+
+function spanOnLine(line: PhysicalLine, fromOffset: number, toOffset: number): SourceSpan {
+  return Object.freeze({
+    fromOffset,
+    toOffset,
+    fromLine: line.lineNumber,
+    fromColumn: fromOffset - line.fromOffset,
+    toLine: line.lineNumber,
+    toColumn: toOffset - line.fromOffset,
+  });
 }
 
 function markerOnLine(content: string, line: PhysicalLine, allowBom: boolean): Marker | undefined {
@@ -88,14 +101,14 @@ function markerOnLine(content: string, line: PhysicalLine, allowBom: boolean): M
     return Object.freeze({
       kind: "open",
       version: open[1]!,
-      span: createSourceSpan(content, markerOffset, markerOffset + markerLength),
+      span: spanOnLine(line, markerOffset, markerOffset + markerLength),
       line,
     });
   }
   if (/^<!-- \/nautilus-log:plan -->[ \t]*$/.test(text)) {
     return Object.freeze({
       kind: "close",
-      span: createSourceSpan(content, markerOffset, markerOffset + PLAN_CLOSE_MARKER.length),
+      span: spanOnLine(line, markerOffset, markerOffset + PLAN_CLOSE_MARKER.length),
       line,
     });
   }
@@ -151,6 +164,8 @@ export function scanPrimaryPlanRegion(content: string): PlanRegionScanResult {
   const diagnostics: PlanRegionDiagnostic[] = [];
   const opening = markers[firstOpeningIndex]!;
   if (opening.kind !== "open") throw new Error("unreachable marker state");
+  const supported = opening.version === "1";
+  if (!supported) diagnostics.push(diagnostic("unsupported-plan-version", opening));
   const next = markers[firstOpeningIndex + 1];
   let region: PrimaryPlanRegion | undefined;
   let duplicateScanIndex = markers.length;
@@ -161,16 +176,17 @@ export function scanPrimaryPlanRegion(content: string): PlanRegionScanResult {
     diagnostics.push(diagnostic("nested-plan-region", next));
   } else {
     duplicateScanIndex = firstOpeningIndex + 2;
-    if (opening.version !== "1") {
-      diagnostics.push(diagnostic("unsupported-plan-version", opening));
-    } else {
+    if (supported) {
       region = Object.freeze({
         version: "v1" as const,
-        contentSpan: createSourceSpan(
-          content,
-          opening.line.toOffsetWithEnding,
-          next.line.fromOffset,
-        ),
+        contentSpan: Object.freeze({
+          fromOffset: opening.line.toOffsetWithEnding,
+          toOffset: next.line.fromOffset,
+          fromLine: opening.line.lineNumber + 1,
+          fromColumn: 0,
+          toLine: next.line.lineNumber,
+          toColumn: 0,
+        }),
         openingMarkerSpan: opening.span,
         closingMarkerSpan: next.span,
       });

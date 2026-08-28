@@ -7,7 +7,6 @@ import {
   type PrimaryPlanRegion,
 } from "./plan-region";
 import type { SourceSpan, SourceVersion } from "./source-version";
-import { createSourceSpan } from "./source-version";
 
 export interface InlineSegmentSource {
   readonly kind: InlineSegment["kind"];
@@ -38,6 +37,7 @@ interface MutableDirectItem {
   readonly line: PhysicalLine;
   readonly bulletEndOffset: number;
   itemEndOffset: number;
+  itemEndLine: PhysicalLine;
 }
 
 interface ListContext {
@@ -51,7 +51,7 @@ interface ProjectedInline {
 }
 
 const DIRECT_LIST_PATTERN = /^( {0,3})([-+*]|[0-9]{1,9}[.)])([ \t]+)(.*)$/;
-const HTML_BLOCK_OPEN = /^ {0,3}<(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
+const HTML_BLOCK_OPEN = /^ {0,3}<(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|pre|script|search|section|style|summary|table|tbody|td|textarea|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
 
 function leadingSpaces(text: string): number {
   const match = /^( *)/.exec(text);
@@ -75,7 +75,10 @@ function directItems(content: string, region: PrimaryPlanRegion): readonly Mutab
   let htmlInItem = false;
 
   const extendItem = (line: PhysicalLine): void => {
-    if (context?.item && line.text.length > 0) context.item.itemEndOffset = line.toOffset;
+    if (context?.item && line.text.length > 0) {
+      context.item.itemEndOffset = line.toOffset;
+      context.item.itemEndLine = line;
+    }
   };
 
   for (const line of linesInRegion(content, region)) {
@@ -94,7 +97,13 @@ function directItems(content: string, region: PrimaryPlanRegion): readonly Mutab
       if (htmlInItem) extendItem(line);
       const closesBlock = htmlTag === "--"
         ? line.text.includes("-->")
-        : new RegExp(`</${htmlTag}[ \\t]*>`, "i").test(line.text);
+        : htmlTag === "?"
+          ? line.text.includes("?>")
+          : htmlTag === "![CDATA["
+            ? line.text.includes("]]>")
+            : htmlTag === "!"
+              ? line.text.includes(">")
+              : new RegExp(`</${htmlTag}[ \\t]*>`, "i").test(line.text);
       if (closesBlock) {
         htmlTag = undefined;
         htmlInItem = false;
@@ -119,6 +128,23 @@ function directItems(content: string, region: PrimaryPlanRegion): readonly Mutab
       if (attached) extendItem(line);
       if (!line.text.includes("-->")) {
         htmlTag = "--";
+        htmlInItem = attached;
+      }
+      continue;
+    }
+    const specialHtml = /^ {0,3}<(?:(\?)|(!\[CDATA\[)|(![A-Z]))/.exec(line.text);
+    if (specialHtml) {
+      const attached = context !== undefined && leadingSpaces(line.text) > context.indent;
+      if (!attached) context = undefined;
+      if (attached) extendItem(line);
+      const blockKind = specialHtml[1] ? "?" : specialHtml[2] ? "![CDATA[" : "!";
+      const closesInline = blockKind === "?"
+        ? line.text.includes("?>")
+        : blockKind === "![CDATA["
+          ? line.text.includes("]]>")
+          : line.text.includes(">");
+      if (!closesInline) {
+        htmlTag = blockKind;
         htmlInItem = attached;
       }
       continue;
@@ -153,6 +179,7 @@ function directItems(content: string, region: PrimaryPlanRegion): readonly Mutab
           line,
           bulletEndOffset: line.fromOffset + list[1]!.length + list[2]!.length + list[3]!.length,
           itemEndOffset: line.toOffset,
+          itemEndLine: line,
         };
         items.push(item);
       }
@@ -174,7 +201,34 @@ function sourceOffsets(fromOffset: number, length: number): readonly number[] {
   return Object.freeze(Array.from({ length: length + 1 }, (_, index) => fromOffset + index));
 }
 
-function projectInline(content: string, fromOffset: number, toOffset: number): readonly ProjectedInline[] {
+function spanOnLine(line: PhysicalLine, fromOffset: number, toOffset: number): SourceSpan {
+  return Object.freeze({
+    fromOffset,
+    toOffset,
+    fromLine: line.lineNumber,
+    fromColumn: fromOffset - line.fromOffset,
+    toLine: line.lineNumber,
+    toColumn: toOffset - line.fromOffset,
+  });
+}
+
+function itemSpan(item: MutableDirectItem): SourceSpan {
+  return Object.freeze({
+    fromOffset: item.line.fromOffset,
+    toOffset: item.itemEndOffset,
+    fromLine: item.line.lineNumber,
+    fromColumn: 0,
+    toLine: item.itemEndLine.lineNumber,
+    toColumn: item.itemEndOffset - item.itemEndLine.fromOffset,
+  });
+}
+
+function projectInline(
+  content: string,
+  line: PhysicalLine,
+  fromOffset: number,
+  toOffset: number,
+): readonly ProjectedInline[] {
   const projected: ProjectedInline[] = [];
 
   const push = (
@@ -188,7 +242,7 @@ function projectInline(content: string, fromOffset: number, toOffset: number): r
       segment: Object.freeze({ kind, text }),
       source: Object.freeze({
         kind,
-        span: createSourceSpan(content, start, end),
+        span: spanOnLine(line, start, end),
         sourceOffsets: sourceOffsets(start, text.length),
       }),
     }));
@@ -339,7 +393,7 @@ function candidateFromItem(
   if (checkbox) {
     if (checkbox[1] !== " " && checkbox[1] !== "x" && checkbox[1] !== "X") return undefined;
     status = checkbox[1] === " " ? "open" : "done";
-    checkboxSpan = createSourceSpan(content, contentStart, contentStart + 3);
+    checkboxSpan = spanOnLine(item.line, contentStart, contentStart + 3);
     contentStart += checkbox[0].length;
   }
 
@@ -357,20 +411,20 @@ function candidateFromItem(
     ? contentStart + terminalId.index + terminalId[0].length - terminalId[1]!.length - 1
     : undefined;
   const contentEnd = terminalId ? contentStart + terminalId.index : horizontalTrimmedEnd;
-  const projection = projectInline(content, contentStart, contentEnd);
+  const projection = projectInline(content, item.line, contentStart, contentEnd);
   const segmentSources = Object.freeze(projection.map(({ source }) => source));
   const source: WorkspacePlanItemSource = Object.freeze({
     version,
     regionSpan: region.contentSpan,
-    itemSpan: createSourceSpan(content, item.line.fromOffset, item.itemEndOffset),
-    firstLineSpan: createSourceSpan(content, item.line.fromOffset, item.line.toOffset),
-    contentSpan: createSourceSpan(content, contentStart, contentEnd),
+    itemSpan: itemSpan(item),
+    firstLineSpan: spanOnLine(item.line, item.line.fromOffset, item.line.toOffset),
+    contentSpan: spanOnLine(item.line, contentStart, contentEnd),
     firstLineText: firstLine,
     ...(checkboxSpan ? { checkboxSpan } : {}),
     ...(blockIdFrom !== undefined && blockId
       ? {
           blockId,
-          blockIdSpan: createSourceSpan(content, blockIdFrom, blockIdFrom + blockId.length + 1),
+          blockIdSpan: spanOnLine(item.line, blockIdFrom, blockIdFrom + blockId.length + 1),
         }
       : {}),
     segmentSources,
@@ -424,5 +478,15 @@ export function tokenSourceSpan(
   ) {
     throw new RangeError("Token location is outside its projected source segment.");
   }
-  return createSourceSpan(content, fromOffset, toOffset);
+  if (content.length !== source.version.contentLength) {
+    throw new RangeError("Token source text does not match the projected source length.");
+  }
+  return Object.freeze({
+    fromOffset,
+    toOffset,
+    fromLine: segment.span.fromLine,
+    fromColumn: segment.span.fromColumn + (fromOffset - segment.span.fromOffset),
+    toLine: segment.span.toLine,
+    toColumn: segment.span.fromColumn + (toOffset - segment.span.fromOffset),
+  });
 }
