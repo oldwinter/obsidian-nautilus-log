@@ -540,6 +540,72 @@ test("selected colliding owner repair preserves an ID-less running CLOCK under e
   }
 });
 
+test("mixed duplicate CLOCK identity repair updates the running set only when the selected CLOCK is running", async () => {
+  const closedClock = formatCanonicalClosedClock(NOW - 120_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const runningClock = formatCanonicalRunningClock(NOW - 120_000, 480, CLOCK_A);
+
+  for (const selectedState of ["closed", "running"] as const) {
+    const selectedPath = `Daily/A-Selected-${selectedState}-Clock.md`;
+    const unselectedPath = `Daily/Z-Unselected-${selectedState}-Clock.md`;
+    const selectedClock = selectedState === "closed" ? closedClock : runningClock;
+    const unselectedClock = selectedState === "closed" ? runningClock : closedClock;
+    const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${selectedClock}\n${CLOSE}\n`;
+    const unselectedSource = `${OPEN}\n- [ ] Unselected owner d30m ^${PLAN_B}\n  - LOGBOOK::\n    - ${unselectedClock}\n${CLOSE}\n`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: selectedSource,
+      [unselectedPath]: unselectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `mixed-duplicate-clock-${selectedState}`,
+      action: "repair-clock-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-clock-identity",
+          target: { kind: "clock", id: CLOCK_A },
+          newId: CLOCK_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [CLOCK_A],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await mutationExpectation(access, repair, {
+      clockIds: [CLOCK_A],
+      expectedRunningClockIds: [CLOCK_A],
+    });
+    assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+    assert.equal(expectation.clocks[0]?.state, selectedState);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const receipt = await writer.commit(repair, expectation);
+
+    assert.equal(receipt.outcome, "applied", `${selectedState}: ${JSON.stringify(receipt)}`);
+    assert.equal(receipt.confirmation, "confirmed", selectedState);
+    assert.deepEqual(receipt.globalCheck, {
+      status: "confirmed",
+      runningClockIds: [selectedState === "running" ? CLOCK_NEW : CLOCK_A],
+    }, selectedState);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, selectedState);
+    assert.equal(access.transactionCounts.has(unselectedPath), false, selectedState);
+    assert.equal(
+      await access.readText(selectedPath),
+      selectedSource.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`),
+      selectedState,
+    );
+    assert.equal(await access.readText(unselectedPath), unselectedSource, selectedState);
+
+    const retry = await writer.commit(repair, expectation);
+    assert.equal(retry.outcome, "already-applied", `${selectedState}: ${JSON.stringify(retry)}`);
+    assert.equal(retry.confirmation, "confirmed", selectedState);
+    assert.deepEqual(retry.globalCheck, receipt.globalCheck, selectedState);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, selectedState);
+    assert.equal(await access.readText(unselectedPath), unselectedSource, selectedState);
+    writer.dispose();
+  }
+});
+
 test("selected duplicate repair cannot confirm a newly invalid unselected CLOCK owner", async () => {
   const selectedPath = "Daily/A-Selected-Final-Owner-Race.md";
   const clockPath = "Daily/B-Unselected-Final-Owner-Race.md";

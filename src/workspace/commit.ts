@@ -1813,11 +1813,20 @@ function finalGlobalExpectation(
       .find((entry): entry is Extract<FileMutationOperation, { kind: "repair-clock-identity" }> =>
         entry.kind === "repair-clock-identity",
       );
-    if (!operation) return undefined;
+    const selected = expectation.selectedRepair;
+    if (!operation || !selected || selected.id !== operation.target.id) return undefined;
+    const selectedClock = expectation.clocks.find((clock) =>
+      clock.target.id === operation.target.id
+      && clock.path === selected.selectedSpan.path
+      && clock.span.fromOffset === selected.selectedSpan.fromOffset
+      && clock.span.toOffset === selected.selectedSpan.toOffset,
+    );
+    if (!selectedClock) return undefined;
     const replaced = [...before];
-    const selected = replaced.indexOf(operation.target.id);
-    if (selected < 0) return undefined;
-    replaced[selected] = operation.newId;
+    if (selectedClock.state !== "running") return Object.freeze(replaced.sort());
+    const runningIndex = replaced.indexOf(operation.target.id);
+    if (runningIndex < 0) return undefined;
+    replaced[runningIndex] = operation.newId;
     return Object.freeze(replaced.sort());
   }
   const ids = new Set(before);
@@ -3466,7 +3475,8 @@ export class WorkspaceCommitter {
       : relocateLegacyKeys(plannedFinal, legacyKeyRelocations);
     const finalFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
     const global = validateFinalGlobal(this.#index, expectedFinal, expectation, this.#logbookOptions);
-    const confirmedDegradedIdentityRepair = finalSnapshot.complete
+    const confirmedDegradedIdentityRepair = global.status !== "confirmed"
+      && finalSnapshot.complete
       && expectedFinal !== undefined
       && arraysEqual(global.ids, expectedFinal)
       && (
