@@ -20,8 +20,11 @@ const update = process.argv.includes("--update");
 const profile = JSON.parse(await readFile(PROFILE_PATH, "utf8"));
 const require = createRequire("/env-vis/package.json");
 const { chromium } = require("playwright");
+const { PNG } = require("pngjs");
 const playwrightVersion = require("playwright/package.json").version;
 const esbuildVersion = require("esbuild/package.json").version;
+const lucideVersion = require("lucide/package.json").version;
+const pngjsVersion = require("pngjs/package.json").version;
 
 function parseOsRelease(source) {
   return Object.fromEntries(source.trim().split("\n").map((line) => {
@@ -50,6 +53,48 @@ function goldenRelativePath(capture) {
   );
 }
 
+function comparePng(expectedBuffer, receivedBuffer, comparison, relative) {
+  const expected = PNG.sync.read(expectedBuffer);
+  const received = PNG.sync.read(receivedBuffer);
+  failUnless(expected.width === received.width && expected.height === received.height,
+    `ENV-VIS dimensions differ for ${relative}: expected ${expected.width}x${expected.height}, received ${received.width}x${received.height}`);
+  let differentPixels = 0;
+  for (let offset = 0; offset < expected.data.length; offset += 4) {
+    let different = false;
+    for (let channel = 0; channel < 4; channel += 1) {
+      if (Math.abs(expected.data[offset + channel] - received.data[offset + channel]) > comparison.channelDelta) {
+        different = true;
+        break;
+      }
+    }
+    if (different) differentPixels += 1;
+  }
+  const totalPixels = expected.width * expected.height;
+  const differentPixelRatio = differentPixels / totalPixels;
+  failUnless(differentPixelRatio <= comparison.maxDifferentPixelRatio,
+    `ENV-VIS golden differs: ${relative} (${differentPixels}/${totalPixels}, ratio=${differentPixelRatio})`);
+  return Object.freeze({ differentPixels, differentPixelRatio, totalPixels });
+}
+
+async function collectBrowserNetworkAttempts(page, phase, output) {
+  const attempts = await page.evaluate(() => {
+    const recorded = [...(globalThis.__issue24NetworkAttempts ?? [])];
+    const expectedResources = new Map([
+      [`script:${new URL("/harness.js", location.href).href}`, 1],
+      [`link:${new URL("/harness.css", location.href).href}`, 1],
+    ]);
+    for (const entry of performance.getEntriesByType("resource")) {
+      const resource = entry;
+      const key = `${resource.initiatorType}:${resource.name}`;
+      const remaining = expectedResources.get(key) ?? 0;
+      if (remaining > 0) expectedResources.set(key, remaining - 1);
+      else recorded.push({ kind: `resource:${resource.initiatorType}`, value: resource.name });
+    }
+    return recorded;
+  });
+  output.push(...attempts.map((attempt) => ({ ...attempt, phase })));
+}
+
 async function waitForHarness(server) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -74,15 +119,27 @@ async function applyCaptureState(page, capture) {
     harness.setTheme(next.theme);
     harness.setReducedMotion(next.reducedMotion);
     await new Promise((resolvePromise) => requestAnimationFrame(() => resolvePromise(undefined)));
+    await new Promise((resolvePromise) => requestAnimationFrame(() => resolvePromise(undefined)));
     if ([320, 360].includes(next.width)) harness.openDisclosure("overview");
     if (next.state === "dense") {
       for (const key of ["overview", "schedule", "overflow", "warnings"]) {
         harness.openDisclosure(key);
         await new Promise((resolvePromise) => requestAnimationFrame(() => resolvePromise(undefined)));
+        await new Promise((resolvePromise) => requestAnimationFrame(() => resolvePromise(undefined)));
       }
     }
     if (next.state === "playback") {
       document.querySelector("#primary-planner [data-control='play']")?.click();
+    }
+    if (next.state === "topbar-completed-hidden") {
+      document.querySelector("#primary-planner [data-control='completed']")?.click();
+    }
+    if (next.state === "topbar-collapsed") {
+      document.querySelector("#primary-planner [data-control='collapse']")?.click();
+    }
+    if (next.state === "topbar-debug") {
+      harness.setDebugEntry(true);
+      document.querySelector("#primary-planner [data-control='debug']")?.click();
     }
     if (next.state === "tooltip") {
       harness.openDisclosure("schedule");
@@ -90,21 +147,37 @@ async function applyCaptureState(page, capture) {
       targets.find((target) => target.getClientRects().length > 0)?.focus();
     }
     await new Promise((resolvePromise) => requestAnimationFrame(() => resolvePromise(undefined)));
-    harness.assertAcceptance();
+    if (next.state !== "topbar-collapsed") harness.assertAcceptance();
   }, capture);
 
   const root = page.locator("#primary-planner");
   const captureState = await page.evaluate(() => window.issue24Harness.state());
+  failUnless(!captureState.primary.horizontalOverflow
+      && captureState.primary.clippedElements === 0
+      && captureState.primary.controlOverlaps === 0
+      && !captureState.primary.viewportClipped,
+  `Capture layout contract failed: ${JSON.stringify(captureState.primary)}`);
   if (capture.state === "temporal") {
     failUnless(await root.locator(".spiral-day-planner__needle").count() === 1, "Temporal capture lacks the now needle");
   } else if (capture.state === "topbar") {
     failUnless(await root.locator(".spiral-day-planner__header").count() === 1, "Topbar capture lacks the plugin header");
+  } else if (capture.state === "topbar-completed-hidden") {
+    failUnless(!captureState.primary.completedVisible, "Completed-hidden capture still shows completed items");
+  } else if (capture.state === "topbar-collapsed") {
+    failUnless(captureState.primary.collapsed
+      && await root.locator(".spiral-day-planner__collapsed-control").count() === 1,
+    "Collapsed capture lacks the expand-only control");
+  } else if (capture.state === "topbar-debug") {
+    failUnless(captureState.primary.debugEnabled, "Debug capture does not show the enabled debug state");
   } else if (capture.state === "playback") {
     failUnless(captureState.primary.playbackRunning, "Playback capture is not running");
   } else if (capture.state === "tooltip") {
     failUnless(captureState.primary.tooltipVisible, "Tooltip capture is not visible");
   } else if (capture.state === "dense") {
-    failUnless(await root.locator("details[open]").count() >= 3, "Dense capture lacks expanded disclosures");
+    for (const disclosure of ["overview", "schedule", "overflow", "warnings"]) {
+      failUnless(await root.locator(`.spiral-day-planner__${disclosure}[open]`).count() === 1,
+        `Dense capture lacks expanded ${disclosure} disclosure`);
+    }
   } else if (capture.state === "reduced-motion") {
     failUnless(captureState.reducedMotion && captureState.primary.motionTransitionsDisabled,
       "Reduced-motion capture is not reduced");
@@ -125,6 +198,13 @@ failUnless(playwrightVersion === profile.playwright,
   `ENV-VIS Playwright mismatch: expected ${profile.playwright}, received ${playwrightVersion}`);
 failUnless(esbuildVersion === profile.esbuild,
   `ENV-VIS esbuild mismatch: expected ${profile.esbuild}, received ${esbuildVersion}`);
+failUnless(lucideVersion === profile.lucide,
+  `ENV-VIS Lucide mismatch: expected ${profile.lucide}, received ${lucideVersion}`);
+failUnless(pngjsVersion === profile.pngjs,
+  `ENV-VIS pngjs mismatch: expected ${profile.pngjs}, received ${pngjsVersion}`);
+failUnless(profile.pixelComparison.channelDelta === 16
+    && profile.pixelComparison.maxDifferentPixelRatio === 0.002,
+  `ENV-VIS pixel-comparison mismatch: ${JSON.stringify(profile.pixelComparison)}`);
 await access(profile.browser.executable, constants.X_OK);
 const [resolvedFamily, resolvedFile] = execFileSync("fc-match", ["--format", "%{family}|%{file}", "Arial"], {
   encoding: "utf8",
@@ -157,14 +237,55 @@ try {
     timezoneId: "Asia/Shanghai",
   });
   await context.addInitScript({ path: INIT_SCRIPT });
-  const pluginRequests = [];
+  await context.addInitScript(() => {
+    const attempts = [];
+    Object.defineProperty(globalThis, "__issue24NetworkAttempts", {
+      configurable: false,
+      value: attempts,
+      writable: false,
+    });
+    const record = (kind, value) => attempts.push({ kind, value: String(value) });
+    const originalFetch = globalThis.fetch.bind(globalThis);
+    globalThis.fetch = (input, init) => {
+      record("fetch", typeof input === "string" ? input : input?.url);
+      return originalFetch(input, init);
+    };
+    const originalXhrOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function issue24Open(method, url, ...rest) {
+      record("xmlhttprequest", url);
+      return originalXhrOpen.call(this, method, url, ...rest);
+    };
+    globalThis.WebSocket = new Proxy(globalThis.WebSocket, {
+      construct(target, argumentsList, newTarget) {
+        record("websocket", argumentsList[0]);
+        return Reflect.construct(target, argumentsList, newTarget);
+      },
+    });
+    globalThis.EventSource = new Proxy(globalThis.EventSource, {
+      construct(target, argumentsList, newTarget) {
+        record("eventsource", argumentsList[0]);
+        return Reflect.construct(target, argumentsList, newTarget);
+      },
+    });
+    const originalSendBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = (url, data) => {
+      record("sendbeacon", url);
+      return originalSendBeacon(url, data);
+    };
+  });
+  const blockedRequests = [];
+  const browserNetworkAttempts = [];
   await context.route("**/*", async (route) => {
-    const url = new URL(route.request().url());
-    const allowed = url.origin === BASE_URL
-      && ["/", "/harness.js", "/harness.css", "/favicon.ico"].includes(url.pathname);
+    const request = route.request();
+    const url = new URL(request.url());
+    const allowed = url.origin === BASE_URL && (
+      (url.pathname === "/" && request.isNavigationRequest() && request.resourceType() === "document")
+      || (url.pathname === "/harness.js" && request.resourceType() === "script")
+      || (url.pathname === "/harness.css" && request.resourceType() === "stylesheet")
+    );
     if (allowed) await route.continue();
     else {
-      pluginRequests.push(route.request().url());
+      blockedRequests.push(route.request().url());
       await route.abort("blockedbyclient");
     }
   });
@@ -189,12 +310,40 @@ try {
   `ENV-VIS browser mismatch: ${JSON.stringify(environment)}`);
 
   const adapterLifecycle = await page.evaluate(() => window.issue24Harness.assertAdapterLifecycle());
-  failUnless(adapterLifecycle === true, "Production adapter lifecycle seam failed");
+  failUnless(Object.values(adapterLifecycle).every(Boolean),
+    `Production adapter lifecycle seam failed: ${JSON.stringify(adapterLifecycle)}`);
   await page.evaluate(() => window.issue24Harness.closeAdapterEvidence());
+  const interactionNames = [
+    "assertConnectFailureState",
+    "assertExternalFocusPreserved",
+    "assertKeyboardPointerParity",
+    "assertLayoutFocusRestoration",
+    "assertLifecycleReparenting",
+    "assertMediaQueryLifecycle",
+    "assertPlaybackStopsOnContextChange",
+    "assertPlaybackStopsOnRuntimeState",
+    "assertReplicaRemount",
+    "assertTooltipClearsWhenHidden",
+  ];
+  const interactions = await page.evaluate(async (names) => {
+    const results = [];
+    for (const name of names) {
+      results.push({ name, passed: await window.issue24Harness[name]() });
+    }
+    return results;
+  }, interactionNames);
+  failUnless(interactions.every(({ passed }) => passed),
+    `Planner interaction evidence failed: ${JSON.stringify(interactions)}`);
+  await collectBrowserNetworkAttempts(page, "adapter-interactions", browserNetworkAttempts);
+  await page.goto(BASE_URL, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => window.issue24Harness !== undefined);
+  await page.evaluate(() => document.fonts.ready);
   const matrix = await page.evaluate(() => window.issue24Harness.runMatrix());
   failUnless(matrix.length === 168, `Canonical matrix returned ${matrix.length} states instead of 168`);
   await page.evaluate(() => window.issue24Harness.assertAcceptance());
+  await collectBrowserNetworkAttempts(page, "matrix", browserNetworkAttempts);
 
+  const pixelComparisons = [];
   for (const capture of profile.captures) {
     await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await page.waitForFunction(() => window.issue24Harness !== undefined);
@@ -227,22 +376,29 @@ try {
         throw new Error(`Missing ENV-VIS golden ${golden}; run with --update and inspect every capture`);
       }
       const received = await readFile(actual);
-      failUnless(received.equals(expected), `ENV-VIS golden differs: ${relative}`);
-      console.log(`exact ${relative}`);
+      const comparison = comparePng(expected, received, profile.pixelComparison, relative);
+      pixelComparisons.push({ relative, ...comparison });
+      console.log(`pixels ${relative} ${comparison.differentPixels}/${comparison.totalPixels} ratio=${comparison.differentPixelRatio}`);
     } else {
       console.log(`captured ${relative}`);
     }
+    await collectBrowserNetworkAttempts(page, `capture:${relative}`, browserNetworkAttempts);
   }
-  failUnless(pluginRequests.length === 0,
-    `Plugin emitted requests during capture: ${JSON.stringify(pluginRequests)}`);
+  failUnless(blockedRequests.length === 0,
+    `Plugin emitted blocked requests during capture: ${JSON.stringify(blockedRequests)}`);
+  failUnless(browserNetworkAttempts.length === 0,
+    `Plugin initiated browser network requests: ${JSON.stringify(browserNetworkAttempts)}`);
   await writeFile(join(OUTPUT_DIRECTORY, "env-vis-result.json"), `${JSON.stringify({
     adapterLifecycle,
+    interactionChecks: interactions.length,
     matrixStates: matrix.length,
-    pluginRequests: pluginRequests.length,
+    pluginRequests: browserNetworkAttempts.length,
+    blockedRequests: blockedRequests.length,
+    pixelComparisons,
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;

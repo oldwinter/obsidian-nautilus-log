@@ -20,11 +20,14 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
     readonly clock: Readonly<{ epochMilliseconds: number; performanceMilliseconds: number }>;
     readonly deviceScaleFactor: number;
     readonly esbuild: string;
+    readonly lucide: string;
+    readonly pngjs: string;
     readonly font: Readonly<{ css: string; resolvedFamily: string; resolvedFile: string }>;
     readonly image: Readonly<{ digest: string; repository: string; tag: string }>;
     readonly node: string;
     readonly os: Readonly<{ id: string; prettyName: string; versionId: string }>;
     readonly playwright: string;
+    readonly pixelComparison: Readonly<{ channelDelta: number; maxDifferentPixelRatio: number }>;
     readonly revision: string;
     readonly viewport: Readonly<{ height: number; width: number }>;
   };
@@ -54,6 +57,9 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.equal(profile.node, "24.18.1");
   assert.equal(profile.playwright, "1.62.1");
   assert.equal(profile.esbuild, "0.28.2");
+  assert.equal(profile.lucide, "1.35.0");
+  assert.equal(profile.pngjs, "7.0.0");
+  assert.deepEqual(profile.pixelComparison, { channelDelta: 16, maxDifferentPixelRatio: 0.002 });
   assert.deepEqual(profile.browser, {
     executable: "/ms-playwright/chromium-1234/chrome-linux/chrome",
     version: "151.0.7922.34",
@@ -73,7 +79,17 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.deepEqual(new Set(profile.captures.map((capture) => capture.width)), new Set([900, 521, 520, 519, 360, 320]));
   assert.deepEqual(new Set(profile.captures.map((capture) => capture.locale)), new Set(["en", "zh-CN"]));
   assert.deepEqual(new Set(profile.captures.map((capture) => capture.theme)), new Set(["light", "dark"]));
-  for (const state of ["temporal", "playback", "tooltip", "dense", "topbar", "reduced-motion"]) {
+  for (const state of [
+    "temporal",
+    "playback",
+    "tooltip",
+    "dense",
+    "topbar",
+    "topbar-completed-hidden",
+    "topbar-collapsed",
+    "topbar-debug",
+    "reduced-motion",
+  ]) {
     assert.ok(profile.captures.some((capture) => capture.state === state), `missing ${state} capture`);
   }
   assert.ok(profile.captures.length <= 12, "capture set must stay bounded");
@@ -83,6 +99,28 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
     containerRunner,
     /assertAdapterLifecycle\(\)[\s\S]*runMatrix\(\)[\s\S]*assertAcceptance\(\)/,
   );
+  for (const interaction of [
+    "assertConnectFailureState",
+    "assertExternalFocusPreserved",
+    "assertKeyboardPointerParity",
+    "assertLayoutFocusRestoration",
+    "assertLifecycleReparenting",
+    "assertMediaQueryLifecycle",
+    "assertPlaybackStopsOnContextChange",
+    "assertPlaybackStopsOnRuntimeState",
+    "assertReplicaRemount",
+    "assertTooltipClearsWhenHidden",
+  ]) {
+    assert.match(containerRunner, new RegExp(`\\"${interaction}\\"`));
+  }
+  for (const initiationApi of ["fetch", "XMLHttpRequest", "WebSocket", "EventSource", "sendBeacon"]) {
+    assert.match(containerRunner, new RegExp(initiationApi));
+  }
+  assert.match(containerRunner, /performance\.getEntriesByType\("resource"\)/);
+  assert.match(containerRunner, /request\.resourceType\(\)/);
+  assert.match(containerRunner, /PNG\.sync\.read/);
+  assert.match(containerRunner, /differentPixelRatio <= comparison\.maxDifferentPixelRatio/);
+  assert.doesNotMatch(containerRunner, /\.equals\(expected\)/);
   assert.match(containerRunner, /locator\(["']#primary-planner["']\)/);
   assert.doesNotMatch(containerRunner, /locator\(["']#primary-leaf["']\)/);
   assert.match(

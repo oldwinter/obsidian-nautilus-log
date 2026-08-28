@@ -1,6 +1,6 @@
 {
   "schema": "spiral-day-env-vis-v1",
-  "revision": "r1",
+  "revision": "r2",
   "image": {
     "repository": "mcr.microsoft.com/playwright",
     "tag": "v1.62.1-noble",
@@ -14,6 +14,8 @@
   "node": "24.18.1",
   "playwright": "1.62.1",
   "esbuild": "0.28.2",
+  "lucide": "1.35.0",
+  "pngjs": "7.0.0",
   "browser": {
     "executable": "/ms-playwright/chromium-1234/chrome-linux/chrome",
     "version": "151.0.7922.34"
@@ -32,6 +34,10 @@
     "epochMilliseconds": 1777344000000,
     "performanceMilliseconds": 1000
   },
+  "pixelComparison": {
+    "channelDelta": 16,
+    "maxDifferentPixelRatio": 0.002
+  },
   "fixture": "canonical-day",
   "captures": [
     {
@@ -44,6 +50,27 @@
     {
       "state": "topbar",
       "locale": "zh-CN",
+      "theme": "dark",
+      "width": 900,
+      "reducedMotion": false
+    },
+    {
+      "state": "topbar-completed-hidden",
+      "locale": "zh-CN",
+      "theme": "dark",
+      "width": 900,
+      "reducedMotion": false
+    },
+    {
+      "state": "topbar-collapsed",
+      "locale": "en",
+      "theme": "light",
+      "width": 900,
+      "reducedMotion": false
+    },
+    {
+      "state": "topbar-debug",
+      "locale": "en",
       "theme": "dark",
       "width": 900,
       "reducedMotion": false

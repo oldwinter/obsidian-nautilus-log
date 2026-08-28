@@ -54,6 +54,8 @@ try {
     "install", "--prefix", "/env-vis", "--no-save", "--package-lock=false",
     `playwright@${profile.playwright}`,
     `esbuild@${profile.esbuild}`,
+    `lucide@${profile.lucide}`,
+    `pngjs@${profile.pngjs}`,
   ]);
 
   console.log("ENV-VIS capture: network=none, normative profile enforcement enabled");

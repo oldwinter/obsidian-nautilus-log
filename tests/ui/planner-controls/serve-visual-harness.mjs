@@ -14,6 +14,11 @@ const obsidianBrowserStub = {
     }));
     build.onLoad({ filter: /.*/, namespace: "issue24-browser-obsidian" }, () => ({
       contents: `
+        import {
+          Bug, ChevronDown, ChevronUp, Eye, EyeOff, Play,
+          createElement as createLucideElement,
+        } from "lucide";
+
         export class ItemView {
           constructor(leaf) {
             this.leaf = leaf;
@@ -22,21 +27,27 @@ const obsidianBrowserStub = {
         }
         export function setIcon(element, icon) {
           element.dataset.obsidianIcon = icon;
-          const glyph = element.ownerDocument.createElement("span");
-          glyph.className = "planner-icon";
-          glyph.setAttribute("aria-hidden", "true");
-          glyph.textContent = ({
-            "chevron-down": "v",
-            "chevron-up": "^",
-            "bug": "#",
-            "eye": "x",
-            "eye-off": "o",
-            "play": ">",
-          })[icon] ?? "?";
-          element.replaceChildren(glyph);
+          const iconNode = ({
+            "chevron-down": ChevronDown,
+            "chevron-up": ChevronUp,
+            "bug": Bug,
+            "eye": Eye,
+            "eye-off": EyeOff,
+            "play": Play,
+          })[icon];
+          if (!iconNode) throw new Error("Unknown Obsidian icon: " + icon);
+          const svg = createLucideElement(iconNode, {
+            "aria-hidden": "true",
+            "class": "svg-icon lucide planner-icon",
+            "height": "16",
+            "stroke-width": "2",
+            "width": "16",
+          });
+          element.replaceChildren(svg);
         }
       `,
       loader: "js",
+      resolveDir: process.cwd(),
     }));
   },
 };

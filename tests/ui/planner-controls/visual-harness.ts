@@ -7,6 +7,7 @@ import {
   type PlannerItemViewDependencies,
   type SpiralDayPlannerView,
 } from "../../../src/adapters/planner-view.ts";
+import { setIcon } from "obsidian";
 import { createMessages } from "../../../src/i18n/resolver.ts";
 import type { SupportedLocale } from "../../../src/i18n/types.ts";
 import type {
@@ -103,7 +104,7 @@ declare global {
   interface Window {
     issue24Harness: {
       activateProgress(id?: string): boolean;
-      assertAdapterLifecycle(): Promise<boolean>;
+      assertAdapterLifecycle(): Promise<Readonly<Record<string, boolean>>>;
       assertAcceptance(): HarnessState;
       assertConnectFailureState(): boolean;
       assertExternalFocusPreserved(): boolean;
@@ -376,24 +377,20 @@ function applyIntent(intent: PlannerProgressIntent): void {
   emitProjection();
 }
 
-const iconGlyphs: Readonly<Record<PlannerIconName, string>> = Object.freeze({
-  collapse: "^",
-  debug: "#",
-  expand: "v",
-  "hide-completed": "o",
-  "show-completed": "x",
-  play: ">",
+const obsidianIconNames: Readonly<Record<PlannerIconName, string>> = Object.freeze({
+  collapse: "chevron-up",
+  debug: "bug",
+  expand: "chevron-down",
+  "hide-completed": "eye-off",
+  "show-completed": "eye",
+  play: "play",
 });
 
 let primary: PlannerSurface;
 let secondary: PlannerSurface;
 
 function renderIcon(button: HTMLElement, icon: PlannerIconName): void {
-  const glyph = document.createElement("span");
-  glyph.className = "planner-icon";
-  glyph.textContent = iconGlyphs[icon];
-  glyph.setAttribute("aria-hidden", "true");
-  button.append(glyph);
+  setIcon(button, obsidianIconNames[icon]);
 }
 
 function mountSurfaces(): void {
@@ -617,9 +614,9 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     overviewOpen: overview?.open ?? false,
     renderedContrast: renderedContrast(root),
     semanticTargetCount: root.querySelectorAll(
-      'svg[role="group"] [data-planner-focus-key][aria-label][role]',
+      'svg.spiral-day-planner__spiral[role="group"] [data-planner-focus-key][aria-label][role]',
     ).length,
-    surfaceRole: root.querySelector("svg")?.getAttribute("role") ?? null,
+    surfaceRole: root.querySelector("svg.spiral-day-planner__spiral")?.getAttribute("role") ?? null,
     playbackRunning: root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") === "true",
     tooltipVisible: [...document.querySelectorAll<HTMLElement>(".spiral-day-planner__tooltip")]
       .some((tooltip) => !tooltip.hidden),
@@ -760,6 +757,8 @@ window.issue24Harness = {
     this.setZoom(1);
     this.setWidth(521);
     adapterLeaf.hidden = false;
+    adapterRoot.style.boxSizing = "border-box";
+    adapterRoot.style.width = "520px";
     adapterIntentCount = 0;
     adapterLocale = "en";
     const identitySuffix = String(Date.now());
@@ -772,6 +771,7 @@ window.issue24Harness = {
     const dependencies: PlannerItemViewDependencies = {
       runtime,
       defaultLogicalDate: () => DISPLAYED_DATE,
+      debugControl: () => true,
       dispatchPlannerProgress: () => { adapterIntentCount += 1; },
       locale: () => adapterLocale,
       subscribeLocale(listener) {
@@ -788,13 +788,37 @@ window.issue24Harness = {
     await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
     await nextFrame();
     const opened = adapterRoot.classList.contains("spiral-day-planner")
-      && adapterRoot.querySelectorAll("[data-obsidian-icon]").length >= 3;
+      && adapterRoot.querySelectorAll("[data-obsidian-icon] svg.lucide").length >= 4;
     dispatchPointerActivation(adapterRoot.querySelector('[data-item-id="nl-urgent"]'));
     const progressBound = adapterIntentCount === 1;
     adapterLocale = "zh-CN";
     for (const listener of adapterLocaleListeners) listener(adapterLocale);
     await nextFrame();
     const localeBound = adapterRoot.querySelector('[aria-label="折叠规划器"]') !== null;
+    const completedControl = adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]');
+    const completedInitiallyVisible = adapterRoot.querySelector('[data-tone="completed"]') !== null;
+    completedControl?.focus();
+    adapterLocale = "en";
+    for (const listener of adapterLocaleListeners) listener(adapterLocale);
+    await nextFrame();
+    const focusPreserved = document.activeElement?.getAttribute("data-planner-focus-key") === "control-completed";
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
+    await nextFrame();
+    const completedHidden = adapterRoot.querySelector('[data-tone="completed"]') === null;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
+    await nextFrame();
+    const debugEnabled = adapterRoot.querySelector(".spiral-day-planner__debug-overlay") !== null;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
+    const playbackStarted = adapterRoot.querySelector('[data-control="play"]')
+      ?.getAttribute("aria-disabled") === "true";
+    await nextFrame();
+    await nextFrame();
+    const schedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
+    if (schedule && !schedule.open) schedule.querySelector<HTMLElement>("summary")?.click();
+    await nextFrame();
+    const disclosureOpened = schedule?.open === true;
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
     const collapsedA = adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
 
@@ -818,8 +842,23 @@ window.issue24Harness = {
       && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
     await nextFrame();
-    return opened && progressBound && localeBound && collapsedA && remountedB
-      && collapsedB && tornDown && restoredB && Number(adapterLocaleListeners.size) === 1;
+    return Object.freeze({
+      collapsedA,
+      collapsedB,
+      completedHidden,
+      completedInitiallyVisible,
+      debugEnabled,
+      disclosureOpened,
+      focusPreserved,
+      listenerBound: Number(adapterLocaleListeners.size) === 1,
+      localeBound,
+      opened,
+      playbackStarted,
+      progressBound,
+      remountedB,
+      restoredB,
+      tornDown,
+    });
   },
   assertAcceptance,
   assertConnectFailureState() {
@@ -1129,6 +1168,8 @@ window.issue24Harness = {
     }
     adapterLocaleListeners.clear();
     adapterLeaf.hidden = true;
+    adapterRoot.style.removeProperty("box-sizing");
+    adapterRoot.style.removeProperty("width");
   },
   focusProgress(id = "nl-urgent") {
     const target = progressElement(id);
