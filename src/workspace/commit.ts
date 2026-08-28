@@ -1341,6 +1341,30 @@ function potentialClockIsSelectedPlanRepair(
     && clock.toOffset <= repair.expected.itemSpan.toOffset;
 }
 
+function selectedClockIdentityRepair(
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+) {
+  if (plan.action !== "repair-clock-identity") return undefined;
+  for (const stage of plan.stages) {
+    for (const operation of stage.operations) {
+      if (operation.kind !== "repair-clock-identity") continue;
+      const selected = expectation.selectedRepair;
+      const expected = selected && expectation.clocks.find((clock) =>
+        clock.target.id === operation.target.id
+        && clock.path === selected.selectedSpan.path
+        && clock.span.fromOffset === selected.selectedSpan.fromOffset
+        && clock.span.toOffset === selected.selectedSpan.toOffset,
+      );
+      if (!selected || !expected || selected.id !== operation.target.id) {
+        return undefined;
+      }
+      return { operation, expected };
+    }
+  }
+  return undefined;
+}
+
 function runningClockIsSelectedRecovery(
   clock: IndexedClockSource,
   plan: MutationPlan,
@@ -1359,10 +1383,26 @@ function runningClockIsSelectedRecovery(
         && clock.toOffset <= repair.expected.itemSpan.toOffset;
       return insideSelected || repair.selected.locations.length === 2;
     }
+    if (operation.kind === "repair-clock-identity") {
+      const repair = selectedClockIdentityRepair(plan, expectation);
+      if (!repair || repair.expected.state !== "running") return false;
+      const oldTerminal = `^${repair.operation.target.id}`;
+      if (!repair.expected.text.endsWith(oldTerminal)) return false;
+      const repairedText = `${repair.expected.text.slice(0, -oldTerminal.length)}^${repair.operation.newId}`;
+      const originalMatches = clock.text === repair.expected.text
+        && clockKey === repair.operation.target.id;
+      const repairedMatches = clock.text === repairedText
+        && clockKey === repair.operation.newId;
+      const phaseMatches = phase === "after" ? repairedMatches : originalMatches || repairedMatches;
+      return phaseMatches
+        && clock.path === repair.expected.path
+        && clock.fromOffset === repair.expected.span.fromOffset
+        && clock.toOffset === repair.expected.span.toOffset
+        && clock.ownerId === repair.expected.ownerId;
+    }
     if (operation.kind !== "clock-out"
       && operation.kind !== "delete-clock"
-      && operation.kind !== "normalize-legacy-clock"
-      && operation.kind !== "repair-clock-identity") return false;
+      && operation.kind !== "normalize-legacy-clock") return false;
     const expected = findClockExpectation(expectation, operation.target, stage.path);
     if (!expected || expected.text !== clock.text) return false;
     const expectedKey = expected.target.id
@@ -1809,24 +1849,13 @@ function finalGlobalExpectation(
   before: readonly string[],
 ): readonly string[] | undefined {
   if (plan.action === "repair-clock-identity") {
-    const operation = plan.stages.flatMap((stage) => stage.operations)
-      .find((entry): entry is Extract<FileMutationOperation, { kind: "repair-clock-identity" }> =>
-        entry.kind === "repair-clock-identity",
-      );
-    const selected = expectation.selectedRepair;
-    if (!operation || !selected || selected.id !== operation.target.id) return undefined;
-    const selectedClock = expectation.clocks.find((clock) =>
-      clock.target.id === operation.target.id
-      && clock.path === selected.selectedSpan.path
-      && clock.span.fromOffset === selected.selectedSpan.fromOffset
-      && clock.span.toOffset === selected.selectedSpan.toOffset,
-    );
-    if (!selectedClock) return undefined;
+    const repair = selectedClockIdentityRepair(plan, expectation);
+    if (!repair) return undefined;
     const replaced = [...before];
-    if (selectedClock.state !== "running") return Object.freeze(replaced.sort());
-    const runningIndex = replaced.indexOf(operation.target.id);
+    if (repair.expected.state !== "running") return Object.freeze(replaced.sort());
+    const runningIndex = replaced.indexOf(repair.operation.target.id);
     if (runningIndex < 0) return undefined;
-    replaced[runningIndex] = operation.newId;
+    replaced[runningIndex] = repair.operation.newId;
     return Object.freeze(replaced.sort());
   }
   const ids = new Set(before);
