@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "gate": "G9",
+  "decision": "NO-GO",
+  "release_type": "public",
+  "version": "1.0.2",
+  "candidate_sha": "0000000000000000000000000000000000000000",
+  "remote_head": "0000000000000000000000000000000000000000",
+  "package_filename": "spiral-day-1.0.2.zip",
+  "package_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "requirements": {
+    "revision_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "upstream_count": "0/114",
+    "active_count": 0
+  },
+  "gate_results": [],
+  "evidence_bundle": {
+    "index_url": "https://example.invalid/replace-with-durable-index",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "approved_deviation_ids": [],
+  "scope_exclusions": [],
+  "manual_workflows": [],
+  "attestations": [],
+  "repository_state": {
+    "before": null,
+    "after": null
+  }
+}

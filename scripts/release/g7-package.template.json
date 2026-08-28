@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "gate": "G7",
+  "result": "PASS",
+  "candidate_sha": "0000000000000000000000000000000000000000",
+  "version": "1.0.2",
+  "release_label": "private preview",
+  "package_filename": "spiral-day-1.0.2.zip",
+  "package_path": "artifacts/spiral-day-1.0.2.zip",
+  "package_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "builds": [],
+  "smoke_workflows": [],
+  "policy": {
+    "checked_at": "1970-01-01T00:00:00.000Z",
+    "official_policy_url": "https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines",
+    "name_available": false,
+    "fork_policy_status": "unverified",
+    "license_present": false,
+    "notices_present": false,
+    "provenance_passed": false,
+    "sbom_present": false,
+    "banner_passed": false
+  },
+  "release_assets": []
+}

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "candidate_owned": [
+    "docs/parity/requirements.json",
+    "docs/parity/deviations.json",
+    "docs/parity/scope.schema.json",
+    "scripts/release/g7-package.template.json",
+    "scripts/release/g8-scope.template.json",
+    "scripts/release/g9-signoff.template.json"
+  ],
+  "external_run_inputs": [
+    "evidence-bundle/manifest.json",
+    "gate-results.json",
+    "g7-package.json",
+    "g8-scope.json",
+    "g9-signoff.json"
+  ],
+  "preparation_commands": [
+    {
+      "id": "deterministic-package",
+      "command": ["node", "scripts/release/build-candidate.mjs"]
+    }
+  ],
+  "gates": [
+    { "id": "G0", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G0"] },
+    { "id": "G1", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G1"] },
+    { "id": "G2", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G2"] },
+    { "id": "G3", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G3"] },
+    { "id": "G4", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G4"] },
+    { "id": "G5", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G5"] },
+    { "id": "G6", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G6"] },
+    { "id": "G7", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G7"] },
+    { "id": "G8", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G8"] },
+    { "id": "G9", "command": ["node", "scripts/release/run-gate.mjs", "--gate", "G9"] }
+  ]
+}
