@@ -1,0 +1,177 @@
+import {
+  ItemView,
+  setIcon,
+  type App,
+  type IconName,
+  type ViewStateResult,
+  type WorkspaceLeaf,
+} from "obsidian";
+import type { LogicalDate } from "../core/day";
+import {
+  mountPlannerSurface,
+  validatePlannerViewContext,
+  type PlannerIconName,
+  type PlannerRuntimePort,
+  type PlannerSurface,
+  type PlannerViewContext,
+} from "../ui/planner/view";
+
+export const PLANNER_VIEW_TYPE = "spiral-day-planner";
+export const MAX_PLANNER_LEAVES = 4;
+
+export interface PlannerItemViewDependencies {
+  readonly runtime: PlannerRuntimePort;
+  readonly defaultLogicalDate: () => LogicalDate;
+  readonly resolveContext: (
+    logicalDate: LogicalDate,
+    leaf: WorkspaceLeaf,
+  ) => PlannerViewContext;
+}
+
+export interface OpenPlannerViewResult {
+  readonly leaf: WorkspaceLeaf;
+  readonly reused: boolean;
+}
+
+const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
+  collapse: "chevron-up",
+  expand: "chevron-down",
+  "hide-completed": "eye-off",
+  "show-completed": "eye",
+  play: "play",
+});
+
+function validLogicalDate(value: unknown): LogicalDate | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const date = value as Partial<LogicalDate>;
+  if (!Number.isInteger(date.year) || !Number.isInteger(date.month) || !Number.isInteger(date.day)) {
+    return undefined;
+  }
+  const candidate = { year: date.year!, month: date.month!, day: date.day! };
+  const utc = new Date(Date.UTC(candidate.year, candidate.month - 1, candidate.day));
+  if (utc.getUTCFullYear() !== candidate.year
+    || utc.getUTCMonth() + 1 !== candidate.month
+    || utc.getUTCDate() !== candidate.day) return undefined;
+  return Object.freeze(candidate);
+}
+
+function stateDate(state: unknown): LogicalDate | undefined {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return undefined;
+  return validLogicalDate((state as { readonly logicalDate?: unknown }).logicalDate);
+}
+
+function defaultDate(dependencies: PlannerItemViewDependencies): LogicalDate {
+  return validLogicalDate(dependencies.defaultLogicalDate())
+    ?? Object.freeze({ year: 1970, month: 1, day: 1 });
+}
+
+function dateKey(date: LogicalDate): string {
+  return `${String(date.year).padStart(4, "0")}-${String(date.month).padStart(2, "0")}`
+    + `-${String(date.day).padStart(2, "0")}`;
+}
+
+export class SpiralDayPlannerView extends ItemView {
+  readonly #dependencies: PlannerItemViewDependencies;
+  #logicalDate: LogicalDate;
+  #surface: PlannerSurface | undefined;
+
+  constructor(leaf: WorkspaceLeaf, dependencies: PlannerItemViewDependencies) {
+    super(leaf);
+    this.#dependencies = dependencies;
+    this.#logicalDate = defaultDate(dependencies);
+  }
+
+  override getViewType(): string {
+    return PLANNER_VIEW_TYPE;
+  }
+
+  override getDisplayText(): string {
+    return `Spiral Day - ${dateKey(this.#logicalDate)}`;
+  }
+
+  override getIcon(): IconName {
+    return "shell";
+  }
+
+  override getState(): Record<string, unknown> {
+    return { logicalDate: { ...this.#logicalDate } };
+  }
+
+  override async setState(state: unknown, _result: ViewStateResult): Promise<void> {
+    this.#logicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
+    const context = validatePlannerViewContext(
+      this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
+    );
+    this.#surface?.setContext(context);
+  }
+
+  override onResize(): void {
+    this.#surface?.measure();
+  }
+
+  protected override async onOpen(): Promise<void> {
+    this.contentEl.replaceChildren();
+    this.contentEl.classList.add("spiral-day-planner-view");
+    const context = validatePlannerViewContext(
+      this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
+    );
+    this.#surface = mountPlannerSurface(
+      this.contentEl,
+      this.#dependencies.runtime,
+      context,
+      { renderIcon: (element, icon) => setIcon(element, ICONS[icon]) },
+    );
+  }
+
+  protected override async onClose(): Promise<void> {
+    this.#surface?.destroy();
+    this.#surface = undefined;
+    this.contentEl.classList.remove("spiral-day-planner-view");
+  }
+}
+
+export function createPlannerViewFactory(
+  dependencies: PlannerItemViewDependencies,
+): (leaf: WorkspaceLeaf) => SpiralDayPlannerView {
+  return (leaf) => new SpiralDayPlannerView(leaf, dependencies);
+}
+
+function leafDate(leaf: WorkspaceLeaf): LogicalDate | undefined {
+  return stateDate(leaf.getViewState().state);
+}
+
+function chooseExistingLeaf(
+  leaves: readonly WorkspaceLeaf[],
+  logicalDate: LogicalDate,
+): WorkspaceLeaf {
+  const targetKey = dateKey(logicalDate);
+  return leaves.find((leaf) => {
+    const date = leafDate(leaf);
+    return date !== undefined && dateKey(date) === targetKey;
+  }) ?? leaves[0]!;
+}
+
+export async function openPlannerView(
+  app: App,
+  logicalDate: LogicalDate,
+): Promise<OpenPlannerViewResult> {
+  const validatedDate = validLogicalDate(logicalDate);
+  if (!validatedDate) throw new RangeError("Cannot open the planner for an invalid date");
+  const existing = app.workspace.getLeavesOfType(PLANNER_VIEW_TYPE);
+  if (existing.length >= MAX_PLANNER_LEAVES) {
+    const leaf = chooseExistingLeaf(existing, validatedDate);
+    await app.workspace.revealLeaf(leaf);
+    app.workspace.setActiveLeaf(leaf, { focus: true });
+    return Object.freeze({ leaf, reused: true });
+  }
+
+  const leaf = app.workspace.getLeaf("tab");
+  await leaf.setViewState({
+    type: PLANNER_VIEW_TYPE,
+    active: true,
+    state: { logicalDate: { ...validatedDate } },
+  });
+  await app.workspace.revealLeaf(leaf);
+  app.workspace.setActiveLeaf(leaf, { focus: true });
+  return Object.freeze({ leaf, reused: false });
+}
