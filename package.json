@@ -1,0 +1,24 @@
+{
+  "name": "spiral-day",
+  "version": "0.1.0",
+  "description": "An unofficial Obsidian-native parity port of Roam Nautilus Log v1.0.2.",
+  "private": true,
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "clean": "node esbuild.config.mjs clean",
+    "validate": "node esbuild.config.mjs validate",
+    "validate:provenance": "node esbuild.config.mjs provenance",
+    "check": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs validate",
+    "test": "node esbuild.config.mjs test",
+    "build": "npm run check && node esbuild.config.mjs build",
+    "verify": "npm run clean && npm run check && npm test && npm run build"
+  },
+  "author": "oldwinter",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "obsidian": "1.13.1",
+    "typescript": "7.0.2"
+  }
+}

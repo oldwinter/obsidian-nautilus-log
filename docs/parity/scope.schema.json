@@ -1,0 +1,5640 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oldwinter/obsidian-nautilus-log/blob/main/docs/parity/scope.schema.json",
+  "title": "Spiral Day release candidate requirement scope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_sha",
+    "requirements_sha256",
+    "deviations_sha256",
+    "release_scope",
+    "parity_claim",
+    "included_requirement_ids",
+    "excluded_requirement_ids",
+    "approved_deviation_ids"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "candidate_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "requirements_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "deviations_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "release_scope": {
+      "enum": [
+        "private",
+        "public"
+      ]
+    },
+    "parity_claim": {
+      "enum": [
+        "private-preview",
+        "v1.0.2-parity"
+      ]
+    },
+    "included_requirement_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/requirementId"
+      }
+    },
+    "excluded_requirement_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/requirementId"
+      }
+    },
+    "approved_deviation_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^DEV-[0-9]{3}$"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-INS-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-INS-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-10"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-10"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-10"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-10"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-11"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-11"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-11"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-11"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-12"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-12"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-12"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-12"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-13"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-13"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SET-13"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SET-13"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-10"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-10"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-10"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-10"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-11"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-11"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-11"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-11"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-12"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-12"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PAR-12"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PAR-12"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-SCH-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-SCH-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DAY-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DAY-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-HIS-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-HIS-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CTL-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CTL-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMP-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMP-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-VIS-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-VIS-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-10"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-10"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-10"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-10"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-11"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-11"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-11"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-11"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-12"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-12"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-12"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-12"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-13"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-13"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-EXE-13"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-EXE-13"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-10"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-10"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CLK-10"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CLK-10"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMD-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMD-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMD-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMD-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMD-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMD-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-CMD-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-CMD-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PER-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PER-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PER-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PER-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PER-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PER-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-PER-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-PER-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERR-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERR-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-ERX-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-ERX-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-01"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-01"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-01"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-01"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-02"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-02"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-02"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-02"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-03"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-03"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-03"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-03"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-04"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-04"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-04"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-04"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-05"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-05"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-05"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-05"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-06"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-06"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-06"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-06"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-07"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-07"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-07"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-07"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-08"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-08"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-08"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-08"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-09"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-09"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "UP-DRF-09"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "UP-DRF-09"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-TRACE-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-TRACE-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-TRACE-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-TRACE-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-HOST-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-HOST-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-HOST-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-HOST-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-VIS-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-VIS-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-VIS-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-VIS-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-VIS-002"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-VIS-002"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-VIS-002"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-VIS-002"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-A11Y-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-A11Y-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-A11Y-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-A11Y-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-SAFE-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-SAFE-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-SAFE-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-SAFE-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-LIFE-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LIFE-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LIFE-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-LIFE-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-I18N-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-I18N-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-I18N-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-I18N-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-LOCAL-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LOCAL-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LOCAL-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "OBS-LOCAL-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-001"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-001"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-001"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-001"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-002"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-002"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-002"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-002"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-003"
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-003"
+                }
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "included_requirement_ids": {
+              "type": "array",
+              "not": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-003"
+                }
+              }
+            },
+            "excluded_requirement_ids": {
+              "type": "array",
+              "contains": {
+                "const": "REL-003"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "release_scope": {
+            "const": "public"
+          }
+        },
+        "required": [
+          "release_scope"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parity_claim": {
+            "const": "v1.0.2-parity"
+          },
+          "included_requirement_ids": {
+            "type": "array",
+            "minItems": 126,
+            "maxItems": 126
+          },
+          "excluded_requirement_ids": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "release_scope": {
+            "const": "private"
+          }
+        },
+        "required": [
+          "release_scope"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parity_claim": {
+            "const": "private-preview"
+          }
+        },
+        "allOf": [
+          {
+            "properties": {
+              "included_requirement_ids": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-SAFE-001"
+                }
+              },
+              "excluded_requirement_ids": {
+                "type": "array",
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "const": "OBS-SAFE-001"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "included_requirement_ids": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LIFE-001"
+                }
+              },
+              "excluded_requirement_ids": {
+                "type": "array",
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "const": "OBS-LIFE-001"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "included_requirement_ids": {
+                "type": "array",
+                "contains": {
+                  "const": "OBS-LOCAL-001"
+                }
+              },
+              "excluded_requirement_ids": {
+                "type": "array",
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "const": "OBS-LOCAL-001"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "included_requirement_ids": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-001"
+                }
+              },
+              "excluded_requirement_ids": {
+                "type": "array",
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "const": "REL-001"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "included_requirement_ids": {
+                "type": "array",
+                "contains": {
+                  "const": "REL-002"
+                }
+              },
+              "excluded_requirement_ids": {
+                "type": "array",
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "const": "REL-002"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "requirementId": {
+      "type": "string",
+      "enum": [
+        "UP-INS-01",
+        "UP-INS-02",
+        "UP-INS-03",
+        "UP-INS-04",
+        "UP-INS-05",
+        "UP-SET-01",
+        "UP-SET-02",
+        "UP-SET-03",
+        "UP-SET-04",
+        "UP-SET-05",
+        "UP-SET-06",
+        "UP-SET-07",
+        "UP-SET-08",
+        "UP-SET-09",
+        "UP-SET-10",
+        "UP-SET-11",
+        "UP-SET-12",
+        "UP-SET-13",
+        "UP-PAR-01",
+        "UP-PAR-02",
+        "UP-PAR-03",
+        "UP-PAR-04",
+        "UP-PAR-05",
+        "UP-PAR-06",
+        "UP-PAR-07",
+        "UP-PAR-08",
+        "UP-PAR-09",
+        "UP-PAR-10",
+        "UP-PAR-11",
+        "UP-PAR-12",
+        "UP-SCH-01",
+        "UP-SCH-02",
+        "UP-SCH-03",
+        "UP-SCH-04",
+        "UP-SCH-05",
+        "UP-SCH-06",
+        "UP-SCH-07",
+        "UP-DAY-01",
+        "UP-DAY-02",
+        "UP-DAY-03",
+        "UP-DAY-04",
+        "UP-HIS-01",
+        "UP-HIS-02",
+        "UP-HIS-03",
+        "UP-HIS-04",
+        "UP-HIS-05",
+        "UP-VIS-01",
+        "UP-VIS-02",
+        "UP-VIS-03",
+        "UP-VIS-04",
+        "UP-VIS-06",
+        "UP-VIS-07",
+        "UP-CTL-01",
+        "UP-CTL-02",
+        "UP-CTL-03",
+        "UP-CTL-04",
+        "UP-CTL-05",
+        "UP-CMP-01",
+        "UP-CMP-02",
+        "UP-CMP-03",
+        "UP-VIS-05",
+        "UP-EXE-01",
+        "UP-EXE-02",
+        "UP-EXE-03",
+        "UP-EXE-04",
+        "UP-EXE-05",
+        "UP-EXE-06",
+        "UP-EXE-07",
+        "UP-EXE-08",
+        "UP-EXE-09",
+        "UP-EXE-10",
+        "UP-EXE-11",
+        "UP-EXE-12",
+        "UP-EXE-13",
+        "UP-CLK-01",
+        "UP-CLK-02",
+        "UP-CLK-03",
+        "UP-CLK-04",
+        "UP-CLK-05",
+        "UP-CLK-06",
+        "UP-CLK-07",
+        "UP-CLK-08",
+        "UP-CLK-09",
+        "UP-CLK-10",
+        "UP-CMD-01",
+        "UP-CMD-02",
+        "UP-PER-01",
+        "UP-PER-02",
+        "UP-ERR-01",
+        "UP-ERR-02",
+        "UP-ERR-03",
+        "UP-ERR-04",
+        "UP-ERR-05",
+        "UP-ERR-06",
+        "UP-ERR-07",
+        "UP-ERR-08",
+        "UP-ERR-09",
+        "UP-ERX-01",
+        "UP-ERX-02",
+        "UP-ERX-03",
+        "UP-ERX-04",
+        "UP-ERX-05",
+        "UP-ERX-06",
+        "UP-ERX-07",
+        "UP-ERX-08",
+        "UP-DRF-01",
+        "UP-DRF-02",
+        "UP-DRF-03",
+        "UP-DRF-04",
+        "UP-DRF-05",
+        "UP-DRF-06",
+        "UP-DRF-07",
+        "UP-DRF-08",
+        "UP-DRF-09",
+        "OBS-TRACE-001",
+        "OBS-HOST-001",
+        "OBS-VIS-001",
+        "OBS-VIS-002",
+        "OBS-A11Y-001",
+        "OBS-SAFE-001",
+        "OBS-LIFE-001",
+        "OBS-I18N-001",
+        "OBS-LOCAL-001",
+        "REL-001",
+        "REL-002",
+        "REL-003"
+      ]
+    }
+  }
+}

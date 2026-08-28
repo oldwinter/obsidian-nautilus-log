@@ -1,0 +1,10 @@
+{
+  "id": "spiral-day",
+  "name": "Spiral Day",
+  "version": "0.1.0",
+  "minAppVersion": "1.7.7",
+  "description": "An unofficial Obsidian-native parity port of Roam Nautilus Log v1.0.2.",
+  "author": "oldwinter",
+  "authorUrl": "https://github.com/oldwinter",
+  "isDesktopOnly": true
+}

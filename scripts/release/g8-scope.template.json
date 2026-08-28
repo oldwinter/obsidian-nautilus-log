@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "candidate_sha": "0000000000000000000000000000000000000000",
+  "requirements_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "deviations_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "release_scope": "private",
+  "parity_claim": "private-preview",
+  "included_requirement_ids": [],
+  "excluded_requirement_ids": [],
+  "approved_deviation_ids": []
+}
