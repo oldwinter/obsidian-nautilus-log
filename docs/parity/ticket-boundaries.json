@@ -11,16 +11,14 @@
         "PROVENANCE.md",
         "README.md",
         "THIRD_PARTY_NOTICES.md",
-        "esbuild.config.mjs",
         "manifest.json",
         "package-lock.json",
         "package.json",
-        "src/main.ts",
         "tsconfig.json",
         "versions.json"
       ],
       "allowed_external_boundaries": [],
-      "primary_requirement_ids": ["UP-INS-01", "UP-INS-02", "UP-DRF-01", "OBS-LOCAL-001"]
+      "primary_requirement_ids": ["UP-INS-01", "UP-DRF-01"]
     },
     {
       "ticket": 18,
@@ -190,6 +188,7 @@
     {
       "ticket": 27,
       "allowed_module_boundaries": [
+        "esbuild.config.mjs",
         "src/adapters/active-task-view.ts",
         "src/adapters/commands.ts",
         "src/adapters/editor-menu.ts",
@@ -199,6 +198,7 @@
         "src/adapters/source-navigation.ts",
         "src/i18n/locales/en/execution.ts",
         "src/i18n/locales/zh-CN/execution.ts",
+        "src/main.ts",
         "src/ui/execution/active-task-view.ts",
         "src/ui/execution/panel.ts",
         "src/ui/execution/plan-view.ts",
@@ -209,13 +209,14 @@
       ],
       "allowed_external_boundaries": [],
       "primary_requirement_ids": [
+        "UP-INS-02",
         "UP-SET-01", "UP-SET-02", "UP-SET-03", "UP-SET-04", "UP-SET-05", "UP-SET-06", "UP-SET-07",
         "UP-SET-08", "UP-SET-09", "UP-SET-10", "UP-SET-11", "UP-SET-12", "UP-SET-13",
         "UP-EXE-03", "UP-EXE-04", "UP-EXE-05", "UP-EXE-06", "UP-EXE-07", "UP-EXE-12", "UP-EXE-13",
         "UP-CLK-10", "UP-CMD-01", "UP-CMD-02",
         "UP-ERR-03", "UP-ERR-04", "UP-ERR-05", "UP-ERR-06", "UP-ERR-07", "UP-ERR-08",
         "UP-ERX-01", "UP-ERX-02", "UP-ERX-03", "UP-ERX-04", "UP-ERX-05", "UP-ERX-06", "UP-ERX-07", "UP-ERX-08",
-        "UP-DRF-07", "UP-DRF-08", "OBS-HOST-001"
+        "UP-DRF-07", "UP-DRF-08", "OBS-HOST-001", "OBS-LOCAL-001"
       ]
     },
     {

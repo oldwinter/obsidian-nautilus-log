@@ -293,24 +293,29 @@ async function validateRequirementContract() {
     fail("requirement-owners.json: requirements must be an array");
   }
 
-  const expected = new Map([
-    ["OBS-LOCAL-001", "src/main.ts"],
+  const expectedFoundation = new Map([
     ["UP-DRF-01", "README.md"],
     ["UP-INS-01", "README.md"],
-    ["UP-INS-02", "src/main.ts"],
   ]);
-  const owned = contract.requirements.filter((row) => row.owner_ticket === 17);
-  if (owned.length !== expected.size) {
-    fail(`requirement-owners.json: ticket 17 owns ${owned.length}, expected ${expected.size}`);
+  const foundationOwned = contract.requirements.filter((row) => row.owner_ticket === 17);
+  if (foundationOwned.length !== expectedFoundation.size) {
+    fail(`requirement-owners.json: ticket 17 owns ${foundationOwned.length}, expected ${expectedFoundation.size}`);
   }
-  for (const row of owned) {
-    if (expected.get(row.id) !== row.owner_module) {
+  for (const row of foundationOwned) {
+    if (expectedFoundation.get(row.id) !== row.owner_module) {
       fail(`requirement-owners.json: unexpected ticket 17 assignment ${row.id} -> ${row.owner_module}`);
     }
-    expected.delete(row.id);
+    expectedFoundation.delete(row.id);
   }
-  if (expected.size !== 0) {
-    fail(`requirement-owners.json: missing ticket 17 IDs ${[...expected.keys()].join(", ")}`);
+  if (expectedFoundation.size !== 0) {
+    fail(`requirement-owners.json: missing ticket 17 IDs ${[...expectedFoundation.keys()].join(", ")}`);
+  }
+
+  for (const id of ["UP-INS-02", "OBS-LOCAL-001"]) {
+    const row = contract.requirements.find((candidate) => candidate.id === id);
+    if (row?.owner_ticket !== 27 || row.owner_module !== "src/main.ts") {
+      fail(`requirement-owners.json: expected ${id} -> ticket 27 src/main.ts`);
+    }
   }
 }
 
