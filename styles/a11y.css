@@ -6,6 +6,17 @@
   min-inline-size: 32px;
 }
 
+.spiral-day-planner__controls--debug {
+  grid-auto-columns: max-content;
+}
+
+.spiral-day-planner__icon-button[data-control="debug"] {
+  flex-basis: auto;
+  gap: 4px;
+  inline-size: auto;
+  padding-inline: 7px;
+}
+
 .spiral-day-planner :is(
   button,
   summary,

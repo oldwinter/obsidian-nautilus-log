@@ -780,6 +780,7 @@ window.issue24Harness = {
     adapterRoot.style.width = "520px";
     adapterIntentCount = 0;
     adapterLocale = "en";
+    const ordinaryDebugAbsent = primaryRoot.querySelector('[data-control="debug"]') === null;
     const identitySuffix = String(Date.now());
     const identityA = `browser-adapter-a-${identitySuffix}`;
     const identityB = `browser-adapter-b-${identitySuffix}`;
@@ -825,16 +826,44 @@ window.issue24Harness = {
     await nextFrame();
     const completedHidden = adapterRoot.querySelector('[data-tone="completed"]') === null;
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
-    adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
+    const debugOffButton = adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]');
+    const debugInitiallyOff = debugOffButton?.textContent === "debug is off"
+      && debugOffButton.querySelector(".spiral-day-planner__debug-state-text")?.textContent === "debug is off"
+      && debugOffButton.getAttribute("aria-label") === "debug is off"
+      && debugOffButton.title === "debug is off"
+      && debugOffButton.getAttribute("aria-pressed") === "false"
+      && debugOffButton.querySelector("svg")?.getAttribute("aria-hidden") === "true";
+    debugOffButton?.click();
     await nextFrame();
     const debugState = surfaceState(adapterRoot);
+    const debugOnButton = adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]');
     const debugEnabled = debugState.debugEnabled
       && debugState.debugGeometryGroups === 1
       && debugState.debugRectangles === 2
       && debugState.debugCenterMarkers === 1
       && debugState.debugGuideCircles === 1
-      && debugState.debugValues === "center 225,158; size 450x315; radii 35/105; band 11; minute 780";
-    adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]')?.click();
+      && debugState.debugValues === "center 225,158; size 450x315; radii 35/105; band 11; minute 780"
+      && debugOnButton?.textContent === "debug is on"
+      && debugOnButton.querySelector(".spiral-day-planner__debug-state-text")?.textContent === "debug is on"
+      && debugOnButton.getAttribute("aria-label") === "debug is on"
+      && debugOnButton.title === "debug is on"
+      && debugOnButton.getAttribute("aria-pressed") === "true"
+      && adapterRoot.querySelector(".spiral-day-planner__live-region")?.textContent === "debug is on";
+    debugOnButton?.click();
+    await nextFrame();
+    const debugOffState = surfaceState(adapterRoot);
+    const debugOffAgainButton = adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]');
+    const debugDisabledAgain = debugOffState.debugEnabled === false
+      && debugOffState.debugGeometryGroups === 0
+      && debugOffState.debugRectangles === 0
+      && debugOffState.debugCenterMarkers === 0
+      && debugOffState.debugGuideCircles === 0
+      && debugOffState.debugValues === ""
+      && debugOffAgainButton?.textContent === "debug is off"
+      && debugOffAgainButton.getAttribute("aria-label") === "debug is off"
+      && debugOffAgainButton.title === "debug is off"
+      && debugOffAgainButton.getAttribute("aria-pressed") === "false"
+      && adapterRoot.querySelector(".spiral-day-planner__live-region")?.textContent === "debug is off";
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
     const playbackStarted = adapterRoot.querySelector('[data-control="play"]')
       ?.getAttribute("aria-disabled") === "true";
@@ -872,12 +901,15 @@ window.issue24Harness = {
       collapsedB,
       completedHidden,
       completedInitiallyVisible,
+      debugDisabledAgain,
       debugEnabled,
+      debugInitiallyOff,
       disclosureOpened,
       focusPreserved,
       listenerBound: Number(adapterLocaleListeners.size) === 1,
       localeBound,
       opened,
+      ordinaryDebugAbsent,
       playbackStarted,
       progressBound,
       remountedB,
@@ -918,14 +950,18 @@ window.issue24Harness = {
     let probeCallback: (() => void) | undefined;
     let probeDelay: number | undefined;
     let clearedTimer: number | undefined;
+    let clearCount = 0;
+    let intervalCount = 0;
     let runtimeState: PlannerRuntimePort["state"] = "starting";
     let connectCount = 0;
+    let disconnectCount = 0;
     const root = document.createElement("div");
     root.style.width = "920px";
     document.body.append(root);
     Object.defineProperty(window, "setInterval", {
       configurable: true,
       value: (handler: TimerHandler, timeout?: number) => {
+        intervalCount += 1;
         probeCallback = typeof handler === "function" ? handler : undefined;
         probeDelay = timeout;
         return timerId;
@@ -933,7 +969,10 @@ window.issue24Harness = {
     });
     Object.defineProperty(window, "clearInterval", {
       configurable: true,
-      value: (intervalId?: number) => { clearedTimer = intervalId; },
+      value: (intervalId?: number) => {
+        clearCount += 1;
+        clearedTimer = intervalId;
+      },
     });
     let surface: PlannerSurface | undefined;
     try {
@@ -946,7 +985,7 @@ window.issue24Harness = {
             setContext() {},
             setVisible() {},
             refresh() { listener(currentSnapshot()); },
-            disconnect() {},
+            disconnect() { disconnectCount += 1; },
           });
         },
       };
@@ -974,10 +1013,46 @@ window.issue24Harness = {
           === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
       runtimeState = "ready";
       probeCallback?.();
+      const firstReady = root.querySelector("svg.spiral-day-planner__spiral") !== null
+        && connectCount === 1
+        && disconnectCount === 0
+        && clearedTimer === undefined;
+      probeCallback?.();
+      const noDuplicateReadyConnection = connectCount === 1 && disconnectCount === 0;
+      runtimeState = "stopping";
+      probeCallback?.();
+      const stopping = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
+      const exactStopping = stopping?.textContent
+          === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+        && root.querySelector("svg.spiral-day-planner__spiral") === null
+        && connectCount === 1
+        && disconnectCount === 1;
+      runtimeState = "unloaded";
+      probeCallback?.();
+      const unloadedRemainsDisconnected = connectCount === 1 && disconnectCount === 1;
+      runtimeState = "ready";
+      probeCallback?.();
+      const reconnected = root.querySelector("svg.spiral-day-planner__spiral") !== null
+        && connectCount === 2
+        && disconnectCount === 1
+        && clearedTimer === undefined;
+      probeCallback?.();
+      const noDuplicateReconnect = connectCount === 2 && disconnectCount === 1;
+      surface.destroy();
+      surface = undefined;
       return probeDelay === 5_000
+        && intervalCount === 1
         && exactLoading
         && exactUnavailable
-        && connectCount === 1
+        && firstReady
+        && noDuplicateReadyConnection
+        && exactStopping
+        && unloadedRemainsDisconnected
+        && reconnected
+        && noDuplicateReconnect
+        && connectCount === 2
+        && disconnectCount === 2
+        && clearCount === 1
         && clearedTimer === timerId;
     } finally {
       surface?.destroy();

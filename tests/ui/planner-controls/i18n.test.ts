@@ -31,6 +31,16 @@ test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals",
   );
 });
 
+test("TC-UP-CTL-05-001 debug state copy matches the independent English literals", () => {
+  const messages = createMessages({ locale: "en" });
+  assert.equal(enPlanner["control.debugEnable"], "debug is off");
+  assert.equal(enPlanner["announcement.debugOff"], "debug is off");
+  assert.equal(messages.t("planner", "control.debugEnable"), "debug is off");
+  assert.equal(enPlanner["control.debugDisable"], "debug is on");
+  assert.equal(enPlanner["announcement.debugOn"], "debug is on");
+  assert.equal(messages.t("planner", "control.debugDisable"), "debug is on");
+});
+
 test("TC-OBS-I18N-001-001 resolver keeps interpolation typed and falls back to English locale", () => {
   const messages = createMessages({ locale: "fr-FR" });
   assert.equal(messages.locale, "en");

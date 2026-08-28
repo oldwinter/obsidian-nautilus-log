@@ -495,8 +495,10 @@ class PlannerSurfaceController implements PlannerSurface {
   }
 
   probeRuntimeNow(): void {
-    if (this.#destroyed || this.#connection) return;
+    if (this.#destroyed) return;
+    this.#scheduleProbe();
     if (this.#runtime.state === "ready") {
+      if (this.#connection) return;
       try {
         this.#connection = this.#runtime.connect(
           { logicalDate: this.#context.logicalDate },
@@ -508,15 +510,16 @@ class PlannerSurfaceController implements PlannerSurface {
           },
           this.#visible,
         );
-        this.#clearProbe();
       } catch {
         this.#snapshot = undefined;
-        this.#scheduleProbe();
         this.#render();
       }
     } else {
+      const connection = this.#connection;
+      this.#connection = undefined;
+      connection?.disconnect();
       this.#snapshot = undefined;
-      this.#scheduleProbe();
+      this.#playback.cancel("cancelled");
       this.#render();
     }
   }
@@ -809,9 +812,14 @@ class PlannerSurfaceController implements PlannerSurface {
     if (controlsState.playbackRunning) play.setAttribute("aria-disabled", "true");
     controls.append(play);
     if (this.#controls.debugControl) {
+      controls.classList.add("spiral-day-planner__controls--debug");
+      const debugStateText = this.#messages.t(
+        "planner",
+        controlsState.debugEnabled ? "control.debugDisable" : "control.debugEnable",
+      );
       const debug = this.#createIconButton(
         "debug",
-        this.#messages.t("planner", controlsState.debugEnabled ? "control.debugDisable" : "control.debugEnable"),
+        debugStateText,
         () => {
           if (!this.#controls.toggleDebug()) return;
           this.#live.announce(this.#messages.t(
@@ -821,6 +829,10 @@ class PlannerSurfaceController implements PlannerSurface {
         },
       );
       debug.setAttribute("aria-pressed", String(controlsState.debugEnabled));
+      debug.querySelector("svg")?.setAttribute("aria-hidden", "true");
+      const debugText = element(this.#root.ownerDocument, "span", "spiral-day-planner__debug-state-text");
+      debugText.textContent = debugStateText;
+      debug.append(debugText);
       controls.append(debug);
     }
     headerEnd.append(controls);

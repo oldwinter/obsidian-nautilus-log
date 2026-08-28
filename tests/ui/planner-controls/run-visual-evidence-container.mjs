@@ -168,13 +168,19 @@ async function applyCaptureState(page, capture) {
       && await root.locator(".spiral-day-planner__collapsed-control").count() === 1,
     "Collapsed capture lacks the expand-only control");
   } else if (capture.state === "topbar-debug") {
+    const debugButton = root.locator('[data-control="debug"]');
     failUnless(captureState.primary.debugEnabled
       && captureState.primary.debugGeometryGroups === 1
       && captureState.primary.debugRectangles === 2
       && captureState.primary.debugCenterMarkers === 1
       && captureState.primary.debugGuideCircles === 1
       && captureState.primary.debugValues
-        === "center 300,210; size 600x420; radii 50/150; band 16; minute 780",
+        === "center 300,210; size 600x420; radii 50/150; band 16; minute 780"
+      && await debugButton.textContent() === "debug is on"
+      && await debugButton.getAttribute("aria-label") === "debug is on"
+      && await debugButton.getAttribute("title") === "debug is on"
+      && await debugButton.getAttribute("aria-pressed") === "true"
+      && await debugButton.locator("svg[aria-hidden='true']").count() === 1,
     `Debug capture lacks complete geometry evidence: ${JSON.stringify(captureState.primary)}`);
   } else if (capture.state === "playback") {
     failUnless(captureState.primary.playbackRunning, "Playback capture is not running");
