@@ -3294,6 +3294,24 @@ export class WorkspaceCommitter {
         const potential = conflict("potential-running-clock", plan.action, blockingPotential.path);
         return this.#stoppedReceipt(plan, isConflictOutcome(potential), potential, [], expectation);
       }
+      const expectedFinalRunningClockIds = finalGlobalExpectation(
+        plan,
+        expectation,
+        expectation.expectedRunningClockIds,
+      );
+      if (
+        expectedFinalRunningClockIds === undefined
+        || !arraysEqual(sortedRunningKeys(initialFacts.running), expectedFinalRunningClockIds)
+      ) {
+        const changedGlobalState = conflict("source-conflict", plan.action);
+        return this.#stoppedReceipt(
+          plan,
+          isConflictOutcome(changedGlobalState),
+          changedGlobalState,
+          [],
+          expectation,
+        );
+      }
       const status = initialFacts.potentialRunning.length > 0 || initialFacts.running.length > 1
         ? "violated"
         : "confirmed";

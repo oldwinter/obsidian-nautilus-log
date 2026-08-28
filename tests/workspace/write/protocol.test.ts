@@ -606,6 +606,80 @@ test("mixed duplicate CLOCK identity repair updates the running set only when th
   }
 });
 
+test("reloaded closed CLOCK identity repair rejects a changed final running set", async () => {
+  const selectedPath = "Daily/A-Selected-Closed-Retry.md";
+  const unselectedPath = "Daily/Z-Unselected-Running-Retry.md";
+  const closedClock = formatCanonicalClosedClock(NOW - 120_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const runningClock = formatCanonicalRunningClock(NOW - 120_000, 480, CLOCK_A);
+  const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${closedClock}\n${CLOSE}\n`;
+  const repairedSelectedSource = selectedSource.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`);
+  const unselectedSource = `${OPEN}\n- [ ] Unselected owner d30m ^${PLAN_B}\n  - LOGBOOK::\n    - ${runningClock}\n${CLOSE}\n`;
+
+  for (const externalChange of ["closed", "other"] as const) {
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: selectedSource,
+      [unselectedPath]: unselectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `closed-clock-retry-${externalChange}`,
+      action: "repair-clock-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-clock-identity",
+          target: { kind: "clock", id: CLOCK_A },
+          newId: CLOCK_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [CLOCK_A],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await mutationExpectation(access, repair, {
+      clockIds: [CLOCK_A],
+      expectedRunningClockIds: [CLOCK_A],
+    });
+    assert.equal(expectation.clocks[0]?.state, "closed");
+    assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+    const firstWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const applied = await firstWriter.commit(repair, expectation);
+
+    assert.equal(applied.outcome, "applied", `${externalChange}: ${JSON.stringify(applied)}`);
+    assert.equal(applied.confirmation, "confirmed", externalChange);
+    assert.deepEqual(applied.globalCheck, { status: "confirmed", runningClockIds: [CLOCK_A] }, externalChange);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, externalChange);
+    assert.equal(access.transactionCounts.has(unselectedPath), false, externalChange);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, externalChange);
+    assert.equal(await access.readText(unselectedPath), unselectedSource, externalChange);
+    firstWriter.dispose();
+
+    const externalClock = externalChange === "closed"
+      ? formatCanonicalClosedClock(NOW - 120_000, 480, NOW, 480, CLOCK_A)
+      : formatCanonicalRunningClock(NOW - 120_000, 480, CLOCK_B);
+    const externallyChangedSource = unselectedSource.replace(runningClock, externalClock);
+    access.modify(unselectedPath, externallyChangedSource);
+    const transactionsBeforeRetry = [...access.transactionCounts.entries()];
+    const retryWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const retry = await retryWriter.commit(repair, expectation);
+
+    assert.equal(retry.outcome, "conflict", `${externalChange}: ${JSON.stringify(retry)}`);
+    assert.equal(retry.confirmation, "confirmed-no-change", externalChange);
+    assert.equal(retry.result?.code, "source-conflict", externalChange);
+    assert.deepEqual(retry.globalCheck, {
+      status: "confirmed",
+      runningClockIds: externalChange === "closed" ? [] : [CLOCK_B],
+    }, externalChange);
+    assert.equal(retryWriter.blocked, false, externalChange);
+    assert.deepEqual([...access.transactionCounts.entries()], transactionsBeforeRetry, externalChange);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, externalChange);
+    assert.equal(await access.readText(unselectedPath), externallyChangedSource, externalChange);
+    retryWriter.dispose();
+  }
+});
+
 test("duplicate running CLOCK identity repair never exempts an invalid unselected occurrence", async () => {
   const selectedPath = "Daily/A-Selected-Running-Owner.md";
   const unselectedPath = "Daily/Z-Unselected-Invalid-Running-Owner.md";
