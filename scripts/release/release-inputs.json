@@ -31,6 +31,7 @@
     "scripts/verify/candidate-release.mjs",
     "scripts/verify/evidence-bundle.mjs",
     "scripts/verify/evidence-schema.mjs",
+    "scripts/verify/json-schema.mjs",
     "scripts/verify/render-trace-report.mjs",
     "scripts/verify/verify-evidence.mjs",
     "tests/fixtures/contracts/scope-private-excludes-mandatory-invalid.json",
@@ -45,6 +46,8 @@
     "tests/release/requirements-contract.test.mjs"
   ],
   "transitive_inputs": [
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "docs/decisions/community-compliant-product-naming-and-attribution.md",
     "docs/decisions/desktop-compatibility-and-performance-envelope.md",
     "docs/decisions/markdown-grammar-and-plan-item-identity.md",

@@ -5,7 +5,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { REQUIRED_REQUIREMENT_IDS } from "../../../scripts/verify/candidate-g0.mjs";
+import {
+  MANDATORY_PRIVATE_REQUIREMENT_IDS,
+  REQUIRED_REQUIREMENT_IDS,
+} from "../../../scripts/verify/candidate-g0.mjs";
 import { buildDeterministicCandidatePackage } from "../../../scripts/verify/candidate-package.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -27,6 +30,7 @@ const ENVIRONMENT_IDS = [
   "ENV-THEME",
   "ENV-A11Y",
 ];
+export const FIXTURE_VALIDATION_NOW_MS = Date.parse("2026-08-29T00:00:00.000Z");
 
 export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -288,7 +292,7 @@ function compatibleProfiles(evidenceKind, requirementId) {
   return ["ENV-PURE", "ENV-HOST-PRIVATE", "ENV-HOST-MIN", "ENV-HOST-MAC", "ENV-HOST-WIN", "ENV-HOST-LINUX"];
 }
 
-async function createEvidenceBundle(root, repository, candidateSha) {
+async function createEvidenceBundle(root, repository, candidateSha, options = {}) {
   const bundleRoot = path.join(root, "evidence-bundle");
   await mkdir(path.join(bundleRoot, "records"), { recursive: true });
   await mkdir(path.join(bundleRoot, "artifacts"), { recursive: true });
@@ -304,6 +308,8 @@ async function createEvidenceBundle(root, repository, candidateSha) {
   const candidateRequirements = JSON.parse(requirementsBytes);
   const testById = new Map(candidateRequirements.test_catalog.map((entry) => [entry.id, entry]));
   const resolvedRequirements = structuredClone(candidateRequirements);
+  const includedRequirementIds = new Set(options.includedRequirementIds ?? REQUIRED_REQUIREMENT_IDS);
+  const requiredEnvironmentIds = new Set(options.requiredEnvironmentIds ?? ENVIRONMENT_IDS);
   const records = [];
   const fileDescriptors = [
     { path: packageBundlePath, sha256: packageHash, role: "package" },
@@ -311,21 +317,23 @@ async function createEvidenceBundle(root, repository, candidateSha) {
   let sequence = 0;
 
   for (const [rowIndex, row] of candidateRequirements.requirements.entries()) {
+    if (!includedRequirementIds.has(row.id)) continue;
+    const applicableEnvironments = row.environments.filter((profileId) => requiredEnvironmentIds.has(profileId));
     const assignments = row.tests.map((testId) => {
       const testEntry = testById.get(testId);
-      const profileId = row.environments.find((candidate) => compatibleProfiles(testEntry.evidence_kind, row.id).includes(candidate));
+      const profileId = applicableEnvironments.find((candidate) => compatibleProfiles(testEntry.evidence_kind, row.id).includes(candidate));
       if (!profileId) throw new Error(`${testId} has no compatible declared environment`);
       return { testId, testEntry, profileId, themeClass: null };
     });
     const coveredProfiles = new Set(assignments.map((entry) => entry.profileId));
-    for (const profileId of row.environments) {
+    for (const profileId of applicableEnvironments) {
       if (coveredProfiles.has(profileId)) continue;
       const testEntry = row.tests.map((id) => testById.get(id))
         .find((entry) => compatibleProfiles(entry.evidence_kind, row.id).includes(profileId));
       if (!testEntry) throw new Error(`${row.id} has no evidence modality compatible with ${profileId}`);
       assignments.push({ testId: testEntry.id, testEntry, profileId, themeClass: null });
     }
-    if (row.environments.includes("ENV-THEME")) {
+    if (applicableEnvironments.includes("ENV-THEME")) {
       const themeTest = assignments.find((entry) => entry.profileId === "ENV-THEME");
       themeTest.themeClass = "community-customized";
       assignments.push({ ...themeTest, themeClass: "high-contrast" });
@@ -379,9 +387,12 @@ async function createEvidenceBundle(root, repository, candidateSha) {
     }))
     .sort((left, right) => left.evidence_id.localeCompare(right.evidence_id));
   const requirementIndex = resolvedRequirements.requirements
+    .filter((row) => includedRequirementIds.has(row.id))
     .map((row) => ({ requirement_id: row.id, test_ids: row.tests, evidence_ids: row.evidence }))
     .sort((left, right) => left.requirement_id.localeCompare(right.requirement_id));
-  const testIndex = candidateRequirements.test_catalog.map((testEntry) => ({
+  const testIndex = candidateRequirements.test_catalog
+    .filter((testEntry) => includedRequirementIds.has(testEntry.requirement_id))
+    .map((testEntry) => ({
     test_id: testEntry.id,
     requirement_ids: [testEntry.requirement_id],
     evidence_ids: recordDescriptors.filter((record) => record.test_ids.includes(testEntry.id)).map((record) => record.evidence_id).sort(),
@@ -431,20 +442,23 @@ async function createEvidenceBundle(root, repository, candidateSha) {
   };
 }
 
-async function createReleaseInputs(root, candidateSha, evidence) {
+async function createReleaseInputs(root, repository, candidateSha, evidence, options = {}) {
   const inputRoot = path.join(root, "release-inputs");
   await mkdir(path.join(inputRoot, "artifacts"), { recursive: true });
   const packagePath = path.join(inputRoot, "artifacts/spiral-day-1.0.2.zip");
   await writeFile(packagePath, evidence.packageBytes);
+  const releaseScope = options.releaseScope ?? "public";
+  const includedRequirementIds = options.includedRequirementIds ?? REQUIRED_REQUIREMENT_IDS;
+  const included = new Set(includedRequirementIds);
   const scope = {
     schema_version: 1,
     candidate_sha: candidateSha,
     requirements_sha256: evidence.requirementsSha256,
     deviations_sha256: evidence.deviationsSha256,
-    release_scope: "public",
-    parity_claim: "v1.0.2-parity",
-    included_requirement_ids: REQUIRED_REQUIREMENT_IDS,
-    excluded_requirement_ids: [],
+    release_scope: releaseScope,
+    parity_claim: releaseScope === "public" ? "v1.0.2-parity" : "private-preview",
+    included_requirement_ids: includedRequirementIds,
+    excluded_requirement_ids: REQUIRED_REQUIREMENT_IDS.filter((id) => !included.has(id)),
     approved_deviation_ids: [],
   };
   await json(path.join(inputRoot, "g8-scope.json"), scope);
@@ -455,7 +469,7 @@ async function createReleaseInputs(root, candidateSha, evidence) {
     result: "PASS",
     candidate_sha: candidateSha,
     version: "1.0.2",
-    release_label: "public parity candidate",
+    release_label: releaseScope === "public" ? "public parity candidate" : "private preview",
     package_filename: "spiral-day-1.0.2.zip",
     package_path: "artifacts/spiral-day-1.0.2.zip",
     package_sha256: evidence.packageHash,
@@ -469,10 +483,10 @@ async function createReleaseInputs(root, candidateSha, evidence) {
       execution: PASS_EXECUTION,
     })),
     policy: {
-      checked_at: new Date().toISOString(),
+      checked_at: new Date(FIXTURE_VALIDATION_NOW_MS).toISOString(),
       official_policy_url: "https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines",
       name_available: true,
-      fork_policy_status: "approved",
+      fork_policy_status: releaseScope === "public" ? "approved" : "not-applicable-private",
       license_present: true,
       notices_present: true,
       provenance_passed: true,
@@ -480,8 +494,8 @@ async function createReleaseInputs(root, candidateSha, evidence) {
       banner_passed: true,
     },
     release_assets: [
-      { path: "LICENSE", sha256: sha256("license") },
-      { path: "THIRD_PARTY_NOTICES.md", sha256: sha256("notices") },
+      { path: "LICENSE", sha256: sha256(await readFile(path.join(repository, "LICENSE"))) },
+      { path: "THIRD_PARTY_NOTICES.md", sha256: sha256(await readFile(path.join(repository, "THIRD_PARTY_NOTICES.md"))) },
     ],
   };
   await json(path.join(inputRoot, "g7-package.json"), g7);
@@ -489,7 +503,7 @@ async function createReleaseInputs(root, candidateSha, evidence) {
   const gateRow = (index) => {
     const id = `G${index}`;
     const testIds = evidence.candidateRequirements.test_catalog
-      .filter((entry) => entry.gates.includes(id)).map((entry) => entry.id).sort();
+      .filter((entry) => included.has(entry.requirement_id) && entry.gates.includes(id)).map((entry) => entry.id).sort();
     const evidenceIds = [...new Set(testIds.flatMap((testId) => indexTestById.get(testId).evidence_ids))].sort();
     return {
     id,
@@ -528,8 +542,8 @@ async function createReleaseInputs(root, candidateSha, evidence) {
   const signoff = {
     schema_version: 1,
     gate: "G9",
-    decision: "GO",
-    release_type: "public",
+    decision: releaseScope === "public" ? "GO" : "HOLD",
+    release_type: releaseScope,
     version: "1.0.2",
     candidate_sha: candidateSha,
     remote_head: candidateSha,
@@ -540,8 +554,8 @@ async function createReleaseInputs(root, candidateSha, evidence) {
       upstream_count: "114/114",
       active_count: 126,
     },
-    gate_results: [...gates, gateRow(9)].map(({ id, result, result_url, candidate_sha, package_sha256, test_ids, evidence_ids }) => ({
-      id, result, result_url: id === "G9" ? "https://github.com/oldwinter/obsidian-nautilus-log/releases/tag/1.0.2" : result_url,
+    gate_results: gates.map(({ id, result, result_url, candidate_sha, package_sha256, test_ids, evidence_ids }) => ({
+      id, result, result_url,
       candidate_sha, package_sha256, test_ids, evidence_ids,
     })),
     evidence_bundle: {
@@ -583,16 +597,29 @@ async function createReleaseInputs(root, candidateSha, evidence) {
   return { inputRoot, scope, g7, gates, signoff };
 }
 
-export async function createDryRunFixture(sourceRoot) {
+export async function createDryRunFixture(sourceRoot, options = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "spiral-day-release-dry-run-"));
   const candidate = await createCandidateRepository(root, sourceRoot);
-  const evidence = await createEvidenceBundle(root, candidate.repository, candidate.candidateSha);
-  const release = await createReleaseInputs(root, candidate.candidateSha, evidence);
+  const releaseScope = options.releaseScope ?? "public";
+  const includedRequirementIds = options.includedRequirementIds
+    ?? (releaseScope === "private" ? MANDATORY_PRIVATE_REQUIREMENT_IDS : REQUIRED_REQUIREMENT_IDS);
+  const requiredEnvironmentIds = releaseScope === "private"
+    ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"]
+    : ENVIRONMENT_IDS;
+  const evidence = await createEvidenceBundle(root, candidate.repository, candidate.candidateSha, {
+    includedRequirementIds,
+    requiredEnvironmentIds,
+  });
+  const release = await createReleaseInputs(root, candidate.repository, candidate.candidateSha, evidence, {
+    releaseScope,
+    includedRequirementIds,
+  });
   return {
     root,
     ...candidate,
     ...evidence,
     ...release,
+    validationNowMs: FIXTURE_VALIDATION_NOW_MS,
     async writeGateResultsThrough(gate) {
       const gateIndex = gate === "G9" ? 8 : Number(gate.slice(1));
       await json(path.join(release.inputRoot, "gate-results.json"), {

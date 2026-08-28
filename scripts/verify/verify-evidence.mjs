@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { validateEvidenceBundle } from "./evidence-bundle.mjs";
 import { expectSafeRelativePath, expectSha256, expectSha40, parseJson } from "./evidence-schema.mjs";
+import { validateCandidateScope, validateRequirementManifest } from "./candidate-g0.mjs";
 
 function fail(message) {
   throw new Error(message);
@@ -24,6 +26,15 @@ function git(repoRoot, args) {
   }
 }
 
+function gitBytes(repoRoot, args) {
+  try {
+    return execFileSync("git", ["-C", repoRoot, ...args], { stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr).trim() : "";
+    fail(`git ${args.join(" ")} failed${stderr ? `: ${stderr}` : ""}`);
+  }
+}
+
 export function loadCandidateRequirements(repoRoot, candidateSha, requirementsPath) {
   const root = realpathSync(repoRoot);
   expectSha40(candidateSha, "candidate SHA");
@@ -33,9 +44,10 @@ export function loadCandidateRequirements(repoRoot, candidateSha, requirementsPa
   if (git(root, ["cat-file", "-t", candidateSha]) !== "commit") fail(`${candidateSha}: candidate object is not a commit`);
   const objectSpec = `${candidateSha}:${requirementsPath}`;
   const blobOid = git(root, ["rev-parse", objectSpec]);
-  const text = git(root, ["show", objectSpec]);
+  const bytes = gitBytes(root, ["show", objectSpec]);
   return {
-    requirements: parseJson(text, objectSpec),
+    requirements: parseJson(bytes.toString("utf8"), objectSpec),
+    bytes,
     blobOid,
     sourcePath: requirementsPath,
   };
@@ -74,7 +86,7 @@ function parseArguments(args) {
   };
 }
 
-function evidenceScope(scopePath, candidateSha, requirements) {
+function evidenceScope(scopePath, candidateSha, requirements, repoRoot, requirementBytes) {
   if (!scopePath) return {
     release_scope: "public",
     included_requirement_ids: requirements.requirements.filter((row) => row.status === "active").map((row) => row.id),
@@ -82,31 +94,41 @@ function evidenceScope(scopePath, candidateSha, requirements) {
     environment_ids: undefined,
   };
   const scope = parseJson(readFileSync(scopePath, "utf8"), scopePath);
-  const activeIds = requirements.requirements.filter((row) => row.status === "active").map((row) => row.id);
-  const included = scope.included_requirement_ids;
-  const excluded = scope.excluded_requirement_ids;
-  if (scope.schema_version !== 1 || scope.candidate_sha !== candidateSha
-    || !["private", "public"].includes(scope.release_scope)
-    || !Array.isArray(included) || !Array.isArray(excluded)
-    || new Set([...included, ...excluded]).size !== activeIds.length
-    || activeIds.some((id) => included.includes(id) === excluded.includes(id))) {
-    fail("--scope is stale or is not an exact active-requirement partition");
+  const deviationSpec = `${candidateSha}:docs/parity/deviations.json`;
+  const deviationBytes = gitBytes(repoRoot, ["show", deviationSpec]);
+  const deviations = parseJson(deviationBytes.toString("utf8"), deviationSpec);
+  const rows = validateRequirementManifest(requirements, deviations);
+  const partition = validateCandidateScope(scope, candidateSha, rows, {
+    requirementsSha256: createHash("sha256").update(requirementBytes).digest("hex"),
+    deviationsSha256: createHash("sha256").update(deviationBytes).digest("hex"),
+  });
+  const requiredDeviationIds = [...rows.values()]
+    .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
+    .map((row) => row.deviation_id)
+    .sort();
+  if (JSON.stringify([...scope.approved_deviation_ids].sort()) !== JSON.stringify(requiredDeviationIds)) {
+    fail("--scope approved deviations do not match the exact candidate requirements");
   }
-  if (scope.release_scope === "public" && excluded.length !== 0) fail("public --scope cannot exclude requirements");
   return {
     release_scope: scope.release_scope,
-    included_requirement_ids: included,
-    excluded_requirement_ids: excluded,
+    included_requirement_ids: [...partition.included],
+    excluded_requirement_ids: [...partition.excluded],
     environment_ids: scope.release_scope === "private" ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"] : undefined,
   };
 }
 
-export function verifyEvidenceFromCliArguments(args) {
+export function verifyEvidenceFromCliArguments(args, runtimeOptions = {}) {
   const options = parseArguments(args);
   expectSha40(options.candidateSha, "--candidate-sha");
   expectSha256(options.packageSha256, "--package-sha256");
   const candidate = loadCandidateRequirements(options.repoRoot, options.candidateSha, options.requirementsPath);
-  const scope = evidenceScope(options.scopePath, options.candidateSha, candidate.requirements);
+  const scope = evidenceScope(
+    options.scopePath,
+    options.candidateSha,
+    candidate.requirements,
+    options.repoRoot,
+    candidate.bytes,
+  );
   return {
     ...validateEvidenceBundle({
     bundleDir: options.bundleDir,
@@ -118,6 +140,7 @@ export function verifyEvidenceFromCliArguments(args) {
     candidateRequirementsSourcePath: candidate.sourcePath,
     requiredRequirementIds: scope.included_requirement_ids,
     requiredEnvironmentIds: scope.environment_ids,
+    nowMs: runtimeOptions.nowMs,
     }),
     scope,
   };

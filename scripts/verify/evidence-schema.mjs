@@ -67,6 +67,16 @@ const SYMBOLIC_VERSIONS = new Set([
   "none",
   "*",
 ]);
+const NUMERIC_TOOL_VERSION = /^[0-9]+(?:\.[0-9]+){1,3}(?:[-+][0-9A-Za-z.-]+)?$/;
+const KNOWN_NUMERIC_TOOLS = new Set([
+  "chromium",
+  "electron",
+  "git",
+  "node",
+  "npm",
+  "obsidian",
+  "playwright",
+]);
 
 const ENVIRONMENT_PROFILES = Object.freeze({
   "ENV-PURE": Object.freeze({
@@ -330,6 +340,9 @@ function validateEnvironment(environment, path) {
   for (const [tool, version] of tools) {
     if (!/^[a-z][a-z0-9-]*$/.test(tool)) fail(`${path}.tool_versions.${tool}`, "tool key must be lowercase kebab-case");
     expectExactVersion(version, `${path}.tool_versions.${tool}`);
+    if (KNOWN_NUMERIC_TOOLS.has(tool) && !NUMERIC_TOOL_VERSION.test(version)) {
+      fail(`${path}.tool_versions.${tool}`, "known tool must use a numeric dotted version");
+    }
   }
   for (const tool of profile.tools) {
     if (!Object.hasOwn(environment.tool_versions, tool)) {

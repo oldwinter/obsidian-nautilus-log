@@ -538,6 +538,26 @@ test("binds Evidence ID kind to the committed test catalog", () => {
   }
 });
 
+test("rejects nonsense numeric versions for known private-host tools", () => {
+  const record = {
+    schema_version: 1,
+    evidence_id: `E-${defaultCandidateSha.slice(0, 12)}-ENV-HOST-PRIVATE-INTEGRATION-997`,
+    record_type: "host",
+    candidate_sha: defaultCandidateSha,
+    package_sha256: "e".repeat(64),
+    environment: environmentFor("ENV-HOST-PRIVATE"),
+    started_at: "2026-08-28T00:00:00Z",
+    ended_at: "2026-08-28T00:01:00Z",
+    result: "PASS",
+    execution: { attempts: 1, retries: 0, skipped: false, quarantined: false, expected_failure: false },
+    requirement_ids: ["OBS-HOST-001"],
+    test_ids: ["EVD-ENV-003"],
+    artifacts: [{ path: "artifacts/environment.txt", sha256: "f".repeat(64) }],
+  };
+  record.environment.tool_versions.obsidian = "definitely-version-ish";
+  assert.throws(() => validateEvidenceRecord(record, "private-host"), /numeric dotted version/);
+});
+
 test("freshness accepts exact boundaries and rejects stale or future-skewed evidence", () => {
   const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-clock-"));
   try {

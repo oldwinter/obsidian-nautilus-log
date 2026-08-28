@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import { execFile } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { createDryRunFixture } from "../../tests/fixtures/release/create-dry-run-fixture.mjs";
-
-const execFileAsync = promisify(execFile);
+import {
+  createDryRunFixture,
+  FIXTURE_VALIDATION_NOW_MS,
+} from "../../tests/fixtures/release/create-dry-run-fixture.mjs";
+import { runGate } from "./run-gate.mjs";
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 async function main() {
@@ -17,16 +17,22 @@ async function main() {
     for (let index = 0; index <= 9; index += 1) {
       const gate = `G${index}`;
       if (gate !== "G0") await fixture.writeGateResultsThrough(gate);
-      const { stdout } = await execFileAsync(process.execPath, [
-        path.join(repositoryRoot, "scripts/release/run-gate.mjs"),
-        "--gate", gate,
-        "--candidate", fixture.candidateSha,
-        "--branch", "candidate",
-        "--bundle", fixture.bundleRoot,
-        "--input-dir", fixture.inputRoot,
-        "--repository", fixture.repository,
-      ], { maxBuffer: 64 * 1024 * 1024 });
-      const result = JSON.parse(stdout);
+      const result = await runGate({
+        gate,
+        candidate: fixture.candidateSha,
+        branch: "candidate",
+        bundle: fixture.bundleRoot,
+        "input-dir": fixture.inputRoot,
+        repository: fixture.repository,
+      }, {
+        validationNowMs: FIXTURE_VALIDATION_NOW_MS,
+        releaseVerifier: async ({ signoff, candidateSha, packageSha256 }) => {
+          if (signoff.release.target_sha !== candidateSha || signoff.package_sha256 !== packageSha256) {
+            throw new Error("dry-run release verifier received stale identity");
+          }
+          return { result: "PASS", verifier: "explicit-dry-run-only" };
+        },
+      });
       if (result.gate !== gate || result.result !== "PASS") {
         throw new Error(`${gate} dry-run did not pass`);
       }

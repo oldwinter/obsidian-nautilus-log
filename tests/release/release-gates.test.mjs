@@ -27,8 +27,12 @@ import {
   validateG7Package,
   validateG9Signoff,
   validateGateResults,
+  verifyPublishedGitHubRelease,
 } from "../../scripts/verify/candidate-release.mjs";
 import { createDeterministicPackage } from "../../scripts/verify/candidate-package.mjs";
+import { validateJsonAgainstSchema } from "../../scripts/verify/json-schema.mjs";
+import { runGate } from "../../scripts/release/run-gate.mjs";
+import { verifyEvidenceFromCliArguments } from "../../scripts/verify/verify-evidence.mjs";
 
 const execFileAsync = promisify(execFile);
 const sourceRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -155,7 +159,7 @@ test("G0 binds canonical scope fields and hashes to exact candidate object bytes
   assert.equal((await validate()).result, "PASS");
 });
 
-test("G0 schema and owner projections fail closed under corruption", async () => {
+test("G0 schemas and owner projections fail closed under structural and coordinated corruption", async () => {
   const requirements = await readJson(path.join(sourceRoot, "docs/parity/requirements.json"));
   const owners = await readJson(path.join(sourceRoot, "docs/parity/requirement-owners.json"));
   const boundaries = await readJson(path.join(sourceRoot, "docs/parity/ticket-boundaries.json"));
@@ -166,6 +170,41 @@ test("G0 schema and owner projections fail closed under corruption", async () =>
   const schema = await readJson(path.join(sourceRoot, "scripts/release/schemas/requirements.schema.json"));
   schema.properties.test_catalog.maxItems = 126;
   assert.throws(() => validateSchemaContract(schema, "requirements"), /open-test evidence contract/);
+
+  const requirementsSchema = await readJson(path.join(sourceRoot, "scripts/release/schemas/requirements.schema.json"));
+  const ownerSchema = await readJson(path.join(sourceRoot, "docs/parity/requirement-owners.schema.json"));
+  const boundarySchema = await readJson(path.join(sourceRoot, "docs/parity/ticket-boundaries.schema.json"));
+  const corruptions = [
+    (value) => { value.counts.upstream = 113; },
+    (value) => { delete value.requirements[0].statement; },
+    (value) => { value.unexpected = true; },
+    (value) => { value.requirements[0].unexpected = true; },
+    (value) => { value.test_catalog[0].gates = "G0"; },
+  ];
+  for (const corrupt of corruptions) {
+    const value = structuredClone(requirements);
+    corrupt(value);
+    assert.throws(() => validateJsonAgainstSchema(value, requirementsSchema, "requirements.json"));
+  }
+  const missingOwnerField = structuredClone(owners);
+  delete missingOwnerField.requirements[0].owner_module;
+  assert.throws(() => validateJsonAgainstSchema(missingOwnerField, ownerSchema, "owners.json"), /missing required field/);
+  const extraBoundaryField = structuredClone(boundaries);
+  extraBoundaryField.tickets[0].unexpected = true;
+  assert.throws(() => validateJsonAgainstSchema(extraBoundaryField, boundarySchema, "boundaries.json"), /unexpected field/);
+
+  const coordinatedRequirements = structuredClone(requirements);
+  const coordinatedOwners = structuredClone(owners);
+  coordinatedRequirements.requirements[0].owner_module = "src/outside-owned-boundary.ts";
+  coordinatedOwners.requirements[0].owner_module = "src/outside-owned-boundary.ts";
+  assert.throws(
+    () => validateOwnershipProjections(
+      new Map(coordinatedRequirements.requirements.map((row) => [row.id, row])),
+      coordinatedOwners,
+      boundaries,
+    ),
+    /allowed_module_boundaries/,
+  );
 });
 
 test("actual G0 accepts private profile semantics without requiring public host profiles", async (t) => {
@@ -187,6 +226,57 @@ test("actual G0 accepts private profile semantics without requiring public host 
   });
   assert.equal(result.release_scope, "private");
   assert.equal(result.included_requirement_ids.length, 126);
+});
+
+test("a genuinely reduced private candidate passes G0 through G8 with scoped gate coverage", async (t) => {
+  const fixture = await createDryRunFixture(sourceRoot, { releaseScope: "private" });
+  t.after(() => fixture.cleanup());
+  assert.equal(fixture.indexValue.requirements.length, 5);
+  assert.ok(fixture.indexValue.requirements.every((entry) => fixture.scope.included_requirement_ids.includes(entry.requirement_id)));
+  const observedProfiles = new Set(fixture.indexValue.records.map((entry) => entry.evidence_id.split("-").slice(2, -2).join("-")));
+  assert.ok([...observedProfiles].every((id) => ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"].includes(id)));
+
+  const originalNow = Date.now;
+  Date.now = () => Date.parse("2099-01-01T00:00:00.000Z");
+  try {
+    const g0 = await runGate({
+      gate: "G0",
+      candidate: fixture.candidateSha,
+      branch: "candidate",
+      bundle: fixture.bundleRoot,
+      "input-dir": fixture.inputRoot,
+      repository: fixture.repository,
+    }, { validationNowMs: fixture.validationNowMs });
+    assert.equal(g0.result, "PASS");
+  } finally {
+    Date.now = originalNow;
+  }
+
+  for (let index = 1; index <= 8; index += 1) {
+    const gate = `G${index}`;
+    await fixture.writeGateResultsThrough(gate);
+    const result = await runGate({
+      gate,
+      candidate: fixture.candidateSha,
+      branch: "candidate",
+      bundle: fixture.bundleRoot,
+      "input-dir": fixture.inputRoot,
+      repository: fixture.repository,
+    }, {
+      validationNowMs: fixture.validationNowMs,
+      releaseVerifier: async () => { throw new Error("private G0-G8 must not verify a public release"); },
+    });
+    assert.equal(result.result, "PASS");
+  }
+  const traceInput = verifyEvidenceFromCliArguments([
+    "--bundle", fixture.bundleRoot,
+    "--candidate-sha", fixture.candidateSha,
+    "--package-sha256", fixture.packageHash,
+    "--repo", fixture.repository,
+    "--scope", path.join(fixture.inputRoot, "g8-scope.json"),
+  ], { nowMs: fixture.validationNowMs });
+  assert.deepEqual(traceInput.scope.included_requirement_ids, fixture.scope.included_requirement_ids);
+  assert.deepEqual(traceInput.scope.excluded_requirement_ids, fixture.scope.excluded_requirement_ids);
 });
 
 test("actual G0 rejects extra manifest files and symlinked bundle content", async (t) => {
@@ -291,7 +381,7 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   const missing = structuredClone(g7);
   delete missing.builds;
   await assert.rejects(
-    validateG7Package(missing, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
+    validateG7Package(missing, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository, nowMs: fixture.validationNowMs }),
     /G7 builds must be an array/,
   );
 
@@ -312,9 +402,26 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   );
   await writeFile(g7Path, `${JSON.stringify(g7, null, 2)}\n`);
 
+  for (const [label, mutate] of [
+    ["missing", (value) => value.release_assets.pop()],
+    ["extra", (value) => value.release_assets.push({ path: "EXTRA", sha256: "a".repeat(64) })],
+    ["wrong", (value) => { value.release_assets[0].sha256 = "b".repeat(64); }],
+  ]) {
+    const corruptAssets = structuredClone(g7);
+    mutate(corruptAssets);
+    await assert.rejects(
+      validateG7Package(corruptAssets, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, {
+        repository: fixture.repository,
+        nowMs: fixture.validationNowMs,
+      }),
+      /release assets must be exactly|does not match exact candidate object bytes/,
+      `G7 must reject ${label} release assets`,
+    );
+  }
+
   await writeFile(path.join(fixture.inputRoot, "artifacts/spiral-day-1.0.2.zip"), "corrupt package\n");
   await assert.rejects(
-    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
+    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository, nowMs: fixture.validationNowMs }),
     /exact package hash mismatch/,
   );
 
@@ -334,7 +441,7 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   });
   await writeFile(path.join(fixture.inputRoot, counterfeit.package_path), counterfeitBytes);
   await assert.rejects(
-    validateG7Package(counterfeit, fixture.candidateSha, counterfeitHash, fixture.inputRoot, { repository: fixture.repository }),
+    validateG7Package(counterfeit, fixture.candidateSha, counterfeitHash, fixture.inputRoot, { repository: fixture.repository, nowMs: fixture.validationNowMs }),
     /deterministic exact-Git-object rebuild/,
   );
 
@@ -342,7 +449,7 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   await unlink(packagePath);
   await symlink(path.join(fixture.bundleRoot, "artifacts/spiral-day.zip"), packagePath);
   await assert.rejects(
-    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository }),
+    validateG7Package(g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository, nowMs: fixture.validationNowMs }),
     /symbolic link/,
   );
 });
@@ -364,7 +471,7 @@ test("deterministic package identity is order-independent and content-sensitive"
   assert.notEqual(sha256(first), sha256(corrupt));
 });
 
-test("G7-G9 validation preserves the repository and enforces the same-SHA invariant", async (t) => {
+test("G9 binds G7 identity, verifies the remote release, and durably produces its own PASS row", async (t) => {
   const fixture = await createDryRunFixture(sourceRoot);
   t.after(() => fixture.cleanup());
   const before = (await execFileAsync("git", ["status", "--porcelain=v2", "--branch"], {
@@ -373,14 +480,96 @@ test("G7-G9 validation preserves the repository and enforces the same-SHA invari
   const evidence = await loadEvidence(fixture);
   const gateResults = await readJson(path.join(fixture.inputRoot, "gate-results.json"));
   const gates = validateGateResults(gateResults, fixture.candidateSha, fixture.packageHash, evidence.index, "G8", fixture.candidateRequirements.test_catalog);
-  await validateG7Package(fixture.g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository });
+  await validateG7Package(fixture.g7, fixture.candidateSha, fixture.packageHash, fixture.inputRoot, { repository: fixture.repository, nowMs: fixture.validationNowMs });
   const identity = {
     bundle_sha256: evidence.manifestSha256,
     index_sha256: evidence.indexSha256,
-    g9_test_ids: fixture.candidateRequirements.test_catalog.filter((entry) => entry.gates.includes("G9")).map((entry) => entry.id).sort(),
-    g9_evidence_ids: fixture.signoff.gate_results.find((entry) => entry.id === "G9").evidence_ids,
   };
-  validateG9Signoff(fixture.signoff, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity);
+  const packageIdentity = {
+    version: fixture.g7.version,
+    package_filename: fixture.g7.package_filename,
+    package_sha256: fixture.g7.package_sha256,
+  };
+  validateG9Signoff(
+    fixture.signoff,
+    fixture.candidateSha,
+    fixture.packageHash,
+    fixture.scope,
+    gates,
+    undefined,
+    identity,
+    packageIdentity,
+  );
+  const wrongVersion = structuredClone(fixture.signoff);
+  wrongVersion.version = "1.0.3";
+  wrongVersion.release.tag = "1.0.3";
+  wrongVersion.release.url = "https://github.com/oldwinter/obsidian-nautilus-log/releases/tag/1.0.3";
+  assert.throws(
+    () => validateG9Signoff(wrongVersion, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity, packageIdentity),
+    /differs from the validated G7 package/,
+  );
+
+  const fakeFetch = async (url) => {
+    if (url.includes("/releases/tags/")) return {
+      ok: true,
+      async json() {
+        return {
+          draft: false,
+          published_at: "2026-08-29T00:00:00Z",
+          tag_name: "1.0.2",
+          html_url: fixture.signoff.release.url,
+          target_commitish: fixture.candidateSha,
+          assets: [{ name: fixture.g7.package_filename, browser_download_url: "https://downloads.example.invalid/package" }],
+        };
+      },
+    };
+    if (url.includes("/git/ref/tags/")) return {
+      ok: true,
+      async json() { return { object: { type: "commit", sha: fixture.candidateSha } }; },
+    };
+    if (url === "https://downloads.example.invalid/package") return {
+      ok: true,
+      async arrayBuffer() { return Uint8Array.from(fixture.packageBytes).buffer; },
+    };
+    throw new Error(`unexpected fake URL ${url}`);
+  };
+  const remote = await verifyPublishedGitHubRelease({
+    repository: fixture.repository,
+    repositorySlug: "oldwinter/obsidian-nautilus-log",
+    signoff: fixture.signoff,
+    candidateSha: fixture.candidateSha,
+    packageSha256: fixture.packageHash,
+    fetchImpl: fakeFetch,
+  });
+  assert.equal(remote.asset_sha256, fixture.packageHash);
+
+  await fixture.writeGateResultsThrough("G9");
+  const result = await runGate({
+    gate: "G9",
+    candidate: fixture.candidateSha,
+    branch: "candidate",
+    bundle: fixture.bundleRoot,
+    "input-dir": fixture.inputRoot,
+    repository: fixture.repository,
+  }, {
+    validationNowMs: fixture.validationNowMs,
+    releaseVerifier: async () => remote,
+  });
+  assert.equal(result.id, "G9");
+  const durable = await readJson(path.join(fixture.inputRoot, "gate-results.json"));
+  assert.deepEqual(durable.gates.map((entry) => entry.id), Array.from({ length: 10 }, (_, index) => `G${index}`));
+  assert.equal(durable.gates.at(-1).result_url, fixture.signoff.release.url);
+  await assert.rejects(
+    runGate({
+      gate: "G9",
+      candidate: fixture.candidateSha,
+      branch: "candidate",
+      bundle: fixture.bundleRoot,
+      "input-dir": fixture.inputRoot,
+      repository: fixture.repository,
+    }, { validationNowMs: fixture.validationNowMs, releaseVerifier: async () => remote }),
+    /G0 through G8 exactly once/,
+  );
   const after = (await execFileAsync("git", ["status", "--porcelain=v2", "--branch"], {
     cwd: fixture.repository,
   })).stdout;
@@ -389,7 +578,7 @@ test("G7-G9 validation preserves the repository and enforces the same-SHA invari
   const stale = structuredClone(fixture.signoff);
   stale.repository_state.after.remote_head = "f".repeat(40);
   assert.throws(
-    () => validateG9Signoff(stale, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity),
+    () => validateG9Signoff(stale, fixture.candidateSha, fixture.packageHash, fixture.scope, gates, undefined, identity, packageIdentity),
     /immutable same-SHA invariant/,
   );
 });

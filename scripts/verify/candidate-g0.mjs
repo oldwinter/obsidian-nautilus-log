@@ -10,6 +10,7 @@ import {
   requireFullSha,
 } from "./candidate-object.mjs";
 import { validateCandidateEvidenceBundle } from "./candidate-evidence.mjs";
+import { validateJsonAgainstSchema } from "./json-schema.mjs";
 
 const UPSTREAM_BASELINE = "973a041aa2f59f3b05bf31db8187efbfea07017a";
 const DISPOSITIONS = new Set(["exact", "host-adapted", "approved-improvement", "not-applicable"]);
@@ -18,13 +19,14 @@ const EVIDENCE_KINDS = new Set([
   "UNIT", "CONTRACT", "VAULT", "INTEGRATION", "SCREENSHOT",
   "KEYBOARD", "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
 ]);
-const MANDATORY_PRIVATE_IDS = new Set([
+export const MANDATORY_PRIVATE_REQUIREMENT_IDS = Object.freeze([
   "OBS-SAFE-001",
   "OBS-LIFE-001",
   "OBS-LOCAL-001",
   "REL-001",
   "REL-002",
 ]);
+const MANDATORY_PRIVATE_IDS = new Set(MANDATORY_PRIVATE_REQUIREMENT_IDS);
 const INITIAL_NATIVE_IDS = [
   "OBS-TRACE-001",
   "OBS-HOST-001",
@@ -67,6 +69,8 @@ const RELEASE_INPUT_FILES = new Set([
   "scripts/generate-requirement-owners.mjs",
 ]);
 export const REQUIRED_TRANSITIVE_INPUT_PATHS = [
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
   "docs/decisions/community-compliant-product-naming-and-attribution.md",
   "docs/decisions/desktop-compatibility-and-performance-envelope.md",
   "docs/decisions/markdown-grammar-and-plan-item-identity.md",
@@ -315,19 +319,76 @@ export function validateSchemaContract(schema, kind) {
     throw new CandidateError(`${kind} schema is not a strict draft 2020-12 object schema`);
   }
   if (kind === "requirements") {
-    if (schema.properties?.requirements?.minItems !== 126
+    const counts = schema.properties?.counts;
+    const fixtureCatalog = schema.properties?.fixture_catalog;
+    const testCatalog = schema.properties?.test_catalog;
+    const environmentCatalog = schema.properties?.environment_catalog;
+    const requirement = schema.$defs?.requirement;
+    const testEntry = schema.$defs?.testEntry;
+    const catalogEntry = schema.$defs?.catalogEntry;
+    if (schema.properties?.$schema?.const !== "../../scripts/release/schemas/requirements.schema.json"
+      || schema.properties?.schema_version?.const !== 1
+      || schema.properties?.requirement_set?.const !== "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1"
+      || schema.properties?.upstream_baseline_sha?.const !== UPSTREAM_BASELINE
+      || schema.properties?.row_count?.const !== 126
+      || counts?.type !== "object" || counts.additionalProperties !== false
+      || counts.properties?.upstream?.const !== 114
+      || counts.properties?.obsidian?.const !== 9
+      || counts.properties?.release?.const !== 3
+      || fixtureCatalog?.type !== "array" || fixtureCatalog.minItems !== 16
+      || fixtureCatalog.items?.$ref !== "#/$defs/catalogEntry"
+      || testCatalog?.type !== "array" || testCatalog.minItems !== 126
+      || testCatalog.items?.$ref !== "#/$defs/testEntry"
+      || environmentCatalog?.type !== "array" || environmentCatalog.minItems !== 9
+      || environmentCatalog.maxItems !== 9 || environmentCatalog.items?.$ref !== "#/$defs/catalogEntry"
+      || schema.properties?.requirements?.type !== "array"
+      || schema.properties?.requirements?.items?.$ref !== "#/$defs/requirement"
+      || schema.properties?.requirements?.minItems !== 126
       || schema.properties?.requirements?.maxItems !== 126
-      || schema.properties?.test_catalog?.minItems !== 126
-      || Object.hasOwn(schema.properties?.test_catalog ?? {}, "maxItems")
-      || !Array.isArray(schema.$defs?.testEntry?.properties?.evidence_kind?.enum)
-      || JSON.stringify(schema.$defs.testEntry.properties.evidence_kind.enum) !== JSON.stringify([...EVIDENCE_KINDS])) {
+      || Object.hasOwn(testCatalog ?? {}, "maxItems")
+      || catalogEntry?.type !== "object" || catalogEntry.additionalProperties !== false
+      || testEntry?.type !== "object" || testEntry.additionalProperties !== false
+      || requirement?.type !== "object" || requirement.additionalProperties !== false
+      || !Array.isArray(testEntry?.properties?.evidence_kind?.enum)
+      || JSON.stringify(testEntry.properties.evidence_kind.enum) !== JSON.stringify([...EVIDENCE_KINDS])) {
       throw new CandidateError("requirements schema does not encode the 126-row/open-test evidence contract");
     }
-  } else if (kind === "owners" && schema.properties?.requirements?.minItems !== 126) {
-    throw new CandidateError("requirement-owner schema does not require the exact owner projection");
-  } else if (kind === "boundaries" && schema.properties?.tickets?.minItems !== 15) {
-    throw new CandidateError("ticket-boundary schema does not require tickets #17 through #31");
+  } else if (kind === "owners") {
+    const projection = schema.properties?.requirements;
+    const ownership = schema.$defs?.ownership;
+    if (schema.properties?.$schema?.const !== "./requirement-owners.schema.json"
+      || schema.properties?.schema_version?.const !== 1
+      || schema.properties?.requirement_set?.const !== "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1"
+      || schema.properties?.row_count?.const !== 126
+      || projection?.type !== "array" || projection.minItems !== 126 || projection.maxItems !== 126
+      || projection.items?.$ref !== "#/$defs/ownership"
+      || ownership?.type !== "object" || ownership.additionalProperties !== false
+      || JSON.stringify(ownership.required) !== JSON.stringify([
+        "id", "owner_ticket", "owner_module", "evidence_contributors",
+      ])) {
+      throw new CandidateError("requirement-owner schema does not require the exact owner projection");
+    }
+  } else if (kind === "boundaries") {
+    const tickets = schema.properties?.tickets;
+    const boundary = schema.$defs?.ticketBoundary;
+    if (schema.properties?.$schema?.const !== "./ticket-boundaries.schema.json"
+      || schema.properties?.schema_version?.const !== 1
+      || schema.properties?.requirement_set?.const !== "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1"
+      || tickets?.type !== "array" || tickets.minItems !== 15 || tickets.maxItems !== 15
+      || tickets.items?.$ref !== "#/$defs/ticketBoundary"
+      || boundary?.type !== "object" || boundary.additionalProperties !== false
+      || JSON.stringify(boundary.required) !== JSON.stringify([
+        "ticket", "allowed_module_boundaries", "allowed_external_boundaries", "primary_requirement_ids",
+      ])) {
+      throw new CandidateError("ticket-boundary schema does not require tickets #17 through #31");
+    }
   }
+}
+
+function isInsideAllowedBoundary(ownerModule, allowedBoundary) {
+  return allowedBoundary.endsWith("/")
+    ? ownerModule.startsWith(allowedBoundary)
+    : ownerModule === allowedBoundary;
 }
 
 export function validateOwnershipProjections(requirementRows, owners, boundaries) {
@@ -346,10 +407,20 @@ export function validateOwnershipProjections(requirementRows, owners, boundaries
   }
   for (const [id, row] of requirementRows) {
     const owner = ownerRows.get(id);
+    const ticket = ticketRows.get(row.owner_ticket);
     if (!owner || owner.owner_ticket !== row.owner_ticket || owner.owner_module !== row.owner_module
       || JSON.stringify(owner.evidence_contributors) !== JSON.stringify(row.evidence_contributors)
       || reverseOwners.get(id) !== row.owner_ticket) {
       throw new CandidateError(`${id} differs from its exact owner/ticket-boundary projection`);
+    }
+    const externalOwner = row.owner_module.startsWith("external:");
+    const boundaryField = externalOwner ? "allowed_external_boundaries" : "allowed_module_boundaries";
+    const allowedBoundaries = requireStrings(ticket?.[boundaryField], `ticket #${row.owner_ticket} ${boundaryField}`, true);
+    const isAllowed = externalOwner
+      ? allowedBoundaries.includes(row.owner_module)
+      : allowedBoundaries.some((boundary) => isInsideAllowedBoundary(row.owner_module, boundary));
+    if (!isAllowed) {
+      throw new CandidateError(`${id} owner_module lies outside ticket #${row.owner_ticket} ${boundaryField}`);
     }
   }
   if (ownerRows.size !== requirementRows.size || reverseOwners.size !== requirementRows.size) {
@@ -429,6 +500,7 @@ export async function validateG0({
   scopePath,
   bundleRoot,
   checkPushedState = true,
+  nowMs,
 }) {
   requireFullSha(candidateSha);
   const [requirementsBytes, deviationsBytes, releaseInputs, scopeSource, candidateFiles,
@@ -478,6 +550,9 @@ export async function validateG0({
   validateSchemaContract(requirementsSchema, "requirements");
   validateSchemaContract(ownersSchema, "owners");
   validateSchemaContract(boundariesSchema, "boundaries");
+  validateJsonAgainstSchema(requirements, requirementsSchema, "requirements.json");
+  validateJsonAgainstSchema(owners, ownersSchema, "requirement-owners.json");
+  validateJsonAgainstSchema(boundaries, boundariesSchema, "ticket-boundaries.json");
   const requirementRows = validateRequirementManifest(requirements, deviations);
   validateOwnershipProjections(requirementRows, owners, boundaries);
   const scopePartition = validateCandidateScope(scope, candidateSha, requirementRows, {
@@ -500,6 +575,7 @@ export async function validateG0({
     requiredEnvironmentIds: scope.release_scope === "private"
       ? ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"]
       : REQUIRED_ENVIRONMENT_IDS,
+    nowMs,
   });
   for (const id of scopePartition.included) {
     if (!evidence.index.requirements.some((entry) => entry.requirement_id === id)) {

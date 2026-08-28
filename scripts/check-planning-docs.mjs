@@ -974,6 +974,7 @@ report("offline", "evidence-and-trace-contract", () => {
     "scripts/verify/candidate-release.mjs",
     "scripts/verify/evidence-bundle.mjs",
     "scripts/verify/evidence-schema.mjs",
+    "scripts/verify/json-schema.mjs",
     "scripts/verify/render-trace-report.mjs",
     "scripts/verify/verify-evidence.mjs",
     "tests/fixtures/evidence/scenarios.json",
@@ -1032,7 +1033,12 @@ report("offline", "evidence-and-trace-contract", () => {
 
   const verifyEvidence = readObject("scripts/verify/verify-evidence.mjs");
   assert(verifyEvidence.includes('${candidateSha}^{commit}'), "evidence verifier does not resolve the exact candidate commit");
-  assert(verifyEvidence.includes('git(root, ["show", objectSpec])'), "evidence verifier does not read requirements from the candidate object");
+  assert(verifyEvidence.includes('gitBytes(root, ["show", objectSpec])'), "evidence verifier does not read requirements bytes from the candidate object");
+  assert(verifyEvidence.includes("validateCandidateScope"), "private trace verifier does not reuse canonical scope validation");
+  const candidateRelease = readObject("scripts/verify/candidate-release.mjs");
+  for (const phrase of ["verifyPublishedGitHubRelease", "G9 tag lookup", "release asset hash", "exact candidate object bytes"]) {
+    assert(candidateRelease.includes(phrase), "release verifier lacks: " + phrase);
+  }
   const evidenceBundle = readObject("scripts/verify/evidence-bundle.mjs");
   for (const phrase of [
     "repository template evidence must be empty",

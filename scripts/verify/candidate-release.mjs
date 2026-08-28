@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 
-import { CandidateError, requireFullSha } from "./candidate-object.mjs";
+import { CandidateError, readCandidateFile, requireFullSha } from "./candidate-object.mjs";
 import { validateCandidateScope } from "./candidate-g0.mjs";
 import { buildDeterministicCandidatePackage } from "./candidate-package.mjs";
 
@@ -25,6 +27,7 @@ const REQUIRED_ATTESTATIONS = [
   "parity-reviewer",
   "release-owner",
 ];
+const execFileAsync = promisify(execFile);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -71,6 +74,7 @@ export function validateGateResults(
   evidenceIndex,
   throughGate = "G9",
   testCatalog = [],
+  requiredRequirementIds,
 ) {
   if (gateResults.schema_version !== 1
     || gateResults.candidate_sha !== candidateSha
@@ -86,6 +90,12 @@ export function validateGateResults(
     throw new CandidateError("gate validation requires the committed test catalog");
   }
   const testsById = uniqueMap(testCatalog, "id", "test catalog");
+  const inScopeRequirements = requiredRequirementIds === undefined
+    ? new Set(evidenceIndex.requirements.map((entry) => entry.requirement_id))
+    : new Set(requiredRequirementIds);
+  if (inScopeRequirements.size === 0) {
+    throw new CandidateError("gate validation requires at least one in-scope requirement");
+  }
   const indexTests = uniqueMap(evidenceIndex.tests, "test_id", "Evidence Index tests");
   if ([...results.keys()].some((gate) => !requiredGates.includes(gate))
     || requiredGates.some((gate) => !results.has(gate))) {
@@ -103,7 +113,7 @@ export function validateGateResults(
       throw new CandidateError(`${gate} does not use its canonical command`);
     }
     const mandatoryTests = [...testsById.values()]
-      .filter((entry) => entry.gates.includes(gate))
+      .filter((entry) => inScopeRequirements.has(entry.requirement_id) && entry.gates.includes(gate))
       .map((entry) => entry.id)
       .sort();
     const declaredTests = requireArray(result.test_ids, `${gate} test_ids`);
@@ -207,11 +217,12 @@ export async function validateG7Package(g7, candidateSha, packageSha256, inputRo
     if (g7.policy?.[field] !== true) throw new CandidateError(`G7 policy field ${field} must pass`);
   }
   const policyCheckedAt = Date.parse(g7.policy?.checked_at);
-  const policyAge = Date.now() - policyCheckedAt;
+  const nowMs = options.nowMs ?? Date.now();
+  const policyAge = nowMs - policyCheckedAt;
   const forkPolicyAccepted = g7.policy?.fork_policy_status === "approved"
     || ((g7.release_label === "private preview" || g7.release_label === "private milestone")
       && g7.policy?.fork_policy_status === "not-applicable-private");
-  if (!Number.isFinite(policyCheckedAt) || policyAge < -5 * 60 * 1000
+  if (!Number.isFinite(nowMs) || !Number.isFinite(policyCheckedAt) || policyAge < -5 * 60 * 1000
     || policyAge > 7 * 24 * 60 * 60 * 1000
     || !/^https:\/\//.test(g7.policy?.official_policy_url ?? "")
     || g7.policy?.name_available !== true
@@ -219,12 +230,137 @@ export async function validateG7Package(g7, candidateSha, packageSha256, inputRo
     throw new CandidateError("G7 current Community policy/name/fork evidence is incomplete");
   }
   const releaseAssets = uniqueMap(g7.release_assets, "path", "G7 release assets");
-  for (const required of ["LICENSE", "THIRD_PARTY_NOTICES.md"]) {
-    if (!HASH_PATTERN.test(releaseAssets.get(required)?.sha256 ?? "")) {
-      throw new CandidateError(`G7 release assets are missing ${required}`);
+  const requiredReleaseAssets = ["LICENSE", "THIRD_PARTY_NOTICES.md"];
+  if (releaseAssets.size !== requiredReleaseAssets.length
+    || requiredReleaseAssets.some((required) => !releaseAssets.has(required))) {
+    throw new CandidateError("G7 release assets must be exactly LICENSE and THIRD_PARTY_NOTICES.md");
+  }
+  for (const required of requiredReleaseAssets) {
+    const expectedBytes = await readCandidateFile(options.repository, candidateSha, required);
+    if (!HASH_PATTERN.test(releaseAssets.get(required)?.sha256 ?? "")
+      || releaseAssets.get(required).sha256 !== sha256(expectedBytes)) {
+      throw new CandidateError(`G7 release asset ${required} does not match exact candidate object bytes`);
     }
   }
   return g7;
+}
+
+export function parseGitHubReleaseUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new CandidateError("G9 release URL must be a valid GitHub release URL");
+  }
+  const segments = url.pathname.split("/").filter(Boolean);
+  if (url.protocol !== "https:" || url.hostname !== "github.com" || url.username || url.password
+    || url.search || url.hash || segments.length !== 5 || segments[2] !== "releases" || segments[3] !== "tag") {
+    throw new CandidateError("G9 release URL must identify one exact github.com repository release tag");
+  }
+  let tag;
+  try {
+    tag = decodeURIComponent(segments[4]);
+  } catch {
+    throw new CandidateError("G9 release URL contains an invalid encoded tag");
+  }
+  if (!segments[0] || !segments[1] || !tag || tag.includes("/") || segments[1].endsWith(".git")) {
+    throw new CandidateError("G9 release URL repository or tag is invalid");
+  }
+  return { owner: segments[0], repository: segments[1], slug: `${segments[0]}/${segments[1]}`, tag, url: url.href };
+}
+
+function parseGitHubRemote(value) {
+  const scp = typeof value === "string" ? value.match(/^git@github\.com:([^/]+)\/(.+?)(?:\.git)?$/) : null;
+  if (scp) return `${scp[1]}/${scp[2].replace(/\.git$/, "")}`;
+  try {
+    const url = new URL(value);
+    if (url.hostname !== "github.com") return null;
+    const segments = url.pathname.replace(/^\//, "").replace(/\.git$/, "").split("/");
+    return segments.length === 2 && segments.every(Boolean) ? segments.join("/") : null;
+  } catch {
+    return null;
+  }
+}
+
+async function githubJson(fetchImpl, url, headers, label) {
+  const response = await fetchImpl(url, { headers });
+  if (!response?.ok) throw new CandidateError(`${label} failed with HTTP ${String(response?.status)}`);
+  return response.json();
+}
+
+export async function verifyPublishedGitHubRelease({
+  repository,
+  signoff,
+  candidateSha,
+  packageSha256,
+  fetchImpl = globalThis.fetch,
+  repositorySlug,
+}) {
+  if (typeof fetchImpl !== "function") throw new CandidateError("G9 production release verification requires fetch");
+  const parsed = parseGitHubReleaseUrl(signoff.release.url);
+  let expectedSlug = repositorySlug;
+  if (!expectedSlug) {
+    const { stdout } = await execFileAsync("git", ["-C", repository, "remote", "get-url", "origin"]);
+    expectedSlug = parseGitHubRemote(stdout.trim());
+  }
+  if (!expectedSlug || parsed.slug.toLowerCase() !== expectedSlug.toLowerCase()) {
+    throw new CandidateError("G9 release URL repository does not match the candidate origin");
+  }
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
+  };
+  const apiRoot = `https://api.github.com/repos/${parsed.slug}`;
+  const release = await githubJson(
+    fetchImpl,
+    `${apiRoot}/releases/tags/${encodeURIComponent(parsed.tag)}`,
+    headers,
+    "G9 GitHub release lookup",
+  );
+  if (release.draft !== false || !release.published_at || release.tag_name !== parsed.tag
+    || release.html_url !== signoff.release.url) {
+    throw new CandidateError("G9 remote release is absent, draft, unpublished, or has inconsistent URL/tag identity");
+  }
+  let targetSha;
+  if (/^[0-9a-f]{40}$/.test(release.target_commitish ?? "")) {
+    targetSha = release.target_commitish;
+  } else {
+    const target = await githubJson(
+      fetchImpl,
+      `${apiRoot}/commits/${encodeURIComponent(release.target_commitish ?? "")}`,
+      headers,
+      "G9 release target lookup",
+    );
+    targetSha = target.sha;
+  }
+  let tagObject = await githubJson(
+    fetchImpl,
+    `${apiRoot}/git/ref/tags/${encodeURIComponent(parsed.tag)}`,
+    headers,
+    "G9 tag lookup",
+  );
+  tagObject = tagObject.object;
+  for (let depth = 0; tagObject?.type === "tag" && depth < 5; depth += 1) {
+    const annotated = await githubJson(fetchImpl, `${apiRoot}/git/tags/${tagObject.sha}`, headers, "G9 annotated tag lookup");
+    tagObject = annotated.object;
+  }
+  if (targetSha !== candidateSha || tagObject?.type !== "commit" || tagObject.sha !== candidateSha) {
+    throw new CandidateError("G9 remote release target and tag must resolve to the exact candidate SHA");
+  }
+  const matchingAssets = Array.isArray(release.assets)
+    ? release.assets.filter((asset) => asset?.name === signoff.package_filename)
+    : [];
+  if (matchingAssets.length !== 1 || !matchingAssets[0].browser_download_url) {
+    throw new CandidateError("G9 remote release must contain exactly one named candidate package asset");
+  }
+  const assetResponse = await fetchImpl(matchingAssets[0].browser_download_url, { headers });
+  if (!assetResponse?.ok) throw new CandidateError(`G9 release asset download failed with HTTP ${String(assetResponse?.status)}`);
+  const assetBytes = Buffer.from(await assetResponse.arrayBuffer());
+  if (sha256(assetBytes) !== packageSha256) {
+    throw new CandidateError("G9 remote release asset hash differs from the validated G7 package");
+  }
+  return { result: "PASS", repository: parsed.slug, tag: parsed.tag, target_sha: candidateSha, asset_sha256: packageSha256 };
 }
 
 export function validateG9Signoff(
@@ -235,6 +371,7 @@ export function validateG9Signoff(
   gateResults,
   expectedRequirementRevision,
   expectedEvidenceIdentity,
+  expectedPackageIdentity,
 ) {
   if (signoff.schema_version !== 1 || signoff.gate !== "G9" || signoff.candidate_sha !== candidateSha
     || signoff.package_sha256 !== packageSha256 || signoff.decision !== "GO") {
@@ -255,9 +392,18 @@ export function validateG9Signoff(
   }
   if (!signoff.release || signoff.release.draft !== false || signoff.release.published !== true
     || signoff.release.target_sha !== candidateSha
-    || signoff.release.tag !== signoff.version
-    || !/^https:\/\/github\.com\/[^/]+\/[^/]+\/releases\/tag\//.test(signoff.release.url ?? "")) {
+    || signoff.release.tag !== signoff.version) {
     throw new CandidateError("G9 requires a published non-draft release URL/tag targeting the exact candidate SHA");
+  }
+  const releaseUrl = parseGitHubReleaseUrl(signoff.release.url);
+  if (releaseUrl.tag !== signoff.release.tag) {
+    throw new CandidateError("G9 release URL tag differs from its declared version/tag");
+  }
+  if (expectedPackageIdentity
+    && (signoff.version !== expectedPackageIdentity.version
+      || signoff.package_filename !== expectedPackageIdentity.package_filename
+      || signoff.package_sha256 !== expectedPackageIdentity.package_sha256)) {
+    throw new CandidateError("G9 version, filename, or hash differs from the validated G7 package");
   }
   if (expectedRequirementRevision
     && signoff.requirements.revision_sha256 !== expectedRequirementRevision) {
@@ -275,13 +421,14 @@ export function validateG9Signoff(
     throw new CandidateError("G9 deviations or exclusions differ from the frozen scope");
   }
   const linkedGates = uniqueMap(signoff.gate_results, "id", "G9 gate links");
-  if (linkedGates.size !== GATES.length || GATES.some((gate) => !linkedGates.has(gate)
+  const prerequisiteGates = GATES.slice(0, 9);
+  if (linkedGates.size !== prerequisiteGates.length || prerequisiteGates.some((gate) => !linkedGates.has(gate)
     || linkedGates.get(gate).result !== "PASS"
     || linkedGates.get(gate).candidate_sha !== candidateSha
     || linkedGates.get(gate).package_sha256 !== packageSha256)) {
-    throw new CandidateError("G9 signoff must link passing G0-G9 results");
+    throw new CandidateError("G9 signoff must link passing G0-G8 prerequisites only");
   }
-  for (const gate of GATES.slice(0, 9)) {
+  for (const gate of prerequisiteGates) {
     const durable = linkedGates.get(gate);
     const validated = gateResults.get(gate);
     if (!validated || durable.result_url !== validated.result_url
@@ -289,14 +436,6 @@ export function validateG9Signoff(
       || JSON.stringify(durable.evidence_ids) !== JSON.stringify(validated.evidence_ids)) {
       throw new CandidateError(`G9 durable ${gate} link differs from the validated gate result`);
     }
-  }
-  if (linkedGates.get("G9").result_url !== signoff.release.url) {
-    throw new CandidateError("G9 durable result must link the published release");
-  }
-  if (expectedEvidenceIdentity
-    && (JSON.stringify(linkedGates.get("G9").test_ids) !== JSON.stringify(expectedEvidenceIdentity.g9_test_ids)
-      || JSON.stringify(linkedGates.get("G9").evidence_ids) !== JSON.stringify(expectedEvidenceIdentity.g9_evidence_ids))) {
-    throw new CandidateError("G9 durable result does not exactly cover its mandatory tests/evidence");
   }
   const workflows = uniqueMap(signoff.manual_workflows, "id", "G9 manual workflows");
   if (workflows.size !== REQUIRED_WORKFLOWS.length || REQUIRED_WORKFLOWS.some((id) => !workflows.has(id))) {
@@ -342,11 +481,21 @@ export async function validateReleaseInputs({
   signoff,
   inputRoot,
   repository,
+  releaseVerifier = verifyPublishedGitHubRelease,
+  nowMs,
 }) {
   const requirementRows = new Map(requirements.requirements.map((row) => [row.id, row]));
   const partition = validateCandidateScope(scope, candidateSha, requirementRows);
-  const gates = validateGateResults(gateResults, candidateSha, evidence.package_sha256, evidence.index, "G8", requirements.test_catalog);
-  await validateG7Package(g7, candidateSha, evidence.package_sha256, inputRoot, { repository });
+  const gates = validateGateResults(
+    gateResults,
+    candidateSha,
+    evidence.package_sha256,
+    evidence.index,
+    "G8",
+    requirements.test_catalog,
+    partition.included,
+  );
+  await validateG7Package(g7, candidateSha, evidence.package_sha256, inputRoot, { repository, nowMs });
   if (scope.release_scope === "private" && partition.excluded.size === 0) {
     throw new CandidateError("G8 private acceptance must explicitly disclose open requirements");
   }
@@ -358,11 +507,12 @@ export async function validateReleaseInputs({
     validateG9Signoff(signoff, candidateSha, evidence.package_sha256, scope, gates, undefined, {
       bundle_sha256: evidence.manifestSha256,
       index_sha256: evidence.indexSha256,
-      g9_test_ids: requirements.test_catalog.filter((entry) => entry.gates.includes("G9")).map((entry) => entry.id).sort(),
-      g9_evidence_ids: [...new Set(requirements.test_catalog
-        .filter((entry) => entry.gates.includes("G9"))
-        .flatMap((entry) => evidence.index.tests.find((row) => row.test_id === entry.id)?.evidence_ids ?? []))].sort(),
+    }, {
+      version: g7.version,
+      package_filename: g7.package_filename,
+      package_sha256: g7.package_sha256,
     });
+    await releaseVerifier({ repository, signoff, candidateSha, packageSha256: evidence.package_sha256 });
   } else if (signoff?.decision === "GO") {
     throw new CandidateError("a private candidate cannot receive public parity GO");
   }

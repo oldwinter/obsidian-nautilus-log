@@ -270,6 +270,8 @@ test("release inventory exhaustively freezes every #31 repository input", () => 
     [...owned, ...explicit].sort(),
   );
   assert.deepEqual(releaseInputs.transitive_inputs, [
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
     "docs/decisions/community-compliant-product-naming-and-attribution.md",
     "docs/decisions/desktop-compatibility-and-performance-envelope.md",
     "docs/decisions/markdown-grammar-and-plan-item-identity.md",
