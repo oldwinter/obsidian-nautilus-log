@@ -76,7 +76,6 @@
         "src/runtime/projection-runtime.ts",
         "src/runtime/refresh.ts",
         "src/runtime/snapshots.ts",
-        "src/runtime/system-clock.ts",
         "tests/runtime/projection/"
       ],
       "allowed_external_boundaries": [],
@@ -176,6 +175,7 @@
         "src/runtime/execution/pomo.ts",
         "src/runtime/execution/recovery.ts",
         "src/runtime/execution/time-continuity.ts",
+        "src/runtime/system-clock.ts",
         "tests/runtime/execution/"
       ],
       "allowed_external_boundaries": [],
