@@ -4961,9 +4961,10 @@
     },
     {
       "id": "UP-INS-02",
-      "owner_ticket": 17,
+      "owner_ticket": 27,
       "owner_module": "src/main.ts",
       "evidence_contributors": [
+        17,
         22,
         30
       ],
@@ -9027,9 +9028,10 @@
     },
     {
       "id": "OBS-LOCAL-001",
-      "owner_ticket": 17,
+      "owner_ticket": 27,
       "owner_module": "src/main.ts",
       "evidence_contributors": [
+        17,
         22,
         30,
         31

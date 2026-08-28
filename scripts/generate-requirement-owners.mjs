@@ -112,7 +112,7 @@ function own(ids, ownerModule, evidenceContributors = []) {
 }
 
 own(["INS-01"], "README.md", [22, 30]);
-own(["INS-02"], "src/main.ts", [22, 30]);
+own(["INS-02"], "src/main.ts", [17, 22, 30]);
 own(["INS-03"], "src/ui/planner/view.ts", [17, 21, 23, 30]);
 own(["INS-04", "INS-05"], "src/runtime/lifecycle.ts", [17, 23, 30]);
 own(range("SET", 1, 13), "src/adapters/settings.ts", [21, 24, 26, 30]);
@@ -154,7 +154,7 @@ own(["OBS-A11Y-001"], "styles/a11y.css", [27, 29, 30]);
 own(["OBS-SAFE-001"], "src/workspace/commit.ts", [20, 26, 30]);
 own(["OBS-LIFE-001"], "src/runtime/lifecycle.ts", [17, 23, 27, 29, 30]);
 own(["OBS-I18N-001"], "src/i18n/resolver.ts", [27, 29, 30]);
-own(["OBS-LOCAL-001"], "src/main.ts", [22, 30, 31]);
+own(["OBS-LOCAL-001"], "src/main.ts", [17, 22, 30, 31]);
 own(["REL-001"], "scripts/release/", [17, 30, 31]);
 own(["REL-002"], "docs/parity/scope.schema.json", [30, 31]);
 own(["REL-003"], "external:g7-g9-sign-off", [22, 30]);
