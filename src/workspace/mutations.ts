@@ -257,6 +257,10 @@ const PREVIEW_CONFIRMATION_ACTIONS: readonly MutationAction[] = Object.freeze([
   "repair-done-owner-clock",
 ]);
 
+export function mutationActionRequiresPreviewConfirmation(action: MutationAction): boolean {
+  return PREVIEW_CONFIRMATION_ACTIONS.includes(action);
+}
+
 function assertSafeInteger(name: string, value: number): void {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new RangeError(`${name} must be a nonnegative safe integer`);
@@ -345,7 +349,7 @@ function assertMutationPlan(input: MutationPlanInput): void {
   }
   const operationCount = stages.reduce((count, stage) => count + stage.operations.length, 0);
   if (
-    PREVIEW_CONFIRMATION_ACTIONS.includes(input.action)
+    mutationActionRequiresPreviewConfirmation(input.action)
     && stages.some((stage) => !stage.confirmationRequired)
   ) {
     throw new TypeError(`${input.action} requires an explicitly confirmed preview`);

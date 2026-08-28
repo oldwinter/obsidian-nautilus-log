@@ -105,11 +105,33 @@ test("issue #25 mutation vocabulary excludes cross-ticket runtime actions", () =
   }
 });
 
-test("invariant 17 uses public Web Crypto by default", () => {
-  assert.equal(typeof globalThis.crypto?.getRandomValues, "function");
-  assert.match(generateUuidV4(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-  assert.match(generateUniquePlanItemId(() => false), /^nl-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-  assert.match(generateUniqueClockId(() => false), /^nl-clock-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+test("invariant 17 calls Web Crypto with 16 bytes and normalizes UUID bits", () => {
+  const cryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const observed: Uint8Array[] = [];
+  const fakeCrypto = {
+    getRandomValues<T extends ArrayBufferView | null>(values: T): T {
+      assert.ok(values instanceof Uint8Array);
+      assert.equal(values.byteLength, 16);
+      values.fill(0xff);
+      observed.push(values);
+      return values as T;
+    },
+  };
+  Object.defineProperty(globalThis, "crypto", { configurable: true, value: fakeCrypto });
+  try {
+    assert.match(generateUuidV4(), /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.match(generateUniquePlanItemId(() => false), /^nl-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.match(generateUniqueClockId(() => false), /^nl-clock-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.equal(observed.length, 3);
+    for (const values of observed) {
+      assert.equal(values.byteLength, 16);
+      assert.equal(values[6]! & 0xf0, 0x40);
+      assert.equal(values[8]! & 0xc0, 0x80);
+    }
+  } finally {
+    if (cryptoDescriptor) Object.defineProperty(globalThis, "crypto", cryptoDescriptor);
+    else Reflect.deleteProperty(globalThis, "crypto");
+  }
 });
 
 test("invariant 17 fails closed when public Web Crypto is unavailable", () => {

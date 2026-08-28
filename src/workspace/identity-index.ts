@@ -548,14 +548,14 @@ async function defaultStructuredClockReader(
   if (!primary.region) return Object.freeze(clocks);
   if (primary.limitExceeded) throw STRUCTURED_INPUT_LIMIT;
   const parsed = parseGrammar({ version: primary.region.version, candidates: primary.candidates });
-  const eligibleAnonymousSources = new Set(parsed.items
-    .filter((item) => item.executionEligible && !item.source.blockId)
+  const parsedAnonymousSources = new Set(parsed.items
+    .filter((item) => !item.source.blockId)
     .map((item) => item.source));
   for (const candidate of primary.candidates) {
     await context.checkpoint();
     if (
       candidate.status === "foreign"
-      || (!candidate.source.blockId && !eligibleAnonymousSources.has(candidate.source))
+      || (!candidate.source.blockId && !parsedAnonymousSources.has(candidate.source))
     ) continue;
     const logbook = readLogbook(text, {
       path,

@@ -46,6 +46,54 @@ function activeSource(planId = PLAN_A, clockId = CLOCK_A, title = "Alpha"): stri
   return `${OPEN}\n- [ ] ${title} 30m ^${planId}\n  - LOGBOOK::\n    - ${clock}\n${CLOSE}\n`;
 }
 
+function mutableEditor(initial: string, afterTransaction?: () => void) {
+  let text = initial;
+  let transactions = 0;
+  let reads = 0;
+  const offsetAt = (source: string, position: { readonly line: number; readonly ch: number }): number => {
+    let line = 0;
+    let offset = 0;
+    while (line < position.line && offset < source.length) {
+      if (source[offset] === "\r" && source[offset + 1] === "\n") offset += 2;
+      else if (source[offset] === "\r" || source[offset] === "\n") offset += 1;
+      else {
+        offset += 1;
+        continue;
+      }
+      line += 1;
+    }
+    return offset + position.ch;
+  };
+  return {
+    editor: {
+      getValue: () => {
+        reads += 1;
+        return text;
+      },
+      transaction: ({ changes = [] }: { readonly changes?: readonly {
+        readonly from: { readonly line: number; readonly ch: number };
+        readonly to: { readonly line: number; readonly ch: number };
+        readonly text: string;
+      }[] }) => {
+        transactions += 1;
+        const before = text;
+        const withOffsets = changes.map((change) => ({
+          change,
+          from: offsetAt(before, change.from),
+          to: offsetAt(before, change.to),
+        })).sort((left, right) => right.from - left.from || right.to - left.to);
+        for (const { change, from, to } of withOffsets) {
+          text = text.slice(0, from) + change.text + text.slice(to);
+        }
+        afterTransaction?.();
+      },
+    },
+    text: () => text,
+    transactions: () => transactions,
+    reads: () => reads,
+  };
+}
+
 function clockInPlan(
   path: string,
   planId: string | undefined,
@@ -218,6 +266,88 @@ test("production Obsidian adapter enters exactly one Editor transaction or Vault
     change.from.line === 0 && change.from.ch === 0
     && change.to.line === idleSource().split(/\r\n|\r|\n/).length - 1
   ), false, "active Editor writes must carry validated byte ranges, not a whole-buffer replacement");
+});
+
+test("production Editor confirmation readers remain scoped to each same-path transform", async () => {
+  const delegate = new MemoryAtomicTextAccess({ [PATH_A]: "vault" });
+  const first = mutableEditor("A");
+  const second = mutableEditor("B");
+  let selected = first;
+  const access = new ObsidianAtomicTextAccess({
+    text: delegate,
+    vault: { process: async () => { throw new Error("unexpected Vault.process"); } } as never,
+    editorForPath: () => selected.editor as never,
+    fileForPath: () => ({ path: PATH_A }) as never,
+  });
+  const append = (suffix: string) => (current: string) => ({
+    text: `${current}${suffix}`,
+    edits: [{
+      fromOffset: current.length,
+      toOffset: current.length,
+      expected: "",
+      replacement: suffix,
+      semanticChange: "progress-updated" as const,
+    }],
+    value: suffix,
+  });
+
+  const firstPending = access.atomicTransform(PATH_A, append("1"));
+  selected = second;
+  const secondPending = access.atomicTransform(PATH_A, append("2"));
+  const [firstResult, secondResult] = await Promise.all([firstPending, secondPending]);
+
+  assert.equal(await secondResult.readConfirmationText(), "B2");
+  assert.equal(await firstResult.readConfirmationText(), "A1");
+  assert.equal(first.text(), "A1");
+  assert.equal(second.text(), "B2");
+  assert.equal(first.transactions(), 1);
+  assert.equal(second.transactions(), 1);
+});
+
+test("disposing after active Editor apply cannot confirm success or leak its handle", async () => {
+  const source = idleSource();
+  const delegate = new MemoryAtomicTextAccess({ [PATH_A]: source });
+  let writer!: WorkspaceCommitter;
+  let readsAtApply = 0;
+  const appliedEditor = mutableEditor(source, () => {
+    readsAtApply = appliedEditor.reads();
+    writer.dispose();
+  });
+  const nextEditor = mutableEditor("next");
+  let selected = appliedEditor;
+  const access = new ObsidianAtomicTextAccess({
+    text: delegate,
+    vault: { process: async () => { throw new Error("unexpected Vault.process"); } } as never,
+    editorForPath: () => selected.editor as never,
+    fileForPath: () => ({ path: PATH_A }) as never,
+  });
+  const plan = clockInPlan(PATH_A, PLAN_A, undefined, CLOCK_NEW, "dispose-production-editor");
+  const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_A] });
+  writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const receipt = await writer.commit(plan, expectation);
+
+  assert.equal(receipt.outcome, "uncertain");
+  assert.equal(receipt.confirmation, "unconfirmed");
+  assert.equal(receipt.result?.code, "write-outcome-uncertain");
+  assert.deepEqual(receipt.sources, []);
+  assert.equal(appliedEditor.reads(), readsAtApply);
+  assert.ok(appliedEditor.text().includes(CLOCK_NEW));
+
+  selected = nextEditor;
+  const next = await access.atomicTransform(PATH_A, (current) => ({
+    text: `${current}!`,
+    edits: [{
+      fromOffset: current.length,
+      toOffset: current.length,
+      expected: "",
+      replacement: "!",
+      semanticChange: "progress-updated",
+    }],
+    value: true,
+  }));
+  assert.equal(await next.readConfirmationText(), "next!");
+  assert.equal(nextEditor.text(), "next!");
 });
 
 test("anonymous target materializes Plan Item ID, drawer, and CLOCK in one CRLF-preserving transform", async () => {

@@ -1,6 +1,7 @@
 import { parseGrammar } from "../../../src/core/grammar-v1.ts";
 import { isCanonicalClockId } from "../../../src/workspace/clock-parser.ts";
 import {
+  acknowledgeMutationPreview,
   createClockExpectation,
   createMutationExpectation,
   createPlanItemExpectation,
@@ -12,6 +13,7 @@ import { readLogbook } from "../../../src/workspace/logbook-reader.ts";
 import type { LogbookReadOptions } from "../../../src/workspace/logbook-reader.ts";
 import { WorkspaceIndex } from "../../../src/workspace/identity-index.ts";
 import type { MutationPlan } from "../../../src/workspace/mutations.ts";
+import { mutationActionRequiresPreviewConfirmation } from "../../../src/workspace/mutations.ts";
 import { resolvePrimaryPlan } from "../../../src/workspace/primary-plan-resolver.ts";
 import { createSourceVersion } from "../../../src/workspace/source-version.ts";
 import type { TextAccess } from "../../../src/workspace/text-access.ts";
@@ -39,6 +41,7 @@ export interface ExpectationTargets {
   readonly clockIds?: readonly (string | undefined)[];
   readonly expectedRunningClockIds?: readonly string[];
   readonly logbookOptions?: LogbookReadOptions;
+  readonly acknowledgePreview?: boolean;
 }
 
 export async function mutationExpectation(
@@ -131,7 +134,7 @@ export async function mutationExpectation(
       index.dispose();
     }
   }
-  return createMutationExpectation({
+  const expectation = createMutationExpectation({
     intentId: plan.intentId,
     action: plan.action,
     planItems,
@@ -150,4 +153,7 @@ export async function mutationExpectation(
     previewToken: plan.previewToken,
     ...(selectedRepair ? { selectedRepair } : {}),
   });
+  return mutationActionRequiresPreviewConfirmation(plan.action) && targets.acknowledgePreview !== false
+    ? acknowledgeMutationPreview(plan, expectation)
+    : expectation;
 }

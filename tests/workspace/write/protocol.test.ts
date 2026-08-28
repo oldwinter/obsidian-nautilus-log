@@ -358,42 +358,87 @@ test("unsaved active Editor anonymous legacy CLOCK blocks before any host mutati
   writer.dispose();
 });
 
-test("anonymous non-execution-eligible CLOCK-looking text stays outside global running facts", async () => {
-  const noneligiblePath = "Daily/Anonymous-Noneligible.md";
+test("anonymous done fixed and plain CLOCK facts block unrelated Clock In", async () => {
+  const factPath = "Daily/Anonymous-Invalid-Owner.md";
+  const targetPath = "Daily/Invalid-Owner-Target.md";
+  const targetSource = `${OPEN}\n- [ ] Eligible task d30m ^${PLAN_B}\n${CLOSE}\n`;
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
+  for (const fixture of [
+    { name: "done-running", ownerLine: "- [x] Done task", clockText: "CLOCK: [2026-08-28 08:01]", code: "clock-owner-invalid" },
+    { name: "fixed-running", ownerLine: "- [ ] Fixed event 08:00-09:00", clockText: "CLOCK: [2026-08-28 08:02]", code: "clock-owner-invalid" },
+    { name: "plain-running", ownerLine: "- Plain item", clockText: "CLOCK: [2026-08-28 08:03]", code: "clock-owner-invalid" },
+    { name: "done-potential", ownerLine: "- [x] Done task", clockText: "CLOCK: [broken]", code: "potential-running-clock" },
+    { name: "fixed-potential", ownerLine: "- [ ] Fixed event 08:00-09:00", clockText: "CLOCK: [broken]", code: "potential-running-clock" },
+    { name: "plain-potential", ownerLine: "- Plain item", clockText: "CLOCK: [broken]", code: "potential-running-clock" },
+  ] as const) {
+    const factSource = `${OPEN}\n${fixture.ownerLine}\n  - LOGBOOK::\n    - ${fixture.clockText}\n${CLOSE}\n`;
+    const access = new MemoryAtomicTextAccess({
+      [factPath]: factSource,
+      [targetPath]: targetSource,
+    });
+    const index = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+    const snapshot = await index.rebuild();
+    assert.equal(snapshot.complete, true, fixture.name);
+    assert.equal(snapshot.clocks.length, 1, fixture.name);
+    assert.equal(snapshot.running.length + snapshot.potentialRunning.length, 1, fixture.name);
+    assert.equal(snapshot.clocks[0]?.ownerId, undefined, fixture.name);
+    index.dispose();
+
+    const mutation = clockInPlanAt(targetPath, `invalid-owner-${fixture.name}`);
+    const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
+    const writer = new WorkspaceCommitter(access, {
+      readContext: () => CONTEXT,
+      index: { clockParsing: { resolveLocalTime } },
+      logbook: { resolveLocalTime },
+    });
+    const receipt = await writer.commit(mutation, expectation);
+    assert.equal(receipt.outcome, "conflict", fixture.name);
+    assert.equal(receipt.result?.code, fixture.code, fixture.name);
+    assert.equal(receipt.globalCheck.status, "violated", fixture.name);
+    assert.equal(access.transactionCounts.size, 0, fixture.name);
+    assert.equal(await access.readText(factPath), factSource, fixture.name);
+    assert.equal(await access.readText(targetPath), targetSource, fixture.name);
+    writer.dispose();
+  }
+});
+
+test("ordinary foreign fenced and HTML CLOCK-looking text stays outside global facts", async () => {
+  const path = "Daily/Excluded-Clock-Examples.md";
   const source = [
     OPEN,
-    "- [x] Done task",
-    "  - LOGBOOK::",
-    "    - CLOCK: [2026-08-28 08:01]",
-    "- [ ] Fixed event 08:00-09:00",
-    "  - LOGBOOK::",
-    "    - CLOCK: [2026-08-28 08:02]",
-    "- Plain item",
-    "  - LOGBOOK::",
-    "    - CLOCK: [2026-08-28 08:03]",
+    "CLOCK: [2026-08-28 08:11]",
     "- [-] Foreign task",
     "  - LOGBOOK::",
-    "    - CLOCK: [2026-08-28 08:04]",
+    "    - CLOCK: [2026-08-28 08:12]",
+    "```md",
+    "- [x] Fenced task",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:13]",
+    "```",
+    "<div>",
+    "- Plain HTML item",
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-28 08:14]",
+    "</div>",
+    "",
     `- [ ] Eligible task d30m ^${PLAN_B}`,
     CLOSE,
     "",
   ].join("\n");
-  const access = new MemoryAtomicTextAccess({ [noneligiblePath]: source });
+  const access = new MemoryAtomicTextAccess({ [path]: source });
   const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
   const index = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
-
   const snapshot = await index.rebuild();
-
   assert.equal(snapshot.complete, true);
-  assert.deepEqual(snapshot.clocks.filter((clock) => clock.path === noneligiblePath), []);
+  assert.deepEqual(snapshot.clocks, []);
   assert.deepEqual(snapshot.running, []);
   assert.deepEqual(snapshot.potentialRunning, []);
   const target = index.identity(PLAN_B);
   assert.equal(target.kind, "unique");
-  if (target.kind === "unique") assert.equal(target.location.path, noneligiblePath);
+  if (target.kind === "unique") assert.equal(target.location.path, path);
   index.dispose();
 
-  const mutation = clockInPlanAt(noneligiblePath, "noneligible-anonymous-clock-text");
+  const mutation = clockInPlanAt(path, "excluded-clock-examples");
   const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
   const writer = new WorkspaceCommitter(access, {
     readContext: () => CONTEXT,
@@ -403,9 +448,9 @@ test("anonymous non-execution-eligible CLOCK-looking text stays outside global r
   const receipt = await writer.commit(mutation, expectation);
   assert.equal(receipt.outcome, "applied");
   assert.deepEqual(receipt.globalCheck, { status: "confirmed", runningClockIds: [CLOCK_NEW] });
-  assert.equal(access.transactionCounts.get(noneligiblePath), 1);
-  const after = await access.readText(noneligiblePath);
-  for (const clockText of ["08:01", "08:02", "08:03", "08:04"]) {
+  assert.equal(access.transactionCounts.get(path), 1);
+  const after = await access.readText(path);
+  for (const clockText of ["08:11", "08:12", "08:13", "08:14"]) {
     assert.equal(after?.match(new RegExp(`CLOCK: \\[2026-08-28 ${clockText}\\]`, "g"))?.length, 1);
   }
   writer.dispose();
@@ -413,28 +458,47 @@ test("anonymous non-execution-eligible CLOCK-looking text stays outside global r
   const confirmedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
   const confirmed = await confirmedIndex.rebuild();
   assert.equal(confirmed.clocks.length, 1);
-  assert.equal(confirmed.running.length, 1);
   assert.equal(confirmed.running[0]?.clockId, CLOCK_NEW);
   assert.equal(confirmed.running[0]?.ownerId, PLAN_B);
-  const confirmedTarget = confirmedIndex.identity(PLAN_B);
-  assert.equal(confirmedTarget.kind, "unique");
-  if (confirmedTarget.kind === "unique") assert.equal(confirmedTarget.location.path, noneligiblePath);
   confirmedIndex.dispose();
 });
 
-test("callback scan rejects newly inserted anonymous eligible CLOCK facts without plugin bytes", async () => {
+test("callback scan rejects newly inserted non-foreign anonymous CLOCK facts without plugin bytes", async () => {
   const path = "Daily/Anonymous-Callback.md";
   const source = `${OPEN}\n- [ ] Eligible task d30m ^${PLAN_B}\n${CLOSE}\n`;
   const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: NOW - 60_000 });
   for (const fixture of [
     {
-      intentId: "anonymous-callback-legacy",
+      intentId: "anonymous-callback-open",
+      ownerLine: "- [ ] Anonymous task d30m",
       clockText: "CLOCK: [2026-08-28 08:10]",
-      code: "source-conflict",
+      code: "clock-owner-invalid",
+      globalStatus: "unavailable",
+    },
+    {
+      intentId: "anonymous-callback-done",
+      ownerLine: "- [x] Anonymous task",
+      clockText: "CLOCK: [2026-08-28 08:10]",
+      code: "clock-owner-invalid",
+      globalStatus: "unavailable",
+    },
+    {
+      intentId: "anonymous-callback-fixed",
+      ownerLine: "- [ ] Anonymous event 08:00-09:00",
+      clockText: "CLOCK: [2026-08-28 08:10]",
+      code: "clock-owner-invalid",
+      globalStatus: "unavailable",
+    },
+    {
+      intentId: "anonymous-callback-plain",
+      ownerLine: "- Anonymous item",
+      clockText: "CLOCK: [2026-08-28 08:10]",
+      code: "clock-owner-invalid",
       globalStatus: "unavailable",
     },
     {
       intentId: "anonymous-callback-potential",
+      ownerLine: "- [x] Anonymous task",
       clockText: "CLOCK: [broken]",
       code: "potential-running-clock",
       globalStatus: "unavailable",
@@ -445,7 +509,7 @@ test("callback scan rejects newly inserted anonymous eligible CLOCK facts withou
     const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
     const externallyChanged = source.replace(
       `- [ ] Eligible task d30m ^${PLAN_B}`,
-      `- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - ${fixture.clockText}\n- [ ] Eligible task d30m ^${PLAN_B}`,
+      `${fixture.ownerLine}\n  - LOGBOOK::\n    - ${fixture.clockText}\n- [ ] Eligible task d30m ^${PLAN_B}`,
     );
     access.raceBeforeCallback(path, () => externallyChanged);
     const writer = new WorkspaceCommitter(access, {
@@ -540,7 +604,7 @@ test("anonymous eligible ID-less legacy running CLOCK permits only exact locator
   });
   const rejected = await driftWriter.commit(mutation, driftExpectation);
   assert.equal(rejected.outcome, "conflict");
-  assert.equal(rejected.result?.code, "source-conflict");
+  assert.equal(rejected.result?.code, "clock-owner-invalid");
   assert.equal(driftAccess.transactionCounts.get(anonymousPath), 1);
   assert.equal(driftAccess.callbackCounts.get(anonymousPath), 1);
   assert.equal(await driftAccess.readText(anonymousPath), drifted);
@@ -596,6 +660,64 @@ test("unrelated bytes may change inside the optimistic window and remain preserv
   writer.dispose();
 });
 
+test("normalizing an anonymous running CLOCK cannot confirm an invalid final owner", async () => {
+  const path = "Daily/Anonymous-Normalize.md";
+  const legacyText = "CLOCK: [2026-08-28 08:10]";
+  const source = `${OPEN}\n- [ ] Anonymous task d30m\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const legacyStart = Date.UTC(2026, 7, 28, 0, 10);
+  const resolveLocalTime = () => ({ kind: "unique" as const, epochMs: legacyStart });
+  const access = new MemoryAtomicTextAccess({ [path]: source });
+  const parsedIndex = new WorkspaceIndex(access, { clockParsing: { resolveLocalTime } });
+  const parsed = await parsedIndex.rebuild();
+  const parsedClock = parsed.running[0]!;
+  const runningKey = legacyRunningClockKey(parsedClock.path, parsedClock.fromOffset, parsedClock.text);
+  parsedIndex.dispose();
+  const mutation = createMutationPlan({
+    intentId: "anonymous-normalize-final-owner",
+    action: "normalize-legacy-clock",
+    stages: [{
+      path,
+      confirmationRequired: true,
+      operations: [{
+        kind: "normalize-legacy-clock",
+        target: { kind: "clock", fromOffset: parsedClock.fromOffset },
+        clockId: CLOCK_NEW,
+        startEpochMs: legacyStart,
+        startOffsetMinutes: 480,
+      }],
+    }],
+    expectedRunningClockIds: [runningKey],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, mutation, {
+    clockIds: [undefined],
+    expectedRunningClockIds: [runningKey],
+    logbookOptions: { resolveLocalTime },
+  });
+  const writer = new WorkspaceCommitter(access, {
+    readContext: () => CONTEXT,
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "invariant-broken", JSON.stringify(receipt));
+  assert.equal(receipt.confirmation, "invariant-broken");
+  assert.equal(receipt.result?.code, "write-invariant-broken");
+  assert.equal(receipt.globalCheck.status, "violated");
+  assert.deepEqual(receipt.globalCheck.runningClockIds, [CLOCK_NEW]);
+  assert.equal(writer.blocked, true);
+  assert.equal(await access.readText(path), source.replace(
+    legacyText,
+    formatCanonicalRunningClock(legacyStart, 480, CLOCK_NEW),
+  ));
+  assert.equal(access.transactionCounts.get(path), 1);
+  assert.deepEqual(receipt.sources.map(({ changed }) => changed), [true]);
+  writer.dispose();
+});
+
 test("a vault change after the final post-scan invalidates success instead of publishing stale global facts", async () => {
   const otherPath = "Daily/Other.md";
   const source = `${OPEN}\n- [ ] B ^${PLAN_B}\n${CLOSE}\n`;
@@ -629,6 +751,44 @@ test("transaction callback rejects newly inserted structured or canonical-global
     assert.equal((await access.readText(PATH))?.includes(CLOCK_A), true, name);
     writer.dispose();
   }
+});
+
+test("same-file owner status race rejects before completing an unrelated task", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  const source = `${OPEN}\n- [ ] Active ^${PLAN_A}\n  - LOGBOOK::\n    - ${running}\n- [ ] Target ^${PLAN_B}\n${CLOSE}\n`;
+  const externallyDone = source.replace(`- [ ] Active ^${PLAN_A}`, `- [x] Active ^${PLAN_A}`);
+  const access = new MemoryAtomicTextAccess({ [PATH]: source });
+  const mutation = createMutationPlan({
+    intentId: "owner-status-callback-race",
+    action: "complete",
+    stages: [{
+      path: PATH,
+      confirmationRequired: false,
+      operations: [{ kind: "complete", target: { kind: "plan-item", id: PLAN_B } }],
+    }],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, mutation, {
+    planIds: [PLAN_B],
+    expectedRunningClockIds: [CLOCK_A],
+  });
+  access.raceBeforeCallback(PATH, () => externallyDone);
+  const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const receipt = await writer.commit(mutation, expectation);
+
+  assert.equal(receipt.outcome, "conflict");
+  assert.equal(receipt.result?.code, "clock-owner-invalid");
+  assert.equal(receipt.confirmation, "confirmed-no-change");
+  assert.equal(receipt.globalCheck.status, "unavailable");
+  assert.equal(await access.readText(PATH), externallyDone);
+  assert.equal((await access.readText(PATH))?.includes(`- [ ] Target ^${PLAN_B}`), true);
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  assert.equal(access.callbackCounts.get(PATH), 1);
+  assert.deepEqual(receipt.sources.map(({ changed }) => changed), [false]);
+  writer.dispose();
 });
 
 test("cross-file running and identity races signaled before callback change zero target bytes", async () => {
@@ -972,15 +1132,15 @@ test("action-operation mismatch and non-shared switch instants are not admissibl
   }), /shared transition/);
 });
 
-test("preview-required mutations reject an unconfirmed plan before host entry", async () => {
+test("preview-required mutations need an opaque exact acknowledgment", async () => {
   const source = "# Daily\n";
   const access = new MemoryAtomicTextAccess({ [PATH]: source });
-  const unconfirmed = {
+  const plan = createMutationPlan({
     intentId: "unconfirmed-initialize",
     action: "initialize-plan",
     stages: [{
       path: PATH,
-      confirmationRequired: false,
+      confirmationRequired: true,
       operations: [{
         kind: "initialize-plan",
         insertionOffset: source.length,
@@ -991,16 +1151,134 @@ test("preview-required mutations reject an unconfirmed plan before host entry", 
     expectedRunningClockIds: [],
     settingsVersion: CONTEXT.settingsVersion,
     zoneId: CONTEXT.zoneId,
-    previewToken: `sha256:${"0".repeat(64)}`,
-  } as const satisfies MutationPlan;
-  const expectation = await mutationExpectation(access, unconfirmed, {});
+  });
+  const unacknowledged = await mutationExpectation(access, plan, { acknowledgePreview: false });
+  const acknowledged = await mutationExpectation(access, plan, {});
   const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
-  const receipt = await writer.commit(unconfirmed, expectation);
-  assert.equal(receipt.outcome, "rejected");
-  assert.equal(receipt.result?.code, "source-conflict");
+
+  const direct = await writer.commit(plan, unacknowledged);
+  assert.equal(direct.outcome, "rejected");
   assert.equal(access.transactionCounts.size, 0);
   assert.equal(await access.readText(PATH), source);
+
+  const forged = await writer.commit(plan, { ...acknowledged });
+  assert.equal(forged.outcome, "rejected");
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(PATH), source);
+
+  const exact = await writer.commit(plan, acknowledged);
+  assert.equal(exact.outcome, "applied", JSON.stringify(exact));
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  assert.ok((await access.readText(PATH))?.includes(OPEN));
   writer.dispose();
+});
+
+test("one acknowledged preview cannot authorize target replacement timestamp or edit mutations", async () => {
+  const initializeSource = "# Daily\n";
+  const initializeAccess = new MemoryAtomicTextAccess({ [PATH]: initializeSource });
+  const initialize = createMutationPlan({
+    intentId: "preview-edit-binding",
+    action: "initialize-plan",
+    stages: [{
+      path: PATH,
+      confirmationRequired: true,
+      operations: [{
+        kind: "initialize-plan",
+        insertionOffset: initializeSource.length,
+        lineEnding: "\n",
+        expectedSource: initializeSource,
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const initializeExpectation = await mutationExpectation(initializeAccess, initialize, {});
+  const { previewToken: _initializeToken, ...initializeInput } = initialize;
+  const initializeOperation = initialize.stages[0]!.operations[0];
+  assert.equal(initializeOperation.kind, "initialize-plan");
+  const initializeVariants = [
+    createMutationPlan({ ...initializeInput, stages: [{ ...initialize.stages[0]!, path: "Daily/Other.md" }] }),
+    createMutationPlan({
+      ...initializeInput,
+      stages: [{
+        ...initialize.stages[0]!,
+        operations: [{ ...initializeOperation, expectedSource: "# Replacement\n" }],
+      }],
+    }),
+    createMutationPlan({
+      ...initializeInput,
+      stages: [{ ...initialize.stages[0]!, operations: [{ ...initializeOperation, insertionOffset: 0 }] }],
+    }),
+  ];
+  const initializeWriter = new WorkspaceCommitter(initializeAccess, { readContext: () => CONTEXT });
+  for (const variant of initializeVariants) {
+    const receipt = await initializeWriter.commit(variant, initializeExpectation);
+    assert.equal(receipt.outcome, "rejected");
+  }
+  assert.equal(initializeAccess.transactionCounts.size, 0);
+  assert.equal(await initializeAccess.readText(PATH), initializeSource);
+  initializeWriter.dispose();
+
+  const legacyText = "CLOCK: [2026-11-01 01:30]";
+  const normalizeSource = `${OPEN}\n- [ ] Task ^${PLAN_A}\n  - LOGBOOK::\n    - ${legacyText}\n${CLOSE}\n`;
+  const selectedEpoch = Date.UTC(2026, 10, 1, 5, 30);
+  const resolveLocalTime = () => ({ kind: "ambiguous" as const });
+  const normalizeAccess = new MemoryAtomicTextAccess({ [PATH]: normalizeSource });
+  const normalize = createMutationPlan({
+    intentId: "preview-timestamp-binding",
+    action: "normalize-legacy-clock",
+    stages: [{ path: PATH, confirmationRequired: true, operations: [{
+      kind: "normalize-legacy-clock",
+      target: { kind: "clock", ownerId: PLAN_A },
+      clockId: CLOCK_NEW,
+      startEpochMs: selectedEpoch,
+      startOffsetMinutes: -240,
+      foldCandidates: [
+        { epochMs: selectedEpoch, offsetMinutes: -240 },
+        { epochMs: Date.UTC(2026, 10, 1, 6, 30), offsetMinutes: -300 },
+      ],
+    }] }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: "America/New_York",
+  });
+  const normalizeExpectation = await mutationExpectation(normalizeAccess, normalize, {
+    clockIds: [undefined],
+    logbookOptions: { resolveLocalTime },
+  });
+  const { previewToken: _normalizeToken, ...normalizeInput } = normalize;
+  const normalizeOperation = normalize.stages[0]!.operations[0];
+  assert.equal(normalizeOperation.kind, "normalize-legacy-clock");
+  const normalizeVariants = [
+    createMutationPlan({
+      ...normalizeInput,
+      stages: [{ ...normalize.stages[0]!, operations: [{
+        ...normalizeOperation,
+        target: { ...normalizeOperation.target, fromOffset: normalizeSource.indexOf(legacyText) + 1 },
+      }] }],
+    }),
+    createMutationPlan({
+      ...normalizeInput,
+      stages: [{ ...normalize.stages[0]!, operations: [{ ...normalizeOperation, clockId: CLOCK_A }] }],
+    }),
+    createMutationPlan({
+      ...normalizeInput,
+      stages: [{ ...normalize.stages[0]!, operations: [{ ...normalizeOperation, startEpochMs: selectedEpoch + 1 }] }],
+    }),
+  ];
+  const normalizeWriter = new WorkspaceCommitter(normalizeAccess, {
+    readContext: () => ({ ...CONTEXT, zoneId: "America/New_York" }),
+    index: { clockParsing: { resolveLocalTime } },
+    logbook: { resolveLocalTime },
+  });
+  for (const variant of normalizeVariants) {
+    const receipt = await normalizeWriter.commit(variant, normalizeExpectation);
+    assert.equal(receipt.outcome, "rejected");
+  }
+  assert.equal(normalizeAccess.transactionCounts.size, 0);
+  assert.equal(await normalizeAccess.readText(PATH), normalizeSource);
+  normalizeWriter.dispose();
 });
 
 test("post-preview plan or expected-byte mutation is rejected before host entry", async () => {

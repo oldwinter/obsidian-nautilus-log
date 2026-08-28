@@ -7,6 +7,7 @@ import { readLogbook, type LogbookClock, type LogbookReadOptions, type LogbookRe
 import {
   createCanonicalPreviewToken,
   isMutationPreviewToken,
+  mutationActionRequiresPreviewConfirmation,
   mutationPlanPreviewTokenMatches,
   type MutationAction,
   type MutationPlan,
@@ -74,6 +75,16 @@ export interface MutationExpectation {
   readonly expectationToken: string;
   readonly selectedRepair?: SelectedRepairEvidence;
 }
+
+declare const acknowledgedMutationExpectationBrand: unique symbol;
+export type AcknowledgedMutationExpectation = MutationExpectation & {
+  readonly [acknowledgedMutationExpectationBrand]: true;
+};
+
+const previewAcknowledgments = new WeakMap<MutationExpectation, {
+  readonly planToken: string;
+  readonly expectationToken: string;
+}>();
 
 export interface SelectedRepairEvidence {
   readonly id: string;
@@ -615,7 +626,7 @@ export function timeExpectationIsTrusted(time: TrustedTimeExpectation): boolean 
     && time.maximumQueueDelayMs >= 0;
 }
 
-export function expectationMatchesPlan(
+function expectationDataMatchesPlan(
   expectation: MutationExpectation,
   plan: MutationPlan,
 ): boolean {
@@ -627,4 +638,33 @@ export function expectationMatchesPlan(
     && expectation.previewToken === plan.previewToken
     && mutationPlanPreviewTokenMatches(plan)
     && mutationExpectationTokenMatches(expectation);
+}
+
+export function acknowledgeMutationPreview(
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+): AcknowledgedMutationExpectation {
+  if (!mutationActionRequiresPreviewConfirmation(plan.action)) {
+    throw new TypeError(`${plan.action} does not require preview acknowledgment`);
+  }
+  if (!expectationDataMatchesPlan(expectation, plan)) {
+    throw new TypeError("Preview acknowledgment requires an exact plan and expectation");
+  }
+  const acknowledged = Object.freeze({ ...expectation }) as AcknowledgedMutationExpectation;
+  previewAcknowledgments.set(acknowledged, Object.freeze({
+    planToken: plan.previewToken,
+    expectationToken: expectation.expectationToken,
+  }));
+  return acknowledged;
+}
+
+export function expectationMatchesPlan(
+  expectation: MutationExpectation,
+  plan: MutationPlan,
+): boolean {
+  if (!expectationDataMatchesPlan(expectation, plan)) return false;
+  if (!mutationActionRequiresPreviewConfirmation(plan.action)) return true;
+  const acknowledgment = previewAcknowledgments.get(expectation);
+  return acknowledgment?.planToken === plan.previewToken
+    && acknowledgment.expectationToken === expectation.expectationToken;
 }

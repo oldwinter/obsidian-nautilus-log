@@ -13,6 +13,7 @@ import { dirname, join, relative } from "node:path";
 
 import {
   ObsidianAtomicTextAccess,
+  type AtomicConfirmationReader,
   type AtomicTextAccess,
   type AtomicTransformDecision,
   type AtomicTransformResult,
@@ -239,7 +240,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     return this.#primitives.get(normalizeVaultRelativePath(path)) ?? "vault-process";
   }
 
-  async readTextForPrimitive(path: string, _primitive: SourceWritePrimitive): Promise<string | undefined> {
+  async #readConfirmationText(path: string): Promise<string | undefined> {
     await this.#waitForGate(this.#primitiveReadGates, normalizeVaultRelativePath(path));
     return this.readText(path);
   }
@@ -247,7 +248,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
-    onEnter?: (primitive: SourceWritePrimitive) => void,
+    onEnter?: (primitive: SourceWritePrimitive, readConfirmationText: AtomicConfirmationReader) => void,
   ): Promise<AtomicTransformResult<T>> {
     const normalized = normalizeVaultRelativePath(path);
     if (this.#disposableRoot) return this.#productionAtomicTransform(normalized, transform, onEnter);
@@ -263,7 +264,8 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       current = race(current);
       super.modify(normalized, current);
     }
-    onEnter?.(this.primitiveFor(normalized));
+    const readConfirmationText = () => this.#readConfirmationText(normalized);
+    onEnter?.(this.primitiveFor(normalized), readConfirmationText);
     this.#insideAtomic = true;
     let decision: AtomicTransformDecision<T>;
     try {
@@ -273,7 +275,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       this.#insideAtomic = false;
     }
     if (fault === "before-apply") throw new Error("injected before apply");
-    if (fault === "silent-noop") return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value });
+    if (fault === "silent-noop") return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value, readConfirmationText });
     const written = fault === "partial-prefix" || fault === "divergent-resolve"
       ? this.#partialPrefix(current, decision.text)
       : decision.text;
@@ -285,13 +287,13 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       this.#failNextConfirmationRead = true;
     }
     if (fault === "apply-then-throw" || fault === "partial-prefix") throw new Error("injected after apply");
-    return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value });
+    return Object.freeze({ primitive: this.primitiveFor(normalized), value: decision.value, readConfirmationText });
   }
 
   async #productionAtomicTransform<T>(
     normalized: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
-    onEnter?: (primitive: SourceWritePrimitive) => void,
+    onEnter?: (primitive: SourceWritePrimitive, readConfirmationText: AtomicConfirmationReader) => void,
   ): Promise<AtomicTransformResult<T>> {
     this.transactionCounts.set(normalized, (this.transactionCounts.get(normalized) ?? 0) + 1);
     const fault = this.#faults.get(normalized)?.shift();
@@ -336,14 +338,29 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
         },
       } as never,
     });
-    const result = await access.atomicTransform(normalized, countedTransform, onEnter);
+    let innerReader: AtomicConfirmationReader | undefined;
+    const readConfirmationText = async () => {
+      await this.#waitForGate(this.#primitiveReadGates, normalized);
+      if (this.#failNextConfirmationRead) {
+        this.#failNextConfirmationRead = false;
+        throw new Error("injected authoritative reread failure");
+      }
+      const text = await innerReader?.();
+      this.#afterRead();
+      return text;
+    };
+    const result = await access.atomicTransform(normalized, countedTransform, (enteredPrimitive, reader) => {
+      innerReader = reader;
+      onEnter?.(enteredPrimitive, readConfirmationText);
+    });
+    innerReader = result.readConfirmationText;
     await this.#waitForGate(this.#afterApplyGates, normalized);
     if (this.#afterTransformReadRace) this.#afterTransformReadRace.armed = true;
     if (this.#failConfirmationAfterTransform) {
       this.#failConfirmationAfterTransform = false;
       this.#failNextConfirmationRead = true;
     }
-    return result;
+    return Object.freeze({ primitive: result.primitive, value: result.value, readConfirmationText });
   }
 
   #editor(normalized: string, fault: AtomicFault | undefined): {
@@ -499,25 +516,22 @@ export class TempVaultAtomicTextAccess implements AtomicTextAccess {
     return this.primitive;
   }
 
-  readTextForPrimitive(path: string, _primitive: SourceWritePrimitive): Promise<string | undefined> {
-    return this.readText(path);
-  }
-
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
-    onEnter?: (primitive: SourceWritePrimitive) => void,
+    onEnter?: (primitive: SourceWritePrimitive, readConfirmationText: AtomicConfirmationReader) => void,
   ): Promise<AtomicTransformResult<T>> {
     const normalized = normalizeVaultRelativePath(path);
     const current = await this.readText(normalized);
     if (current === undefined) throw new Error("source disappeared");
-    onEnter?.(this.primitive);
+    const readConfirmationText = () => this.readText(normalized);
+    onEnter?.(this.primitive, readConfirmationText);
     this.transactionCounts.set(normalized, (this.transactionCounts.get(normalized) ?? 0) + 1);
     const decision = transform(current);
     if (decision.text !== current) {
       await writeFile(join(this.root, normalized), decision.text, "utf8");
       for (const listener of this.#listeners) listener(Object.freeze({ kind: "modify", path: normalized }));
     }
-    return Object.freeze({ primitive: this.primitive, value: decision.value });
+    return Object.freeze({ primitive: this.primitive, value: decision.value, readConfirmationText });
   }
 }

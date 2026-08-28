@@ -68,9 +68,12 @@ export interface AtomicTransformDecision<T> {
   readonly value: T;
 }
 
+export type AtomicConfirmationReader = () => Promise<string | undefined>;
+
 export interface AtomicTransformResult<T> {
   readonly primitive: SourceWritePrimitive;
   readonly value: T;
+  readonly readConfirmationText: AtomicConfirmationReader;
 }
 
 /**
@@ -79,11 +82,10 @@ export interface AtomicTransformResult<T> {
  */
 export interface AtomicTextAccess extends TextAccess {
   primitiveFor(path: string): SourceWritePrimitive;
-  readTextForPrimitive(path: string, primitive: SourceWritePrimitive): Promise<string | undefined>;
   atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
-    onEnter?: (primitive: SourceWritePrimitive) => void,
+    onEnter?: (primitive: SourceWritePrimitive, readConfirmationText: AtomicConfirmationReader) => void,
   ): Promise<AtomicTransformResult<T>>;
 }
 
@@ -116,7 +118,6 @@ function editorPositionAtOffset(text: string, targetOffset: number): { readonly 
 /** Active buffers use one Editor transaction; background files use one Vault.process transform. */
 export class ObsidianAtomicTextAccess implements AtomicTextAccess {
   readonly #options: ObsidianAtomicTextAccessOptions;
-  readonly #enteredEditors = new Map<string, Pick<Editor, "getValue" | "transaction">>();
 
   constructor(options: ObsidianAtomicTextAccessOptions) {
     this.#options = options;
@@ -140,24 +141,15 @@ export class ObsidianAtomicTextAccess implements AtomicTextAccess {
     return this.#options.editorForPath(path) ? "editor" : "vault-process";
   }
 
-  async readTextForPrimitive(path: string, primitive: SourceWritePrimitive): Promise<string | undefined> {
-    if (primitive === "editor") {
-      const editor = this.#enteredEditors.get(path);
-      this.#enteredEditors.delete(path);
-      return editor?.getValue();
-    }
-    return this.#options.text.readText(path);
-  }
-
   async atomicTransform<T>(
     path: string,
     transform: (currentText: string) => AtomicTransformDecision<T>,
-    onEnter?: (primitive: SourceWritePrimitive) => void,
+    onEnter?: (primitive: SourceWritePrimitive, readConfirmationText: AtomicConfirmationReader) => void,
   ): Promise<AtomicTransformResult<T>> {
     const editor = this.#options.editorForPath(path);
     if (editor) {
-      this.#enteredEditors.set(path, editor);
-      onEnter?.("editor");
+      const readConfirmationText = async () => editor.getValue();
+      onEnter?.("editor", readConfirmationText);
       const current = editor.getValue();
       const decision = transform(current);
       if (decision.text !== current) {
@@ -184,22 +176,23 @@ export class ObsidianAtomicTextAccess implements AtomicTextAccess {
           changes,
         }, "nautilus-log");
       }
-      return Object.freeze({ primitive: "editor" as const, value: decision.value });
+      return Object.freeze({ primitive: "editor" as const, value: decision.value, readConfirmationText });
     }
 
     const file = this.#options.fileForPath(path);
     if (!file) throw new Error("Background source is no longer available");
+    const readConfirmationText = () => this.#options.text.readText(path);
     let value: T | undefined;
     let entered = false;
     await this.#options.vault.process(file, (current) => {
-      onEnter?.("vault-process");
+      onEnter?.("vault-process", readConfirmationText);
       const decision = transform(current);
       value = decision.value;
       entered = true;
       return decision.text;
     });
     if (!entered) throw new Error("Vault.process did not enter its transform");
-    return Object.freeze({ primitive: "vault-process" as const, value: value as T });
+    return Object.freeze({ primitive: "vault-process" as const, value: value as T, readConfirmationText });
   }
 }
 
@@ -1090,18 +1083,21 @@ function currentFileRunningFacts(
   text: string,
   logbookOptions: LogbookReadOptions,
   index: StageIndexFacts,
+  plan: MutationPlan,
   expectation: MutationExpectation,
 ): {
   readonly fingerprints: readonly string[];
   readonly potentialFingerprints: readonly string[];
   readonly potential: boolean;
   readonly planInvalid: boolean;
+  readonly invalidOwner: boolean;
 } {
   const resolved = resolvePrimaryPlan(synchronousVersion(path, text), text);
   const fingerprints = new Set<string>();
   const potentialFingerprints = new Set<string>();
   const structuredLocations = new Set<string>();
   let potential = false;
+  let invalidOwner = false;
   const planInvalid = resolved.diagnostics.length > 0 || resolved.limitExceeded !== undefined;
   if (resolved.region && !planInvalid) {
     const parsed = parseGrammar({ version: resolved.region.version, candidates: resolved.candidates });
@@ -1114,7 +1110,7 @@ function currentFileRunningFacts(
         && item.source.itemSpan.toOffset === selectedRepair?.selectedSpan.toOffset;
       if (item.source.blockId) {
         if (!selectedOwnerRepair && (ownerIdentity?.kind !== "unique" || ownerIdentity.location.path !== path)) continue;
-      } else if (!item.executionEligible) continue;
+      }
       const logbook = readLogbook(text, {
         path,
         itemFromOffset: item.source.itemSpan.fromOffset,
@@ -1122,13 +1118,35 @@ function currentFileRunningFacts(
         ...(item.source.blockId ? { ownerId: item.source.blockId } : {}),
       }, logbookOptions);
       if (!logbook.complete || logbook.kind === "ambiguous") {
-        return { fingerprints: Object.freeze([]), potentialFingerprints: Object.freeze([]), potential: true, planInvalid };
+        return {
+          fingerprints: Object.freeze([]),
+          potentialFingerprints: Object.freeze([]),
+          potential: true,
+          planInvalid,
+          invalidOwner,
+        };
       }
       for (const clock of logbook.clocks) {
         structuredLocations.add(`${clock.fromOffset}\0${clock.toOffset}`);
         if (clock.parsed.kind === "record" && clock.parsed.record.state === "running") {
           const key = clock.parsed.record.clockId ?? legacyRunningClockKey(path, clock.fromOffset, clock.text);
           fingerprints.add(runningFingerprint(key, path, clock.fromOffset, clock.toOffset, clock.text, clock.ownerId));
+          const indexedClock: IndexedClockSource = Object.freeze({
+            path,
+            fromOffset: clock.fromOffset,
+            toOffset: clock.toOffset,
+            text: clock.text,
+            ...(clock.ownerId ? { ownerId: clock.ownerId } : {}),
+            ...(clock.parsed.record.clockId ? { clockId: clock.parsed.record.clockId } : {}),
+            scope: "accepted-logbook",
+            parsed: clock.parsed,
+          });
+          const ownerValid = item.executionEligible
+            && item.source.blockId !== undefined
+            && clock.ownerId === item.source.blockId
+            && ownerIdentity?.kind === "unique"
+            && ownerIdentity.location.path === path;
+          if (!ownerValid && !runningClockIsSelectedRecovery(indexedClock, plan, expectation)) invalidOwner = true;
         } else if (clock.parsed.kind === "malformed" && clock.parsed.potentialRunning) {
           potential = true;
           const rawIdMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(clock.text);
@@ -1160,6 +1178,16 @@ function currentFileRunningFacts(
         fingerprints.add(runningFingerprint(
           idMatch[1]!, path, fromOffset, toOffset, clockText, undefined,
         ));
+        const indexedClock: IndexedClockSource = Object.freeze({
+          path,
+          fromOffset,
+          toOffset,
+          text: clockText,
+          clockId: idMatch[1]!,
+          scope: "canonical-global",
+          parsed,
+        });
+        if (!runningClockIsSelectedRecovery(indexedClock, plan, expectation)) invalidOwner = true;
       }
       else if (parsed.kind === "malformed" && parsed.potentialRunning) {
         potential = true;
@@ -1172,6 +1200,7 @@ function currentFileRunningFacts(
     potentialFingerprints: Object.freeze([...potentialFingerprints].sort()),
     potential,
     planInvalid,
+    invalidOwner,
   };
 }
 
@@ -1933,8 +1962,11 @@ function buildStage(
     .filter((clock) => clock.path === currentPath)
     .map(indexedRunningFingerprint)
     .sort();
-  const actualFileRunning = currentFileRunningFacts(currentPath, currentText, logbookOptions, index, expectation);
+  const actualFileRunning = currentFileRunningFacts(currentPath, currentText, logbookOptions, index, plan, expectation);
   const permitsOldPlan = plan.action === "migrate-plan";
+  if (actualFileRunning.invalidOwner) {
+    return { ok: false, conflict: conflict("clock-owner-invalid", plan.action, currentPath) };
+  }
   if (
     (actualFileRunning.planInvalid && !permitsOldPlan)
     || !arraysEqual(actualFileRunning.fingerprints, expectedFileRunning)
@@ -2920,6 +2952,7 @@ export class WorkspaceCommitter {
     let intended = queued.value;
     let primitive = this.#access.primitiveFor(path);
     let hostEntered = false;
+    let readConfirmationText: AtomicConfirmationReader | undefined;
     if (this.#disposed) {
       return { kind: "stopped", outcome: "rejected", sources: [], result: conflict("action-no-longer-applicable", plan.action, path, stageNumber) };
     }
@@ -2950,12 +2983,14 @@ export class WorkspaceCommitter {
         if (!rebuilt.ok) throw new StageConflictError(rebuilt.conflict);
         intended = rebuilt.value;
         return Object.freeze({ text: rebuilt.value.text, edits: rebuilt.value.byteEdits, value: rebuilt.value });
-      }, (enteredPrimitive) => {
+      }, (enteredPrimitive, confirmationReader) => {
         hostEntered = true;
         primitive = enteredPrimitive;
+        readConfirmationText = confirmationReader;
       });
       primitive = host.primitive;
       intended = host.value;
+      readConfirmationText = host.readConfirmationText;
     } catch (error) {
       if (this.#disposed) {
         if (error instanceof StageConflictError && error.conflict.code === "action-no-longer-applicable") {
@@ -2969,7 +3004,7 @@ export class WorkspaceCommitter {
       }
       let observed: string | undefined;
       try {
-        observed = await this.#access.readTextForPrimitive(path, primitive);
+        observed = await (readConfirmationText ?? (() => this.#access.readText(path)))();
       } catch {
         observed = undefined;
       }
@@ -3010,7 +3045,7 @@ export class WorkspaceCommitter {
 
     let observed: string | undefined;
     try {
-      observed = await this.#access.readTextForPrimitive(path, primitive);
+      observed = await (readConfirmationText ?? (() => this.#access.readText(path)))();
     } catch {
       observed = undefined;
     }
@@ -3323,6 +3358,19 @@ export class WorkspaceCommitter {
       return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
     }
     const finalGeneration = finalSnapshot.generation;
+    const finalInvalidOwner = finalSnapshot.complete
+      ? await invalidClockOwnerPrecondition(
+          this.#index,
+          this.#access,
+          plan,
+          expectation,
+          this.#logbookOptions,
+          () => this.#disposed,
+        )
+      : undefined;
+    if (this.#disposed) {
+      return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
+    }
     const plannedFinal = finalGlobalExpectation(plan, expectation, expectation.expectedRunningClockIds);
     const expectedFinal = plannedFinal === undefined
       ? undefined
@@ -3396,6 +3444,7 @@ export class WorkspaceCommitter {
       || stableTargetBroken
       || missingTargetBroken
       || sourceConfirmationBroken
+      || finalInvalidOwner !== undefined
     ) {
       this.#blocked = true;
       return createCommitReceipt({
@@ -3408,7 +3457,7 @@ export class WorkspaceCommitter {
         confirmation: "invariant-broken",
         globalCheck: {
           status: resultingIdentityBroken || stableTargetBroken || missingTargetBroken
-            || sourceConfirmationBroken || !finalIndexStillCurrent
+            || sourceConfirmationBroken || !finalIndexStillCurrent || finalInvalidOwner !== undefined
             ? "violated"
             : global.status,
           runningClockIds: global.receiptIds,
