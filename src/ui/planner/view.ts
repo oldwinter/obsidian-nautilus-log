@@ -28,6 +28,7 @@ import {
 import {
   bindPlannerDisclosure,
   createPlannerDisclosures,
+  initialPlannerDisclosureState,
   type PlannerDisclosuresController,
 } from "./disclosures";
 import {
@@ -406,7 +407,10 @@ class PlannerSurfaceController implements PlannerSurface {
     root.replaceChildren(this.#content);
     this.#focus = createPlannerFocusManager(root);
     this.#live = createPlannerLiveAnnouncer(root);
-    this.#disclosures = createPlannerDisclosures();
+    this.#disclosures = createPlannerDisclosures({
+      ...initialPlannerDisclosureState(),
+      schedule: this.#layout.scheduleInitiallyOpen,
+    });
     this.#controls = createPlannerControls({
       instanceId: options.instanceId ?? `planner-${++plannerSurfaceSequence}`,
       ...(options.collapseStore ? { collapseStore: options.collapseStore } : {}),
@@ -637,7 +641,13 @@ class PlannerSurfaceController implements PlannerSurface {
   }
 
   #applyLayout(layout: PlannerResponsiveLayout): void {
+    const resetDisclosureDefaults = this.#layout.mode !== layout.mode
+      || this.#layout.hostContext !== layout.hostContext;
     this.#layout = layout;
+    if (resetDisclosureDefaults) {
+      this.#disclosures.setOpen("overview", false);
+      this.#disclosures.setOpen("schedule", layout.scheduleInitiallyOpen);
+    }
   }
 
   #render(): void {

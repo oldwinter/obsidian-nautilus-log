@@ -80,6 +80,7 @@ interface HarnessSurfaceState {
   readonly semanticTargetCount: number;
   readonly surfaceRole: string | null;
   readonly playbackRunning: boolean;
+  readonly scheduleOpen: boolean;
   readonly tooltipVisible: boolean;
   readonly visible: boolean;
   readonly viewportClipped: boolean;
@@ -637,6 +638,7 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     ).length,
     surfaceRole: root.querySelector("svg.spiral-day-planner__spiral")?.getAttribute("role") ?? null,
     playbackRunning: root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") === "true",
+    scheduleOpen: root.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open ?? false,
     tooltipVisible: [...document.querySelectorAll<HTMLElement>(".spiral-day-planner__tooltip")]
       .some((tooltip) => !tooltip.hidden),
     visible,
@@ -726,6 +728,13 @@ function assertAcceptance(): HarnessState {
     || (expectedLayout === "wide" && result.primary.semanticTargetCount === 0)) {
     throw new Error(`accessibility tree contract failed: ${JSON.stringify(result.primary)}`);
   }
+  if ((expectedLayout === "compact" && !result.primary.scheduleOpen)
+    || result.secondary.scheduleOpen) {
+    throw new Error(`compact Schedule default contract failed: ${JSON.stringify({
+      primary: result.primary.scheduleOpen,
+      secondary: result.secondary.scheduleOpen,
+    })}`);
+  }
   if (result.primary.renderedContrast.text < 4.5
     || result.primary.renderedContrast.control < 3
     || result.primary.renderedContrast.state < 3
@@ -780,6 +789,7 @@ window.issue24Harness = {
     adapterRoot.style.width = "520px";
     adapterIntentCount = 0;
     adapterLocale = "en";
+    let adapterHostContext: "main" | "sidebar" = "main";
     const ordinaryDebugAbsent = primaryRoot.querySelector('[data-control="debug"]') === null;
     const identitySuffix = String(Date.now());
     const identityA = `browser-adapter-a-${identitySuffix}`;
@@ -798,7 +808,7 @@ window.issue24Harness = {
         adapterLocaleListeners.add(listener);
         return () => adapterLocaleListeners.delete(listener);
       },
-      resolveContext: (logicalDate) => ({ logicalDate, bounds: BOUNDS, hostContext: "main" }),
+      resolveContext: (logicalDate) => ({ logicalDate, bounds: BOUNDS, hostContext: adapterHostContext }),
     };
     adapterView = createPlannerViewFactory(dependencies)(leaf as never);
     await adapterView.setState({
@@ -809,6 +819,42 @@ window.issue24Harness = {
     await nextFrame();
     const opened = adapterRoot.classList.contains("spiral-day-planner")
       && adapterRoot.querySelectorAll("[data-obsidian-icon] svg.lucide").length >= 4;
+    const mainSchedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
+    const mainCompactScheduleInitiallyOpen = mainSchedule?.open === true;
+    mainSchedule?.querySelector<HTMLElement>("summary")?.click();
+    await nextFrame();
+    const foldedMainSchedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
+    const mainScheduleCanFold = foldedMainSchedule?.open === false;
+    foldedMainSchedule?.querySelector<HTMLElement>("summary")?.click();
+    await nextFrame();
+    const mainScheduleCanReopen = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
+    adapterRoot.style.width = "541px";
+    adapterView.onResize();
+    await nextFrame();
+    const mainReachedWide = adapterRoot.dataset.layout === "wide"
+      && adapterRoot.querySelector(".spiral-day-planner__schedule") === null;
+    adapterRoot.style.width = "540px";
+    adapterView.onResize();
+    await nextFrame();
+    const mainWideToCompactScheduleOpen = adapterRoot.dataset.layout === "compact"
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
+    adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")
+      ?.querySelector<HTMLElement>("summary")?.click();
+    await nextFrame();
+    await adapterView.setState({
+      logicalDate: DISPLAYED_DATE,
+      plannerInstanceId: identityA,
+    }, {} as never);
+    await nextFrame();
+    const stableMainTogglePreserved = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
+    adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")
+      ?.querySelector<HTMLElement>("summary")?.click();
+    await nextFrame();
+    adapterRoot.style.width = "520px";
+    adapterView.onResize();
+    await nextFrame();
     dispatchPointerActivation(adapterRoot.querySelector('[data-item-id="nl-urgent"]'));
     const progressBound = adapterIntentCount === 1;
     adapterLocale = "zh-CN";
@@ -869,13 +915,12 @@ window.issue24Harness = {
       ?.getAttribute("aria-disabled") === "true";
     await nextFrame();
     await nextFrame();
-    const schedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
-    if (schedule && !schedule.open) schedule.querySelector<HTMLElement>("summary")?.click();
-    await nextFrame();
-    const disclosureOpened = schedule?.open === true;
+    const disclosureOpened = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
     const collapsedA = adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
 
+    adapterHostContext = "sidebar";
     await adapterView.setState({
       logicalDate: DISPLAYED_DATE,
       plannerInstanceId: identityB,
@@ -883,6 +928,21 @@ window.issue24Harness = {
     await nextFrame();
     const remountedB = adapterView.getState().plannerInstanceId === identityB
       && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") === null;
+    const sidebarCompactScheduleInitiallyFolded = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
+    adapterRoot.style.width = "541px";
+    adapterView.onResize();
+    await nextFrame();
+    const sidebarReachedWide = adapterRoot.dataset.layout === "wide"
+      && adapterRoot.querySelector(".spiral-day-planner__schedule") === null;
+    adapterRoot.style.width = "540px";
+    adapterView.onResize();
+    await nextFrame();
+    const sidebarWideToCompactScheduleFolded = adapterRoot.dataset.layout === "compact"
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
+    adapterRoot.style.width = "520px";
+    adapterView.onResize();
+    await nextFrame();
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
     const collapsedB = adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
 
@@ -896,6 +956,8 @@ window.issue24Harness = {
       && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") !== null;
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="collapse"]')?.click();
     await nextFrame();
+    const sidebarScheduleFoldedAfterReopen = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
     return Object.freeze({
       collapsedA,
       collapsedB,
@@ -908,12 +970,22 @@ window.issue24Harness = {
       focusPreserved,
       listenerBound: Number(adapterLocaleListeners.size) === 1,
       localeBound,
+      mainCompactScheduleInitiallyOpen,
+      mainReachedWide,
+      mainScheduleCanFold,
+      mainScheduleCanReopen,
+      mainWideToCompactScheduleOpen,
       opened,
       ordinaryDebugAbsent,
       playbackStarted,
       progressBound,
       remountedB,
       restoredB,
+      sidebarCompactScheduleInitiallyFolded,
+      sidebarReachedWide,
+      sidebarScheduleFoldedAfterReopen,
+      sidebarWideToCompactScheduleFolded,
+      stableMainTogglePreserved,
       tornDown,
     });
   },

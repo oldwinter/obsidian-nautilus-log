@@ -157,6 +157,15 @@ async function applyCaptureState(page, capture) {
       && captureState.primary.controlOverlaps === 0
       && !captureState.primary.viewportClipped,
   `Capture layout contract failed: ${JSON.stringify(captureState.primary)}`);
+  if (capture.width <= 520) {
+    failUnless(captureState.primary.scheduleOpen
+      && !captureState.secondary.scheduleOpen
+      && await root.locator(".spiral-day-planner__schedule[open]").count() === 1,
+    `Compact Schedule defaults failed: ${JSON.stringify({
+      primary: captureState.primary.scheduleOpen,
+      secondary: captureState.secondary.scheduleOpen,
+    })}`);
+  }
   if (capture.state === "temporal") {
     failUnless(await root.locator(".spiral-day-planner__needle").count() === 1, "Temporal capture lacks the now needle");
   } else if (capture.state === "topbar") {

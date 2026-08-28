@@ -6,7 +6,7 @@ import {
   initialPlannerDisclosureState,
 } from "../../../src/ui/planner/disclosures.ts";
 
-test("TC-OBS-VIS-002-001 compact Overview and Schedule start folded with independent diagnostics", () => {
+test("TC-OBS-VIS-002-001 disclosure controller defaults folded before responsive policy is applied", () => {
   assert.deepEqual(initialPlannerDisclosureState(), {
     overflow: false,
     overview: false,
