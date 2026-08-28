@@ -50,25 +50,110 @@ test("GRI-03 first complete region is primary and later complete regions are dia
 });
 
 test("GRI-05 direct unordered parents retain source order and structural exclusions", async () => {
-  const source = `${OPEN}\n- [ ] first 15m ^first\n  wrapped 90m\n  - [ ] nested 60m\n1. ordered\n   - [ ] ordered child\n> - [ ] quoted\n\n\`\`\`md\n- [ ] fenced\n\`\`\`\n\n<div>\n- [ ] html\n</div>\n\n| column |\n| --- |\n| - [ ] table |\n\n  + plain 20m\n* [x] done 30m\n- [-] foreign\n${CLOSE}`;
+  const source = `${OPEN}\n- [ ] first 15m ^first\nlazy continuation 75m\n  wrapped 90m\n  * * *\n  - [ ] nested 60m\n1. ordered\n   ordered continuation\n   - [ ] ordered child\n> - [ ] quoted\n\n- - -\n\n- parent\n\n      \`\`\`md\n- [ ] after indented code fence 35m\n\n\`\`\`md\n- [ ] fenced\n\`\`\`\n\n<div>\n- [ ] html\n</div>\n\n<custom-element data-kind="block">\n- [ ] custom html\n</custom-element>\n\n<div>\nunclosed type-six HTML ends at blank\n\n- [ ] after html 25m\n\n| column |\n| --- |\n| - [ ] table |\n\n  + plain 20m\n* [x] done 30m\n- [-] foreign\n${CLOSE}`;
   const result = await resolve(source);
+  assert.deepEqual(result.candidates.map(({ source: item }) => item.firstLineText), [
+    "- [ ] first 15m ^first",
+    "- parent",
+    "- [ ] after indented code fence 35m",
+    "- [ ] after html 25m",
+    "  + plain 20m",
+    "* [x] done 30m",
+  ]);
   assert.deepEqual(result.candidates.map(({ sourceOrder, status }) => [sourceOrder, status]), [
     [0, "open"],
     [1, "plain"],
-    [2, "done"],
+    [2, "open"],
+    [3, "open"],
+    [4, "plain"],
+    [5, "done"],
   ]);
-  assert.deepEqual(result.candidates.map(({ source }) => source.blockId), ["first", undefined, undefined]);
+  assert.deepEqual(result.candidates.map(({ source }) => source.blockId), [
+    "first",
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+  ]);
   assert.equal(result.candidates[0]!.source.firstLineText, "- [ ] first 15m ^first");
   assert.match(
     source.slice(
       result.candidates[0]!.source.itemSpan.fromOffset,
       result.candidates[0]!.source.itemSpan.toOffset,
     ),
-    /^- \[ \] first 15m \^first\n  wrapped 90m\n  - \[ \] nested 60m$/,
+    /^- \[ \] first 15m \^first\nlazy continuation 75m\n  wrapped 90m\n  \* \* \*\n  - \[ \] nested 60m$/,
   );
 });
 
-test("GRI-08/12 inline projection is structural, mapped, and never dereferences", async () => {
+test("GRI-05 indented code that looks like HTML cannot hide later direct items", async () => {
+  const source = `${OPEN}\n- parent\n\n      <div>\n- [ ] after list code 30m\n- \`\`\`md\n  literal 90m\n  \`\`\`\n# reset\n\n    <div>\n- [ ] after top-level code 45m\n${CLOSE}`;
+  const result = await resolve(source);
+  assert.deepEqual(result.candidates.map(({ status, segments }) => [
+    status,
+    segments.filter(({ kind }) => kind === "semantic").map(({ text }) => text).join(""),
+  ]), [
+    ["plain", "parent"],
+    ["open", "after list code 30m"],
+    ["open", "after top-level code 45m"],
+  ]);
+});
+
+test("GRI-08 escaped image punctuation leaves the following link label semantic", async () => {
+  const source = `${OPEN}\n- [ ] escaped \\![45m](image.png) ^escaped\n${CLOSE}`;
+  const result = await resolve(source);
+  assert.deepEqual(result.candidates[0]!.segments
+    .filter(({ kind }) => kind !== "hidden")
+    .map(({ kind, text }) => [kind, text]), [
+    ["semantic", "escaped \\!"],
+    ["semantic", "45m"],
+  ]);
+});
+
+test("GRI-08 CommonMark intraword underscores and balanced link destinations stay structural", async () => {
+  const source = `${OPEN}\n- [ ] foo_30m_bar _45m_baz [label](foo(and)99m) [name\\\\](120m) [label [inner]](target/180m) 15m\n${CLOSE}`;
+  const result = await resolve(source);
+  const candidate = result.candidates[0]!;
+  assert.deepEqual(candidate.segments.filter(({ kind }) => kind !== "hidden").map(({ text }) => text), [
+    "foo_30m_bar _45m_baz ",
+    "label",
+    " ",
+    "name\\\\",
+    " ",
+    "label [inner]",
+    " 15m",
+  ]);
+  assert.equal(candidate.segments.some(({ kind, text }) => kind === "hidden" && text.includes("120m")), true);
+  assert.equal(candidate.segments.some(({ kind, text }) => kind === "hidden" && text.includes("180m")), true);
+});
+
+test("GRI-08 multiline comments stay hidden and escaped backticks stay semantic", async () => {
+  const source = [
+    OPEN,
+    "- [ ] comment 15m <!-- hidden 90m",
+    "  still hidden -->",
+    "- [ ] escaped \\`30m\\` 45m",
+    CLOSE,
+  ].join("\n");
+  const result = await resolve(source);
+  assert.equal(result.candidates[0]!.segments.some(({ kind, text }) =>
+    kind !== "hidden" && text.includes("90m")), false);
+  assert.equal(result.candidates[1]!.segments.some(({ kind, text }) =>
+    kind === "semantic" && text.includes("30m")), true);
+  assert.equal(result.candidates[1]!.segments.some(({ kind }) => kind === "display-only"), false);
+});
+
+test("GRI-08 preserves visible angle text, autolink labels, and triple emphasis", async () => {
+  const source = `${OPEN}\n- [ ] compare < 30m > ***45m*** ___60m___ <user@example.com> <https://example.com/75m>\n${CLOSE}`;
+  const result = await resolve(source);
+  const visible = result.candidates[0]!.segments
+    .filter(({ kind }) => kind !== "hidden")
+    .map(({ text }) => text)
+    .join("");
+  assert.equal(visible, "compare < 30m > 45m 60m user@example.com https://example.com/75m");
+});
+
+test("GRI-08/12 read-side contribution preserves bytes and never dereferences", async () => {
   const source = `${OPEN}\n- [ ] **Plan** [30m](99m) [[Target|45m]] ![60m](image.png) ![[Embed|75m]] \`90m\` <!-- 120m --> ==now== #tag ^mapped  \n${CLOSE}`;
   const result = await resolve(source);
   const candidate = result.candidates[0]!;
@@ -105,12 +190,23 @@ test("GRI-08/12 inline projection is structural, mapped, and never dereferences"
   const linkSegmentIndex = candidate.segments.findIndex(
     ({ kind, text }) => kind === "semantic" && text === "30m",
   );
-  const linkToken = tokenSourceSpan(source, candidate.source, {
+  const linkToken = await tokenSourceSpan(source, candidate.source, {
     segmentIndex: linkSegmentIndex,
     fromOffset: 0,
     toOffset: 3,
   });
   assert.equal(source.slice(linkToken.fromOffset, linkToken.toOffset), "30m");
+
+  const sameLengthEdit = source.replace("Plan", "Edit");
+  assert.equal(sameLengthEdit.length, source.length);
+  await assert.rejects(
+    tokenSourceSpan(sameLengthEdit, candidate.source, {
+      segmentIndex: linkSegmentIndex,
+      fromOffset: 0,
+      toOffset: 3,
+    }),
+    /snapshot|digest/i,
+  );
 });
 
 test("GRI-13 spans are half-open UTF-16 positions against one exact snapshot", async () => {

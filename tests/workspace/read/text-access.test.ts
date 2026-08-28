@@ -5,6 +5,8 @@ import {
   createSourceSpan,
   createSourceVersion,
   sourceSpanText,
+  utf8ByteLength,
+  utf8ByteLengthCooperative,
 } from "../../../src/workspace/source-version.ts";
 import {
   MemoryTextAccess,
@@ -43,6 +45,18 @@ test("WSR-TEXT-002 spans use half-open UTF-16 offsets and zero-based lines and c
   assert.throws(() => createSourceSpan(content, -1, 1), /offset/i);
   assert.throws(() => createSourceSpan(content, 4, 3), /offset/i);
   assert.throws(() => createSourceSpan(content, 0, content.length + 1), /offset/i);
+});
+
+test("cooperative UTF-8 measurement preserves surrogate pairs across chunk boundaries", async () => {
+  const content = `${"a".repeat(64 * 1024 - 1)}😀tail`;
+  let checkpoints = 0;
+  const cooperative = await utf8ByteLengthCooperative(content, async () => {
+    checkpoints += 1;
+  });
+  assert.equal(cooperative, utf8ByteLength(content));
+  assert.equal(checkpoints >= 2, true);
+  const version = await createSourceVersion("boundary.md", content, async () => undefined);
+  assert.equal(version.contentLength, content.length);
 });
 
 test("WSR-TEXT-003 MemoryTextAccess reads exact bytes and lists only normalized Markdown paths", async () => {

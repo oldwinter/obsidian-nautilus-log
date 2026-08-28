@@ -183,6 +183,20 @@ function compileConfiguration(
       );
     }
   }
+  for (const [index, part] of parts.entries()) {
+    if (part.kind !== "token" || !part.variableWidth) continue;
+    const previous = parts[index - 1];
+    const next = parts[index + 1];
+    if (
+      (previous?.kind === "literal" && /[0-9]$/.test(previous.value))
+      || (next?.kind === "literal" && /^[0-9]/.test(next.value))
+    ) {
+      return compilationFailure(
+        "ambiguous-config",
+        "Variable-width Daily Note date tokens require nonnumeric separators",
+      );
+    }
+  }
 
   return {
     ok: true,

@@ -19,9 +19,13 @@ export type Unsubscribe = () => void;
 export type SourceChangeListener = (change: SourceChange) => void;
 
 export interface TextAccess {
-  listMarkdownPaths(): Promise<readonly string[]>;
-  readText(path: string): Promise<string | undefined>;
+  listMarkdownPaths(signal?: AbortSignal): Promise<readonly string[]>;
+  readText(path: string, signal?: AbortSignal): Promise<string | undefined>;
   onChange(listener: SourceChangeListener): Unsubscribe;
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) throw new DOMException("The operation was aborted", "AbortError");
 }
 
 export function normalizeVaultRelativePath(path: string): string {
@@ -69,7 +73,8 @@ export class MemoryTextAccess implements TextAccess {
     }
   }
 
-  async listMarkdownPaths(): Promise<readonly string[]> {
+  async listMarkdownPaths(signal?: AbortSignal): Promise<readonly string[]> {
+    throwIfAborted(signal);
     return Object.freeze(
       [...this.#files.keys()]
         .filter((path) => /\.md$/i.test(path))
@@ -77,7 +82,8 @@ export class MemoryTextAccess implements TextAccess {
     );
   }
 
-  async readText(path: string): Promise<string | undefined> {
+  async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    throwIfAborted(signal);
     return this.#files.get(normalizeVaultRelativePath(path));
   }
 

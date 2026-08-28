@@ -97,7 +97,15 @@ test("WSR-DN-004 rejects invalid dates, paths, formats, and duplicate extensions
 });
 
 test("WSR-DN-005 rejects ambiguous or colliding date formats", () => {
-  const formats = ["MM-DD", "YYYY-DD", "YYYY-MM", "YY-MM-DD", "YYYY-MD"];
+  const formats = [
+    "MM-DD",
+    "YYYY-DD",
+    "YYYY-MM",
+    "YY-MM-DD",
+    "YYYY-MD",
+    "M[1]D-YYYY",
+    "YYYY-[2]M-D",
+  ];
 
   for (const format of formats) {
     const result = resolveDailyNotePath(date(2026, 8, 28), { folder: "Daily", format });

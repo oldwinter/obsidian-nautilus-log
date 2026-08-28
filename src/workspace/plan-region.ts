@@ -3,6 +3,40 @@ import type { SourceSpan } from "./source-version";
 export const PLAN_OPEN_MARKER_V1 = "<!-- nautilus-log:plan/v1 -->";
 export const PLAN_CLOSE_MARKER = "<!-- /nautilus-log:plan -->";
 
+export interface MarkdownHtmlBlockStart {
+  readonly closePattern?: RegExp;
+  readonly endsOnBlank: boolean;
+  readonly closedOnOpeningLine: boolean;
+}
+
+const HTML_TYPE_ONE_OPEN = /^[ \t]*<(pre|script|style|textarea)(?:[ \t/>]|$)/i;
+const HTML_TYPE_SIX_OPEN = /^[ \t]*<(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
+const HTML_TYPE_SEVEN = /^[ \t]*<\/?[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[^<>]*)?\/?>[ \t]*$/;
+
+export function markdownHtmlBlockStart(text: string): MarkdownHtmlBlockStart | undefined {
+  if (/^[ \t]*<!--/.test(text)) {
+    return { closePattern: /-->/, endsOnBlank: false, closedOnOpeningLine: text.includes("-->") };
+  }
+  if (/^[ \t]*<\?/.test(text)) {
+    return { closePattern: /\?>/, endsOnBlank: false, closedOnOpeningLine: text.includes("?>") };
+  }
+  if (/^[ \t]*<!\[CDATA\[/.test(text)) {
+    return { closePattern: /\]\]>/, endsOnBlank: false, closedOnOpeningLine: text.includes("]]>") };
+  }
+  if (/^[ \t]*<![A-Z]/.test(text)) {
+    return { closePattern: />/, endsOnBlank: false, closedOnOpeningLine: text.includes(">") };
+  }
+  const typeOne = HTML_TYPE_ONE_OPEN.exec(text);
+  if (typeOne) {
+    const closePattern = new RegExp(`</${typeOne[1]!.toLowerCase()}[ \\t]*>`, "i");
+    return { closePattern, endsOnBlank: false, closedOnOpeningLine: closePattern.test(text) };
+  }
+  if (HTML_TYPE_SIX_OPEN.test(text) || HTML_TYPE_SEVEN.test(text)) {
+    return { endsOnBlank: true, closedOnOpeningLine: false };
+  }
+  return undefined;
+}
+
 export type PlanRegionDiagnosticCode =
   | "unsupported-plan-version"
   | "unclosed-plan-region"
@@ -48,9 +82,9 @@ type Marker =
       readonly line: PhysicalLine;
     };
 
-export function physicalLines(content: string): readonly PhysicalLine[] {
-  const lines: PhysicalLine[] = [];
+export function* iteratePhysicalLines(content: string): Iterable<PhysicalLine> {
   let fromOffset = 0;
+  let lineNumber = 0;
   while (fromOffset < content.length) {
     let toOffset = fromOffset;
     while (toOffset < content.length && content[toOffset] !== "\n" && content[toOffset] !== "\r") {
@@ -59,25 +93,29 @@ export function physicalLines(content: string): readonly PhysicalLine[] {
     let toOffsetWithEnding = toOffset;
     if (content[toOffsetWithEnding] === "\r") toOffsetWithEnding += 1;
     if (content[toOffsetWithEnding] === "\n") toOffsetWithEnding += 1;
-    lines.push(Object.freeze({
+    yield Object.freeze({
       text: content.slice(fromOffset, toOffset),
-      lineNumber: lines.length,
+      lineNumber,
       fromOffset,
       toOffset,
       toOffsetWithEnding,
-    }));
+    });
+    lineNumber += 1;
     fromOffset = toOffsetWithEnding;
   }
   if (content.length === 0 || /(?:\r\n|\r|\n)$/.test(content)) {
-    lines.push(Object.freeze({
+    yield Object.freeze({
       text: "",
-      lineNumber: lines.length,
+      lineNumber,
       fromOffset: content.length,
       toOffset: content.length,
       toOffsetWithEnding: content.length,
-    }));
+    });
   }
-  return Object.freeze(lines);
+}
+
+export function physicalLines(content: string): readonly PhysicalLine[] {
+  return Object.freeze([...iteratePhysicalLines(content)]);
 }
 
 function spanOnLine(line: PhysicalLine, fromOffset: number, toOffset: number): SourceSpan {
@@ -120,7 +158,10 @@ function markersOutsideFences(content: string): readonly Marker[] {
   let fenceCharacter: "`" | "~" | undefined;
   let fenceLength = 0;
 
-  for (const [index, line] of physicalLines(content).entries()) {
+  let index = 0;
+  for (const line of iteratePhysicalLines(content)) {
+    const allowBom = index === 0;
+    index += 1;
     if (fenceCharacter) {
       const close = /^ {0,3}(`+|~+)[ \t]*$/.exec(line.text);
       if (close && close[1]![0] === fenceCharacter && close[1]!.length >= fenceLength) {
@@ -136,8 +177,14 @@ function markersOutsideFences(content: string): readonly Marker[] {
       fenceLength = openFence[1]!.length;
       continue;
     }
+    const listFence = /^ {0,3}(?:[-+*]|[0-9]{1,9}[.)])[ \t]+(`{3,}|~{3,})(.*)$/.exec(line.text);
+    if (listFence && !(listFence[1]![0] === "`" && listFence[2]!.includes("`"))) {
+      fenceCharacter = listFence[1]![0] as "`" | "~";
+      fenceLength = listFence[1]!.length;
+      continue;
+    }
 
-    const marker = markerOnLine(content, line, index === 0);
+    const marker = markerOnLine(content, line, allowBom);
     if (marker) markers.push(marker);
   }
   return Object.freeze(markers);

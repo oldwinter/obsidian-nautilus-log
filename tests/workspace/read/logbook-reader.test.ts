@@ -126,6 +126,112 @@ test("UP-PER-01 reads one direct LOGBOOK and only its direct CLOCK children", ()
   assert.equal(source.slice(result.clocks[0]!.fromOffset, result.clocks[0]!.toOffset), result.clocks[0]!.text);
 });
 
+test("UP-PER-01 preserves CR-only LOGBOOK and CLOCK spans", () => {
+  const source = [
+    `- [ ] Owner ^${PLAN_ID}`,
+    "  - LOGBOOK::",
+    `    - CLOCK: [2026-08-28 Fri 09:15:42.137 +08:00] ^${CLOCK_ID}`,
+  ].join("\r");
+  const result = readLogbook(source, {
+    path: "Daily/2026-08-28.md",
+    itemFromOffset: 0,
+    itemToOffset: source.length,
+    ownerId: PLAN_ID,
+  });
+  assert.equal(result.kind, "accepted");
+  assert.equal(result.clocks.length, 1);
+  const clock = result.clocks[0]!;
+  assert.equal(source.slice(clock.fromOffset, clock.toOffset), clock.text);
+  assert.equal(clock.fromOffset, source.indexOf("CLOCK:"));
+});
+
+test("UP-PER-01 ignores list-looking LOGBOOK source inside HTML blocks", () => {
+  const source = [
+    `- [ ] Owner ^${PLAN_ID}`,
+    "  <div>",
+    "  - LOGBOOK::",
+    `    - CLOCK: [2026-08-28 Fri 07:00:00.000 +08:00] ^${CLOCK_ID}`,
+    "  </div>",
+    "",
+    "  <custom-element>",
+    "  - LOGBOOK::",
+    `    - CLOCK: [2026-08-28 Fri 08:00:00.000 +08:00] ^${CLOCK_ID}`,
+    "  </custom-element>",
+    "",
+    "  - LOGBOOK::",
+    `    - CLOCK: [2026-08-28 Fri 09:15:42.137 +08:00] ^${CLOCK_ID}`,
+  ].join("\n");
+  const result = readLogbook(source, {
+    path: "Daily/2026-08-28.md",
+    itemFromOffset: 0,
+    itemToOffset: source.length,
+    ownerId: PLAN_ID,
+  });
+
+  assert.equal(result.kind, "accepted");
+  assert.equal(result.drawers.length, 1);
+  assert.equal(result.clocks.length, 1);
+  assert.equal(result.clocks[0]!.text.includes("09:15"), true);
+});
+
+test("bounded LOGBOOK reads expose no partial CLOCK set", () => {
+  const source = [
+    `- [ ] Owner ^${PLAN_ID}`,
+    "  - LOGBOOK::",
+    "    - CLOCK: [broken-one]",
+    "    - CLOCK: [broken-two]",
+  ].join("\n");
+  const result = readLogbook(source, {
+    path: "Daily/2026-08-28.md",
+    itemFromOffset: 0,
+    itemToOffset: source.length,
+    ownerId: PLAN_ID,
+  }, { maxClockRecords: 1 });
+  assert.equal(result.complete, false);
+  assert.equal(result.reason, "clock-record-limit");
+  assert.deepEqual(result.clocks, []);
+});
+
+test("LOGBOOK and CLOCK children must meet Markdown content indentation", () => {
+  const source = [
+    `- [ ] Owner ^${PLAN_ID}`,
+    "  - LOGBOOK::",
+    "   - CLOCK: [broken]",
+  ].join("\n");
+  const result = readLogbook(source, {
+    path: "Daily/2026-08-28.md",
+    itemFromOffset: 0,
+    itemToOffset: source.length,
+    ownerId: PLAN_ID,
+  });
+  assert.equal(result.kind, "accepted");
+  assert.deepEqual(result.clocks, []);
+});
+
+test("list-relative indented code cannot create or hide a LOGBOOK or CLOCK", () => {
+  for (const firstCodeLine of ["      ordinary code", "      <div>", "      ```md"]) {
+    const source = [
+      `- [ ] Owner ^${PLAN_ID}`,
+      "",
+      firstCodeLine,
+      "      - LOGBOOK::",
+      `        - CLOCK: [2026-08-28 Fri 07:00:00.000 +08:00] ^${CLOCK_ID}`,
+      "  - LOGBOOK::",
+      `    - CLOCK: [2026-08-28 Fri 09:15:42.137 +08:00] ^${CLOCK_ID}`,
+    ].join("\n");
+    const result = readLogbook(source, {
+      path: "Daily/2026-08-28.md",
+      itemFromOffset: 0,
+      itemToOffset: source.length,
+      ownerId: PLAN_ID,
+    });
+    assert.equal(result.kind, "accepted", firstCodeLine);
+    assert.equal(result.drawers.length, 1, firstCodeLine);
+    assert.equal(result.clocks.length, 1, firstCodeLine);
+    assert.equal(result.clocks[0]!.text.includes("09:15"), true, firstCodeLine);
+  }
+});
+
 test("LOGBOOK matching is case-insensitive, checkbox-free, exact, and duplicate-aware", () => {
   const source = [
     `- [ ] Owner ^${PLAN_ID}`,

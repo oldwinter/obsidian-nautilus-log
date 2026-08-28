@@ -5,8 +5,14 @@ import {
   type ParseClockOptions,
 } from "./clock-parser";
 import { readLogbook, type LogbookClock } from "./logbook-reader";
+import { markdownHtmlBlockStart } from "./plan-region";
 import { resolvePrimaryPlan } from "./primary-plan-resolver";
-import { createSourceVersion, type SourceVersion } from "./source-version";
+import {
+  createSourceVersion,
+  utf8ByteLengthCooperative,
+  type AsyncCheckpoint,
+  type SourceVersion,
+} from "./source-version";
 import type { SourceChange, TextAccess } from "./text-access";
 
 export type { SourceChange } from "./text-access";
@@ -49,11 +55,13 @@ export interface IdentityLookupIndex {
 export type WorkspaceIndexIncompleteReason =
   | "not-built"
   | "source-changed"
+  | "cancelled"
   | "source-read-failed"
   | "markdown-file-limit"
   | "markdown-byte-limit"
   | "block-id-limit"
-  | "clock-record-limit";
+  | "clock-record-limit"
+  | "structured-input-limit";
 
 export interface IndexedClockSource {
   readonly path: string;
@@ -83,7 +91,15 @@ export type StructuredClockReader = (
   text: string,
   identities: IdentityLookupIndex,
   version: SourceVersion,
+  maximumClockRecords: number,
+  context: StructuredClockReadContext,
 ) => readonly LogbookClock[] | Promise<readonly LogbookClock[]>;
+
+export interface StructuredClockReadContext {
+  readonly sourceBytes: number;
+  readonly signal?: AbortSignal;
+  readonly checkpoint: AsyncCheckpoint;
+}
 
 export interface WorkspaceIndexOptions {
   readonly limits?: Partial<WorkspaceIndexLimits>;
@@ -99,7 +115,28 @@ interface PhysicalLine {
 }
 
 const TERMINAL_BLOCK_ID = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/;
-const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
+const FENCE_OPEN = /^([ \t]*)(`{3,}|~{3,})/;
+const ANY_LIST_ITEM = /^([ \t]*)([-+*]|[0-9]{1,9}[.)])([ \t]+)/;
+const CLOCK_RECORD_LIMIT = Object.freeze({ kind: "clock-record-limit" as const });
+const REBUILD_CANCELLED = Object.freeze({ kind: "cancelled" as const });
+const REBUILD_STALE = Object.freeze({ kind: "source-changed" as const });
+const STRUCTURED_INPUT_LIMIT = Object.freeze({ kind: "structured-input-limit" as const });
+const MAX_STRUCTURED_SOURCE_BYTES = 2 * 1024 * 1024;
+const MAX_STRUCTURED_REGION_BYTES = 1024 * 1024;
+const MAX_STRUCTURED_PLAN_ITEMS = 1_000;
+const MAX_STRUCTURED_ITEM_BYTES = 16 * 1024;
+const MAX_STRUCTURED_LIST_DEPTH = 16;
+
+function isTableRow(content: string): boolean {
+  return /^ {0,3}\S.*\|.*$/.test(content) || /^ {0,3}\|.*$/.test(content);
+}
+
+function isTableDelimiter(content: string): boolean {
+  const trimmed = content.trim();
+  if (!trimmed.includes("|")) return false;
+  const cells = trimmed.replace(/^\|/, "").replace(/\|$/, "").split("|");
+  return cells.length > 0 && cells.every((cell) => /^[ \t]*:?-{3,}:?[ \t]*$/.test(cell));
+}
 
 function frozenEmptySnapshot(
   generation: number,
@@ -119,65 +156,251 @@ function frozenEmptySnapshot(
   });
 }
 
-function* physicalLines(text: string): Iterable<PhysicalLine> {
+async function* physicalLines(
+  text: string,
+  checkpoint: AsyncCheckpoint,
+): AsyncIterable<PhysicalLine> {
   let start = 0;
   let line = 0;
-  while (start <= text.length) {
-    const newline = text.indexOf("\n", start);
-    const physicalEnd = newline < 0 ? text.length : newline;
-    const end = physicalEnd > start && text.charCodeAt(physicalEnd - 1) === 13
-      ? physicalEnd - 1
-      : physicalEnd;
-    yield { start, end, line, content: text.slice(start, end) };
-    if (newline < 0) break;
-    start = newline + 1;
-    line += 1;
-  }
-}
-
-function* outsideFenceLines(text: string): Iterable<PhysicalLine> {
-  let fence: { readonly marker: string; readonly length: number } | undefined;
-  for (const line of physicalLines(text)) {
-    const match = FENCE_OPEN.exec(line.content);
-    if (match) {
-      const run = match[1]!;
-      const remainder = line.content.slice(match[0].length);
-      if (!fence) {
-        if (run[0] !== "`" || !remainder.includes("`")) {
-          fence = { marker: run[0]!, length: run.length };
-        }
-      } else if (
-        run[0] === fence.marker
-        && run.length >= fence.length
-        && /^[ \t]*$/.test(remainder)
-      ) {
-        fence = undefined;
+  let offset = 0;
+  let nextCheckpoint = 64 * 1024;
+  while (offset < text.length) {
+    const code = text.charCodeAt(offset);
+    if (code === 10 || code === 13) {
+      yield { start, end: offset, line, content: text.slice(start, offset) };
+      if (code === 13 && text.charCodeAt(offset + 1) === 10) offset += 1;
+      offset += 1;
+      start = offset;
+      line += 1;
+      if (offset >= nextCheckpoint) {
+        await checkpoint();
+        nextCheckpoint = offset + 64 * 1024;
       }
       continue;
     }
-    if (!fence) yield line;
-  }
-}
-
-function utf8ByteLength(text: string): number {
-  let bytes = 0;
-  for (let index = 0; index < text.length; index += 1) {
-    const code = text.charCodeAt(index);
-    if (code <= 0x7f) bytes += 1;
-    else if (code <= 0x7ff) bytes += 2;
-    else if (code >= 0xd800 && code <= 0xdbff && index + 1 < text.length) {
-      const next = text.charCodeAt(index + 1);
-      if (next >= 0xdc00 && next <= 0xdfff) {
-        bytes += 4;
-        index += 1;
-      } else {
-        bytes += 3;
-      }
-    } else {
-      bytes += 3;
+    offset += 1;
+    if (offset >= nextCheckpoint) {
+      await checkpoint();
+      nextCheckpoint = offset + 64 * 1024;
     }
   }
-  return bytes;
+  yield { start, end: text.length, line, content: text.slice(start) };
+}
+
+async function* outsideFenceLines(
+  text: string,
+  checkpoint: AsyncCheckpoint,
+): AsyncIterable<PhysicalLine> {
+  let fence: {
+    readonly marker: string;
+    readonly length: number;
+    readonly quoteDepth: number;
+  } | undefined;
+  let htmlBlock: {
+    readonly closePattern?: RegExp;
+    readonly endsOnBlank: boolean;
+    readonly quoteDepth: number;
+  } | undefined;
+  let frontmatter = false;
+  let firstLine = true;
+  let separatedByBlank = false;
+  let listQuoteDepth = 0;
+  let indentedCodeAt: number | undefined;
+  let pendingTableHeader: PhysicalLine | undefined;
+  let inTable = false;
+  const listContentIndents: number[] = [];
+  for await (const line of physicalLines(text, checkpoint)) {
+    const firstContent = firstLine && line.content.startsWith("\uFEFF")
+      ? line.content.slice(1)
+      : line.content;
+    if (firstLine && firstContent === "---") {
+      frontmatter = true;
+      firstLine = false;
+      continue;
+    }
+    firstLine = false;
+    if (frontmatter) {
+      if (line.content === "---" || line.content === "...") frontmatter = false;
+      continue;
+    }
+    const container = markdownContainerContent(line.content);
+    if (pendingTableHeader) {
+      if (isTableDelimiter(container.content)) {
+        pendingTableHeader = undefined;
+        inTable = true;
+        continue;
+      }
+      yield pendingTableHeader;
+      pendingTableHeader = undefined;
+    }
+    if (inTable) {
+      if (isTableRow(container.content)) continue;
+      inTable = false;
+    }
+    if (container.quoteDepth !== listQuoteDepth) {
+      listContentIndents.length = 0;
+      separatedByBlank = false;
+      indentedCodeAt = undefined;
+      listQuoteDepth = container.quoteDepth;
+    }
+    if (fence && container.quoteDepth < fence.quoteDepth) fence = undefined;
+    const rawFenceMatch = FENCE_OPEN.exec(container.content);
+    if (fence) {
+      if (rawFenceMatch) {
+        const run = rawFenceMatch[2]!;
+        const remainder = container.content.slice(rawFenceMatch[0].length);
+        const indent = indentationWidth(rawFenceMatch[1]!);
+        const validIndent = indent <= 3 || (
+          listContentIndents.length > 0
+          && indent >= listContentIndents[listContentIndents.length - 1]!
+          && indent <= listContentIndents[listContentIndents.length - 1]! + 3
+        );
+        if (
+          container.quoteDepth === fence.quoteDepth
+          && validIndent
+          && run[0] === fence.marker
+          && run.length >= fence.length
+          && /^[ \t]*$/.test(remainder)
+        ) fence = undefined;
+      }
+      continue;
+    }
+    if (htmlBlock) {
+      if (container.quoteDepth < htmlBlock.quoteDepth) {
+        htmlBlock = undefined;
+      } else {
+        if (
+          container.quoteDepth === htmlBlock.quoteDepth
+          && htmlBlock.endsOnBlank
+          && /^[ \t]*$/.test(container.content)
+        ) htmlBlock = undefined;
+        else if (
+          container.quoteDepth === htmlBlock.quoteDepth
+          && htmlBlock.closePattern?.test(container.content)
+        ) htmlBlock = undefined;
+        continue;
+      }
+    }
+    const blank = /^[ \t]*$/.test(container.content);
+    const indentText = /^([ \t]*)/.exec(container.content)![1]!;
+    const indent = indentationWidth(indentText);
+    if (indentedCodeAt !== undefined) {
+      if (blank) {
+        separatedByBlank = true;
+        continue;
+      }
+      if (indent >= indentedCodeAt) continue;
+      indentedCodeAt = undefined;
+    }
+    if (blank) {
+      separatedByBlank = true;
+      continue;
+    }
+    while (listContentIndents.length > 0 && indent < listContentIndents[listContentIndents.length - 1]!) {
+      listContentIndents.pop();
+    }
+    if (
+      separatedByBlank
+      && listContentIndents.length > 0
+      && indent >= listContentIndents[listContentIndents.length - 1]! + 4
+    ) {
+      indentedCodeAt = listContentIndents[listContentIndents.length - 1]! + 4;
+      separatedByBlank = false;
+      continue;
+    }
+    if (listContentIndents.length === 0 && indent >= 4) {
+      indentedCodeAt = 4;
+      separatedByBlank = false;
+      continue;
+    }
+
+    const list = ANY_LIST_ITEM.exec(container.content);
+    if (list) {
+      const blockContent = container.content.slice(list[0].length);
+      listContentIndents.push(indentationWidth(list[1]! + list[2]! + list[3]!));
+      const listFence = FENCE_OPEN.exec(blockContent);
+      if (listFence) {
+        const run = listFence[2]!;
+        const remainder = blockContent.slice(listFence[0].length);
+        if (run[0] !== "`" || !remainder.includes("`")) {
+          fence = { marker: run[0]!, length: run.length, quoteDepth: container.quoteDepth };
+          separatedByBlank = false;
+          continue;
+        }
+      }
+      const listHtmlStart = markdownHtmlBlockStart(blockContent);
+      if (listHtmlStart) {
+        if (listHtmlStart.endsOnBlank || !listHtmlStart.closedOnOpeningLine) {
+          htmlBlock = {
+            ...(listHtmlStart.closePattern ? { closePattern: listHtmlStart.closePattern } : {}),
+            endsOnBlank: listHtmlStart.endsOnBlank,
+            quoteDepth: container.quoteDepth,
+          };
+        }
+        separatedByBlank = false;
+        continue;
+      }
+      separatedByBlank = false;
+      yield line;
+      continue;
+    }
+
+    if (rawFenceMatch) {
+      const run = rawFenceMatch[2]!;
+      const remainder = container.content.slice(rawFenceMatch[0].length);
+      const validIndent = indent <= 3 || (
+        listContentIndents.length > 0
+        && indent >= listContentIndents[listContentIndents.length - 1]!
+        && indent <= listContentIndents[listContentIndents.length - 1]! + 3
+      );
+      if (validIndent && (run[0] !== "`" || !remainder.includes("`"))) {
+        fence = { marker: run[0]!, length: run.length, quoteDepth: container.quoteDepth };
+        separatedByBlank = false;
+        continue;
+      }
+    }
+
+    const htmlStart = markdownHtmlBlockStart(container.content);
+    if (htmlStart) {
+      if (htmlStart.endsOnBlank || !htmlStart.closedOnOpeningLine) {
+        htmlBlock = {
+          ...(htmlStart.closePattern ? { closePattern: htmlStart.closePattern } : {}),
+          endsOnBlank: htmlStart.endsOnBlank,
+          quoteDepth: container.quoteDepth,
+        };
+      }
+      separatedByBlank = false;
+      continue;
+    }
+
+    separatedByBlank = false;
+    if (isTableRow(container.content)) pendingTableHeader = line;
+    else yield line;
+  }
+  if (pendingTableHeader) yield pendingTableHeader;
+}
+
+function markdownContainerContent(content: string): {
+  readonly content: string;
+  readonly quoteDepth: number;
+} {
+  let offset = 0;
+  let quoteDepth = 0;
+  while (offset < content.length) {
+    const marker = /^[ ]{0,3}>[ \t]?/.exec(content.slice(offset));
+    if (!marker) break;
+    offset += marker[0].length;
+    quoteDepth += 1;
+  }
+  return { content: content.slice(offset), quoteDepth };
+}
+
+function indentationWidth(text: string): number {
+  let width = 0;
+  for (const character of text) {
+    width = character === "\t" ? width + (4 - width % 4) : width + 1;
+  }
+  return width;
 }
 
 function terminalBlockId(line: PhysicalLine, path: string): BlockIdLocation | undefined {
@@ -254,23 +477,74 @@ function normalizeLimits(overrides: Partial<WorkspaceIndexLimits> | undefined): 
   return Object.freeze(limits);
 }
 
+function interruptionReason(error: unknown): "cancelled" | "source-changed" | undefined {
+  if (error === REBUILD_CANCELLED) return "cancelled";
+  if (error === REBUILD_STALE) return "source-changed";
+  return undefined;
+}
+
+async function hasPlanOpeningMarker(
+  text: string,
+  checkpoint: AsyncCheckpoint,
+): Promise<boolean> {
+  let fence: { readonly marker: string; readonly length: number } | undefined;
+  for await (const line of physicalLines(text, checkpoint)) {
+    const content = line.line === 0 && line.content.startsWith("\uFEFF")
+      ? line.content.slice(1)
+      : line.content;
+    const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(content);
+    if (fence) {
+      if (
+        marker
+        && marker[1]![0] === fence.marker
+        && marker[1]!.length >= fence.length
+        && /^[ \t]*$/.test(marker[2]!)
+      ) fence = undefined;
+      continue;
+    }
+    if (marker && !(marker[1]![0] === "`" && marker[2]!.includes("`"))) {
+      fence = { marker: marker[1]![0]!, length: marker[1]!.length };
+      continue;
+    }
+    if (/^<!-- nautilus-log:plan\/v[0-9]+ -->[ \t]*$/.test(content)) return true;
+  }
+  return false;
+}
+
 async function defaultStructuredClockReader(
   path: string,
   text: string,
   _identities: IdentityLookupIndex,
   version: SourceVersion,
+  maximumClockRecords: number,
+  context: StructuredClockReadContext,
   options: ParseClockOptions,
 ): Promise<readonly LogbookClock[]> {
   const clocks: LogbookClock[] = [];
-  const primary = resolvePrimaryPlan(version, text);
+  if (context.sourceBytes > MAX_STRUCTURED_SOURCE_BYTES) {
+    if (await hasPlanOpeningMarker(text, context.checkpoint)) throw STRUCTURED_INPUT_LIMIT;
+    return Object.freeze(clocks);
+  }
+  const primary = resolvePrimaryPlan(version, text, {
+    maxPlanRegionBytes: MAX_STRUCTURED_REGION_BYTES,
+    maxPlanItems: MAX_STRUCTURED_PLAN_ITEMS,
+    maxPlanItemBytes: MAX_STRUCTURED_ITEM_BYTES,
+    maxListDepth: MAX_STRUCTURED_LIST_DEPTH,
+  });
+  await context.checkpoint();
+  if (!primary.region) return Object.freeze(clocks);
+  if (primary.limitExceeded) throw STRUCTURED_INPUT_LIMIT;
   for (const candidate of primary.candidates) {
+    await context.checkpoint();
     if (candidate.status === "foreign" || !candidate.source.blockId) continue;
-    clocks.push(...readLogbook(text, {
+    const logbook = readLogbook(text, {
       path,
       itemFromOffset: candidate.source.itemSpan.fromOffset,
       itemToOffset: candidate.source.itemSpan.toOffset,
       ownerId: candidate.source.blockId,
-    }, options).clocks);
+    }, { ...options, maxClockRecords: maximumClockRecords - clocks.length });
+    if (!logbook.complete) throw CLOCK_RECORD_LIMIT;
+    clocks.push(...logbook.clocks);
   }
   return Object.freeze(clocks);
 }
@@ -291,8 +565,16 @@ export class WorkspaceIndex {
     this.#access = access;
     this.#limits = normalizeLimits(options.limits);
     this.#readStructuredClocks = options.readStructuredClocks
-      ?? ((path, text, identities, version) =>
-        defaultStructuredClockReader(path, text, identities, version, options.clockParsing ?? {}));
+      ?? ((path, text, identities, version, maximumClockRecords, context) =>
+        defaultStructuredClockReader(
+          path,
+          text,
+          identities,
+          version,
+          maximumClockRecords,
+          context,
+          options.clockParsing ?? {},
+        ));
     this.#unsubscribe = access.onChange((change: SourceChange) => this.invalidate(change));
   }
 
@@ -306,6 +588,7 @@ export class WorkspaceIndex {
 
   invalidate(_change: SourceChange): void {
     this.#revision += 1;
+    this.#rebuildAttempt += 1;
     this.#dirty = true;
     this.#locations = new Map();
     this.#snapshot = frozenEmptySnapshot(this.#generation, "source-changed");
@@ -334,15 +617,26 @@ export class WorkspaceIndex {
     return identityLookup(this.#locations, id);
   }
 
-  async rebuild(): Promise<WorkspaceIndexSnapshot> {
+  async rebuild(signal?: AbortSignal): Promise<WorkspaceIndexSnapshot> {
     const attempt = ++this.#rebuildAttempt;
     const revision = this.#revision;
     const generation = this.#generation + 1;
+    if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled");
     let listed: readonly string[];
     try {
-      listed = await this.#access.listMarkdownPaths();
-    } catch {
-      return this.#publishIncomplete(attempt, generation, "source-read-failed");
+      listed = await this.#access.listMarkdownPaths(signal);
+    } catch (error) {
+      return this.#publishIncomplete(
+        attempt,
+        generation,
+        signal?.aborted || (error instanceof DOMException && error.name === "AbortError")
+          ? "cancelled"
+          : "source-read-failed",
+      );
+    }
+    if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled");
+    if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+      return this.#publishIncomplete(attempt, generation, "source-changed");
     }
     const paths = [...new Set(listed.filter((path) => path.toLowerCase().endsWith(".md")))].sort();
     if (paths.length > this.#limits.maxMarkdownFiles) {
@@ -350,19 +644,49 @@ export class WorkspaceIndex {
     }
 
     const versions = new Map<string, SourceVersion>();
+    const byteLengths = new Map<string, number>();
     const mutableLocations = new Map<string, BlockIdLocation[]>();
     const clocks = new Map<string, IndexedClockSource>();
     let markdownBytes = 0;
     let blockIds = 0;
+    let lastYield = Date.now();
+    const checkpoint: AsyncCheckpoint = async () => {
+      if (signal?.aborted) throw REBUILD_CANCELLED;
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) throw REBUILD_STALE;
+      if (Date.now() - lastYield < 40) return;
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      lastYield = Date.now();
+      if (signal?.aborted) throw REBUILD_CANCELLED;
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) throw REBUILD_STALE;
+    };
     for (const path of paths) {
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
+        });
+      }
       let text: string | undefined;
       try {
-        text = await this.#access.readText(path);
-      } catch {
-        return this.#publishIncomplete(attempt, generation, "source-read-failed", {
+        text = await this.#access.readText(path, signal);
+      } catch (error) {
+        return this.#publishIncomplete(attempt, generation,
+          signal?.aborted || (error instanceof DOMException && error.name === "AbortError")
+            ? "cancelled"
+            : "source-read-failed", {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
+        });
+      }
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
       if (text === undefined) {
@@ -372,7 +696,19 @@ export class WorkspaceIndex {
           blockIds,
         });
       }
-      markdownBytes += utf8ByteLength(text);
+      let fileBytes: number;
+      try {
+        fileBytes = await utf8ByteLengthCooperative(text, checkpoint);
+      } catch (error) {
+        return this.#publishIncomplete(
+          attempt,
+          generation,
+          interruptionReason(error) ?? "source-read-failed",
+          { markdownFiles: paths.length, markdownBytes, blockIds },
+        );
+      }
+      byteLengths.set(path, fileBytes);
+      markdownBytes += fileBytes;
       if (markdownBytes > this.#limits.maxMarkdownBytes) {
         return this.#publishIncomplete(attempt, generation, "markdown-byte-limit", {
           markdownFiles: paths.length,
@@ -380,39 +716,57 @@ export class WorkspaceIndex {
           blockIds,
         });
       }
-      const lines = outsideFenceLines(text);
-      for (const line of lines) {
-        const location = terminalBlockId(line, path);
-        if (location) {
-          blockIds += 1;
-          if (blockIds > this.#limits.maxBlockIds) {
-            return this.#publishIncomplete(attempt, generation, "block-id-limit", {
-              markdownFiles: paths.length,
-              markdownBytes,
-              blockIds,
-            });
+      try {
+        for await (const line of outsideFenceLines(text, checkpoint)) {
+          const location = terminalBlockId(line, path);
+          if (location) {
+            blockIds += 1;
+            if (blockIds > this.#limits.maxBlockIds) {
+              return this.#publishIncomplete(attempt, generation, "block-id-limit", {
+                markdownFiles: paths.length,
+                markdownBytes,
+                blockIds,
+              });
+            }
+            const existing = mutableLocations.get(location.id);
+            if (existing) existing.push(location);
+            else mutableLocations.set(location.id, [location]);
           }
-          const existing = mutableLocations.get(location.id);
-          if (existing) existing.push(location);
-          else mutableLocations.set(location.id, [location]);
+          const canonical = canonicalClockOnLine(line, path, location);
+          if (canonical) {
+            clocks.set(clockKey(canonical), canonical);
+            if (clocks.size > this.#limits.maxClockRecords) {
+              return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
+                markdownFiles: paths.length,
+                markdownBytes,
+                blockIds,
+              });
+            }
+          }
         }
-        const canonical = canonicalClockOnLine(line, path, location);
-        if (canonical) clocks.set(clockKey(canonical), canonical);
+      } catch (error) {
+        return this.#publishIncomplete(
+          attempt,
+          generation,
+          interruptionReason(error) ?? "source-read-failed",
+          { markdownFiles: paths.length, markdownBytes, blockIds },
+        );
       }
-      if (clocks.size > this.#limits.maxClockRecords) {
-        return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
+      try {
+        versions.set(path, await createSourceVersion(path, text, checkpoint));
+      } catch (error) {
+        return this.#publishIncomplete(attempt, generation, interruptionReason(error) ?? "source-read-failed", {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
         });
       }
-      try {
-        versions.set(path, await createSourceVersion(path, text));
-      } catch {
-        return this.#publishIncomplete(attempt, generation, "source-read-failed", {
-          markdownFiles: paths.length,
-          markdownBytes,
-          blockIds,
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
     }
@@ -431,14 +785,33 @@ export class WorkspaceIndex {
       lookup: (id: string) => identityLookup(locations, id),
     });
     for (const path of paths) {
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
+        });
+      }
       let text: string | undefined;
       try {
-        text = await this.#access.readText(path);
-      } catch {
-        return this.#publishIncomplete(attempt, generation, "source-read-failed", {
+        text = await this.#access.readText(path, signal);
+      } catch (error) {
+        return this.#publishIncomplete(attempt, generation,
+          signal?.aborted || (error instanceof DOMException && error.name === "AbortError")
+            ? "cancelled"
+            : "source-read-failed", {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
+        });
+      }
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
       if (text === undefined) {
@@ -450,12 +823,20 @@ export class WorkspaceIndex {
       }
       let version: SourceVersion;
       try {
-        version = await createSourceVersion(path, text);
-      } catch {
-        return this.#publishIncomplete(attempt, generation, "source-read-failed", {
+        version = await createSourceVersion(path, text, checkpoint);
+      } catch (error) {
+        return this.#publishIncomplete(attempt, generation, interruptionReason(error) ?? "source-read-failed", {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
+        });
+      }
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
       const firstVersion = versions.get(path)!;
@@ -471,12 +852,39 @@ export class WorkspaceIndex {
       }
       let structured: readonly LogbookClock[];
       try {
-        structured = await this.#readStructuredClocks(path, text, lookup, version);
-      } catch {
-        return this.#publishIncomplete(attempt, generation, "source-read-failed", {
+        structured = await this.#readStructuredClocks(
+          path,
+          text,
+          lookup,
+          version,
+          this.#limits.maxClockRecords,
+          {
+            sourceBytes: byteLengths.get(path)!,
+            ...(signal ? { signal } : {}),
+            checkpoint,
+          },
+        );
+      } catch (error) {
+        const reason = error === CLOCK_RECORD_LIMIT
+          ? "clock-record-limit"
+          : error === STRUCTURED_INPUT_LIMIT
+            ? "structured-input-limit"
+            : interruptionReason(error)
+              ?? (signal?.aborted || (error instanceof DOMException && error.name === "AbortError")
+                ? "cancelled"
+                : "source-read-failed");
+        return this.#publishIncomplete(attempt, generation, reason, {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
+        });
+      }
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
       for (const clock of structured) {
@@ -505,12 +913,25 @@ export class WorkspaceIndex {
         const existing = clocks.get(key);
         if (!existing) clocks.set(key, entry);
         else if (!existing.ownerId) clocks.set(key, Object.freeze({ ...existing, ownerId: clock.ownerId }));
+        if (clocks.size > this.#limits.maxClockRecords) {
+          return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
+            markdownFiles: paths.length, markdownBytes, blockIds,
+          });
+        }
       }
       if (clocks.size > this.#limits.maxClockRecords) {
         return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
           markdownFiles: paths.length,
           markdownBytes,
           blockIds,
+        });
+      }
+      if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
+        markdownFiles: paths.length, markdownBytes, blockIds,
+      });
+      if (this.#revision !== revision || attempt !== this.#rebuildAttempt) {
+        return this.#publishIncomplete(attempt, generation, "source-changed", {
+          markdownFiles: paths.length, markdownBytes, blockIds,
         });
       }
     }
