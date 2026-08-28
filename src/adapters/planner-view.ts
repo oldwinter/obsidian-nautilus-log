@@ -8,6 +8,11 @@ import {
 } from "obsidian";
 import type { LogicalDate } from "../core/day";
 import {
+  createMemoryPlannerCollapseStore,
+  type PlannerCollapseStore,
+  type PlannerProgressIntent,
+} from "../ui/planner/controls";
+import {
   mountPlannerSurface,
   validatePlannerViewContext,
   type PlannerIconName,
@@ -22,6 +27,10 @@ export const MAX_PLANNER_LEAVES = 4;
 export interface PlannerItemViewDependencies {
   readonly runtime: PlannerRuntimePort;
   readonly defaultLogicalDate: () => LogicalDate;
+  readonly debugControl?: () => boolean;
+  readonly dispatchPlannerProgress?: (intent: PlannerProgressIntent) => void | Promise<void>;
+  readonly locale?: () => string;
+  readonly subscribeLocale?: (listener: (locale: string) => void) => () => void;
   readonly resolveContext: (
     logicalDate: LogicalDate,
     leaf: WorkspaceLeaf,
@@ -35,11 +44,53 @@ export interface OpenPlannerViewResult {
 
 const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
   collapse: "chevron-up",
+  debug: "bug",
   expand: "chevron-down",
   "hide-completed": "eye-off",
   "show-completed": "eye",
   play: "play",
 });
+
+const COLLAPSE_STORAGE_PREFIX = "spiral-day:planner-collapsed:";
+const transientCollapseStore = createMemoryPlannerCollapseStore();
+let plannerInstanceSequence = 0;
+
+function createPlannerInstanceId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") return globalThis.crypto.randomUUID();
+  plannerInstanceSequence += 1;
+  return `planner-view-${Date.now()}-${plannerInstanceSequence}`;
+}
+
+function stateInstanceId(state: unknown): string | undefined {
+  if (!state || typeof state !== "object" || Array.isArray(state)) return undefined;
+  const value = (state as { readonly plannerInstanceId?: unknown }).plannerInstanceId;
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
+}
+
+function collapseStore(storage: Storage | undefined): PlannerCollapseStore {
+  if (!storage) return transientCollapseStore;
+  return Object.freeze({
+    load(instanceId: string) {
+      try {
+        const value = storage?.getItem(`${COLLAPSE_STORAGE_PREFIX}${instanceId}`);
+        return value === "true" ? true : value === "false" ? false : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    save(instanceId: string, collapsed: boolean) {
+      storage.setItem(`${COLLAPSE_STORAGE_PREFIX}${instanceId}`, String(collapsed));
+    },
+  });
+}
+
+function documentStorage(document: Document): Storage | undefined {
+  try {
+    return document.defaultView?.localStorage;
+  } catch {
+    return undefined;
+  }
+}
 
 function validLogicalDate(value: unknown): LogicalDate | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
@@ -73,7 +124,9 @@ function dateKey(date: LogicalDate): string {
 export class SpiralDayPlannerView extends ItemView {
   readonly #dependencies: PlannerItemViewDependencies;
   #logicalDate: LogicalDate;
+  #plannerInstanceId = createPlannerInstanceId();
   #surface: PlannerSurface | undefined;
+  #localeUnsubscribe: (() => void) | undefined;
 
   constructor(leaf: WorkspaceLeaf, dependencies: PlannerItemViewDependencies) {
     super(leaf);
@@ -94,11 +147,15 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { logicalDate: { ...this.#logicalDate } };
+    return {
+      logicalDate: { ...this.#logicalDate },
+      plannerInstanceId: this.#plannerInstanceId,
+    };
   }
 
   override async setState(state: unknown, _result: ViewStateResult): Promise<void> {
     this.#logicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
+    this.#plannerInstanceId = stateInstanceId(state) ?? this.#plannerInstanceId;
     const context = validatePlannerViewContext(
       this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
     );
@@ -119,13 +176,27 @@ export class SpiralDayPlannerView extends ItemView {
       this.contentEl,
       this.#dependencies.runtime,
       context,
-      { renderIcon: (element, icon) => setIcon(element, ICONS[icon]) },
+      {
+        collapseStore: collapseStore(documentStorage(this.contentEl.ownerDocument)),
+        debugControl: this.#dependencies.debugControl?.() ?? false,
+        instanceId: this.#plannerInstanceId,
+        locale: this.#dependencies.locale?.() ?? "en",
+        ...(this.#dependencies.dispatchPlannerProgress
+          ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }
+          : {}),
+        renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
+      },
     );
+    this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
+      this.#surface?.setLocale(locale);
+    });
   }
 
   protected override async onClose(): Promise<void> {
     this.#surface?.destroy();
     this.#surface = undefined;
+    this.#localeUnsubscribe?.();
+    this.#localeUnsubscribe = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
   }
 }

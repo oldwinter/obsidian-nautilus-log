@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spiral Day planner controls harness</title>
+    <link rel="stylesheet" href="/harness.css">
+    <style>
+      * { box-sizing: border-box; }
+      :root { color-scheme: light; }
+      body {
+        --background-primary: #ffffff;
+        --background-secondary: #edf0f3;
+        --background-modifier-border: #cbd1d9;
+        --background-modifier-hover: #e5e9ee;
+        --font-interface: Inter, ui-sans-serif, system-ui, sans-serif;
+        --interactive-accent: #245fbd;
+        --text-faint: #7a8492;
+        --text-muted: #5e6876;
+        --text-normal: #252a32;
+        background: var(--background-secondary);
+        color: var(--text-normal);
+        font: 14px/1.45 var(--font-interface);
+        margin: 0;
+        min-height: 100vh;
+      }
+      body.theme-dark {
+        --background-primary: #202328;
+        --background-secondary: #14171b;
+        --background-modifier-border: #515865;
+        --background-modifier-hover: #343a43;
+        --interactive-accent: #8bb7ff;
+        --text-faint: #949eac;
+        --text-muted: #bac1cb;
+        --text-normal: #f1f2f4;
+        color-scheme: dark;
+      }
+      body.spiral-day-theme-custom {
+        --background-primary: #fbfdff;
+        --background-secondary: #e8edf2;
+        --background-modifier-border: #607180;
+        --background-modifier-hover: #d9e5e4;
+        --font-interface: Georgia, "Songti SC", serif;
+        --interactive-accent: #006b62;
+        --spiral-day-theme-completed: #4e5963;
+        --spiral-day-theme-event: #6e4f00;
+        --spiral-day-theme-focus: #006b62;
+        --spiral-day-theme-task: #006b62;
+        --spiral-day-theme-urgent: #aa1e42;
+        --spiral-day-theme-warning: #6e4f00;
+        --text-faint: #64717d;
+        --text-muted: #4e5963;
+        --text-normal: #172129;
+      }
+      .harness-toolbar {
+        align-items: center;
+        background: var(--background-primary);
+        border-bottom: 1px solid var(--background-modifier-border);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        min-height: 48px;
+        padding: 7px 14px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .harness-toolbar strong { margin-right: auto; }
+      .harness-toolbar label {
+        align-items: center;
+        color: var(--text-muted);
+        display: inline-flex;
+        font-size: 12px;
+        gap: 5px;
+      }
+      .harness-toolbar select,
+      .harness-toolbar input {
+        background: var(--background-primary);
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 4px;
+        color: var(--text-normal);
+        min-height: 30px;
+      }
+      .harness-stage-shell { overflow: auto; padding: 20px; }
+      .harness-stage {
+        align-items: start;
+        display: grid;
+        gap: 20px;
+        grid-template-columns: max-content 320px;
+        justify-content: center;
+        transform-origin: top center;
+      }
+      .planner-leaf {
+        background: var(--background-primary);
+        border: 1px solid var(--background-modifier-border);
+        min-height: 590px;
+        overflow: visible;
+      }
+      .planner-leaf__title {
+        align-items: center;
+        border-bottom: 1px solid var(--background-modifier-border);
+        display: flex;
+        font-size: 13px;
+        font-weight: 650;
+        height: 38px;
+        justify-content: space-between;
+        padding: 0 10px;
+      }
+      .planner-leaf__title span { color: var(--text-muted); font-size: 11px; font-weight: 500; }
+      .spiral-day-planner { padding: 8px 10px 14px; }
+      .planner-content { display: grid; gap: 10px; min-width: 0; }
+      .planner-summary {
+        align-items: start;
+        border-bottom: 1px solid var(--spiral-day-border);
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        min-height: 54px;
+        padding-bottom: 8px;
+      }
+      .planner-metrics {
+        display: grid;
+        gap: 4px 12px;
+        grid-template-columns: repeat(2, minmax(90px, 1fr));
+      }
+      .planner-metric { min-width: 0; }
+      .planner-metric strong { display: block; font-size: 12px; font-variant-numeric: tabular-nums; }
+      .planner-metric span { color: var(--text-muted); display: block; font-size: 11px; overflow-wrap: anywhere; }
+      .planner-controls { display: flex; gap: 4px; }
+      .planner-icon { font: 700 13px/1 ui-monospace, monospace; }
+      .planner-legend { color: var(--text-muted); display: flex; font-size: 11px; gap: 9px; }
+      .planner-legend span { align-items: center; display: inline-flex; gap: 4px; }
+      .planner-timeline {
+        border-block: 1px solid var(--spiral-day-border);
+        display: grid;
+        gap: 6px;
+        padding: 10px 0;
+      }
+      .planner-timebar {
+        background: var(--spiral-day-available);
+        height: 9px;
+        overflow: hidden;
+        position: relative;
+      }
+      .planner-timebar::before {
+        background: var(--spiral-day-focus);
+        content: "";
+        height: 100%;
+        inset: 0 auto 0 0;
+        position: absolute;
+        width: calc(var(--playback-progress, 0) * 100%);
+      }
+      .planner-timebar-label { color: var(--text-muted); display: flex; font-size: 11px; justify-content: space-between; }
+      .planner-items { display: grid; gap: 6px; }
+      .spiral-day-planner__interactive-item-title { font-weight: 620; min-width: 0; }
+      .spiral-day-planner__interactive-item-progress {
+        background: var(--spiral-day-available);
+        grid-column: 1 / -1;
+        height: 3px;
+        overflow: hidden;
+      }
+      .spiral-day-planner__interactive-item-progress span {
+        background: var(--spiral-day-task);
+        display: block;
+        height: 100%;
+      }
+      .planner-tooltip {
+        background: var(--background-primary);
+        border: 1px solid var(--spiral-day-border);
+        color: var(--text-normal);
+        font-size: 12px;
+        max-width: 280px;
+        padding: 6px 8px;
+        position: fixed;
+        z-index: 20;
+      }
+      .planner-tooltip[hidden] { display: none; }
+      .planner-secondary .planner-metrics { grid-template-columns: 1fr; }
+      .planner-secondary .planner-leaf__title span { display: none; }
+      .planner-empty { color: var(--text-muted); padding: 28px 8px; text-align: center; }
+      .spiral-day-planner[data-layout="compact"] .planner-summary { min-height: 40px; }
+      .spiral-day-planner[data-layout="compact"] .planner-metrics,
+      .spiral-day-planner[data-layout="compact"] .planner-legend { display: none; }
+      .spiral-day-planner[data-layout="wide"] .spiral-day-planner__overview,
+      .spiral-day-planner[data-layout="wide"] .spiral-day-planner__schedule { display: none; }
+      .spiral-day-planner[data-collapsed="true"] { min-height: 40px; }
+      .spiral-day-planner[data-collapsed="true"] .planner-content { justify-items: end; }
+      .spiral-day-planner[data-reduced-motion="true"] *,
+      .spiral-day-planner[data-reduced-motion="true"] *::before,
+      .spiral-day-planner[data-reduced-motion="true"] *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      body[data-zoom="2"] .harness-stage {
+        grid-template-columns: max-content;
+        justify-content: start;
+        transform-origin: top left;
+      }
+      body[data-zoom="2"] .planner-secondary { display: none; }
+      @media (max-width: 1300px) {
+        .harness-stage { grid-template-columns: max-content; justify-content: start; }
+        .planner-secondary { display: none; }
+      }
+      @media (max-width: 940px) {
+        .harness-stage-shell { padding: 0; }
+      }
+      @media (max-width: 760px) {
+        .harness-toolbar strong { flex-basis: 100%; }
+        .harness-stage-shell { padding: 10px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="harness-toolbar">
+      <strong>Spiral Day</strong>
+      <label>Locale
+        <select id="locale"><option value="en">English</option><option value="zh-CN">简体中文</option></select>
+      </label>
+      <label>Width
+        <select id="width">
+          <option value="900">900</option><option value="521">521</option><option value="520">520</option>
+          <option value="519">519</option><option value="360">360</option><option value="320">320</option><option value="300">300</option>
+        </select>
+      </label>
+      <label>Theme
+        <select id="theme">
+          <option value="light">Light</option><option value="dark">Dark</option>
+          <option value="high-contrast">High contrast</option><option value="custom">Custom</option>
+        </select>
+      </label>
+      <label>Zoom
+        <select id="zoom"><option value="0.8">80%</option><option value="1" selected>100%</option><option value="2">200%</option></select>
+      </label>
+      <label><input id="motion" type="checkbox"> Reduced motion</label>
+      <label><input id="debug-entry" type="checkbox"> Debug entry</label>
+    </header>
+    <main class="harness-stage-shell">
+      <div id="harness-stage" class="harness-stage">
+        <section id="primary-leaf" class="planner-leaf">
+          <div class="planner-leaf__title">Spiral Day - 2026-08-28 <span>Primary planner</span></div>
+          <div id="primary-planner"></div>
+        </section>
+        <section id="secondary-leaf" class="planner-leaf planner-secondary">
+          <div class="planner-leaf__title">Spiral Day - 2026-08-28 <span>Independent planner</span></div>
+          <div id="secondary-planner"></div>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/harness.js"></script>
+  </body>
+</html>

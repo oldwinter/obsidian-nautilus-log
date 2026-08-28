@@ -1,0 +1,90 @@
+.spiral-day-planner__icon-button {
+  block-size: 32px;
+  flex: 0 0 32px;
+  inline-size: 32px;
+  min-block-size: 32px;
+  min-inline-size: 32px;
+}
+
+.spiral-day-planner :is(
+  button,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [data-planner-focus-key]
+):focus-visible {
+  box-shadow: 0 0 0 2px var(--spiral-day-control-surface), 0 0 0 4px var(--spiral-day-focus);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+.spiral-day-planner svg :is([role="button"], [data-planner-focus-key]):focus-visible {
+  filter: drop-shadow(0 0 1px var(--spiral-day-control-surface)) drop-shadow(0 0 3px var(--spiral-day-focus));
+  outline: 0;
+}
+
+.spiral-day-planner :is(button, [role="button"])[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.spiral-day-planner__live-region {
+  block-size: 1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  inline-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.spiral-day-planner__disclosure-summary {
+  overflow-wrap: anywhere;
+}
+
+.spiral-day-planner__interactive-item {
+  border-radius: 4px;
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+
+.spiral-day-planner__interactive-item-title,
+.spiral-day-planner__row-title,
+.spiral-day-planner__row-meta {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spiral-day-planner,
+  .spiral-day-planner *,
+  .spiral-day-planner *::before,
+  .spiral-day-planner *::after {
+    animation: none !important;
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .spiral-day-planner :is(
+    button,
+    summary,
+    [role="button"],
+    [role="tab"],
+    [data-planner-focus-key]
+  ):focus-visible {
+    box-shadow: none;
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+  }
+
+  .spiral-day-planner :is(button, [role="button"])[aria-disabled="true"] {
+    color: GrayText;
+    opacity: 1;
+  }
+}

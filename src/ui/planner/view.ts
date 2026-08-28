@@ -1,4 +1,12 @@
-import type { LogicalDate } from "../../core/day";
+import { calculateCapacity } from "../../core/capacity";
+import { projectDay, type LogicalDate } from "../../core/day";
+import type { ParserDiagnosticCode } from "../../core/diagnostics";
+import { schedulePlan } from "../../core/scheduler";
+import { createMessages } from "../../i18n/resolver";
+import type {
+  Messages,
+  PlannerLimitKind,
+} from "../../i18n/types";
 import type {
   RuntimeConnection,
   RuntimePlanProjection,
@@ -6,15 +14,34 @@ import type {
   RuntimeViewContext,
 } from "../../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../../runtime/snapshots";
-import { formatClockMinute, formatDuration, plannerOverflow, plannerWarnings } from "./diagnostics";
-import { placeTooltip, spiralBandPath, spiralViewBox, type PlannerTimeBounds } from "./geometry";
+import type { PlanRegionDiagnosticCode } from "../../workspace/plan-region";
+import { formatClockMinute, plannerOverflow } from "./diagnostics";
+import { spiralBandPath, spiralViewBox, type PlannerTimeBounds } from "./geometry";
 import {
-  initialPlannerPresentationState,
-  normalizeStateForLayout,
-  plannerPlaybackMinute,
-  reducePlannerPresentationState,
-  type PlannerPresentationState,
-} from "./planner-state";
+  bindPlannerProgressTarget,
+  createPlannerControls,
+  type PlannerCollapseStore,
+  type PlannerControlsController,
+  type PlannerProgressIntent,
+  type PlannerProgressTarget,
+} from "./controls";
+import {
+  bindPlannerDisclosure,
+  createPlannerDisclosures,
+  type PlannerDisclosuresController,
+} from "./disclosures";
+import {
+  bindPlannerTooltip,
+  createPlannerFocusManager,
+  createPlannerLiveAnnouncer,
+  type PlannerFocusManager,
+  type PlannerLiveAnnouncer,
+} from "./focus";
+import {
+  createPlannerPlayback,
+  type PlannerPlaybackController,
+  type PlannerPlaybackFrame,
+} from "./playback";
 import {
   observePlannerContainer,
   plannerContainerWidth,
@@ -32,7 +59,6 @@ import {
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const RUNTIME_PROBE_MILLISECONDS = 5_000;
-const PLAYBACK_DURATION_MILLISECONDS = 6_000;
 
 export interface PlannerRuntimePort {
   readonly state: "unloaded" | "starting" | "ready" | "stopping";
@@ -49,16 +75,24 @@ export interface PlannerViewContext {
   readonly hostContext: PlannerHostContext;
 }
 
-export type PlannerIconName = "collapse" | "expand" | "hide-completed" | "show-completed" | "play";
+export type PlannerIconName = "collapse" | "debug" | "expand" | "hide-completed" | "show-completed" | "play";
 export type PlannerIconRenderer = (element: HTMLElement, icon: PlannerIconName) => void;
 
 export interface PlannerSurfaceOptions {
+  readonly collapseStore?: PlannerCollapseStore;
+  readonly debugControl?: boolean;
+  readonly instanceId?: string;
+  readonly locale?: string;
+  readonly messages?: Messages;
+  readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly renderIcon?: PlannerIconRenderer;
-  readonly now?: () => number;
+  readonly reducedMotion?: boolean;
 }
 
 export interface PlannerSurface {
   setContext(context: PlannerViewContext): void;
+  setLocale(locale: string): void;
+  setReducedMotion(reducedMotion: boolean): void;
   measure(): void;
   probeRuntimeNow(): void;
   destroy(): void;
@@ -95,13 +129,14 @@ export function validatePlannerViewContext(context: PlannerViewContext): Planner
 export function plannerSurfaceStateModel(
   snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined,
   layout: PlannerResponsiveLayout,
+  messages: Messages = createMessages(),
 ): PlannerSurfaceStateModel {
   if (!snapshot) {
     return Object.freeze({
       state: "runtime-unavailable",
       authoritative: false,
-      heading: "Spiral Day unavailable",
-      message: "The shared planner runtime is not ready.",
+      heading: messages.t("shared", "status.unavailable"),
+      message: messages.t("planner", "status.unavailableDetail"),
       hierarchy: Object.freeze(["status"]),
       mutationEnabled: false,
     });
@@ -114,23 +149,42 @@ export function plannerSurfaceStateModel(
     return Object.freeze({
       state: "confirmed",
       authoritative: true,
-      heading: "Planner confirmed",
+      heading: messages.t("planner", "surface.name"),
       message: "",
       hierarchy: Object.freeze(hierarchy),
       mutationEnabled: false,
     });
   }
+  const limitKinds: readonly PlannerLimitKind[] = [
+    "active-note-bytes",
+    "list-depth",
+    "plan-item-bytes",
+    "plan-items",
+    "plan-region-bytes",
+  ];
+  const overLimitMessage = snapshot.state === "over-limit"
+    ? limitKinds.includes(snapshot.overLimit.kind as PlannerLimitKind)
+      ? messages.t("planner", "status.overLimitDetail", {
+        actual: snapshot.overLimit.actual,
+        kind: snapshot.overLimit.kind as PlannerLimitKind,
+        limit: snapshot.overLimit.limit,
+      })
+      : messages.t("planner", "status.overLimitUnknownDetail", {
+        actual: snapshot.overLimit.actual,
+        limit: snapshot.overLimit.limit,
+      })
+    : "";
   const copy = snapshot.state === "loading"
-    ? ["Loading Spiral Day...", "Reading the confirmed plan snapshot."]
+    ? [messages.t("shared", "status.loading"), messages.t("planner", "status.loadingDetail")]
     : snapshot.state === "missing"
-      ? ["No Primary Plan", "No supported Plan Region was found for this day."]
+      ? [messages.t("shared", "status.missing"), messages.t("planner", "status.missingDetail")]
       : snapshot.state === "over-limit"
-        ? ["Planner input limit reached", `${snapshot.overLimit.actual} ${snapshot.overLimit.kind}; limit ${snapshot.overLimit.limit}.`]
+        ? [messages.t("shared", "status.overLimit"), overLimitMessage]
         : snapshot.state === "stale"
-          ? ["Planner snapshot is stale", "Refreshing after a source change. No stale projection is shown."]
+          ? [messages.t("shared", "status.stale"), messages.t("planner", "status.staleDetail")]
           : snapshot.state === "hidden"
-            ? ["Planner refresh paused", "This leaf is hidden; the projection will refresh when revealed."]
-            : ["Planner could not load", `Diagnostic: ${snapshot.diagnostic.code}.`];
+            ? [messages.t("shared", "status.hidden"), messages.t("planner", "status.hiddenDetail")]
+            : [messages.t("shared", "status.error"), messages.t("planner", "status.errorDetail")];
   return Object.freeze({
     state: snapshot.state,
     authoritative: false,
@@ -165,6 +219,7 @@ function defaultIconRenderer(button: HTMLElement, icon: PlannerIconName): void {
   button.dataset.icon = icon;
   const fallback = {
     collapse: "-",
+    debug: "#",
     expand: "+",
     "hide-completed": "o",
     "show-completed": "x",
@@ -178,6 +233,7 @@ function defaultIconRenderer(button: HTMLElement, icon: PlannerIconName): void {
 
 function appendMetric(
   parent: HTMLElement,
+  messages: Messages,
   kind: string,
   minutes: number,
   percent: number | null,
@@ -187,9 +243,15 @@ function appendMetric(
   metric.dataset.metric = kind;
   if (burning) metric.dataset.burning = "true";
   const value = element(parent.ownerDocument, "span", "spiral-day-planner__metric-value");
-  value.textContent = formatDuration(minutes);
+  value.textContent = messages.t("shared", "unit.duration", { minutes });
   const label = element(parent.ownerDocument, "span", "spiral-day-planner__metric-label");
-  label.textContent = kind.replaceAll("-", " ");
+  label.textContent = kind === "events"
+    ? messages.t("planner", "metric.fixedTime")
+    : kind === "available"
+      ? messages.t("planner", "metric.availableTime")
+      : kind === "planned"
+        ? messages.t("planner", "metric.scheduledTime")
+        : messages.t("planner", "metric.flexibleTime");
   metric.append(value, label);
   if (percent !== null) {
     const total = element(parent.ownerDocument, "span", "spiral-day-planner__metric-percent");
@@ -199,22 +261,33 @@ function appendMetric(
   parent.append(metric);
 }
 
-function appendMetrics(parent: HTMLElement, projection: RuntimePlanProjection): void {
+function appendMetrics(parent: HTMLElement, projection: RuntimePlanProjection, messages: Messages): void {
   parent.setAttribute("role", "status");
   parent.setAttribute(
     "aria-label",
     projection.capacity.metrics
-      .map((metric) => `${metric.kind} ${formatDuration(metric.minutes)}`)
+      .map((metric) => `${metric.kind === "events"
+        ? messages.t("planner", "metric.fixedTime")
+        : metric.kind === "available"
+          ? messages.t("planner", "metric.availableTime")
+          : metric.kind === "planned"
+            ? messages.t("planner", "metric.scheduledTime")
+            : messages.t("planner", "metric.flexibleTime")} ${messages.t("shared", "unit.duration", { minutes: metric.minutes })}`)
       .join(", "),
   );
   for (const metric of projection.capacity.metrics) {
-    appendMetric(parent, metric.kind, metric.minutes, metric.percent, metric.burning);
+    appendMetric(parent, messages, metric.kind, metric.minutes, metric.percent, metric.burning);
   }
 }
 
-function appendLegend(parent: HTMLElement): void {
-  parent.setAttribute("aria-label", "Planner legend: urgent, event, task");
-  for (const [tone, label] of [["urgent", "Urgent"], ["event", "Event"], ["task", "Task"]] as const) {
+function appendLegend(parent: HTMLElement, messages: Messages): void {
+  const entries = [
+    ["urgent", messages.t("planner", "legend.urgent")],
+    ["event", messages.t("planner", "legend.event")],
+    ["task", messages.t("planner", "legend.task")],
+  ] as const;
+  parent.setAttribute("aria-label", entries.map(([, label]) => label).join(", "));
+  for (const [tone, label] of entries) {
     const item = element(parent.ownerDocument, "span", "spiral-day-planner__legend-item");
     const swatch = element(parent.ownerDocument, "span", "spiral-day-planner__legend-swatch");
     swatch.dataset.tone = tone;
@@ -242,29 +315,70 @@ function appendDisclosureRows(
   details.append(list);
 }
 
-function timelineTooltipText(item: PlannerTimelineItem): string {
-  return `${item.kind === "event" ? "Fixed event" : item.tone === "urgent" ? "Urgent task" : "Task"}`
-    + ` | ${item.title} | ${formatClockMinute(item.startMinutes)}-${formatClockMinute(item.endMinutes)}`
-    + ` | ${formatDuration(item.durationMinutes)}`;
+function timelineKind(messages: Messages, item: PlannerTimelineItem): string {
+  return item.kind === "event"
+    ? messages.t("planner", "item.fixedEvent")
+    : messages.t("planner", item.tone === "urgent" ? "item.urgentTask" : "item.task");
 }
+
+function timelineStates(messages: Messages, item: PlannerTimelineItem): string {
+  const states = [];
+  if (item.tone === "urgent") states.push(messages.t("shared", "state.urgent"));
+  if (item.completed) states.push(messages.t("shared", "state.completed"));
+  if (item.current) states.push(messages.t("shared", "state.current"));
+  if (item.conflict) states.push(messages.t("shared", "state.conflict"));
+  return states.join(", ");
+}
+
+function timelineAccessibleName(messages: Messages, item: PlannerTimelineItem): string {
+  return messages.t("planner", "item.accessibleName", {
+    kind: timelineKind(messages, item),
+    title: item.title,
+    start: formatClockMinute(item.startMinutes),
+    end: formatClockMinute(item.endMinutes),
+    duration: messages.t("shared", "unit.duration", { minutes: item.durationMinutes }),
+    states: timelineStates(messages, item),
+  });
+}
+
+function timelineTooltipText(messages: Messages, item: PlannerTimelineItem): string {
+  return messages.t("planner", "tooltip.item", {
+    kind: timelineKind(messages, item),
+    title: item.title,
+    start: formatClockMinute(item.startMinutes),
+    end: formatClockMinute(item.endMinutes),
+    duration: messages.t("shared", "unit.duration", { minutes: item.durationMinutes }),
+  });
+}
+
+let plannerSurfaceSequence = 0;
+let plannerTooltipSequence = 0;
 
 class PlannerSurfaceController implements PlannerSurface {
   readonly #root: HTMLElement;
+  readonly #content: HTMLElement;
   readonly #runtime: PlannerRuntimePort;
   readonly #renderIcon: PlannerIconRenderer;
-  readonly #now: () => number;
+  readonly #messages: Messages;
+  readonly #onProgressIntent: ((intent: PlannerProgressIntent) => void | Promise<void>) | undefined;
+  readonly #controls: PlannerControlsController;
+  readonly #disclosures: PlannerDisclosuresController;
+  readonly #focus: PlannerFocusManager;
+  readonly #live: PlannerLiveAnnouncer;
+  readonly #playback: PlannerPlaybackController;
   #context: PlannerViewContext;
   #connection: RuntimeConnection | undefined;
   #snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
   #layout: PlannerResponsiveLayout;
-  #presentation: PlannerPresentationState;
   #resize: PlannerResizeSubscription | undefined;
   #visibilityObserver: MutationObserver | undefined;
   #documentVisibilityListener: (() => void) | undefined;
   #probeTimer: number | undefined;
-  #animationFrame: number | undefined;
-  #tooltip: HTMLElement | undefined;
-  #pendingFocusKey: string | undefined;
+  #localeUnsubscribe: (() => void) | undefined;
+  #motionPreference: MediaQueryList | undefined;
+  #motionPreferenceListener: ((event: MediaQueryListEvent) => void) | undefined;
+  #playbackFrame: PlannerPlaybackFrame | null = null;
+  readonly #renderCleanups: Array<() => void> = [];
   #visible = true;
   #destroyed = false;
 
@@ -278,16 +392,57 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#runtime = runtime;
     this.#context = validatePlannerViewContext(context);
     this.#renderIcon = options.renderIcon ?? defaultIconRenderer;
-    this.#now = options.now ?? Date.now;
+    this.#messages = options.messages ?? (options.locale === undefined
+      ? createMessages()
+      : createMessages({ locale: options.locale }));
+    this.#onProgressIntent = options.onProgressIntent;
     this.#layout = plannerLayoutForWidth(plannerContainerWidth(root), context.hostContext);
-    this.#presentation = initialPlannerPresentationState(context.hostContext);
     root.classList.add("spiral-day-planner");
+    root.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));
+    this.#content = element(root.ownerDocument, "div", "spiral-day-planner__content");
+    root.replaceChildren(this.#content);
+    this.#focus = createPlannerFocusManager(root);
+    this.#live = createPlannerLiveAnnouncer(root);
+    this.#disclosures = createPlannerDisclosures();
+    this.#controls = createPlannerControls({
+      instanceId: options.instanceId ?? `planner-${++plannerSurfaceSequence}`,
+      ...(options.collapseStore ? { collapseStore: options.collapseStore } : {}),
+      debugControl: options.debugControl ?? false,
+      onChange: () => this.#render(),
+    });
+    const view = root.ownerDocument.defaultView;
+    this.#motionPreference = view?.matchMedia("(prefers-reduced-motion: reduce)");
+    const reducedMotion = options.reducedMotion ?? this.#motionPreference?.matches ?? false;
+    this.#playback = createPlannerPlayback({
+      reducedMotion,
+      onStart: () => {
+        this.#controls.startPlayback();
+        this.#live.announce(this.#messages.t("planner", "announcement.playbackStarted"));
+      },
+      onFrame: (frame) => {
+        this.#playbackFrame = frame;
+        this.#render();
+      },
+      onFinish: (reason) => {
+        this.#playbackFrame = null;
+        this.#controls.finishPlayback();
+        if (reason === "completed") {
+          this.#live.announce(this.#messages.t("planner", "announcement.playbackFinished"));
+        }
+      },
+    });
+    this.#motionPreferenceListener = (event) => this.setReducedMotion(event.matches);
+    this.#motionPreference?.addEventListener("change", this.#motionPreferenceListener);
+    this.#localeUnsubscribe = this.#messages.subscribe(() => {
+      this.#root.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));
+      this.#render();
+    });
     this.#visible = this.#elementVisible();
+    this.#playback.setVisible(this.#visible);
     this.#observeVisibility();
     this.#resize = observePlannerContainer(root, context.hostContext, (layout) => {
       this.#applyLayout(layout);
-      this.#removeTooltip();
-      this.#render();
+    this.#render();
     });
     this.probeRuntimeNow();
   }
@@ -295,20 +450,31 @@ class PlannerSurfaceController implements PlannerSurface {
   setContext(context: PlannerViewContext): void {
     if (this.#destroyed) return;
     const validated = validatePlannerViewContext(context);
+    const wasReplica = this.#context.hostContext === "replica";
     const hostChanged = validated.hostContext !== this.#context.hostContext;
     this.#context = validated;
     this.#connection?.setContext({ logicalDate: validated.logicalDate });
     if (hostChanged) {
       this.#resize?.disconnect();
       this.#layout = plannerLayoutForWidth(plannerContainerWidth(this.#root), validated.hostContext);
-      this.#presentation = initialPlannerPresentationState(validated.hostContext);
       this.#resize = observePlannerContainer(this.#root, validated.hostContext, (layout) => {
         this.#applyLayout(layout);
         this.#render();
       });
     }
-    this.#removeTooltip();
+    if (wasReplica && validated.hostContext !== "replica") {
+      this.#root.hidden = false;
+      this.#publishVisibility();
+    }
     this.#render();
+  }
+
+  setLocale(locale: string): void {
+    if (!this.#destroyed) this.#messages.setLocale(locale);
+  }
+
+  setReducedMotion(reducedMotion: boolean): void {
+    if (!this.#destroyed) this.#playback.setReducedMotion(reducedMotion);
   }
 
   measure(): void {
@@ -332,6 +498,7 @@ class PlannerSurfaceController implements PlannerSurface {
       } catch {
         this.#snapshot = undefined;
         this.#scheduleProbe();
+        this.#render();
       }
     } else {
       this.#snapshot = undefined;
@@ -353,13 +520,24 @@ class PlannerSurfaceController implements PlannerSurface {
       this.#root.ownerDocument.removeEventListener("visibilitychange", this.#documentVisibilityListener);
     }
     this.#documentVisibilityListener = undefined;
+    this.#localeUnsubscribe?.();
+    this.#localeUnsubscribe = undefined;
+    if (this.#motionPreferenceListener) {
+      this.#motionPreference?.removeEventListener("change", this.#motionPreferenceListener);
+    }
+    this.#motionPreference = undefined;
+    this.#motionPreferenceListener = undefined;
     this.#clearProbe();
-    const view = this.#root.ownerDocument.defaultView;
-    if (this.#animationFrame !== undefined) view?.cancelAnimationFrame(this.#animationFrame);
-    this.#animationFrame = undefined;
-    this.#removeTooltip();
+    this.#playback.destroy();
+    this.#controls.destroy();
+    this.#clearRenderBindings();
+    this.#live.destroy();
     this.#root.replaceChildren();
     this.#root.classList.remove("spiral-day-planner");
+    this.#root.hidden = false;
+    this.#root.removeAttribute("aria-label");
+    delete this.#root.dataset.layout;
+    delete this.#root.dataset.narrow;
   }
 
   #scheduleProbe(): void {
@@ -406,49 +584,26 @@ class PlannerSurfaceController implements PlannerSurface {
     if (visible === this.#visible) return;
     this.#visible = visible;
     this.#connection?.setVisible(visible);
-    if (!visible && this.#animationFrame !== undefined) {
-      this.#root.ownerDocument.defaultView?.cancelAnimationFrame(this.#animationFrame);
-      this.#animationFrame = undefined;
-    }
+    this.#playback.setVisible(visible);
+    if (!visible) this.#clearRenderBindings();
+    else this.#render();
     if (visible && !this.#connection) this.probeRuntimeNow();
   }
 
-  #focusedKey(): string | undefined {
-    const active = this.#root.ownerDocument.activeElement;
-    if (!active || !this.#root.contains(active)) return undefined;
-    return (active as HTMLElement | SVGElement).dataset.plannerFocusKey;
-  }
-
-  #restoreFocus(key: string | undefined): boolean {
-    if (!key) return false;
-    const target = [...this.#root.querySelectorAll<HTMLElement | SVGElement>("[data-planner-focus-key]")]
-      .find((element) => element.dataset.plannerFocusKey === key);
-    target?.focus({ preventScroll: true });
-    return target !== undefined;
-  }
-
   #applyLayout(layout: PlannerResponsiveLayout): void {
-    const previousMode = this.#layout.mode;
     this.#layout = layout;
-    this.#presentation = normalizeStateForLayout(
-      this.#presentation,
-      previousMode,
-      layout.mode,
-      this.#context.hostContext,
-    );
   }
 
   #render(): void {
-    if (this.#destroyed) return;
+    if (this.#destroyed || !this.#visible) return;
     if (this.#context.hostContext !== "replica") this.#root.hidden = false;
     this.#applyLayout(plannerLayoutForWidth(
       plannerContainerWidth(this.#root),
       this.#context.hostContext,
     ));
-    const focusedKey = this.#focusedKey();
-    if (focusedKey) this.#pendingFocusKey = focusedKey;
-    this.#removeTooltip();
-    this.#root.replaceChildren();
+    const focusedKey = this.#focus.capture();
+    this.#clearRenderBindings();
+    this.#content.replaceChildren();
     this.#root.dataset.layout = this.#layout.mode;
     this.#root.dataset.narrow = String(this.#layout.narrow);
     if (this.#layout.suppressSurface) {
@@ -459,39 +614,41 @@ class PlannerSurfaceController implements PlannerSurface {
 
     if (!this.#snapshot) {
       this.#renderRuntimeState();
+      if (focusedKey) this.#focus.restore(focusedKey, "status");
       return;
     }
     if (this.#snapshot.state !== "confirmed") {
       this.#renderSnapshotState(this.#snapshot);
+      if (focusedKey) this.#focus.restore(focusedKey, "status");
       return;
     }
     this.#renderConfirmed(this.#snapshot.projection);
-    const active = this.#root.ownerDocument.activeElement;
-    const canRestorePending = active === null || active === this.#root.ownerDocument.body
-      || this.#root.contains(active);
-    this.#restoreFocus(focusedKey ?? (canRestorePending ? this.#pendingFocusKey : undefined));
-    this.#pendingFocusKey = undefined;
+    if (focusedKey) this.#focus.restore(focusedKey, "control-completed");
+  }
+
+  #clearRenderBindings(): void {
+    for (const cleanup of this.#renderCleanups.splice(0)) cleanup();
   }
 
   #renderRuntimeState(): void {
     const pending = this.#runtime.state === "starting";
     this.#renderStatus(
       pending ? "loading" : "unavailable",
-      pending ? "Loading Spiral Day..." : "Spiral Day unavailable",
-      pending
-        ? "Waiting for the shared planner runtime."
-        : "The shared planner runtime is not available. Reload Obsidian to retry.",
+      this.#messages.t("shared", pending ? "status.loading" : "status.unavailable"),
+      this.#messages.t("planner", pending ? "status.loadingDetail" : "status.unavailableDetail"),
     );
   }
 
   #renderSnapshotState(snapshot: Exclude<RuntimeSnapshot<RuntimePlanProjection>, { state: "confirmed" }>): void {
-    const model = plannerSurfaceStateModel(snapshot, this.#layout);
+    const model = plannerSurfaceStateModel(snapshot, this.#layout, this.#messages);
     this.#renderStatus(snapshot.state, model.heading, model.message);
   }
 
   #renderStatus(state: string, headingText: string, messageText: string): void {
     const status = element(this.#root.ownerDocument, "section", "spiral-day-planner__status");
     status.dataset.state = state;
+    status.dataset.plannerFocusKey = "status";
+    status.tabIndex = -1;
     status.setAttribute("role", state === "loading" ? "status" : "alert");
     status.setAttribute("aria-live", state === "loading" ? "polite" : "assertive");
     const heading = element(this.#root.ownerDocument, "strong", "spiral-day-planner__status-heading");
@@ -499,7 +656,7 @@ class PlannerSurfaceController implements PlannerSurface {
     const message = element(this.#root.ownerDocument, "span", "spiral-day-planner__status-message");
     message.textContent = messageText;
     status.append(heading, message);
-    this.#root.append(status);
+    this.#content.append(status);
   }
 
   #createIconButton(icon: PlannerIconName, label: string, action: () => void): HTMLButtonElement {
@@ -507,11 +664,18 @@ class PlannerSurfaceController implements PlannerSurface {
     button.type = "button";
     button.title = label;
     button.setAttribute("aria-label", label);
+    button.dataset.control = icon === "collapse" || icon === "expand"
+      ? "collapse"
+      : icon === "hide-completed" || icon === "show-completed"
+        ? "completed"
+        : icon;
     button.dataset.plannerFocusKey = icon === "collapse" || icon === "expand"
       ? "control-collapse"
       : icon === "hide-completed" || icon === "show-completed"
         ? "control-completed"
-        : "control-play";
+        : icon === "debug"
+          ? "control-debug"
+          : "control-play";
     this.#renderIcon(button, icon);
     button.addEventListener("click", () => {
       if (button.getAttribute("aria-disabled") !== "true") action();
@@ -520,30 +684,30 @@ class PlannerSurfaceController implements PlannerSurface {
   }
 
   #renderConfirmed(projection: RuntimePlanProjection): void {
-    if (this.#presentation.collapsed) {
-      const expand = this.#createIconButton("expand", "Expand planner", () => {
-        this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "toggle-collapse" });
-        this.#render();
+    const controlsState = this.#controls.state;
+    if (controlsState.collapsed) {
+      const expand = this.#createIconButton("expand", this.#messages.t("planner", "control.expand"), () => {
+        try {
+          if (this.#controls.toggleCollapsed()) {
+            this.#live.announce(this.#messages.t("planner", "announcement.expanded"));
+          }
+        } catch {
+          this.#live.announce(this.#messages.t("planner", "status.errorDetail"), "assertive");
+        }
       });
       expand.classList.add("spiral-day-planner__collapsed-control");
-      this.#root.append(expand);
+      this.#content.append(expand);
       return;
     }
 
-    const now = this.#now();
-    const playbackMinute = plannerPlaybackMinute(
-      this.#presentation,
-      now,
-      this.#context.bounds.startMinutes,
-      this.#context.bounds.endMinutes,
-    );
-    if (this.#presentation.playback === "running" && playbackMinute === null) {
-      this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "finish-playback" });
-    }
-    const spiral = buildPlannerSpiralModel(projection, this.#context.bounds, {
+    const playbackMinute = this.#playbackFrame?.minute;
+    const displayedProjection = playbackMinute === undefined
+      ? projection
+      : this.#playbackProjection(projection, playbackMinute);
+    const spiral = buildPlannerSpiralModel(displayedProjection, this.#context.bounds, {
       mode: this.#layout.mode,
-      showCompleted: this.#presentation.showCompleted,
-      ...(playbackMinute === null ? {} : { playbackMinute }),
+      showCompleted: controlsState.showCompleted,
+      ...(playbackMinute === undefined ? {} : { playbackMinute }),
       measureLabel: (label) => this.#measureLabel(label),
       labelMaxWidth: plannerRailLabelMaxWidth(this.#layout.containerWidth),
     });
@@ -551,47 +715,110 @@ class PlannerSurfaceController implements PlannerSurface {
     const header = element(this.#root.ownerDocument, "header", "spiral-day-planner__header");
     if (this.#layout.showWideHeader) {
       const metrics = element(this.#root.ownerDocument, "div", "spiral-day-planner__metrics");
-      appendMetrics(metrics, projection);
+      appendMetrics(metrics, displayedProjection, this.#messages);
       header.append(metrics);
     }
     const headerEnd = element(this.#root.ownerDocument, "div", "spiral-day-planner__header-end");
     const controls = element(this.#root.ownerDocument, "div", "spiral-day-planner__controls");
     controls.append(
-      this.#createIconButton("collapse", "Collapse planner", () => {
-        this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "toggle-collapse" });
-        this.#render();
+      this.#createIconButton("collapse", this.#messages.t("planner", "control.collapse"), () => {
+        try {
+          this.#playback.cancel("hidden");
+          if (this.#controls.toggleCollapsed()) {
+            this.#live.announce(this.#messages.t("planner", "announcement.collapsed"));
+          }
+        } catch {
+          this.#live.announce(this.#messages.t("planner", "status.errorDetail"), "assertive");
+        }
       }),
       this.#createIconButton(
-        this.#presentation.showCompleted ? "hide-completed" : "show-completed",
-        this.#presentation.showCompleted ? "Hide completed items" : "Show completed items",
+        controlsState.showCompleted ? "hide-completed" : "show-completed",
+        this.#messages.t("planner", controlsState.showCompleted ? "control.hideCompleted" : "control.showCompleted"),
         () => {
-          this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "toggle-completed" });
-          this.#render();
+          if (!this.#controls.toggleCompleted()) return;
+          this.#live.announce(this.#messages.t(
+            "planner",
+            this.#controls.state.showCompleted
+              ? "announcement.completedShown"
+              : "announcement.completedHidden",
+          ));
         },
       ),
     );
-    const play = this.#createIconButton("play", "Play day", () => this.#startPlayback());
-    if (this.#presentation.playback === "running") play.setAttribute("aria-disabled", "true");
+    const play = this.#createIconButton(
+      "play",
+      this.#messages.t("planner", controlsState.playbackRunning ? "control.playbackRunning" : "control.play"),
+      () => this.#startPlayback(),
+    );
+    if (controlsState.playbackRunning) play.setAttribute("aria-disabled", "true");
     controls.append(play);
+    if (this.#controls.debugControl) {
+      const debug = this.#createIconButton(
+        "debug",
+        this.#messages.t("planner", controlsState.debugEnabled ? "control.debugDisable" : "control.debugEnable"),
+        () => {
+          if (!this.#controls.toggleDebug()) return;
+          this.#live.announce(this.#messages.t(
+            "planner",
+            this.#controls.state.debugEnabled ? "announcement.debugOn" : "announcement.debugOff",
+          ));
+        },
+      );
+      debug.setAttribute("aria-pressed", String(controlsState.debugEnabled));
+      controls.append(debug);
+    }
     headerEnd.append(controls);
     if (this.#layout.showWideHeader) {
       const legend = element(this.#root.ownerDocument, "div", "spiral-day-planner__legend");
-      appendLegend(legend);
+      appendLegend(legend, this.#messages);
       headerEnd.append(legend);
     }
     header.append(headerEnd);
-    this.#root.append(header);
+    this.#content.append(header);
 
     if (this.#layout.showCompactOverview) {
-      this.#root.append(this.#renderOverview(projection));
+      this.#content.append(this.#renderOverview(displayedProjection));
     }
-    this.#root.append(this.#renderSpiral(spiral));
+    this.#content.append(this.#renderSpiral(spiral, projection));
     if (this.#layout.showCompactSchedule) {
-      this.#root.append(this.#renderSchedule(spiral));
+      this.#content.append(this.#renderSchedule(spiral, projection));
     }
-    this.#appendDiagnostics(projection);
+    this.#appendDiagnostics(displayedProjection);
+    if (controlsState.debugEnabled) {
+      const debug = element(this.#root.ownerDocument, "pre", "spiral-day-planner__debug-overlay");
+      debug.textContent = this.#messages.t("planner", "debug.geometry", {
+        centerX: Math.round(spiral.geometry.center.x),
+        centerY: Math.round(spiral.geometry.center.y),
+        minute: Math.round(playbackMinute ?? projection.day.elapsedUntilMinutes ?? this.#context.bounds.startMinutes),
+      });
+      this.#content.append(debug);
+    }
+  }
 
-    if (this.#presentation.playback === "running") this.#schedulePlaybackFrame();
+  #playbackProjection(
+    projection: RuntimePlanProjection,
+    playbackMinute: number,
+  ): RuntimePlanProjection {
+    const day = projectDay({
+      displayedDate: projection.displayedDate,
+      today: projection.today,
+      startMinutes: this.#context.bounds.startMinutes,
+      endMinutes: this.#context.bounds.endMinutes,
+      nowMinutes: playbackMinute,
+      playbackMinutes: playbackMinute,
+    });
+    const scheduleInput = {
+      startMinutes: this.#context.bounds.startMinutes,
+      endMinutes: this.#context.bounds.endMinutes,
+      nowMinutes: day.scheduleFromMinutes,
+      items: projection.items,
+    };
+    return Object.freeze({
+      ...projection,
+      day,
+      schedule: schedulePlan(scheduleInput),
+      capacity: calculateCapacity(scheduleInput),
+    });
   }
 
   #measureLabel(label: string): number {
@@ -605,47 +832,57 @@ class PlannerSurfaceController implements PlannerSurface {
 
   #renderOverview(projection: RuntimePlanProjection): HTMLDetailsElement {
     const details = element(this.#root.ownerDocument, "details", "spiral-day-planner__disclosure spiral-day-planner__overview");
-    details.open = this.#presentation.overviewOpen;
     const summary = element(this.#root.ownerDocument, "summary", "spiral-day-planner__disclosure-summary");
-    summary.textContent = "Overview";
+    summary.textContent = this.#messages.t("planner", "disclosure.overview");
     summary.dataset.plannerFocusKey = "disclosure-overview";
     summary.setAttribute(
       "aria-label",
-      `Overview, ${projection.capacity.status}, available ${formatDuration(projection.capacity.availableMinutes)}`,
+      `${this.#messages.t("planner", "disclosure.overview")}, ${this.#messages.t("planner", "metric.availableTime")} ${this.#messages.t("shared", "unit.duration", { minutes: projection.capacity.availableMinutes })}`,
     );
     const body = element(this.#root.ownerDocument, "div", "spiral-day-planner__overview-body");
     const metrics = element(this.#root.ownerDocument, "div", "spiral-day-planner__metrics");
-    appendMetrics(metrics, projection);
+    appendMetrics(metrics, projection, this.#messages);
     const legend = element(this.#root.ownerDocument, "div", "spiral-day-planner__legend");
-    appendLegend(legend);
+    appendLegend(legend, this.#messages);
     body.append(metrics, legend);
     details.append(summary, body);
-    details.addEventListener("toggle", () => {
-      if (details.open !== this.#presentation.overviewOpen) {
-        this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "toggle-overview" });
-      }
-    });
+    this.#renderCleanups.push(bindPlannerDisclosure(details, "overview", this.#disclosures));
     return details;
   }
 
-  #renderSchedule(spiral: PlannerSpiralModel): HTMLDetailsElement {
+  #renderSchedule(
+    spiral: PlannerSpiralModel,
+    projection: RuntimePlanProjection,
+  ): HTMLDetailsElement {
     const details = element(this.#root.ownerDocument, "details", "spiral-day-planner__disclosure spiral-day-planner__schedule");
-    details.open = this.#presentation.scheduleOpen;
     const summary = element(this.#root.ownerDocument, "summary", "spiral-day-planner__disclosure-summary");
-    summary.textContent = `Schedule | ${spiral.items.length} item${spiral.items.length === 1 ? "" : "s"}`;
+    summary.textContent = this.#messages.t("planner", "disclosure.schedule", { count: spiral.items.length });
     summary.dataset.plannerFocusKey = "disclosure-schedule";
-    summary.setAttribute("aria-label", `Schedule, ${spiral.items.length} items`);
-    details.append(summary);
-    appendDisclosureRows(details, spiral.items.map((item) => ({
-      title: item.title,
-      meta: `${formatClockMinute(item.startMinutes)}-${formatClockMinute(item.endMinutes)}`,
-      tone: item.tone,
-    })));
-    details.addEventListener("toggle", () => {
-      if (details.open !== this.#presentation.scheduleOpen) {
-        this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "toggle-schedule" });
-      }
-    });
+    summary.setAttribute("aria-label", summary.textContent);
+    const list = element(details.ownerDocument, "ul", "spiral-day-planner__disclosure-list");
+    for (const item of spiral.items) {
+      const row = element(details.ownerDocument, "li", "spiral-day-planner__disclosure-row spiral-day-planner__interactive-item");
+      row.dataset.tone = item.tone;
+      row.dataset.completed = String(item.completed);
+      row.dataset.conflict = String(item.conflict);
+      row.dataset.current = String(item.current);
+      row.dataset.itemId = item.id;
+      row.dataset.plannerFocusKey = `schedule-item-${item.id}`;
+      const name = timelineAccessibleName(this.#messages, item);
+      row.setAttribute("aria-label", name);
+      const title = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-title");
+      title.textContent = item.title;
+      const meta = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-meta");
+      meta.textContent = `${formatClockMinute(item.startMinutes)}-${formatClockMinute(item.endMinutes)}`;
+      const state = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-state");
+      state.textContent = [timelineKind(this.#messages, item), timelineStates(this.#messages, item)]
+        .filter(Boolean).join(" | ");
+      row.append(title, meta, state);
+      this.#bindProgressTarget(row, item, projection);
+      list.append(row);
+    }
+    details.append(summary, list);
+    this.#renderCleanups.push(bindPlannerDisclosure(details, "schedule", this.#disclosures));
     return details;
   }
 
@@ -655,40 +892,70 @@ class PlannerSurfaceController implements PlannerSurface {
       const details = element(this.#root.ownerDocument, "details", "spiral-day-planner__disclosure spiral-day-planner__overflow");
       const summary = element(this.#root.ownerDocument, "summary", "spiral-day-planner__disclosure-summary");
       const total = overflow.reduce((sum, row) => sum + row.durationMinutes, 0);
-      summary.textContent = `Unscheduled today | ${formatDuration(total)} | ${overflow.length} item${overflow.length === 1 ? "" : "s"}`;
+      summary.textContent = this.#messages.t("planner", "disclosure.overflow", {
+        count: overflow.length,
+        duration: this.#messages.t("shared", "unit.duration", { minutes: total }),
+      });
       summary.dataset.plannerFocusKey = "disclosure-overflow";
-      summary.setAttribute("aria-label", `${projection.capacity.status}, ${overflow.length} unscheduled items`);
+      summary.setAttribute("aria-label", summary.textContent);
       details.append(summary);
       appendDisclosureRows(details, overflow.map((row) => ({
         title: row.title,
-        meta: formatDuration(row.durationMinutes),
+        meta: this.#messages.t("shared", "unit.duration", { minutes: row.durationMinutes }),
         tone: "warning",
       })));
-      this.#root.append(details);
+      this.#renderCleanups.push(bindPlannerDisclosure(details, "overflow", this.#disclosures));
+      this.#content.append(details);
     }
-    const warnings = plannerWarnings(projection);
+    const labels = new Map(projection.items.map((item) => [item.sourceOrder, item.label]));
+    const warningKeys = Object.freeze({
+      "duplicate-plan-region": "warning.planRegionDuplicate",
+      "empty-plan-item": "warning.emptyPlanItem",
+      "invalid-time-range": "warning.invalidTimeRange",
+      "nested-plan-region": "warning.planRegionNested",
+      "overnight-truncated": "warning.overnightTruncated",
+      "same-time": "warning.sameTime",
+      "unclosed-plan-region": "warning.planRegionUnclosed",
+      "unsupported-plan-version": "warning.planVersionUnsupported",
+    } as const satisfies Readonly<Record<ParserDiagnosticCode | PlanRegionDiagnosticCode, string>>);
+    const warnings = projection.diagnostics.flatMap((diagnostic) => {
+      const key = warningKeys[diagnostic.code as keyof typeof warningKeys];
+      if (!key) return [];
+      return [Object.freeze({
+        title: diagnostic.sourceOrder === null
+          ? this.#messages.t("planner", "warning.plan")
+          : labels.get(diagnostic.sourceOrder)
+            ?? this.#messages.t("planner", "warning.itemFallback", { index: diagnostic.sourceOrder + 1 }),
+        message: this.#messages.t("planner", key),
+      })];
+    });
     if (warnings.length > 0) {
       const details = element(this.#root.ownerDocument, "details", "spiral-day-planner__disclosure spiral-day-planner__warnings");
       const summary = element(this.#root.ownerDocument, "summary", "spiral-day-planner__disclosure-summary");
-      summary.textContent = `Schedule warnings | ${warnings.length} item${warnings.length === 1 ? "" : "s"}`;
+      summary.textContent = this.#messages.t("planner", "disclosure.warnings", { count: warnings.length });
       summary.dataset.plannerFocusKey = "disclosure-warnings";
+      summary.setAttribute("aria-label", summary.textContent);
       details.append(summary);
       appendDisclosureRows(details, warnings.map((row) => ({
         title: row.title,
         meta: row.message,
         tone: "warning",
       })));
-      this.#root.append(details);
+      this.#renderCleanups.push(bindPlannerDisclosure(details, "warnings", this.#disclosures));
+      this.#content.append(details);
     }
   }
 
-  #renderSpiral(model: PlannerSpiralModel): SVGSVGElement {
+  #renderSpiral(
+    model: PlannerSpiralModel,
+    projection: RuntimePlanProjection,
+  ): SVGSVGElement {
     const document = this.#root.ownerDocument;
     const svg = svgElement(document, "svg", "spiral-day-planner__spiral");
     const viewBox = spiralViewBox(model.geometry, model.labels);
     svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", `${model.title} spiral schedule`);
+    svg.setAttribute("role", "group");
+    svg.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));
     svg.dataset.mode = model.mode;
 
     const defs = svgElement(document, "defs");
@@ -745,18 +1012,24 @@ class PlannerSurfaceController implements PlannerSurface {
       path.setAttribute("d", slot.path);
       group.append(path);
       if (model.mode === "wide") {
+        const availableName = this.#messages.t("planner", "item.availableName", {
+          start: formatClockMinute(slot.startMinutes),
+          end: formatClockMinute(slot.endMinutes),
+          duration: this.#messages.t("shared", "unit.duration", { minutes: slot.durationMinutes }),
+          states: slot.availableNow ? this.#messages.t("shared", "state.current") : "",
+        });
         group.setAttribute("role", "img");
         group.setAttribute("tabindex", "0");
         group.setAttribute("focusable", "true");
-        group.setAttribute("aria-label", slot.ariaLabel);
+        group.setAttribute("aria-label", availableName);
         group.dataset.plannerFocusKey = `available-${slot.id}`;
-        this.#bindTooltip(group, slot.ariaLabel);
+        this.#bindTooltip(group, availableName);
       } else {
         group.setAttribute("aria-hidden", "true");
       }
       svg.append(group);
     }
-    for (const item of model.items) svg.append(this.#renderTimelineTarget(item, model.mode));
+    for (const item of model.items) svg.append(this.#renderTimelineTarget(item, model.mode, projection));
     for (const label of model.labels) {
       const connector = svgElement(document, "path", "spiral-day-planner__connector");
       connector.dataset.tone = label.timelineItem.tone;
@@ -767,10 +1040,11 @@ class PlannerSurfaceController implements PlannerSurface {
       );
       const group = svgElement(document, "g", "spiral-day-planner__external-label");
       group.dataset.tone = label.timelineItem.tone;
+      const accessibleName = timelineAccessibleName(this.#messages, label.timelineItem);
       group.setAttribute("role", "img");
       group.setAttribute("tabindex", "0");
       group.setAttribute("focusable", "true");
-      group.setAttribute("aria-label", label.timelineItem.ariaLabel);
+      group.setAttribute("aria-label", accessibleName);
       group.dataset.plannerFocusKey = `label-${label.id}`;
       if (label.timelineItem.current) group.setAttribute("aria-current", "true");
       const text = svgElement(document, "text");
@@ -779,9 +1053,9 @@ class PlannerSurfaceController implements PlannerSurface {
       text.setAttribute("text-anchor", label.side === "left" ? "end" : "start");
       text.textContent = label.visibleText;
       const title = svgElement(document, "title");
-      title.textContent = label.timelineItem.ariaLabel;
+      title.textContent = accessibleName;
       group.append(title, text);
-      this.#bindTooltip(group, timelineTooltipText(label.timelineItem), connector);
+      this.#bindTooltip(group, timelineTooltipText(this.#messages, label.timelineItem), connector);
       svg.append(connector, group);
     }
     if (model.needlePath) {
@@ -814,7 +1088,11 @@ class PlannerSurfaceController implements PlannerSurface {
     return start;
   }
 
-  #renderTimelineTarget(item: PlannerTimelineItem, mode: PlannerSpiralModel["mode"]): SVGGElement {
+  #renderTimelineTarget(
+    item: PlannerTimelineItem,
+    mode: PlannerSpiralModel["mode"],
+    projection: RuntimePlanProjection,
+  ): SVGGElement {
     const group = svgElement(this.#root.ownerDocument, "g", "spiral-day-planner__target spiral-day-planner__item");
     group.dataset.tone = item.tone;
     group.dataset.conflict = String(item.conflict);
@@ -828,91 +1106,103 @@ class PlannerSurfaceController implements PlannerSurface {
       progress.setAttribute("d", item.path);
       group.append(progress);
     }
+    const accessibleName = timelineAccessibleName(this.#messages, item);
     const title = svgElement(this.#root.ownerDocument, "title");
-    title.textContent = item.ariaLabel;
+    title.textContent = accessibleName;
     group.append(title);
     if (mode === "wide") {
-      group.setAttribute("role", "img");
-      group.setAttribute("tabindex", "0");
       group.setAttribute("focusable", "true");
-      group.setAttribute("aria-label", item.ariaLabel);
+      group.setAttribute("aria-label", accessibleName);
       group.dataset.plannerFocusKey = `item-${item.id}`;
       if (item.current) group.setAttribute("aria-current", "true");
-      this.#bindTooltip(group, timelineTooltipText(item));
+      this.#bindProgressTarget(group, item, projection);
+      this.#bindTooltip(group, timelineTooltipText(this.#messages, item));
     } else {
       group.setAttribute("aria-hidden", "true");
     }
     return group;
   }
 
+  #bindProgressTarget(
+    target: HTMLElement | SVGElement,
+    item: PlannerTimelineItem,
+    projection: RuntimePlanProjection,
+  ): void {
+    const source = projection.items.find((candidate) => candidate.sourceOrder === item.sourceOrder);
+    if (source) target.dataset.itemId = source.source.blockId ?? item.id;
+    if (!source || !this.#onProgressIntent) {
+      target.setAttribute("role", "img");
+      target.setAttribute("tabindex", "0");
+      return;
+    }
+    const progressTarget = (): PlannerProgressTarget => Object.freeze({
+      authoritative: true,
+      blockId: source.source.blockId,
+      dayRelation: projection.day.relation,
+      executionEligible: source.executionEligible,
+      itemId: source.source.blockId ?? item.id,
+      kind: source.kind,
+      path: source.source.path,
+      progress: Object.freeze({
+        present: "unknown" as const,
+        projectedPercent: source.progressPercent,
+      }),
+      sourceOrder: source.sourceOrder,
+      status: source.status,
+      title: source.label,
+    });
+    this.#renderCleanups.push(bindPlannerProgressTarget(
+      target,
+      progressTarget,
+      (dispatch) => {
+        this.#live.announce(this.#messages.t("planner", "announcement.progressPending", {
+          title: dispatch.target.title,
+        }));
+        try {
+          const result = this.#onProgressIntent?.(dispatch.intent);
+          if (result && "catch" in result) {
+            void result.catch(() => {
+              this.#live.announce(this.#messages.t("planner", "status.errorDetail"), "assertive");
+            });
+          }
+        } catch {
+          this.#live.announce(this.#messages.t("planner", "status.errorDetail"), "assertive");
+        }
+      },
+    ));
+  }
+
   #bindTooltip(target: SVGElement, text: string, companion?: SVGElement): void {
     if (!this.#layout.mountHoverSurface) return;
-    const show = (): void => {
+    const tooltip = element(this.#root.ownerDocument, "div", "spiral-day-planner__tooltip");
+    tooltip.id = `spiral-day-planner-tooltip-${++plannerTooltipSequence}`;
+    this.#root.ownerDocument.body.append(tooltip);
+    const emphasize = (): void => {
       companion?.classList.add("is-emphasized");
       target.classList.add("is-emphasized");
-      this.#showTooltip(target, text);
     };
-    const hide = (): void => {
+    const deemphasize = (): void => {
       companion?.classList.remove("is-emphasized");
       target.classList.remove("is-emphasized");
-      this.#removeTooltip();
     };
-    target.addEventListener("mouseenter", show);
-    target.addEventListener("mouseleave", hide);
-    target.addEventListener("focus", show);
-    target.addEventListener("blur", hide);
-  }
-
-  #showTooltip(target: SVGElement, text: string): void {
-    this.#removeTooltip();
-    const document = this.#root.ownerDocument;
-    const tooltip = element(document, "div", "spiral-day-planner__tooltip");
-    tooltip.setAttribute("role", "tooltip");
-    tooltip.textContent = text;
-    document.body.append(tooltip);
-    const targetBox = target.getBoundingClientRect();
-    const tooltipBox = tooltip.getBoundingClientRect();
-    const view = document.defaultView;
-    if (!view) return;
-    const placement = placeTooltip({
-      anchor: { x: targetBox.x, y: targetBox.y, width: targetBox.width, height: targetBox.height },
-      tooltipWidth: tooltipBox.width,
-      tooltipHeight: tooltipBox.height,
-      viewportWidth: view.innerWidth,
-      viewportHeight: view.innerHeight,
+    target.addEventListener("mouseenter", emphasize);
+    target.addEventListener("mouseleave", deemphasize);
+    target.addEventListener("focus", emphasize);
+    target.addEventListener("blur", deemphasize);
+    const unbindTooltip = bindPlannerTooltip(target, tooltip, text);
+    this.#renderCleanups.push(() => {
+      unbindTooltip();
+      target.removeEventListener("mouseenter", emphasize);
+      target.removeEventListener("mouseleave", deemphasize);
+      target.removeEventListener("focus", emphasize);
+      target.removeEventListener("blur", deemphasize);
+      deemphasize();
+      tooltip.remove();
     });
-    tooltip.dataset.side = placement.side;
-    tooltip.style.left = `${placement.x}px`;
-    tooltip.style.top = `${placement.y}px`;
-    this.#tooltip = tooltip;
-  }
-
-  #removeTooltip(): void {
-    this.#tooltip?.remove();
-    this.#tooltip = undefined;
   }
 
   #startPlayback(): void {
-    if (this.#presentation.playback === "running") return;
-    this.#presentation = reducePlannerPresentationState(this.#presentation, {
-      type: "start-playback",
-      now: this.#now(),
-    });
-    this.#render();
-  }
-
-  #schedulePlaybackFrame(): void {
-    const view = this.#root.ownerDocument.defaultView;
-    if (!view || !this.#visible || this.#animationFrame !== undefined) return;
-    this.#animationFrame = view.requestAnimationFrame(() => {
-      this.#animationFrame = undefined;
-      if (this.#destroyed || this.#presentation.playback !== "running") return;
-      const startedAt = this.#presentation.playbackStartedAt;
-      if (startedAt !== null && this.#now() - startedAt >= PLAYBACK_DURATION_MILLISECONDS) {
-        this.#presentation = reducePlannerPresentationState(this.#presentation, { type: "finish-playback" });
-      }
-      this.#render();
-    });
+    this.#playback.start(this.#context.bounds);
   }
 }
 
