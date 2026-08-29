@@ -1,0 +1,225 @@
+.spiral-day-planner {
+  --spiral-day-control-surface: var(--background-primary, #ffffff);
+  --spiral-day-control-border: var(--text-faint, #707985);
+  --spiral-day-control-hover: var(--background-modifier-hover, #e9edf2);
+  --spiral-day-task: var(--spiral-day-theme-task, #0b668f);
+  --spiral-day-task-fill: var(--spiral-day-theme-task-fill, rgb(11 102 143 / 24%));
+  --spiral-day-urgent: var(--spiral-day-theme-urgent, #b42334);
+  --spiral-day-urgent-fill: var(--spiral-day-theme-urgent-fill, rgb(180 35 52 / 24%));
+  --spiral-day-event: var(--spiral-day-theme-event, #765200);
+  --spiral-day-event-fill: var(--spiral-day-theme-event-fill, rgb(163 113 0 / 24%));
+  --spiral-day-warning: var(--spiral-day-theme-warning, #805800);
+  --spiral-day-completed: var(--spiral-day-theme-completed, #505967);
+  --spiral-day-focus: var(--spiral-day-theme-focus, var(--interactive-accent, #245fbd));
+  accent-color: var(--spiral-day-focus);
+  background: transparent;
+  color: var(--text-normal, #252a32);
+  color-scheme: light;
+}
+
+.theme-dark .spiral-day-planner,
+.spiral-day-planner.theme-dark {
+  --spiral-day-control-surface: var(--background-primary, #202226);
+  --spiral-day-control-border: var(--text-faint, #949eac);
+  --spiral-day-control-hover: var(--background-modifier-hover, #343942);
+  --spiral-day-task: var(--spiral-day-theme-task, #70c8ea);
+  --spiral-day-task-fill: var(--spiral-day-theme-task-fill, rgb(112 200 234 / 26%));
+  --spiral-day-urgent: var(--spiral-day-theme-urgent, #ff8993);
+  --spiral-day-urgent-fill: var(--spiral-day-theme-urgent-fill, rgb(255 137 147 / 25%));
+  --spiral-day-event: var(--spiral-day-theme-event, #f2ce72);
+  --spiral-day-event-fill: var(--spiral-day-theme-event-fill, rgb(242 206 114 / 24%));
+  --spiral-day-warning: var(--spiral-day-theme-warning, #efbd5f);
+  --spiral-day-completed: var(--spiral-day-theme-completed, #b9c0cb);
+  --spiral-day-focus: var(--spiral-day-theme-focus, var(--interactive-accent, #8bb7ff));
+  color: var(--text-normal, #f0f1f3);
+  color-scheme: dark;
+}
+
+.spiral-day-planner__icon-button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted, #626b78);
+  opacity: 1;
+}
+
+.spiral-day-planner__icon-button:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--spiral-day-control-hover);
+  border-color: var(--spiral-day-control-border);
+  color: var(--text-normal, #252a32);
+}
+
+.spiral-day-planner__icon-button[aria-pressed="true"] {
+  background: var(--spiral-day-control-hover);
+  border-color: var(--spiral-day-focus);
+  color: var(--text-normal, #252a32);
+}
+
+.spiral-day-planner__legend-swatch[data-tone="urgent"] {
+  border-radius: 1px;
+  outline: 1px solid currentColor;
+  outline-offset: 1px;
+}
+
+.spiral-day-planner__legend-swatch[data-tone="event"] {
+  border-radius: 0 50% 50%;
+  transform: rotate(45deg);
+}
+
+.spiral-day-planner__legend-swatch[data-tone="task"] {
+  border-radius: 50%;
+}
+
+.spiral-day-planner__item[data-tone="urgent"] .spiral-day-planner__item-path,
+.spiral-day-planner__interactive-item[data-tone="urgent"] {
+  stroke-dasharray: 5 2;
+}
+
+.spiral-day-planner__item[data-current="true"] .spiral-day-planner__item-path {
+  stroke-width: 2px;
+}
+
+.spiral-day-planner__interactive-item[data-current="true"] {
+  box-shadow: inset 3px 0 0 var(--spiral-day-focus);
+}
+
+.spiral-day-planner__interactive-item[data-conflict="true"] {
+  outline: 1px dashed var(--spiral-day-warning);
+  outline-offset: 2px;
+}
+
+.spiral-day-planner__interactive-item {
+  align-items: center;
+  border: 1px solid var(--spiral-day-control-border);
+  border-left: 4px solid var(--spiral-day-task);
+  color: var(--text-normal, #252a32);
+  display: grid;
+  gap: 2px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 42px;
+  padding: 6px 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.spiral-day-planner__interactive-item[data-tone="urgent"] {
+  border-left-color: var(--spiral-day-urgent);
+}
+
+.spiral-day-planner__interactive-item[data-tone="event"] {
+  border-left-color: var(--spiral-day-event);
+}
+
+.spiral-day-planner__interactive-item[data-completed="true"] {
+  border-left-color: var(--spiral-day-completed);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.spiral-day-planner__interactive-item-meta,
+.spiral-day-planner__interactive-item-state {
+  color: var(--text-muted, #626b78);
+  font-size: 0.82em;
+}
+
+.spiral-day-planner__debug-overlay {
+  background: var(--spiral-day-control-surface);
+  border: 1px dashed var(--spiral-day-focus);
+  color: var(--text-normal, #252a32);
+  font-family: var(--font-monospace, ui-monospace, monospace);
+  font-size: 11px;
+  padding: 5px 7px;
+}
+
+.spiral-day-planner__debug-geometry {
+  pointer-events: none;
+}
+
+.spiral-day-planner__debug-rectangle,
+.spiral-day-planner__debug-guide-circle,
+.spiral-day-planner__debug-center-marker {
+  vector-effect: non-scaling-stroke;
+}
+
+.spiral-day-planner__debug-rectangle {
+  fill: none;
+  stroke: var(--spiral-day-focus);
+  stroke-dasharray: 5 3;
+  stroke-width: 1px;
+}
+
+.spiral-day-planner__debug-rectangle[data-debug-marker="radial-bounds"] {
+  stroke: var(--spiral-day-warning);
+}
+
+.spiral-day-planner__debug-guide-circle {
+  fill: none;
+  stroke: var(--spiral-day-task);
+  stroke-dasharray: 2 4;
+  stroke-width: 1.25px;
+}
+
+.spiral-day-planner__debug-center-marker {
+  fill: var(--spiral-day-control-surface);
+  stroke: var(--spiral-day-urgent);
+  stroke-width: 2px;
+}
+
+.spiral-day-planner__status,
+.spiral-day-planner__warnings .spiral-day-planner__disclosure-row,
+.spiral-day-planner__overflow .spiral-day-planner__disclosure-row {
+  border-inline-start-color: var(--spiral-day-warning);
+}
+
+.spiral-day-theme-high-contrast .spiral-day-planner {
+  --spiral-day-control-border: currentColor;
+  --spiral-day-task: #005f86;
+  --spiral-day-urgent: #9e001f;
+  --spiral-day-event: #604200;
+  --spiral-day-warning: #604200;
+  --spiral-day-completed: #414955;
+  --spiral-day-focus: #004fd7;
+}
+
+.theme-dark.spiral-day-theme-high-contrast .spiral-day-planner {
+  --spiral-day-task: #8bddff;
+  --spiral-day-urgent: #ff9ba6;
+  --spiral-day-event: #ffe08c;
+  --spiral-day-warning: #ffe08c;
+  --spiral-day-completed: #d6dae0;
+  --spiral-day-focus: #a8c9ff;
+}
+
+@media (forced-colors: active) {
+  .spiral-day-planner {
+    --spiral-day-control-border: CanvasText;
+    --spiral-day-event: CanvasText;
+    --spiral-day-focus: Highlight;
+    --spiral-day-task: LinkText;
+    --spiral-day-urgent: MarkText;
+    --spiral-day-warning: CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  .spiral-day-planner__legend-swatch,
+  .spiral-day-planner__item-path {
+    forced-color-adjust: none;
+  }
+
+  .spiral-day-planner__item-path {
+    fill: Canvas;
+    stroke: CanvasText;
+  }
+
+  .spiral-day-planner__item[data-tone="urgent"] .spiral-day-planner__item-path {
+    stroke: MarkText;
+  }
+
+  .spiral-day-planner__item[data-tone="completed"] .spiral-day-planner__item-path {
+    stroke: GrayText;
+  }
+
+  .spiral-day-planner__available path {
+    fill: Canvas;
+    stroke: LinkText;
+  }
+}
