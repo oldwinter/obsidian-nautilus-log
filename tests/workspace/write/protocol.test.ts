@@ -196,6 +196,7 @@ function exactOrphanRecoveryPlan(
   action: ExactOrphanRecoveryAction,
   path: string,
   intentId: string,
+  expectedRunningClockIds: readonly string[] = [CLOCK_A],
 ) {
   return createMutationPlan({
     intentId,
@@ -226,7 +227,7 @@ function exactOrphanRecoveryPlan(
               close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
             }],
     }],
-    expectedRunningClockIds: [CLOCK_A],
+    expectedRunningClockIds,
     settingsVersion: CONTEXT.settingsVersion,
     zoneId: CONTEXT.zoneId,
   });
@@ -1045,6 +1046,124 @@ test("selected malformed closed orphan CLOCK identity repair is exact across quo
     assert.equal(await access.readText(unselectedPath), unselectedSource, entry.name);
     retryWriter.dispose();
   }
+});
+
+test("selected potential orphan CLOCK identity repair is exact and remains degraded across containers", async () => {
+  const potentialClock = `CLOCK: [broken] ^${CLOCK_A}`;
+  const parsed = parseClockText(potentialClock);
+  assert.equal(parsed.kind, "malformed");
+  assert.equal(parsed.kind === "malformed" && parsed.potentialRunning, true);
+  const closedClock = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 60_000, 480, CLOCK_A);
+
+  for (const entry of [
+    { name: "bare", prefix: "> ", eol: "\n" },
+    { name: "nested-bare", prefix: "> > ", eol: "\n" },
+    { name: "bare-crlf", prefix: "> ", eol: "\r\n" },
+    { name: "bare-tab", prefix: ">\t", eol: "\n" },
+  ] as const) {
+    const selectedPath = `Daily/A-Selected-Potential-Orphan-${entry.name}.md`;
+    const duplicatePath = `Daily/Z-Unselected-Closed-Potential-Orphan-${entry.name}.md`;
+    const selectedSource = `# Selected orphan${entry.eol}${entry.prefix}${potentialClock}${entry.eol}`;
+    const repairedSelectedSource = selectedSource.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`);
+    const duplicateSource = `# Closed duplicate${entry.eol}- ${closedClock}${entry.eol}`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: selectedSource,
+      [duplicatePath]: duplicateSource,
+    });
+    const repair = exactOrphanRecoveryPlan(
+      "repair-clock-identity",
+      selectedPath,
+      `potential-orphan-${entry.name}`,
+      [],
+    );
+    const expectation = await orphanClockIdentityRepairExpectation(
+      access,
+      repair,
+      selectedPath,
+      selectedSource,
+      potentialClock,
+    );
+    assert.equal(expectation.clocks[0]?.state, "potential-running", entry.name);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const applied = await writer.commit(repair, expectation);
+
+    assert.equal(applied.outcome, "applied", `${entry.name}: ${JSON.stringify(applied)}`);
+    assert.equal(applied.confirmation, "confirmed", entry.name);
+    assert.deepEqual(applied.globalCheck, { status: "violated", runningClockIds: [] }, entry.name);
+    assert.equal(writer.blocked, false, entry.name);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, entry.name);
+    assert.equal(access.transactionCounts.has(duplicatePath), false, entry.name);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, entry.name);
+    assert.equal(await access.readText(duplicatePath), duplicateSource, entry.name);
+    writer.dispose();
+
+    const finalIndex = new WorkspaceIndex(access);
+    const finalSnapshot = await finalIndex.rebuild();
+    assert.equal(finalSnapshot.complete, true, entry.name);
+    assert.deepEqual(finalSnapshot.running, [], entry.name);
+    assert.equal(finalSnapshot.potentialRunning.length, 1, entry.name);
+    assert.equal(finalSnapshot.potentialRunning[0]?.path, selectedPath, entry.name);
+    assert.equal(finalIndex.safetyIdentity(CLOCK_NEW).kind, "unique", entry.name);
+    assert.equal(finalIndex.safetyIdentity(CLOCK_A).kind, "unique", entry.name);
+    finalIndex.dispose();
+
+    const transactionsAfterApply = [...access.transactionCounts.entries()];
+    const retryWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+    const retry = await retryWriter.commit(repair, expectation);
+    assert.equal(retry.outcome, "already-applied", `${entry.name}: ${JSON.stringify(retry)}`);
+    assert.equal(retry.confirmation, "confirmed", entry.name);
+    assert.deepEqual(retry.globalCheck, applied.globalCheck, entry.name);
+    assert.equal(retryWriter.blocked, false, entry.name);
+    assert.deepEqual([...access.transactionCounts.entries()], transactionsAfterApply, entry.name);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, entry.name);
+    assert.equal(await access.readText(duplicatePath), duplicateSource, entry.name);
+    retryWriter.dispose();
+  }
+});
+
+test("selected potential orphan repair never exempts an unselected potential CLOCK", async () => {
+  const selectedPath = "Daily/A-Selected-Potential-Orphan-Blocked.md";
+  const potentialPath = "Daily/M-Unselected-Potential-Orphan-Blocked.md";
+  const duplicatePath = "Daily/Z-Closed-Potential-Orphan-Blocked.md";
+  const selectedClock = `CLOCK: [broken] ^${CLOCK_A}`;
+  const unselectedClock = `CLOCK: [also-broken] ^${CLOCK_B}`;
+  const closedClock = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const selectedSource = `> ${selectedClock}\n`;
+  const potentialSource = `> ${unselectedClock}\n`;
+  const duplicateSource = `- ${closedClock}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [selectedPath]: selectedSource,
+    [potentialPath]: potentialSource,
+    [duplicatePath]: duplicateSource,
+  });
+  const repair = exactOrphanRecoveryPlan(
+    "repair-clock-identity",
+    selectedPath,
+    "potential-orphan-unselected-potential",
+    [],
+  );
+  const expectation = await orphanClockIdentityRepairExpectation(
+    access,
+    repair,
+    selectedPath,
+    selectedSource,
+    selectedClock,
+  );
+  const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const blocked = await writer.commit(repair, expectation);
+
+  assert.equal(blocked.outcome, "conflict", JSON.stringify(blocked));
+  assert.equal(blocked.confirmation, "confirmed-no-change");
+  assert.equal(blocked.result?.code, "potential-running-clock");
+  assert.equal(blocked.globalCheck.status, "violated");
+  assert.equal(writer.blocked, false);
+  assert.equal(access.transactionCounts.size, 0);
+  assert.equal(await access.readText(selectedPath), selectedSource);
+  assert.equal(await access.readText(potentialPath), potentialSource);
+  assert.equal(await access.readText(duplicatePath), duplicateSource);
+  writer.dispose();
 });
 
 test("malformed closed orphan identity repair rejects attached lazy and narrative CLOCK text", async () => {
@@ -3028,6 +3147,21 @@ test("orphan recovery preserves sibling blocks after list and blank paragraph bo
   const cases: Array<{ readonly name: string; readonly source: string; readonly eol: "\n" | "\r\n" }> = [
     { name: "ordinary-list-sibling-quote", source: `- ${running}\n> nested\n`, eol: "\n" },
     { name: "quoted-list-sibling-quote", source: `> - ${running}\n> > nested\n`, eol: "\n" },
+    { name: "quoted-bare-sibling-quote", source: `> ${running}\n> > nested\n`, eol: "\n" },
+    {
+      name: "quoted-bare-blank-indented-list",
+      source: `> ${running}\n>\n>   - sibling\n`,
+      eol: "\n",
+    },
+    {
+      name: "nested-bare-blank-indented-heading-crlf",
+      source: `> > ${running}\r\n> >\r\n> >   # sibling\r\n`,
+      eol: "\r\n",
+    },
+    { name: "quoted-three-space-list", source: `> ${running}\n   - sibling\n`, eol: "\n" },
+    { name: "quoted-three-space-ordered", source: `> ${running}\r\n   1. sibling\r\n`, eol: "\r\n" },
+    { name: "quoted-three-space-html", source: `> ${running}\n   <div>\n`, eol: "\n" },
+    { name: "quoted-closing-type-six-html", source: `> ${running}\n> </div>\n`, eol: "\n" },
     {
       name: "nested-tab-list-sibling-quote",
       source: `>\t>\t-\t${running}\r\n>\t>\t>\tnested\r\n`,
@@ -3120,6 +3254,8 @@ test("orphan recovery rejects genuinely nested list content and lazy continuatio
   for (const entry of [
     { name: "ordinary-nested", source: `- ${running}\n  > nested\n` },
     { name: "quoted-nested", source: `> - ${running}\n>   > nested\n` },
+    { name: "quoted-tab-padding-lf", source: `> - ${running}\n>\t> nested\n` },
+    { name: "quoted-tab-padding-crlf", source: `> - ${running}\r\n>\t> nested\r\n` },
     { name: "nested-tab", source: `>\t>\t-\t${running}\r\n>\t>\t\t>\tnested\r\n` },
     { name: "lazy", source: `> - ${running}\nlazy continuation\n` },
   ] as const) for (const action of [
@@ -3279,17 +3415,26 @@ test("orphan recovery rejects every same-paragraph continuation across container
     { name: "dash-empty", text: "- " },
     { name: "type-seven-open", text: '<x attr="v">' },
     { name: "type-seven-close", text: "</x>" },
+    { name: "invalid-backtick-info", text: "``` foo`bar" },
+    { name: "mixed-thematic-compact", text: "*-*" },
+    { name: "mixed-thematic-spaced", text: "_ - *" },
+    { name: "mixed-thematic-dash", text: "-_-" },
+    { name: "four-space-list", text: "    - sibling" },
+    { name: "four-space-ordered", text: "    1. sibling" },
+    { name: "four-space-html", text: "    <div>" },
+    { name: "tab-list", text: "\t- sibling" },
   ] as const;
   const containers = [
     { name: "ordinary", clockPrefix: "", continuationPrefix: "", eol: "\n" },
     { name: "quote", clockPrefix: "> ", continuationPrefix: "> ", eol: "\n" },
     { name: "nested-quote", clockPrefix: "> > ", continuationPrefix: "> > ", eol: "\n" },
     { name: "quote-lazy", clockPrefix: "> ", continuationPrefix: "", eol: "\n" },
+    { name: "quote-lazy-crlf", clockPrefix: "> ", continuationPrefix: "", eol: "\r\n" },
     { name: "quote-crlf", clockPrefix: "> ", continuationPrefix: "> ", eol: "\r\n" },
   ] as const;
 
   for (const continuation of continuations) for (const container of containers) {
-    if (container.name === "quote-lazy" && continuation.name === "dash-setext") continue;
+    if (container.name.startsWith("quote-lazy") && continuation.name === "dash-setext") continue;
     for (const action of ["delete-clock", "clock-out", "repair-clock-identity"] as const) {
       const caseName = `${continuation.name}-${container.name}-${action}`;
       const selectedPath = `Daily/Paragraph-${caseName}.md`;
@@ -3398,6 +3543,10 @@ test("orphan Delete permits actual paragraph-interrupting list and HTML blocks",
     { name: "bullet-plus", text: "+ continuation" },
     { name: "bullet-dash", text: "- continuation" },
     { name: "html-type-six", text: "<div>" },
+    { name: "backtick-fence", text: "``` md" },
+    { name: "tilde-fence-backtick-info", text: "~~~ foo`bar" },
+    { name: "thematic-star", text: "***" },
+    { name: "thematic-underscore", text: "___" },
   ] as const) {
     const source = `${running}\n${entry.text}\n`;
     const access = new MemoryAtomicTextAccess({ [PATH]: source });

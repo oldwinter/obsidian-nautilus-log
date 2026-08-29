@@ -1191,7 +1191,18 @@ function currentFileRunningFacts(
       }
       else if (parsed.kind === "malformed" && parsed.potentialRunning) {
         potential = true;
-        blockingPotential = true;
+        const indexedClock: IndexedClockSource = Object.freeze({
+          path,
+          fromOffset,
+          toOffset,
+          text: clockText,
+          clockId: located.clockId,
+          scope: "canonical-global",
+          parsed,
+        });
+        if (!potentialClockIsSelectedClockRepair(indexedClock, plan, expectation, "before")) {
+          blockingPotential = true;
+        }
         potentialFingerprints.add(runningFingerprint(located.clockId, path, fromOffset, toOffset, clockText, undefined));
       }
     }

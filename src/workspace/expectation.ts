@@ -559,7 +559,7 @@ function exactCanonicalOrphanClock(
   const terminalId = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(expectation.text)?.[1];
   const selectedMalformedIdentityRepair = action === "repair-clock-identity"
     && identity?.kind === "selected-repair"
-    && expectation.state === "malformed"
+    && (expectation.state === "malformed" || expectation.state === "potential-running")
     && parsed.kind === "malformed"
     && terminalId === expectation.target.id;
   const canonicalRecordRecovery = parsed.kind === "record"

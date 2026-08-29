@@ -108,11 +108,21 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 function markdownContainerDetails(lineText: string): MarkdownContainerDetails {
   let contentOffset = 0;
   let quoteDepth = 0;
+  let visualColumn = 0;
+  let inheritedIndent = 0;
   const quoteIndents: number[] = [];
   while (contentOffset < lineText.length) {
-    const marker = /^([ ]{0,3})>[ \t]?/.exec(lineText.slice(contentOffset));
+    const marker = /^([ ]{0,3})>([ \t]?)/.exec(lineText.slice(contentOffset));
     if (!marker) break;
-    quoteIndents.push(marker[1]!.length);
+    const markerColumn = visualColumn + marker[1]!.length;
+    const afterMarkerColumn = markerColumn + 1;
+    const padding = marker[2]!;
+    const afterPaddingColumn = padding === "\t"
+      ? afterMarkerColumn + (4 - afterMarkerColumn % 4)
+      : afterMarkerColumn + padding.length;
+    quoteIndents.push(inheritedIndent + marker[1]!.length);
+    inheritedIndent = Math.max(0, afterPaddingColumn - afterMarkerColumn - 1);
+    visualColumn = afterPaddingColumn;
     contentOffset += marker[0].length;
     quoteDepth += 1;
   }
@@ -711,21 +721,38 @@ function indentationWidth(text: string): number {
   return width;
 }
 
-const HTML_TYPE_SIX_PARAGRAPH_INTERRUPT = /^[ \t]*<(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
+const HTML_TYPE_SIX_PARAGRAPH_INTERRUPT = /^[ \t]*<\/?(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
 
-function paragraphInterrupts(lineText: string, sameContainer: boolean): boolean {
+function paragraphInterrupts(
+  lineText: string,
+  sameContainer: boolean,
+  containerIndent = 0,
+): boolean {
+  const leadingIndent = /^([ \t]*)/.exec(lineText)![1]!;
+  const indent = Math.max(0, indentationWidth(leadingIndent) - containerIndent);
+  const content = lineText.slice(leadingIndent.length);
   const list = LIST_ITEM.exec(lineText);
   if (list) {
+    if (indent > 3) return false;
     if (list[4]!.trim().length === 0) return false;
     const marker = list[2]!;
     if (/^[0-9]/.test(marker)) return Number(marker.slice(0, -1)) === 1;
     return true;
   }
-  if (sameContainer && /^ {0,3}-+[ \t]*$/.test(lineText)) return false;
+  if (sameContainer && indent <= 3 && /^-+[ \t]*$/.test(content)) return false;
   const html = markdownHtmlBlockStart(lineText);
-  if (html) return !html.endsOnBlank || HTML_TYPE_SIX_PARAGRAPH_INTERRUPT.test(lineText);
-  return /^ {0,3}(?:>|#{1,6}(?:[ \t]+|$)|`{3,}|~{3,})/.test(lineText)
-    || /^ {0,3}(?:[*_-][ \t]*){3,}$/.test(lineText);
+  if (html) {
+    return indent <= 3
+      && (!html.endsOnBlank || HTML_TYPE_SIX_PARAGRAPH_INTERRUPT.test(lineText));
+  }
+  const fence = indent <= 3 ? /^(`{3,}|~{3,})(.*)$/.exec(content) : undefined;
+  if (fence && (fence[1]![0] !== "`" || !fence[2]!.includes("`"))) return true;
+  return indent <= 3 && (
+    /^(?:>|#{1,6}(?:[ \t]+|$))/.test(content)
+    || /^(?:\*[ \t]*){3,}$/.test(content)
+    || /^(?:_[ \t]*){3,}$/.test(content)
+    || /^(?:-[ \t]*){3,}$/.test(content)
+  );
 }
 
 export function clockHasAttachedContent(source: string, clock: LogbookClock): boolean {
@@ -750,6 +777,7 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
         0,
         physicalClock!.fromColumn - clockContainer.contentOffset,
       )) + 1;
+  const containerIndent = clockList ? indentationWidth(clockList[1]!) : 0;
   let separatedByBlank = false;
 
   for (let index = clockIndex + 1; index < lines.length; index += 1) {
@@ -761,7 +789,7 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
       return true;
     }
     if (container.quoteDepth > clockContainer.quoteDepth) {
-      if (!clockList) return !separatedByBlank;
+      if (!clockList) return false;
       return container.quoteIndents[clockContainer.quoteDepth]! >= contentIndent;
     }
     if (/^[ \t]*$/.test(container.content)) {
@@ -769,8 +797,9 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
       continue;
     }
     const lineIndent = indentationWidth(/^([ \t]*)/.exec(container.content)![1]!);
+    if (!clockList && separatedByBlank && paragraphInterrupts(container.content, true)) return false;
     if (lineIndent >= contentIndent) return true;
-    if (paragraphInterrupts(container.content, true)) return false;
+    if (paragraphInterrupts(container.content, true, containerIndent)) return false;
     return !separatedByBlank;
   }
   return false;
