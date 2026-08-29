@@ -354,8 +354,24 @@ function timelineTooltipText(messages: Messages, item: PlannerTimelineItem): str
 }
 
 let plannerSurfaceSequence = 0;
-let plannerPatternSequence = 0;
 let plannerTooltipSequence = 0;
+const PLANNER_PATTERN_SEQUENCE = Symbol.for("spiral-day.planner.pattern-sequence");
+
+function allocatePlannerPatternIds(document: Document): Readonly<{ dots: string; hatch: string }> {
+  const stored = Reflect.get(document, PLANNER_PATTERN_SEQUENCE);
+  let sequence = Number.isSafeInteger(stored) && (stored as number) >= 0 ? stored as number : 0;
+  let dots: string;
+  let hatch: string;
+  do {
+    sequence += 1;
+    dots = `spiral-day-planner-dots-${sequence}`;
+    hatch = `spiral-day-planner-hatch-${sequence}`;
+  } while (document.getElementById(dots) !== null || document.getElementById(hatch) !== null);
+  if (!Reflect.set(document, PLANNER_PATTERN_SEQUENCE, sequence)) {
+    throw new Error("Planner pattern ID registry is not writable");
+  }
+  return Object.freeze({ dots, hatch });
+}
 
 class PlannerSurfaceController implements PlannerSurface {
   readonly #root: HTMLElement;
@@ -402,11 +418,7 @@ class PlannerSurfaceController implements PlannerSurface {
       ? createMessages()
       : createMessages({ locale: options.locale }));
     this.#onProgressIntent = options.onProgressIntent;
-    const patternSequence = ++plannerPatternSequence;
-    this.#patternIds = Object.freeze({
-      dots: `spiral-day-planner-dots-${patternSequence}`,
-      hatch: `spiral-day-planner-hatch-${patternSequence}`,
-    });
+    this.#patternIds = allocatePlannerPatternIds(root.ownerDocument);
     this.#layout = plannerLayoutForWidth(plannerContainerWidth(root), context.hostContext);
     root.classList.add("spiral-day-planner");
     root.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));

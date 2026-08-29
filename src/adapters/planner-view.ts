@@ -126,6 +126,7 @@ export class SpiralDayPlannerView extends ItemView {
   #logicalDate: LogicalDate;
   #plannerInstanceId = createPlannerInstanceId();
   #surface: PlannerSurface | undefined;
+  #surfaceContext: PlannerViewContext | undefined;
   #localeUnsubscribe: (() => void) | undefined;
 
   constructor(leaf: WorkspaceLeaf, dependencies: PlannerItemViewDependencies) {
@@ -154,17 +155,39 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   override async setState(state: unknown, _result: ViewStateResult): Promise<void> {
+    const previousLogicalDate = this.#logicalDate;
     const previousInstanceId = this.#plannerInstanceId;
-    this.#logicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
-    this.#plannerInstanceId = stateInstanceId(state) ?? this.#plannerInstanceId;
-    const context = validatePlannerViewContext(
-      this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
+    const previousContext = this.#surfaceContext;
+    const nextLogicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
+    const nextInstanceId = stateInstanceId(state) ?? previousInstanceId;
+    const nextContext = validatePlannerViewContext(
+      this.#dependencies.resolveContext(nextLogicalDate, this.leaf),
     );
-    if (this.#surface && previousInstanceId !== this.#plannerInstanceId) {
-      this.#mountSurface(context);
-    } else {
-      this.#surface?.setContext(context);
+
+    if (this.#surface && previousInstanceId !== nextInstanceId) {
+      try {
+        this.#mountSurface(nextContext, nextInstanceId);
+      } catch (error) {
+        if (previousContext) {
+          try {
+            this.#mountSurface(previousContext, previousInstanceId);
+          } catch (rollbackError) {
+            throw new AggregateError(
+              [error, rollbackError],
+              "Planner surface remount and rollback both failed",
+            );
+          }
+        }
+        this.#logicalDate = previousLogicalDate;
+        throw error;
+      }
+    } else if (this.#surface) {
+      this.#surface.setContext(nextContext);
     }
+
+    this.#logicalDate = nextLogicalDate;
+    this.#plannerInstanceId = nextInstanceId;
+    this.#surfaceContext = this.#surface ? nextContext : undefined;
   }
 
   override onResize(): void {
@@ -173,6 +196,7 @@ export class SpiralDayPlannerView extends ItemView {
       this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
     );
     this.#surface.setContext(context);
+    this.#surfaceContext = context;
     this.#surface.measure();
   }
 
@@ -184,13 +208,14 @@ export class SpiralDayPlannerView extends ItemView {
     );
     this.#localeUnsubscribe?.();
     this.#localeUnsubscribe = undefined;
-    this.#mountSurface(context);
+    this.#mountSurface(context, this.#plannerInstanceId);
+    this.#surfaceContext = context;
     this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
       this.#surface?.setLocale(locale);
     });
   }
 
-  #mountSurface(context: PlannerViewContext): void {
+  #mountSurface(context: PlannerViewContext, instanceId: string): void {
     const previous = this.#surface;
     this.#surface = undefined;
     previous?.destroy();
@@ -201,7 +226,7 @@ export class SpiralDayPlannerView extends ItemView {
       {
         collapseStore: collapseStore(documentStorage(this.contentEl.ownerDocument)),
         debugControl: this.#dependencies.debugControl?.() ?? false,
-        instanceId: this.#plannerInstanceId,
+        instanceId,
         locale: this.#dependencies.locale?.() ?? "en",
         ...(this.#dependencies.dispatchPlannerProgress
           ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }
@@ -216,6 +241,7 @@ export class SpiralDayPlannerView extends ItemView {
     this.#localeUnsubscribe = undefined;
     this.#surface?.destroy();
     this.#surface = undefined;
+    this.#surfaceContext = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
   }
 }

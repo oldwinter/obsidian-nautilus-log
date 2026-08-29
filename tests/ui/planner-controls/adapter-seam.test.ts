@@ -25,6 +25,7 @@ interface CapturedMount {
 interface AdapterSeam {
   readonly iconCalls: string[];
   readonly mounts: CapturedMount[];
+  mountFailure?: Error;
   readonly surface: {
     readonly destroyCalls: string[];
     readonly localeCalls: string[];
@@ -34,6 +35,106 @@ interface AdapterSeam {
     setLocale(locale: string): void;
   };
 }
+
+test("TC-UP-CTL-01-007 setState commits date and identity only after context and remount succeed", async () => {
+  const contextCalls: unknown[] = [];
+  const destroyCalls: string[] = [];
+  const seam: AdapterSeam = {
+    iconCalls: [],
+    mounts: [],
+    surface: {
+      destroyCalls,
+      localeCalls: [],
+      destroy() { destroyCalls.push("destroy"); },
+      measure() {},
+      setContext(context?: unknown) { contextCalls.push(context); },
+      setLocale() {},
+    },
+  };
+  (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam: AdapterSeam })
+    .__issue24PlannerAdapterSeam = seam;
+
+  const dateA = Object.freeze({ year: 2026, month: 8, day: 28 });
+  const dateB = Object.freeze({ year: 2026, month: 8, day: 29 });
+  const dateC = Object.freeze({ year: 2026, month: 8, day: 30 });
+  let resolution: "invalid" | "ready" | "throw" = "ready";
+  const dependencies: PlannerItemViewDependencies = {
+    runtime: { state: "ready", connect: () => { throw new Error("surface is seam-stubbed"); } } as never,
+    defaultLogicalDate: () => dateA,
+    resolveContext(logicalDate) {
+      if (resolution === "throw") throw new Error("resolver failed");
+      return {
+        logicalDate,
+        bounds: resolution === "invalid"
+          ? { startMinutes: 900, endMinutes: 300 }
+          : { startMinutes: 300, endMinutes: 1_440 },
+        hostContext: "main",
+      };
+    },
+  };
+  const view = createPlannerViewFactory(dependencies)({ getViewState: () => ({ state: {} }) } as never);
+  await view.setState({ logicalDate: dateA, plannerInstanceId: "atomic-a" }, {} as never);
+  await (view as unknown as { onOpen(): Promise<void> }).onOpen();
+  const mountedA = seam.mounts[0]!;
+  mountedA.options.collapseStore.save("atomic-a", true);
+
+  resolution = "throw";
+  await assert.rejects(
+    view.setState({ logicalDate: dateB, plannerInstanceId: "atomic-b" }, {} as never),
+    /resolver failed/,
+  );
+  assert.deepEqual(view.getState(), { logicalDate: dateA, plannerInstanceId: "atomic-a" });
+  assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-28");
+  assert.equal(seam.mounts.length, 1);
+  assert.deepEqual(contextCalls, []);
+  assert.deepEqual(destroyCalls, []);
+  assert.equal(mountedA.options.collapseStore.load("atomic-a"), true);
+
+  resolution = "invalid";
+  await assert.rejects(
+    view.setState({ logicalDate: dateB, plannerInstanceId: "atomic-b" }, {} as never),
+    /valid same-day chart bounds/,
+  );
+  assert.deepEqual(view.getState(), { logicalDate: dateA, plannerInstanceId: "atomic-a" });
+  assert.equal(seam.mounts.length, 1);
+  assert.deepEqual(contextCalls, []);
+  assert.deepEqual(destroyCalls, []);
+
+  resolution = "ready";
+  await view.setState({ logicalDate: dateB, plannerInstanceId: "atomic-b" }, {} as never);
+  assert.deepEqual(view.getState(), { logicalDate: dateB, plannerInstanceId: "atomic-b" });
+  assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-29");
+  assert.equal(seam.mounts.length, 2);
+  assert.equal(seam.mounts[1]!.options.instanceId, "atomic-b");
+  assert.deepEqual(destroyCalls, ["destroy"]);
+  assert.deepEqual(contextCalls, []);
+  seam.mounts[1]!.options.collapseStore.save("atomic-b", true);
+  assert.equal(seam.mounts[1]!.options.collapseStore.load("atomic-b"), true);
+
+  await view.setState({ logicalDate: dateC, plannerInstanceId: "atomic-b" }, {} as never);
+  assert.deepEqual(view.getState(), { logicalDate: dateC, plannerInstanceId: "atomic-b" });
+  assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-30");
+  assert.equal(seam.mounts.length, 2);
+  assert.equal(contextCalls.length, 1);
+  assert.deepEqual(destroyCalls, ["destroy"]);
+
+  seam.mountFailure = new Error("mount failed");
+  await assert.rejects(
+    view.setState({ logicalDate: dateA, plannerInstanceId: "atomic-c" }, {} as never),
+    /mount failed/,
+  );
+  assert.deepEqual(view.getState(), { logicalDate: dateC, plannerInstanceId: "atomic-b" });
+  assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-30");
+  assert.equal(seam.mounts.length, 4);
+  assert.equal(seam.mounts[2]!.options.instanceId, "atomic-c");
+  assert.equal(seam.mounts[3]!.options.instanceId, "atomic-b");
+  assert.equal(seam.mounts[3]!.options.collapseStore.load("atomic-b"), true);
+  assert.deepEqual(destroyCalls, ["destroy", "destroy"]);
+
+  await (view as unknown as { onClose(): Promise<void> }).onClose();
+  delete (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam?: AdapterSeam })
+    .__issue24PlannerAdapterSeam;
+});
 
 test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner lifecycle seam", async () => {
   const seam: AdapterSeam = {

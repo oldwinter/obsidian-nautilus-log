@@ -76,10 +76,22 @@ const plannerViewSeamStub = {
     });
     build.onLoad({ filter: /^planner-view$/, namespace: "planner-controls-view-test" }, () => ({
       contents: `
-        export function validatePlannerViewContext(context) { return context; }
+        export function validatePlannerViewContext(context) {
+          if (!context || !context.bounds || context.bounds.startMinutes < 0
+            || context.bounds.endMinutes > 1440
+            || context.bounds.endMinutes <= context.bounds.startMinutes) {
+            throw new RangeError("Planner view requires valid same-day chart bounds");
+          }
+          return context;
+        }
         export function mountPlannerSurface(root, runtime, context, options) {
           const seam = globalThis.__issue24PlannerAdapterSeam;
           seam.mounts.push({ context, options, root, runtime });
+          if (seam.mountFailure) {
+            const failure = seam.mountFailure;
+            seam.mountFailure = undefined;
+            throw failure;
+          }
           return seam.surface;
         }
       `,

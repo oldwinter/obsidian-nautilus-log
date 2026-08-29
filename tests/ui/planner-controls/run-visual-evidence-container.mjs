@@ -109,6 +109,8 @@ async function collectBrowserNetworkAttempts(page, phase, output) {
     const recorded = [...(globalThis.__issue24NetworkAttempts ?? [])];
     const expectedResources = new Map([
       [`script:${new URL("/harness.js", location.href).href}`, 1],
+      [`script:${new URL("/pattern-probe-a.js", location.href).href}`, 1],
+      [`script:${new URL("/pattern-probe-b.js", location.href).href}`, 1],
       [`link:${new URL("/harness.css", location.href).href}`, 1],
     ]);
     for (const entry of performance.getEntriesByType("resource")) {
@@ -331,6 +333,8 @@ try {
     const allowed = url.origin === BASE_URL && (
       (url.pathname === "/" && request.isNavigationRequest() && request.resourceType() === "document")
       || (url.pathname === "/harness.js" && request.resourceType() === "script")
+      || (["/pattern-probe-a.js", "/pattern-probe-b.js"].includes(url.pathname)
+        && request.resourceType() === "script")
       || (url.pathname === "/harness.css" && request.resourceType() === "stylesheet")
     );
     if (allowed) await route.continue();
@@ -376,6 +380,24 @@ try {
     `Visible later leaf lacks patterned pixels: ${JSON.stringify({ elapsedPatternPixels, progressPatternPixels })}`);
   await page.locator("#pattern-evidence-visible").screenshot({
     path: join(OUTPUT_DIRECTORY, "pattern-evidence-visible.png"),
+    animations: "disabled",
+    caret: "hide",
+    scale: "device",
+  });
+  await page.evaluate(() => window.issue24Harness.closePatternEvidence());
+  const patternReloadIsolation = await page.evaluate(() => window.issue24Harness.assertPatternReloadIsolation());
+  failUnless(Object.values(patternReloadIsolation).every(Boolean),
+    `Production adapter module-reload pattern isolation failed: ${JSON.stringify(patternReloadIsolation)}`);
+  const reloadElapsedPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-reload-visible .spiral-day-planner__elapsed"),
+  );
+  const reloadProgressPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-reload-visible .spiral-day-planner__progress").first(),
+  );
+  failUnless(reloadElapsedPatternPixels > 20 && reloadProgressPatternPixels > 20,
+    `Visible module-reload leaf lacks patterned pixels: ${JSON.stringify({ reloadElapsedPatternPixels, reloadProgressPatternPixels })}`);
+  await page.locator("#pattern-reload-visible").screenshot({
+    path: join(OUTPUT_DIRECTORY, "pattern-reload-visible.png"),
     animations: "disabled",
     caret: "hide",
     scale: "device",
@@ -460,7 +482,9 @@ try {
   await writeFile(join(OUTPUT_DIRECTORY, "env-vis-result.json"), `${JSON.stringify({
     adapterLifecycle,
     patternIsolation,
+    patternReloadIsolation,
     patternPixels: { elapsed: elapsedPatternPixels, progress: progressPatternPixels },
+    reloadPatternPixels: { elapsed: reloadElapsedPatternPixels, progress: reloadProgressPatternPixels },
     interactionChecks: interactions.length,
     matrixStates: matrix.length,
     pluginRequests: browserNetworkAttempts.length,
@@ -469,7 +493,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;

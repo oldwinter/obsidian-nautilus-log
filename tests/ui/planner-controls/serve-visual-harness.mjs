@@ -51,7 +51,7 @@ const obsidianBrowserStub = {
     }));
   },
 };
-const [bundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
+const [bundle, patternProbeBundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
   build({
     absWorkingDir: process.cwd(),
     bundle: true,
@@ -63,6 +63,16 @@ const [bundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
     target: "es2021",
     write: false,
   }),
+  build({
+    absWorkingDir: process.cwd(),
+    bundle: true,
+    entryPoints: ["tests/ui/planner-controls/pattern-probe.ts"],
+    format: "esm",
+    logLevel: "silent",
+    platform: "browser",
+    target: "es2021",
+    write: false,
+  }),
   readFile("tests/ui/planner-controls/visual-harness.html"),
   readFile("styles/planner.css"),
   readFile("styles/theme.css"),
@@ -70,12 +80,19 @@ const [bundle, html, plannerCss, themeCss, a11yCss] = await Promise.all([
 ]);
 const javascript = bundle.outputFiles[0]?.contents;
 if (!javascript) throw new Error("Issue #24 visual harness bundle was empty");
+const patternProbeJavascript = patternProbeBundle.outputFiles[0]?.contents;
+if (!patternProbeJavascript) throw new Error("Issue #24 pattern probe bundle was empty");
 const css = Buffer.concat([plannerCss, Buffer.from("\n"), themeCss, Buffer.from("\n"), a11yCss]);
 
 const server = createServer((request, response) => {
   if (request.url === "/harness.js") {
     response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
     response.end(javascript);
+    return;
+  }
+  if (request.url === "/pattern-probe-a.js" || request.url === "/pattern-probe-b.js") {
+    response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
+    response.end(patternProbeJavascript);
     return;
   }
   if (request.url === "/harness.css") {

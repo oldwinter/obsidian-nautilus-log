@@ -120,6 +120,7 @@ declare global {
       assertLifecycleReparenting(): Promise<boolean>;
       assertMediaQueryLifecycle(): Promise<boolean>;
       assertPatternIsolation(): Promise<Readonly<Record<string, boolean>>>;
+      assertPatternReloadIsolation(): Promise<Readonly<Record<string, boolean>>>;
       assertPlaybackStopsOnContextChange(): Promise<boolean>;
       assertPlaybackStopsOnRuntimeState(): Promise<boolean>;
       assertReplicaRemount(): boolean;
@@ -178,6 +179,16 @@ let adapterLocale: SupportedLocale = "en";
 const adapterLocaleListeners = new Set<(locale: string) => void>();
 let patternEvidenceContainer: HTMLElement | undefined;
 let patternEvidenceViews: SpiralDayPlannerView[] = [];
+let patternReloadSurfaces: PlannerSurface[] = [];
+let patternReloadFrame: HTMLIFrameElement | undefined;
+
+type PatternProbeModule = Readonly<{
+  mountPatternProbe: typeof mountPlannerSurface;
+}>;
+
+function importPatternProbe(path: string): Promise<PatternProbeModule> {
+  return import(path) as Promise<PatternProbeModule>;
+}
 
 const items: HarnessItem[] = [
   {
@@ -1119,6 +1130,112 @@ window.issue24Harness = {
       laterLeafVisible,
     });
   },
+  async assertPatternReloadIsolation() {
+    await this.closePatternEvidence();
+    const [firstModule, reloadedModule] = await Promise.all([
+      importPatternProbe("/pattern-probe-a.js"),
+      importPatternProbe("/pattern-probe-b.js"),
+    ]);
+    const container = document.createElement("section");
+    container.id = "pattern-reload-evidence";
+    container.style.background = "var(--background-primary)";
+    container.style.width = "920px";
+    document.body.append(container);
+    patternEvidenceContainer = container;
+    const context = { logicalDate: DISPLAYED_DATE, bounds: BOUNDS, hostContext: "main" } as const;
+
+    const oldWrapper = document.createElement("div");
+    oldWrapper.className = "planner-leaf";
+    oldWrapper.style.width = "920px";
+    const oldRoot = document.createElement("div");
+    oldRoot.style.width = "900px";
+    oldWrapper.append(oldRoot);
+    container.append(oldWrapper);
+    patternReloadSurfaces.push(firstModule.mountPatternProbe(
+      oldRoot,
+      runtime,
+      context,
+      { instanceId: "pattern-before-module-reload" },
+    ));
+    await nextFrame();
+    oldWrapper.style.display = "none";
+
+    const visibleWrapper = document.createElement("div");
+    visibleWrapper.className = "planner-leaf";
+    visibleWrapper.style.width = "920px";
+    const visibleRoot = document.createElement("div");
+    visibleRoot.id = "pattern-reload-visible";
+    visibleRoot.style.width = "900px";
+    visibleWrapper.append(visibleRoot);
+    container.append(visibleWrapper);
+    patternReloadSurfaces.push(reloadedModule.mountPatternProbe(
+      visibleRoot,
+      runtime,
+      context,
+      { instanceId: "pattern-after-module-reload" },
+    ));
+    await nextFrame();
+    await nextFrame();
+
+    const patternState = (root: HTMLElement) => {
+      const svg = root.querySelector<SVGSVGElement>("svg.spiral-day-planner__spiral")!;
+      const patterns = [...svg.querySelectorAll<SVGPatternElement>("defs pattern")];
+      const hatch = patterns.find((pattern) => pattern.querySelector(".spiral-day-planner__hatch-line"))!;
+      const dots = patterns.find((pattern) => pattern.querySelector(".spiral-day-planner__progress-dot"))!;
+      const elapsed = svg.querySelector<SVGPathElement>(".spiral-day-planner__elapsed")!;
+      const progress = svg.querySelector<SVGPathElement>(".spiral-day-planner__progress")!;
+      return { dots, elapsed, hatch, progress, svg };
+    };
+    const oldState = patternState(oldRoot);
+    const visibleState = patternState(visibleRoot);
+    const idsUniqueAcrossModuleReload = new Set([
+      oldState.hatch.id,
+      oldState.dots.id,
+      visibleState.hatch.id,
+      visibleState.dots.id,
+    ]).size === 4;
+    const visibleFillsResolveWithinOwningSurface = (
+      visibleState.elapsed.style.fill === `url(\"#${visibleState.hatch.id}\")`
+      && visibleState.progress.style.fill === `url(\"#${visibleState.dots.id}\")`
+      && document.getElementById(visibleState.hatch.id) === visibleState.hatch
+      && document.getElementById(visibleState.dots.id) === visibleState.dots
+      && visibleState.svg.contains(visibleState.hatch)
+      && visibleState.svg.contains(visibleState.dots)
+    );
+
+    const frame = document.createElement("iframe");
+    frame.style.height = "1000px";
+    frame.style.left = "-10000px";
+    frame.style.position = "fixed";
+    frame.style.width = "920px";
+    document.body.append(frame);
+    patternReloadFrame = frame;
+    const frameDocument = frame.contentDocument!;
+    const frameRoot = frameDocument.createElement("div");
+    frameRoot.style.width = "900px";
+    frameDocument.body.append(frameRoot);
+    patternReloadSurfaces.push(reloadedModule.mountPatternProbe(
+      frameRoot,
+      runtime,
+      context,
+      { instanceId: "pattern-other-document" },
+    ));
+    await nextFrame();
+    const framePatterns = [...frameRoot.querySelectorAll<SVGPatternElement>("defs pattern")];
+    const differentDocumentsAllocateIndependently = framePatterns.length === 2
+      && framePatterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern)
+      && framePatterns.every((pattern) => document.getElementById(pattern.id) !== pattern);
+
+    return Object.freeze({
+      differentDocumentsAllocateIndependently,
+      earlierModuleSurfaceHidden: getComputedStyle(oldWrapper).display === "none",
+      idsUniqueAcrossModuleReload,
+      laterModuleSurfaceVisible: visibleState.svg.getBoundingClientRect().width > 0
+        && visibleState.elapsed.getBoundingClientRect().width > 0
+        && visibleState.progress.getBoundingClientRect().width > 0,
+      visibleFillsResolveWithinOwningSurface,
+    });
+  },
   assertAcceptance,
   assertConnectFailureState() {
     const root = document.createElement("div");
@@ -1557,6 +1674,10 @@ window.issue24Harness = {
       await (view as unknown as { onClose(): Promise<void> }).onClose();
     }
     patternEvidenceViews = [];
+    for (const surface of patternReloadSurfaces) surface.destroy();
+    patternReloadSurfaces = [];
+    patternReloadFrame?.remove();
+    patternReloadFrame = undefined;
     patternEvidenceContainer?.remove();
     patternEvidenceContainer = undefined;
   },
