@@ -38,6 +38,13 @@ function failUnless(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function assertionPassed(result) {
+  if (typeof result === "boolean") return result;
+  if (result === null || typeof result !== "object" || Array.isArray(result)) return false;
+  const fields = Object.values(result);
+  return fields.length > 0 && fields.every((field) => field === true);
+}
+
 function goldenRelativePath(capture) {
   for (const value of [profile.fixture, capture.state, capture.locale, capture.theme, profile.revision]) {
     failUnless(/^[a-zA-Z0-9-]+$/.test(value), `Unsafe ENV-VIS path component: ${String(value)}`);
@@ -457,9 +464,13 @@ try {
   });
   await page.evaluate(() => window.issue24Harness.closePatternEvidence());
   const interactionNames = [
+    "assertAllocatorReentrancyAndBounds",
     "assertConnectFailureState",
+    "assertConstructorRollback",
     "assertContextTransaction",
+    "assertDisconnectRetirement",
     "assertRuntimeProbeInterval",
+    "assertSnapshotOrdering",
     "assertExternalFocusPreserved",
     "assertKeyboardPointerParity",
     "assertLayoutFocusRestoration",
@@ -473,12 +484,18 @@ try {
   const interactions = await page.evaluate(async (names) => {
     const results = [];
     for (const name of names) {
-      results.push({ name, passed: await window.issue24Harness[name]() });
+      const result = await window.issue24Harness[name]();
+      results.push({ name, result });
     }
     return results;
   }, interactionNames);
-  failUnless(interactions.every(({ passed }) => passed),
-    `Planner interaction evidence failed: ${JSON.stringify(interactions)}`);
+  const evaluatedInteractions = interactions.map(({ name, result }) => ({
+    name,
+    passed: assertionPassed(result),
+    result,
+  }));
+  failUnless(evaluatedInteractions.every(({ passed }) => passed),
+    `Planner interaction evidence failed: ${JSON.stringify(evaluatedInteractions)}`);
   await collectBrowserNetworkAttempts(page, "adapter-interactions", browserNetworkAttempts);
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.waitForFunction(() => window.issue24Harness !== undefined);
@@ -542,7 +559,7 @@ try {
     patternPixels: { elapsed: elapsedPatternPixels, progress: progressPatternPixels },
     reloadPatternPixels: { elapsed: reloadElapsedPatternPixels, progress: reloadProgressPatternPixels },
     hostilePatternPixels: { elapsed: hostileElapsedPatternPixels, progress: hostileProgressPatternPixels },
-    interactionChecks: interactions.length,
+    interactionChecks: evaluatedInteractions.length,
     matrixStates: matrix.length,
     pluginRequests: browserNetworkAttempts.length,
     blockedRequests: blockedRequests.length,
@@ -550,7 +567,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true adapterWrapperPixels=${adapterWrapperEvidence.map(({ pixels }) => pixels).join("/")} patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true adapterWrapperPixels=${adapterWrapperEvidence.map(({ pixels }) => pixels).join("/")} patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${evaluatedInteractions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;

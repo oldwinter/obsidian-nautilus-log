@@ -52,6 +52,7 @@ const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
 });
 
 const COLLAPSE_STORAGE_PREFIX = "spiral-day:planner-collapsed:";
+const ADAPTER_CLEANUP_DRAIN_ATTEMPTS = 3;
 const transientCollapseStore = createMemoryPlannerCollapseStore();
 let plannerInstanceSequence = 0;
 
@@ -128,6 +129,7 @@ export class SpiralDayPlannerView extends ItemView {
   #surface: PlannerSurface | undefined;
   #surfaceRoot: HTMLElement | undefined;
   #surfaceContext: PlannerViewContext | undefined;
+  readonly #retiredLocaleUnsubscribes: Array<() => void> = [];
   readonly #retiredSurfaces: PlannerSurface[] = [];
   #localeUnsubscribe: (() => void) | undefined;
 
@@ -173,7 +175,7 @@ export class SpiralDayPlannerView extends ItemView {
     this.#logicalDate = nextLogicalDate;
     this.#plannerInstanceId = nextInstanceId;
     this.#surfaceContext = this.#surface ? nextContext : undefined;
-    this.#retryRetiredSurfaces();
+    this.#retryRetiredResources();
   }
 
   override onResize(): void {
@@ -187,19 +189,21 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   protected override async onOpen(): Promise<void> {
+    const previousLocaleUnsubscribe = this.#localeUnsubscribe;
+    this.#localeUnsubscribe = undefined;
+    if (previousLocaleUnsubscribe) this.#retireLocaleSubscription(previousLocaleUnsubscribe);
+    this.#drainRetiredResources();
     this.contentEl.replaceChildren();
     this.contentEl.classList.add("spiral-day-planner-view");
     const context = validatePlannerViewContext(
       this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
     );
-    this.#localeUnsubscribe?.();
-    this.#localeUnsubscribe = undefined;
     this.#replaceSurface(this.#stageSurface(context, this.#plannerInstanceId));
     this.#surfaceContext = context;
+    this.#drainRetiredResources();
     this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
       this.#surface?.setLocale(locale);
     });
-    this.#retryRetiredSurfaces();
   }
 
   #stageSurface(
@@ -250,35 +254,67 @@ export class SpiralDayPlannerView extends ItemView {
     }
   }
 
-  #retireSurface(surface: PlannerSurface, root?: HTMLElement): void {
+  #retireSurface(surface: PlannerSurface, root?: HTMLElement): unknown {
     root?.remove();
     try {
       surface.destroy();
-    } catch {
+      return undefined;
+    } catch (error) {
       if (!this.#retiredSurfaces.includes(surface)) this.#retiredSurfaces.push(surface);
+      return error;
     }
   }
 
-  #retryRetiredSurfaces(): void {
-    const retired = this.#retiredSurfaces.splice(0);
-    for (const surface of retired) this.#retireSurface(surface);
+  #retireLocaleSubscription(unsubscribe: () => void): unknown {
+    try {
+      unsubscribe();
+      return undefined;
+    } catch (error) {
+      if (!this.#retiredLocaleUnsubscribes.includes(unsubscribe)) {
+        this.#retiredLocaleUnsubscribes.push(unsubscribe);
+      }
+      return error;
+    }
+  }
+
+  #retryRetiredResources(attempts = 1): readonly unknown[] {
+    let errors: unknown[] = [];
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (this.#retiredLocaleUnsubscribes.length === 0 && this.#retiredSurfaces.length === 0) break;
+      errors = [];
+      const localeUnsubscribes = this.#retiredLocaleUnsubscribes.splice(0);
+      for (const unsubscribe of localeUnsubscribes) {
+        const error = this.#retireLocaleSubscription(unsubscribe);
+        if (error !== undefined) errors.push(error);
+      }
+      const surfaces = this.#retiredSurfaces.splice(0);
+      for (const surface of surfaces) {
+        const error = this.#retireSurface(surface);
+        if (error !== undefined) errors.push(error);
+      }
+    }
+    return errors;
+  }
+
+  #drainRetiredResources(): void {
+    const errors = this.#retryRetiredResources(ADAPTER_CLEANUP_DRAIN_ATTEMPTS);
+    if (this.#retiredLocaleUnsubscribes.length > 0 || this.#retiredSurfaces.length > 0) {
+      throw new AggregateError(errors, "Planner adapter cleanup remains incomplete");
+    }
   }
 
   protected override async onClose(): Promise<void> {
-    try {
-      this.#localeUnsubscribe?.();
-    } catch {
-      // Closing the view must still retire every mounted surface.
-    }
+    const localeUnsubscribe = this.#localeUnsubscribe;
     this.#localeUnsubscribe = undefined;
+    if (localeUnsubscribe) this.#retireLocaleSubscription(localeUnsubscribe);
     const surface = this.#surface;
     const root = this.#surfaceRoot;
     this.#surface = undefined;
     this.#surfaceRoot = undefined;
     if (surface) this.#retireSurface(surface, root);
-    this.#retryRetiredSurfaces();
     this.#surfaceContext = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
+    this.#drainRetiredResources();
   }
 }
 

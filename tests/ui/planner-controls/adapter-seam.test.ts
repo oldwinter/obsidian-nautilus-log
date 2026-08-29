@@ -355,7 +355,83 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   seam.surface.destroyFailuresRemaining = 1;
   await (view as unknown as { onClose(): Promise<void> }).onClose();
   assert.deepEqual(seam.surface.destroyCalls, ["destroy", "destroy", "destroy", "destroy"]);
-  assert.equal(unsubscribeCalls, 2);
+  assert.equal(unsubscribeCalls, 3);
+
+  delete (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam?: AdapterSeam })
+    .__issue24PlannerAdapterSeam;
+});
+
+test("TC-UP-CTL-01-008 adapter owns failed terminal cleanup until reopen or close drains it", async () => {
+  const surface: AdapterSurface = {
+    destroyCalls: [],
+    destroyFailuresRemaining: 0,
+    localeCalls: [],
+    measureCalls: [],
+    measureFailuresRemaining: 0,
+    destroy() {
+      this.destroyCalls.push("destroy");
+      if (this.destroyFailuresRemaining > 0) {
+        this.destroyFailuresRemaining -= 1;
+        throw new Error("surface destroy failed before cleanup");
+      }
+    },
+    measure() { this.measureCalls.push("measure"); },
+    setContext() {},
+    setLocale(locale) { this.localeCalls.push(locale); },
+  };
+  const seam: AdapterSeam = { iconCalls: [], mounts: [], surface };
+  (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam: AdapterSeam })
+    .__issue24PlannerAdapterSeam = seam;
+  const localeListeners = new Set<(locale: string) => void>();
+  let unsubscribeCalls = 0;
+  let unsubscribeFailuresRemaining = 0;
+  const view = createPlannerViewFactory({
+    runtime: { state: "ready", connect: () => { throw new Error("surface is seam-stubbed"); } } as never,
+    defaultLogicalDate: () => ({ year: 2026, month: 8, day: 28 }),
+    resolveContext: (logicalDate) => ({
+      logicalDate,
+      bounds: { startMinutes: 300, endMinutes: 1_440 },
+      hostContext: "main",
+    }),
+    subscribeLocale(listener) {
+      localeListeners.add(listener);
+      return () => {
+        unsubscribeCalls += 1;
+        if (unsubscribeFailuresRemaining > 0) {
+          unsubscribeFailuresRemaining -= 1;
+          throw new Error("locale unsubscribe failed before unregistering");
+        }
+        localeListeners.delete(listener);
+      };
+    },
+  })({ getViewState: () => ({ state: {} }) } as never);
+
+  await (view as unknown as { onOpen(): Promise<void> }).onOpen();
+  assert.equal(localeListeners.size, 1);
+  unsubscribeFailuresRemaining = 4;
+  surface.destroyFailuresRemaining = 2;
+  await assert.rejects(
+    (view as unknown as { onClose(): Promise<void> }).onClose(),
+    /planner adapter cleanup remains incomplete/i,
+  );
+  assert.equal(localeListeners.size, 1);
+  assert.equal(unsubscribeCalls, 4);
+  assert.deepEqual(surface.destroyCalls, ["destroy", "destroy", "destroy"]);
+
+  await (view as unknown as { onOpen(): Promise<void> }).onOpen();
+  assert.equal(localeListeners.size, 1);
+  assert.equal(unsubscribeCalls, 5);
+  assert.equal(seam.mounts.length, 2);
+
+  unsubscribeFailuresRemaining = 2;
+  surface.destroyFailuresRemaining = 2;
+  await (view as unknown as { onClose(): Promise<void> }).onClose();
+  assert.equal(localeListeners.size, 0);
+  assert.equal(unsubscribeCalls, 8);
+  assert.deepEqual(surface.destroyCalls, [
+    "destroy", "destroy", "destroy",
+    "destroy", "destroy", "destroy",
+  ]);
 
   delete (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam?: AdapterSeam })
     .__issue24PlannerAdapterSeam;
