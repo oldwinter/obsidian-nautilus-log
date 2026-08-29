@@ -168,6 +168,7 @@
     {
       "ticket": 26,
       "allowed_module_boundaries": [
+        "src/core/execution.ts",
         "src/runtime/execution/clock-index.ts",
         "src/runtime/execution/commands.ts",
         "src/runtime/execution/execution-state.ts",
@@ -176,6 +177,7 @@
         "src/runtime/execution/recovery.ts",
         "src/runtime/execution/time-continuity.ts",
         "src/runtime/system-clock.ts",
+        "tests/core/execution/",
         "tests/runtime/execution/"
       ],
       "allowed_external_boundaries": [],
@@ -200,6 +202,7 @@
         "src/i18n/locales/en/execution.ts",
         "src/i18n/locales/zh-CN/execution.ts",
         "src/main.ts",
+        "src/runtime/execution/application.ts",
         "src/ui/execution/active-task-view.ts",
         "src/ui/execution/panel.ts",
         "src/ui/execution/plan-view.ts",
