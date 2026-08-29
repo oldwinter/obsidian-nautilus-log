@@ -113,6 +113,7 @@ declare global {
       assertAdapterLifecycle(): Promise<Readonly<Record<string, boolean>>>;
       assertAcceptance(): HarnessState;
       assertConnectFailureState(): boolean;
+      assertContextTransaction(): Promise<Readonly<Record<string, boolean>>>;
       assertRuntimeProbeInterval(): boolean;
       assertExternalFocusPreserved(): boolean;
       assertKeyboardPointerParity(): Promise<boolean>;
@@ -121,6 +122,7 @@ declare global {
       assertMediaQueryLifecycle(): Promise<boolean>;
       assertPatternIsolation(): Promise<Readonly<Record<string, boolean>>>;
       assertPatternReloadIsolation(): Promise<Readonly<Record<string, boolean>>>;
+      assertPatternRegistryHostility(): Promise<Readonly<Record<string, boolean>>>;
       assertPlaybackStopsOnContextChange(): Promise<boolean>;
       assertPlaybackStopsOnRuntimeState(): Promise<boolean>;
       assertReplicaRemount(): boolean;
@@ -180,7 +182,7 @@ const adapterLocaleListeners = new Set<(locale: string) => void>();
 let patternEvidenceContainer: HTMLElement | undefined;
 let patternEvidenceViews: SpiralDayPlannerView[] = [];
 let patternReloadSurfaces: PlannerSurface[] = [];
-let patternReloadFrame: HTMLIFrameElement | undefined;
+let patternReloadFrames: HTMLIFrameElement[] = [];
 
 type PatternProbeModule = Readonly<{
   mountPatternProbe: typeof mountPlannerSurface;
@@ -842,7 +844,8 @@ window.issue24Harness = {
     }, {} as never);
     await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
     await nextFrame();
-    const opened = adapterRoot.classList.contains("spiral-day-planner")
+    const adapterSurfaceRoot = () => adapterRoot.querySelector<HTMLElement>(":scope > .spiral-day-planner");
+    const opened = adapterSurfaceRoot() !== null
       && adapterRoot.querySelectorAll("[data-obsidian-icon] svg.lucide").length >= 4;
     const mainSchedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
     const mainCompactScheduleInitiallyOpen = mainSchedule?.open === true;
@@ -857,12 +860,16 @@ window.issue24Harness = {
     adapterRoot.style.width = "541px";
     adapterView.onResize();
     await nextFrame();
-    const mainReachedWide = adapterRoot.dataset.layout === "wide"
+    const mainReachedWide = adapterSurfaceRoot()?.dataset.layout === "wide"
       && adapterRoot.querySelector(".spiral-day-planner__schedule") === null;
     adapterRoot.style.width = "540px";
     adapterView.onResize();
     await nextFrame();
-    const mainWideToCompactScheduleOpen = adapterRoot.dataset.layout === "compact"
+    const mainWideToCompactLayout = adapterSurfaceRoot()?.dataset.layout === "compact";
+    const mainWideToCompactSchedulePresent = adapterRoot
+      .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule") !== null;
+    const mainWideToCompactScheduleOpen = mainWideToCompactLayout
+      && mainWideToCompactSchedulePresent
       && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
     adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")
       ?.querySelector<HTMLElement>("summary")?.click();
@@ -986,12 +993,12 @@ window.issue24Harness = {
     adapterRoot.style.width = "541px";
     adapterView.onResize();
     await nextFrame();
-    const sidebarReachedWide = adapterRoot.dataset.layout === "wide"
+    const sidebarReachedWide = adapterSurfaceRoot()?.dataset.layout === "wide"
       && adapterRoot.querySelector(".spiral-day-planner__schedule") === null;
     adapterRoot.style.width = "540px";
     adapterView.onResize();
     await nextFrame();
-    const sidebarWideToCompactScheduleFolded = adapterRoot.dataset.layout === "compact"
+    const sidebarWideToCompactScheduleFolded = adapterSurfaceRoot()?.dataset.layout === "compact"
       && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
     adapterRoot.style.width = "520px";
     adapterView.onResize();
@@ -1002,7 +1009,7 @@ window.issue24Harness = {
     await (adapterView as unknown as { onClose(): Promise<void> }).onClose();
     const tornDown = adapterLocaleListeners.size === 0
       && adapterRoot.childElementCount === 0
-      && !adapterRoot.classList.contains("spiral-day-planner");
+      && adapterSurfaceRoot() === null;
     await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
     await nextFrame();
     const restoredB = adapterView.getState().plannerInstanceId === identityB
@@ -1028,6 +1035,8 @@ window.issue24Harness = {
       mainScheduleCanFold,
       mainScheduleCanReopen,
       mainWideToCompactScheduleOpen,
+      mainWideToCompactLayout,
+      mainWideToCompactSchedulePresent,
       opened,
       ordinaryDebugAbsentAfterDisable,
       ordinaryDebugAbsentInitially,
@@ -1209,7 +1218,7 @@ window.issue24Harness = {
     frame.style.position = "fixed";
     frame.style.width = "920px";
     document.body.append(frame);
-    patternReloadFrame = frame;
+    patternReloadFrames.push(frame);
     const frameDocument = frame.contentDocument!;
     const frameRoot = frameDocument.createElement("div");
     frameRoot.style.width = "900px";
@@ -1234,6 +1243,103 @@ window.issue24Harness = {
         && visibleState.elapsed.getBoundingClientRect().width > 0
         && visibleState.progress.getBoundingClientRect().width > 0,
       visibleFillsResolveWithinOwningSurface,
+    });
+  },
+  async assertPatternRegistryHostility() {
+    await this.closePatternEvidence();
+    const module = await importPatternProbe("/pattern-probe-a.js");
+    const registry = Symbol.for("spiral-day.planner.pattern-sequence");
+    const context = { logicalDate: DISPLAYED_DATE, bounds: BOUNDS, hostContext: "main" } as const;
+    const container = document.createElement("section");
+    container.id = "pattern-hostile-evidence";
+    container.style.background = "var(--background-primary)";
+    container.style.width = "920px";
+    document.body.append(container);
+    patternEvidenceContainer = container;
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, registry);
+    const visibleRoot = document.createElement("div");
+    visibleRoot.id = "pattern-hostile-visible";
+    visibleRoot.style.width = "900px";
+    container.append(visibleRoot);
+    let nonWritableRegistryRenders = false;
+    try {
+      Object.defineProperty(document, registry, {
+        configurable: true,
+        value: 0,
+        writable: false,
+      });
+      patternReloadSurfaces.push(module.mountPatternProbe(
+        visibleRoot,
+        runtime,
+        context,
+        { instanceId: "pattern-hostile-non-writable" },
+      ));
+      await nextFrame();
+      nonWritableRegistryRenders = visibleRoot.querySelectorAll("defs pattern").length === 2;
+    } finally {
+      if (originalDescriptor) Object.defineProperty(document, registry, originalDescriptor);
+      else Reflect.deleteProperty(document, registry);
+    }
+
+    const hostileCases = ["getter-throws", "setter-throws", "max-safe-wrap"] as const;
+    const results = new Map<string, boolean>();
+    for (const hostileCase of hostileCases) {
+      const frame = document.createElement("iframe");
+      frame.style.height = "1000px";
+      frame.style.left = "-10000px";
+      frame.style.position = "fixed";
+      frame.style.width = "920px";
+      document.body.append(frame);
+      patternReloadFrames.push(frame);
+      const frameDocument = frame.contentDocument!;
+      if (hostileCase === "getter-throws") {
+        Object.defineProperty(frameDocument, registry, {
+          configurable: true,
+          get() { throw new Error("hostile registry getter"); },
+        });
+      } else if (hostileCase === "setter-throws") {
+        Object.defineProperty(frameDocument, registry, {
+          configurable: true,
+          get() { return 0; },
+          set() { throw new Error("hostile registry setter"); },
+        });
+      } else {
+        Object.defineProperty(frameDocument, registry, {
+          configurable: true,
+          value: Number.MAX_SAFE_INTEGER,
+          writable: true,
+        });
+        for (const kind of ["dots", "hatch"] as const) {
+          const occupied = frameDocument.createElement("div");
+          occupied.id = `spiral-day-planner-${kind}-1`;
+          frameDocument.body.append(occupied);
+        }
+      }
+      const root = frameDocument.createElement("div");
+      root.style.width = "900px";
+      frameDocument.body.append(root);
+      try {
+        patternReloadSurfaces.push(module.mountPatternProbe(
+          root,
+          runtime,
+          context,
+          { instanceId: `pattern-hostile-${hostileCase}` },
+        ));
+        await nextFrame();
+        const patterns = [...root.querySelectorAll<SVGPatternElement>("defs pattern")];
+        results.set(hostileCase, patterns.length === 2
+          && new Set(patterns.map((pattern) => pattern.id)).size === 2
+          && patterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern));
+      } catch {
+        results.set(hostileCase, false);
+      }
+    }
+    return Object.freeze({
+      getterThrowFallsBack: results.get("getter-throws") === true,
+      maxSafeWrapSkipsOccupied: results.get("max-safe-wrap") === true,
+      nonWritableRegistryRenders,
+      setterThrowFallsBack: results.get("setter-throws") === true,
     });
   },
   assertAcceptance,
@@ -1261,6 +1367,121 @@ window.issue24Harness = {
     surface.destroy();
     root.remove();
     return passed;
+  },
+  async assertContextTransaction() {
+    const root = document.createElement("div");
+    root.style.width = "920px";
+    document.body.append(root);
+    const dateB = Object.freeze({ year: 2026, month: 8, day: 29 });
+    const boundsB = Object.freeze({ startMinutes: 10 * 60, endMinutes: 12 * 60 });
+    const snapshotFor = (logicalDate: LogicalDate, bounds = BOUNDS) => {
+      const base = projection();
+      const sourcePath = `Journal/${logicalDate.year}-${String(logicalDate.month).padStart(2, "0")}-${String(logicalDate.day).padStart(2, "0")}.md`;
+      const day = projectDay({
+        displayedDate: logicalDate,
+        today: logicalDate,
+        ...bounds,
+        nowMinutes: bounds.startMinutes + 30,
+      });
+      return confirmedSnapshot(createProjectionRevision({
+        generation: ++generation,
+        path: sourcePath,
+        sourceFingerprint: `sha256:context-transaction-${logicalDate.day}`,
+        settingsVersion: 1,
+        logicalDate,
+        minuteBucket: bounds.startMinutes + 30,
+        timeZone: "Asia/Shanghai",
+        grammarVersion: "v1",
+      }), Object.freeze({
+        ...base,
+        contextKey: sourcePath.slice("Journal/".length, -".md".length),
+        sourcePath,
+        displayedDate: logicalDate,
+        today: logicalDate,
+        day,
+      }));
+    };
+    let mode: "rollback-fails" | "rollback-succeeds" | "success" = "rollback-succeeds";
+    let disconnectCalls = 0;
+    let connectCalls = 0;
+    const contextDays: number[] = [];
+    const transactionRuntime: PlannerRuntimePort = {
+      state: "ready",
+      connect(context, listener) {
+        connectCalls += 1;
+        listener(snapshotFor(context.logicalDate));
+        return Object.freeze({
+          setContext(nextContext) {
+            contextDays.push(nextContext.logicalDate.day);
+            if (nextContext.logicalDate.day === dateB.day) {
+              listener(snapshotFor(dateB, boundsB));
+              if (mode !== "success") throw new Error("candidate context failed");
+              return;
+            }
+            listener(snapshotFor(DISPLAYED_DATE));
+            if (mode === "rollback-fails") throw new Error("rollback context failed");
+          },
+          setVisible() {},
+          refresh() {},
+          disconnect() { disconnectCalls += 1; },
+        });
+      },
+    };
+    const surface = mountPlannerSurface(root, transactionRuntime, {
+      logicalDate: DISPLAYED_DATE,
+      bounds: BOUNDS,
+      hostContext: "main",
+    }, { instanceId: "context-transaction" });
+    await nextFrame();
+    const title = () => root.querySelector(".spiral-day-planner__center-title")?.textContent;
+    const hours = () => [...root.querySelectorAll(".spiral-day-planner__hour")]
+      .map((element) => element.textContent);
+
+    let rollbackSuccessThrew = false;
+    try {
+      surface.setContext({ logicalDate: dateB, bounds: boundsB, hostContext: "main" });
+    } catch {
+      rollbackSuccessThrew = true;
+    }
+    await nextFrame();
+    const rollbackSuccessPreservedA = title() === "2026-08-28"
+      && hours().includes("5")
+      && contextDays.join(",") === "29,28"
+      && disconnectCalls === 0;
+
+    mode = "rollback-fails";
+    let rollbackFailureThrew = false;
+    try {
+      surface.setContext({ logicalDate: dateB, bounds: boundsB, hostContext: "main" });
+    } catch {
+      rollbackFailureThrew = true;
+    }
+    await nextFrame();
+    const unavailable = root.querySelector<HTMLElement>(".spiral-day-planner__status");
+    const rollbackFailureDisconnected = disconnectCalls === 1
+      && unavailable?.dataset.state === "unavailable"
+      && unavailable.textContent === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
+
+    surface.probeRuntimeNow();
+    await nextFrame();
+    const probeRecoveredA = connectCalls === 2 && title() === "2026-08-28" && hours().includes("5");
+    mode = "success";
+    surface.setContext({ logicalDate: dateB, bounds: boundsB, hostContext: "main" });
+    await nextFrame();
+    const successCommittedB = title() === "2026-08-29"
+      && !hours().includes("5")
+      && hours().includes("10");
+
+    surface.destroy();
+    root.remove();
+    return Object.freeze({
+      probeRecoveredA,
+      rollbackFailureDisconnected,
+      rollbackFailureThrew,
+      rollbackSuccessPreservedA,
+      rollbackSuccessThrew,
+      successCommittedB,
+    });
   },
   assertRuntimeProbeInterval() {
     const originalSetInterval = window.setInterval;
@@ -1579,6 +1800,8 @@ window.issue24Harness = {
     const stopped = !state().primary.playbackRunning;
     primary.setContext({ logicalDate: DISPLAYED_DATE, bounds: BOUNDS, hostContext: "main" });
     await nextFrame();
+    emitProjection();
+    await nextFrame();
     return started && stopped;
   },
   async assertPlaybackStopsOnRuntimeState() {
@@ -1676,8 +1899,8 @@ window.issue24Harness = {
     patternEvidenceViews = [];
     for (const surface of patternReloadSurfaces) surface.destroy();
     patternReloadSurfaces = [];
-    patternReloadFrame?.remove();
-    patternReloadFrame = undefined;
+    for (const frame of patternReloadFrames) frame.remove();
+    patternReloadFrames = [];
     patternEvidenceContainer?.remove();
     patternEvidenceContainer = undefined;
   },

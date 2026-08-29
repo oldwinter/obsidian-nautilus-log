@@ -126,6 +126,7 @@ export class SpiralDayPlannerView extends ItemView {
   #logicalDate: LogicalDate;
   #plannerInstanceId = createPlannerInstanceId();
   #surface: PlannerSurface | undefined;
+  #surfaceRoot: HTMLElement | undefined;
   #surfaceContext: PlannerViewContext | undefined;
   #localeUnsubscribe: (() => void) | undefined;
 
@@ -155,9 +156,7 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   override async setState(state: unknown, _result: ViewStateResult): Promise<void> {
-    const previousLogicalDate = this.#logicalDate;
     const previousInstanceId = this.#plannerInstanceId;
-    const previousContext = this.#surfaceContext;
     const nextLogicalDate = stateDate(state) ?? defaultDate(this.#dependencies);
     const nextInstanceId = stateInstanceId(state) ?? previousInstanceId;
     const nextContext = validatePlannerViewContext(
@@ -165,22 +164,7 @@ export class SpiralDayPlannerView extends ItemView {
     );
 
     if (this.#surface && previousInstanceId !== nextInstanceId) {
-      try {
-        this.#mountSurface(nextContext, nextInstanceId);
-      } catch (error) {
-        if (previousContext) {
-          try {
-            this.#mountSurface(previousContext, previousInstanceId);
-          } catch (rollbackError) {
-            throw new AggregateError(
-              [error, rollbackError],
-              "Planner surface remount and rollback both failed",
-            );
-          }
-        }
-        this.#logicalDate = previousLogicalDate;
-        throw error;
-      }
+      this.#replaceSurface(this.#stageSurface(nextContext, nextInstanceId));
     } else if (this.#surface) {
       this.#surface.setContext(nextContext);
     }
@@ -208,32 +192,56 @@ export class SpiralDayPlannerView extends ItemView {
     );
     this.#localeUnsubscribe?.();
     this.#localeUnsubscribe = undefined;
-    this.#mountSurface(context, this.#plannerInstanceId);
+    this.#replaceSurface(this.#stageSurface(context, this.#plannerInstanceId));
     this.#surfaceContext = context;
     this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
       this.#surface?.setLocale(locale);
     });
   }
 
-  #mountSurface(context: PlannerViewContext, instanceId: string): void {
-    const previous = this.#surface;
-    this.#surface = undefined;
-    previous?.destroy();
-    this.#surface = mountPlannerSurface(
-      this.contentEl,
-      this.#dependencies.runtime,
-      context,
-      {
-        collapseStore: collapseStore(documentStorage(this.contentEl.ownerDocument)),
-        debugControl: this.#dependencies.debugControl?.() ?? false,
-        instanceId,
-        locale: this.#dependencies.locale?.() ?? "en",
-        ...(this.#dependencies.dispatchPlannerProgress
-          ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }
-          : {}),
-        renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
-      },
-    );
+  #stageSurface(
+    context: PlannerViewContext,
+    instanceId: string,
+  ): Readonly<{ root: HTMLElement; surface: PlannerSurface }> {
+    const root = this.contentEl.ownerDocument.createElement("div");
+    root.classList.add("spiral-day-planner-view__surface");
+    root.style.boxSizing = "border-box";
+    root.style.width = "100%";
+    root.style.display = "none";
+    this.contentEl.append(root);
+    try {
+      const surface = mountPlannerSurface(
+        root,
+        this.#dependencies.runtime,
+        context,
+        {
+          collapseStore: collapseStore(documentStorage(this.contentEl.ownerDocument)),
+          debugControl: this.#dependencies.debugControl?.() ?? false,
+          instanceId,
+          locale: this.#dependencies.locale?.() ?? "en",
+          ...(this.#dependencies.dispatchPlannerProgress
+            ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }
+            : {}),
+          renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
+        },
+      );
+      return Object.freeze({ root, surface });
+    } catch (error) {
+      root.remove();
+      throw error;
+    }
+  }
+
+  #replaceSurface(candidate: Readonly<{ root: HTMLElement; surface: PlannerSurface }>): void {
+    const previousSurface = this.#surface;
+    const previousRoot = this.#surfaceRoot;
+    candidate.root.style.removeProperty("display");
+    this.contentEl.replaceChildren(candidate.root);
+    this.#surface = candidate.surface;
+    this.#surfaceRoot = candidate.root;
+    previousSurface?.destroy();
+    previousRoot?.remove();
+    candidate.surface.measure();
   }
 
   protected override async onClose(): Promise<void> {
@@ -241,6 +249,8 @@ export class SpiralDayPlannerView extends ItemView {
     this.#localeUnsubscribe = undefined;
     this.#surface?.destroy();
     this.#surface = undefined;
+    this.#surfaceRoot?.remove();
+    this.#surfaceRoot = undefined;
     this.#surfaceContext = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
   }

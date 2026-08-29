@@ -385,6 +385,18 @@ try {
     scale: "device",
   });
   await page.evaluate(() => window.issue24Harness.closePatternEvidence());
+  const patternRegistryHostility = await page.evaluate(() => window.issue24Harness.assertPatternRegistryHostility());
+  failUnless(Object.values(patternRegistryHostility).every(Boolean),
+    `Production pattern registry hostility failed: ${JSON.stringify(patternRegistryHostility)}`);
+  const hostileElapsedPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-hostile-visible .spiral-day-planner__elapsed"),
+  );
+  const hostileProgressPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-hostile-visible .spiral-day-planner__progress").first(),
+  );
+  failUnless(hostileElapsedPatternPixels > 20 && hostileProgressPatternPixels > 20,
+    `Hostile-registry surface lacks patterned pixels: ${JSON.stringify({ hostileElapsedPatternPixels, hostileProgressPatternPixels })}`);
+  await page.evaluate(() => window.issue24Harness.closePatternEvidence());
   const patternReloadIsolation = await page.evaluate(() => window.issue24Harness.assertPatternReloadIsolation());
   failUnless(Object.values(patternReloadIsolation).every(Boolean),
     `Production adapter module-reload pattern isolation failed: ${JSON.stringify(patternReloadIsolation)}`);
@@ -405,6 +417,7 @@ try {
   await page.evaluate(() => window.issue24Harness.closePatternEvidence());
   const interactionNames = [
     "assertConnectFailureState",
+    "assertContextTransaction",
     "assertRuntimeProbeInterval",
     "assertExternalFocusPreserved",
     "assertKeyboardPointerParity",
@@ -483,8 +496,10 @@ try {
     adapterLifecycle,
     patternIsolation,
     patternReloadIsolation,
+    patternRegistryHostility,
     patternPixels: { elapsed: elapsedPatternPixels, progress: progressPatternPixels },
     reloadPatternPixels: { elapsed: reloadElapsedPatternPixels, progress: reloadProgressPatternPixels },
+    hostilePatternPixels: { elapsed: hostileElapsedPatternPixels, progress: hostileProgressPatternPixels },
     interactionChecks: interactions.length,
     matrixStates: matrix.length,
     pluginRequests: browserNetworkAttempts.length,
@@ -493,7 +508,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;

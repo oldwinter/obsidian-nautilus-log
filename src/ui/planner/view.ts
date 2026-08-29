@@ -358,19 +358,55 @@ let plannerTooltipSequence = 0;
 const PLANNER_PATTERN_SEQUENCE = Symbol.for("spiral-day.planner.pattern-sequence");
 
 function allocatePlannerPatternIds(document: Document): Readonly<{ dots: string; hatch: string }> {
-  const stored = Reflect.get(document, PLANNER_PATTERN_SEQUENCE);
-  let sequence = Number.isSafeInteger(stored) && (stored as number) >= 0 ? stored as number : 0;
-  let dots: string;
-  let hatch: string;
-  do {
-    sequence += 1;
-    dots = `spiral-day-planner-dots-${sequence}`;
-    hatch = `spiral-day-planner-hatch-${sequence}`;
-  } while (document.getElementById(dots) !== null || document.getElementById(hatch) !== null);
-  if (!Reflect.set(document, PLANNER_PATTERN_SEQUENCE, sequence)) {
-    throw new Error("Planner pattern ID registry is not writable");
+  let stored: unknown;
+  try {
+    stored = Reflect.get(document, PLANNER_PATTERN_SEQUENCE);
+  } catch {
+    stored = undefined;
   }
-  return Object.freeze({ dots, hatch });
+  let sequence = Number.isSafeInteger(stored) && (stored as number) >= 0 ? stored as number : 0;
+  const occupiedCount = document.querySelectorAll("[id]").length;
+  const sequentialAttempts = Math.min(1_024, occupiedCount + 1);
+  for (let attempt = 0; attempt < sequentialAttempts; attempt += 1) {
+    sequence = sequence >= Number.MAX_SAFE_INTEGER ? 1 : sequence + 1;
+    const dots = `spiral-day-planner-dots-${sequence}`;
+    const hatch = `spiral-day-planner-hatch-${sequence}`;
+    if (document.getElementById(dots) !== null || document.getElementById(hatch) !== null) continue;
+    let persisted = false;
+    try {
+      persisted = Reflect.set(document, PLANNER_PATTERN_SEQUENCE, sequence);
+    } catch {
+      persisted = false;
+    }
+    if (persisted) return Object.freeze({ dots, hatch });
+    break;
+  }
+
+  for (let attempt = 0; attempt < 32; attempt += 1) {
+    let token: string;
+    try {
+      token = document.defaultView?.crypto.randomUUID() ?? "";
+    } catch {
+      token = "";
+    }
+    if (token === "") {
+      token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${attempt}`;
+    }
+    const dots = `spiral-day-planner-dots-fallback-${token}`;
+    const hatch = `spiral-day-planner-hatch-fallback-${token}`;
+    if (document.getElementById(dots) === null && document.getElementById(hatch) === null) {
+      return Object.freeze({ dots, hatch });
+    }
+  }
+
+  for (let attempt = 0; attempt <= occupiedCount; attempt += 1) {
+    const dots = `spiral-day-planner-dots-fallback-${attempt}`;
+    const hatch = `spiral-day-planner-hatch-fallback-${attempt}`;
+    if (document.getElementById(dots) === null && document.getElementById(hatch) === null) {
+      return Object.freeze({ dots, hatch });
+    }
+  }
+  throw new Error("Planner pattern ID allocation exhausted its bounded fallback");
 }
 
 class PlannerSurfaceController implements PlannerSurface {
@@ -388,7 +424,9 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #patternIds: Readonly<{ dots: string; hatch: string }>;
   #context: PlannerViewContext;
   #connection: RuntimeConnection | undefined;
+  #connectionToken: object | undefined;
   #snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
+  #snapshotTransaction: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } | undefined;
   #layout: PlannerResponsiveLayout;
   #resize: PlannerResizeSubscription | undefined;
   #visibilityObserver: MutationObserver | undefined;
@@ -477,17 +515,67 @@ class PlannerSurfaceController implements PlannerSurface {
   setContext(context: PlannerViewContext): void {
     if (this.#destroyed) return;
     const validated = validatePlannerViewContext(context);
+    const previous = this.#context;
     const contextChanged = validated.logicalDate.year !== this.#context.logicalDate.year
       || validated.logicalDate.month !== this.#context.logicalDate.month
       || validated.logicalDate.day !== this.#context.logicalDate.day
       || validated.bounds.startMinutes !== this.#context.bounds.startMinutes
       || validated.bounds.endMinutes !== this.#context.bounds.endMinutes
       || validated.hostContext !== this.#context.hostContext;
+    const runtimeContextChanged = validated.logicalDate.year !== previous.logicalDate.year
+      || validated.logicalDate.month !== previous.logicalDate.month
+      || validated.logicalDate.day !== previous.logicalDate.day;
+    const connection = this.#connection;
+    let nextSnapshot = this.#snapshot;
+    if (runtimeContextChanged && connection) {
+      const forward: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } = {};
+      this.#snapshotTransaction = forward;
+      try {
+        connection.setContext({ logicalDate: validated.logicalDate });
+      } catch (error) {
+        const rollback: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } = {};
+        this.#snapshotTransaction = rollback;
+        try {
+          connection.setContext({ logicalDate: previous.logicalDate });
+        } catch (rollbackError) {
+          this.#snapshotTransaction = undefined;
+          if (this.#connection === connection) {
+            this.#connection = undefined;
+            this.#connectionToken = undefined;
+          }
+          let disconnectError: unknown;
+          try {
+            connection.disconnect();
+          } catch (caught) {
+            disconnectError = caught;
+          }
+          this.#snapshot = undefined;
+          this.#playback.cancel("cancelled");
+          this.#render();
+          this.#scheduleProbe();
+          throw new AggregateError(
+            disconnectError === undefined
+              ? [error, rollbackError]
+              : [error, rollbackError, disconnectError],
+            "Planner runtime context transition and rollback both failed",
+          );
+        }
+        this.#snapshotTransaction = undefined;
+        if (rollback.snapshot) this.#publishSnapshot(rollback.snapshot);
+        throw error;
+      }
+      this.#snapshotTransaction = undefined;
+      nextSnapshot = forward.snapshot;
+    } else if (runtimeContextChanged) {
+      nextSnapshot = undefined;
+    }
+
     if (contextChanged) this.#playback.cancel("cancelled");
-    const wasReplica = this.#context.hostContext === "replica";
-    const hostChanged = validated.hostContext !== this.#context.hostContext;
+    const wasReplica = previous.hostContext === "replica";
+    const hostChanged = validated.hostContext !== previous.hostContext;
     this.#context = validated;
-    this.#connection?.setContext({ logicalDate: validated.logicalDate });
+    this.#snapshot = nextSnapshot;
+    if (nextSnapshot && nextSnapshot.state !== "confirmed") this.#playback.cancel("cancelled");
     if (hostChanged) {
       this.#resize?.disconnect();
       this.#applyLayout(plannerLayoutForWidth(plannerContainerWidth(this.#root), validated.hostContext));
@@ -522,24 +610,31 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#scheduleProbe();
     if (this.#runtime.state === "ready") {
       if (this.#connection) return;
+      const token = {};
+      this.#connectionToken = token;
       try {
         this.#connection = this.#runtime.connect(
           { logicalDate: this.#context.logicalDate },
           (snapshot) => {
-            if (this.#destroyed) return;
-            if (snapshot.state !== "confirmed") this.#playback.cancel("cancelled");
-            this.#snapshot = snapshot;
-            this.#render();
+            if (this.#destroyed || this.#connectionToken !== token) return;
+            if (this.#snapshotTransaction) {
+              this.#snapshotTransaction.snapshot = snapshot;
+              return;
+            }
+            this.#publishSnapshot(snapshot);
           },
           this.#visible,
         );
       } catch {
+        if (this.#connectionToken === token) this.#connectionToken = undefined;
+        this.#connection = undefined;
         this.#snapshot = undefined;
         this.#render();
       }
     } else {
       const connection = this.#connection;
       this.#connection = undefined;
+      this.#connectionToken = undefined;
       connection?.disconnect();
       this.#snapshot = undefined;
       this.#playback.cancel("cancelled");
@@ -552,6 +647,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#destroyed = true;
     this.#connection?.disconnect();
     this.#connection = undefined;
+    this.#connectionToken = undefined;
     this.#resize?.disconnect();
     this.#resize = undefined;
     this.#visibilityObserver?.disconnect();
@@ -589,6 +685,12 @@ class PlannerSurfaceController implements PlannerSurface {
     const view = this.#root.ownerDocument.defaultView;
     if (!view) return;
     this.#probeTimer = view.setInterval(() => this.probeRuntimeNow(), RUNTIME_PROBE_MILLISECONDS);
+  }
+
+  #publishSnapshot(snapshot: RuntimeSnapshot<RuntimePlanProjection>): void {
+    if (snapshot.state !== "confirmed") this.#playback.cancel("cancelled");
+    this.#snapshot = snapshot;
+    this.#render();
   }
 
   #clearProbe(): void {

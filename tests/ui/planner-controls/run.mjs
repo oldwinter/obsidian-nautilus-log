@@ -47,14 +47,45 @@ const obsidianStub = {
             this.values.set(key, String(value));
           }
         }
+        class FakeElement {
+          constructor(ownerDocument) {
+            this.ownerDocument = ownerDocument;
+            this.classList = new FakeClassList();
+            this.children = [];
+            this.parentElement = null;
+            this.style = {
+              removeProperty(property) { delete this[property]; },
+            };
+          }
+          append(...children) {
+            for (const child of children) {
+              child.remove();
+              child.parentElement = this;
+              this.children.push(child);
+            }
+          }
+          remove() {
+            if (!this.parentElement) return;
+            const index = this.parentElement.children.indexOf(this);
+            if (index >= 0) this.parentElement.children.splice(index, 1);
+            this.parentElement = null;
+          }
+          replaceChildren(...children) {
+            for (const child of this.children) child.parentElement = null;
+            this.children = [];
+            this.append(...children);
+          }
+        }
+        class FakeDocument {
+          constructor() {
+            this.defaultView = { localStorage: new FakeStorage() };
+          }
+          createElement() { return new FakeElement(this); }
+        }
         export class ItemView {
           constructor(leaf) {
             this.leaf = leaf;
-            this.contentEl = {
-              classList: new FakeClassList(),
-              ownerDocument: { defaultView: { localStorage: new FakeStorage() } },
-              replaceChildren() {},
-            };
+            this.contentEl = new FakeDocument().createElement();
           }
         }
         export function setIcon(element, icon) {
@@ -86,13 +117,16 @@ const plannerViewSeamStub = {
         }
         export function mountPlannerSurface(root, runtime, context, options) {
           const seam = globalThis.__issue24PlannerAdapterSeam;
-          seam.mounts.push({ context, options, root, runtime });
+          const mount = { context, options, root, runtime };
+          seam.mounts.push(mount);
           if (seam.mountFailure) {
             const failure = seam.mountFailure;
             seam.mountFailure = undefined;
             throw failure;
           }
-          return seam.surface;
+          const surface = seam.createSurface ? seam.createSurface(mount) : seam.surface;
+          mount.surface = surface;
+          return surface;
         }
       `,
       loader: "js",
