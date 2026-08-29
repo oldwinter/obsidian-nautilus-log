@@ -2938,6 +2938,8 @@ export class WorkspaceCommitter {
             || result.code === "clock-owner-invalid"
             || facts.potentialRunning.length > 0
             || facts.running.length > 1
+            || (expectation !== undefined
+              && selectedClockIdentityRepair(plan, expectation)?.expected.state === "malformed")
             ? "violated"
             : "confirmed",
         runningClockIds: snapshot.complete ? receiptRunningKeys(facts.running) : [],
@@ -3617,7 +3619,8 @@ export class WorkspaceCommitter {
       && arraysEqual(global.ids, expectedFinal)
       && (
         (plan.action === "repair-clock-identity"
-          && selectedClockIdentityRepair(plan, expectation)?.expected.state === "malformed")
+          && selectedClockIdentityRepair(plan, expectation)?.expected.state === "malformed"
+          && finalFacts.potentialRunning.length === 0)
         || ((plan.action === "repair-clock-identity" || plan.action === "repair-plan-item-identity")
           && selectedInvalidOwner
           && finalFacts.potentialRunning.length === 0)

@@ -135,6 +135,103 @@ function orphanClockExpectation(
   });
 }
 
+async function orphanClockIdentityRepairExpectation(
+  access: MemoryAtomicTextAccess,
+  plan: MutationPlan,
+  path: string,
+  source: string,
+  clockText: string,
+  expectedRunningClockIds: readonly string[] = [],
+) {
+  const fromOffset = source.indexOf(clockText);
+  const parsed = parseClockText(clockText);
+  assert.notEqual(parsed.kind, "not-clock");
+  const clock = createClockExpectation({
+    target: { kind: "clock", id: CLOCK_A },
+    path,
+    sourceText: source,
+    clock: {
+      path,
+      fromOffset,
+      toOffset: fromOffset + clockText.length,
+      text: clockText,
+      parsed,
+    },
+  });
+  const index = new WorkspaceIndex(access);
+  const snapshot = await index.rebuild();
+  assert.equal(snapshot.complete, true);
+  const collision = index.identity(CLOCK_A);
+  assert.equal(collision.kind, "collision");
+  if (collision.kind !== "collision") throw new Error("fixture CLOCK identity must collide");
+  index.dispose();
+  return acknowledgeMutationPreview(plan, createMutationExpectation({
+    intentId: plan.intentId,
+    action: plan.action,
+    planItems: [],
+    clocks: [clock],
+    expectedRunningClockIds,
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+    indexComplete: true,
+    time: {
+      wallEpochMs: CONTEXT.wallEpochMs,
+      monotonicMs: CONTEXT.monotonicMs,
+      maximumDriftMs: 1_000,
+      maximumQueueDelayMs: 1_000,
+      discontinuity: false,
+    },
+    previewToken: plan.previewToken,
+    selectedRepair: {
+      id: CLOCK_A,
+      locations: collision.locations,
+      selectedSpan: { path, fromOffset, toOffset: fromOffset + clockText.length },
+    },
+  }));
+}
+
+type ExactOrphanRecoveryAction = "delete-clock" | "clock-out" | "repair-clock-identity";
+
+function exactOrphanRecoveryPlan(
+  action: ExactOrphanRecoveryAction,
+  path: string,
+  intentId: string,
+) {
+  return createMutationPlan({
+    intentId,
+    action,
+    stages: [{
+      path,
+      confirmationRequired: action === "repair-clock-identity",
+      operations: action === "delete-clock"
+        ? [{
+            kind: "delete-clock",
+            target: { kind: "clock", id: CLOCK_A },
+            confirmation: {
+              firstActivationEpochMs: NOW - 100,
+              secondActivationEpochMs: NOW,
+              firstTargetKey: CLOCK_A,
+              secondTargetKey: CLOCK_A,
+            },
+          }]
+        : action === "repair-clock-identity"
+          ? [{
+              kind: "repair-clock-identity",
+              target: { kind: "clock", id: CLOCK_A },
+              newId: CLOCK_NEW,
+            }]
+          : [{
+              kind: "clock-out",
+              target: { kind: "clock", id: CLOCK_A },
+              close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
+            }],
+    }],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+}
+
 test("all stable result codes expose only bounded redacted context", () => {
   assert.equal(WRITE_RESULT_CODES.length, 19);
   for (const code of WRITE_RESULT_CODES) {
@@ -860,6 +957,225 @@ test("selected malformed closed duplicate CLOCK identity repair changes only its
   assert.equal(await access.readText(selectedPath), repairedSelectedSource);
   assert.equal(await access.readText(unselectedPath), unselectedSource);
   retryWriter.dispose();
+});
+
+test("selected malformed closed orphan CLOCK identity repair is exact across quote containers and reload", async () => {
+  const closedClock = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const malformedClosedClock = closedClock.replace(
+    /^(CLOCK: \[\d{4}-\d{2}-\d{2} )([A-Z][a-z]{2})( )/,
+    (_match, prefix: string, weekday: string, suffix: string) =>
+      `${prefix}${weekday === "Mon" ? "Tue" : "Mon"}${suffix}`,
+  );
+  const malformed = parseClockText(malformedClosedClock);
+  assert.equal(malformed.kind, "malformed");
+  assert.equal(malformed.kind === "malformed" && malformed.potentialRunning, false);
+  assert.deepEqual(malformed.kind === "malformed" ? malformed.diagnostics.map(({ code }) => code) : [], [
+    "weekday-mismatch",
+  ]);
+
+  for (const entry of [
+    { name: "bare", prefix: "> ", eol: "\n" },
+    { name: "nested-bare", prefix: "> > ", eol: "\n" },
+    { name: "bare-crlf", prefix: "> ", eol: "\r\n" },
+    { name: "bare-tab", prefix: ">\t", eol: "\n" },
+  ] as const) {
+    const selectedPath = `Daily/A-Selected-Malformed-Closed-Orphan-${entry.name}.md`;
+    const unselectedPath = `Daily/Z-Unselected-Valid-Closed-Orphan-${entry.name}.md`;
+    const selectedSource = `# Selected orphan${entry.eol}${entry.prefix}${malformedClosedClock}${entry.eol}`;
+    const repairedSelectedSource = selectedSource.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`);
+    const unselectedSource = `# Unselected orphan${entry.eol}- ${closedClock}${entry.eol}`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: selectedSource,
+      [unselectedPath]: unselectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `malformed-closed-orphan-${entry.name}`,
+      action: "repair-clock-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-clock-identity",
+          target: { kind: "clock", id: CLOCK_A },
+          newId: CLOCK_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await orphanClockIdentityRepairExpectation(
+      access,
+      repair,
+      selectedPath,
+      selectedSource,
+      malformedClosedClock,
+    );
+    assert.equal(expectation.clocks[0]?.state, "malformed", entry.name);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const applied = await writer.commit(repair, expectation);
+
+    assert.equal(applied.outcome, "applied", `${entry.name}: ${JSON.stringify(applied)}`);
+    assert.equal(applied.confirmation, "confirmed", entry.name);
+    assert.deepEqual(applied.globalCheck, { status: "violated", runningClockIds: [] }, entry.name);
+    assert.equal(writer.blocked, false, entry.name);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, entry.name);
+    assert.equal(access.transactionCounts.has(unselectedPath), false, entry.name);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, entry.name);
+    assert.equal(await access.readText(unselectedPath), unselectedSource, entry.name);
+    writer.dispose();
+
+    const finalIndex = new WorkspaceIndex(access);
+    const finalSnapshot = await finalIndex.rebuild();
+    assert.equal(finalSnapshot.complete, true, entry.name);
+    assert.deepEqual(finalSnapshot.running, [], entry.name);
+    assert.deepEqual(finalSnapshot.potentialRunning, [], entry.name);
+    assert.equal(finalIndex.safetyIdentity(CLOCK_NEW).kind, "unique", entry.name);
+    assert.equal(finalIndex.safetyIdentity(CLOCK_A).kind, "unique", entry.name);
+    finalIndex.dispose();
+
+    const transactionsAfterApply = [...access.transactionCounts.entries()];
+    const retryWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+    const retry = await retryWriter.commit(repair, expectation);
+    assert.equal(retry.outcome, "already-applied", `${entry.name}: ${JSON.stringify(retry)}`);
+    assert.deepEqual(retry.globalCheck, applied.globalCheck, entry.name);
+    assert.deepEqual([...access.transactionCounts.entries()], transactionsAfterApply, entry.name);
+    assert.equal(await access.readText(selectedPath), repairedSelectedSource, entry.name);
+    assert.equal(await access.readText(unselectedPath), unselectedSource, entry.name);
+    retryWriter.dispose();
+  }
+});
+
+test("malformed closed orphan identity repair rejects attached lazy and narrative CLOCK text", async () => {
+  const closedClock = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const malformedClosedClock = closedClock.replace(
+    /^(CLOCK: \[\d{4}-\d{2}-\d{2} )([A-Z][a-z]{2})( )/,
+    (_match, prefix: string, weekday: string, suffix: string) =>
+      `${prefix}${weekday === "Mon" ? "Tue" : "Mon"}${suffix}`,
+  );
+  for (const entry of [
+    {
+      name: "attached",
+      selectedSource: `# Selected orphan\n> ${malformedClosedClock}\n> attached continuation\n`,
+    },
+    {
+      name: "lazy",
+      selectedSource: `# Selected orphan\n> ${malformedClosedClock}\nlazy continuation\n`,
+    },
+    {
+      name: "narrative",
+      selectedSource: `# Selected orphan\n> Narrative ${malformedClosedClock}\n`,
+    },
+  ] as const) {
+    const selectedPath = `Daily/A-Rejected-Malformed-Closed-Orphan-${entry.name}.md`;
+    const unselectedPath = `Daily/Z-Unselected-Valid-Closed-Orphan-${entry.name}.md`;
+    const unselectedSource = `# Unselected orphan\n- ${closedClock}\n`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: entry.selectedSource,
+      [unselectedPath]: unselectedSource,
+    });
+    const repair = createMutationPlan({
+      intentId: `rejected-malformed-closed-orphan-${entry.name}`,
+      action: "repair-clock-identity",
+      stages: [{
+        path: selectedPath,
+        confirmationRequired: true,
+        operations: [{
+          kind: "repair-clock-identity",
+          target: { kind: "clock", id: CLOCK_A },
+          newId: CLOCK_NEW,
+        }],
+      }],
+      expectedRunningClockIds: [],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = await orphanClockIdentityRepairExpectation(
+      access,
+      repair,
+      selectedPath,
+      entry.selectedSource,
+      malformedClosedClock,
+    );
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const rejected = await writer.commit(repair, expectation);
+
+    assert.equal(rejected.outcome, "conflict", `${entry.name}: ${JSON.stringify(rejected)}`);
+    assert.equal(rejected.confirmation, "confirmed-no-change", entry.name);
+    assert.equal(rejected.result?.code, "source-conflict", entry.name);
+    assert.deepEqual(rejected.globalCheck, { status: "violated", runningClockIds: [] }, entry.name);
+    assert.equal(writer.blocked, false, entry.name);
+    assert.equal(access.transactionCounts.size, 0, entry.name);
+    assert.equal(await access.readText(selectedPath), entry.selectedSource, entry.name);
+    assert.equal(await access.readText(unselectedPath), unselectedSource, entry.name);
+    writer.dispose();
+  }
+});
+
+test("malformed closed duplicate repair blocks after an unselected potential CLOCK appears post-write", async () => {
+  const selectedPath = "Daily/A-Selected-Malformed-Closed-Potential-Race.md";
+  const potentialPath = "Daily/M-Unselected-Malformed-Closed-Potential-Race.md";
+  const duplicatePath = "Daily/Z-Unselected-Valid-Closed-Potential-Race.md";
+  const closedClock = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 60_000, 480, CLOCK_A);
+  const malformedClosedClock = closedClock.replace(
+    /^(CLOCK: \[\d{4}-\d{2}-\d{2} )([A-Z][a-z]{2})( )/,
+    (_match, prefix: string, weekday: string, suffix: string) =>
+      `${prefix}${weekday === "Mon" ? "Tue" : "Mon"}${suffix}`,
+  );
+  const selectedSource = `${OPEN}\n- [ ] Selected owner d30m ^${PLAN_A}\n  - LOGBOOK::\n    - ${malformedClosedClock}\n${CLOSE}\n`;
+  const repairedSelectedSource = selectedSource.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`);
+  const initialPotentialSource = `${OPEN}\n- [ ] Potential owner d30m ^${PLAN_NEW}\n${CLOSE}\n`;
+  const insertedPotentialSource = initialPotentialSource.replace(
+    CLOSE,
+    `  - LOGBOOK::\n    - CLOCK: [broken]\n${CLOSE}`,
+  );
+  const duplicateSource = `${OPEN}\n- [ ] Duplicate owner d30m ^${PLAN_B}\n  - LOGBOOK::\n    - ${closedClock}\n${CLOSE}\n`;
+  const access = new MemoryAtomicTextAccess({
+    [selectedPath]: selectedSource,
+    [potentialPath]: initialPotentialSource,
+    [duplicatePath]: duplicateSource,
+  });
+  const repair = createMutationPlan({
+    intentId: "malformed-closed-duplicate-unselected-potential-race",
+    action: "repair-clock-identity",
+    stages: [{
+      path: selectedPath,
+      confirmationRequired: true,
+      operations: [{
+        kind: "repair-clock-identity",
+        target: { kind: "clock", id: CLOCK_A },
+        newId: CLOCK_NEW,
+      }],
+    }],
+    expectedRunningClockIds: [],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const expectation = await mutationExpectation(access, repair, {
+    clockIds: [CLOCK_A],
+    expectedRunningClockIds: [],
+  });
+  assert.equal(expectation.clocks[0]?.state, "malformed");
+  assert.equal(expectation.selectedRepair?.selectedSpan.path, selectedPath);
+  access.raceAfterTransformReads(1, () => access.modify(potentialPath, insertedPotentialSource));
+  const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+  const receipt = await writer.commit(repair, expectation);
+
+  assert.equal(receipt.outcome, "invariant-broken", JSON.stringify(receipt));
+  assert.equal(receipt.confirmation, "invariant-broken");
+  assert.equal(receipt.result?.code, "write-invariant-broken");
+  assert.equal(receipt.globalCheck.status, "violated");
+  assert.equal(writer.blocked, true);
+  assert.equal(access.transactionCounts.get(selectedPath), 1);
+  assert.equal(access.transactionCounts.has(potentialPath), false);
+  assert.equal(access.transactionCounts.has(duplicatePath), false);
+  assert.equal(await access.readText(selectedPath), repairedSelectedSource);
+  assert.equal(await access.readText(potentialPath), insertedPotentialSource);
+  assert.equal(await access.readText(duplicatePath), duplicateSource);
+  writer.dispose();
 });
 
 test("selected invalid-owner identity repair cannot absorb a new unselected potential CLOCK", async () => {
@@ -2634,6 +2950,11 @@ test("quoted orphan Delete distinguishes attached content from quote and list bo
     {
       name: "deeper-quote",
       source: `# Quoted orphan\n> - ${running}\n> > nested evidence\n`,
+      expectedAfter: "# Quoted orphan\n> > nested evidence\n",
+    },
+    {
+      name: "indented-deeper-quote",
+      source: `# Quoted orphan\n> - ${running}\n>   > nested evidence\n`,
       expectedCode: "clock-has-attached-content",
     },
     {
@@ -2697,6 +3018,418 @@ test("quoted orphan Delete distinguishes attached content from quote and list bo
       assert.equal(receipt.outcome, "applied", `${entry.name}: ${JSON.stringify(receipt)}`);
       assert.equal(await access.readText(PATH), entry.expectedAfter, entry.name);
     }
+    writer.dispose();
+  }
+});
+
+test("orphan recovery preserves sibling blocks after list and blank paragraph boundaries", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  const closed = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 120_000, 480, CLOCK_A);
+  const cases: Array<{ readonly name: string; readonly source: string; readonly eol: "\n" | "\r\n" }> = [
+    { name: "ordinary-list-sibling-quote", source: `- ${running}\n> nested\n`, eol: "\n" },
+    { name: "quoted-list-sibling-quote", source: `> - ${running}\n> > nested\n`, eol: "\n" },
+    {
+      name: "nested-tab-list-sibling-quote",
+      source: `>\t>\t-\t${running}\r\n>\t>\t>\tnested\r\n`,
+      eol: "\r\n",
+    },
+  ];
+  for (const container of [
+    { name: "ordinary-lf", prefix: "", eol: "\n" as const },
+    { name: "quoted-crlf", prefix: "> ", eol: "\r\n" as const },
+    { name: "nested-tab-lf", prefix: ">\t>\t", eol: "\n" as const },
+  ]) for (const sibling of [
+    { name: "list", text: "- sibling" },
+    { name: "heading", text: "# sibling" },
+    { name: "fence", text: "```" },
+    { name: "deeper-quote", text: "> nested" },
+  ]) {
+    cases.push({
+      name: `${container.name}-blank-${sibling.name}`,
+      source: `${container.prefix}${running}${container.eol}${container.prefix.trimEnd()}${container.eol}${container.prefix}${sibling.text}${container.eol}`,
+      eol: container.eol,
+    });
+  }
+
+  for (const entry of cases) for (const action of [
+    "delete-clock",
+    "clock-out",
+    "repair-clock-identity",
+  ] as const) {
+    const caseName = `${entry.name}-${action}`;
+    const selectedPath = `Daily/Boundary-${caseName}.md`;
+    const duplicatePath = `Daily/Boundary-${caseName}-Duplicate.md`;
+    const duplicateSource = `- ${closed}\n`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: entry.source,
+      ...(action === "repair-clock-identity" ? { [duplicatePath]: duplicateSource } : {}),
+    });
+    const plan = exactOrphanRecoveryPlan(action, selectedPath, `boundary-${caseName}`);
+    const expectation = action === "repair-clock-identity"
+      ? await orphanClockIdentityRepairExpectation(
+          access,
+          plan,
+          selectedPath,
+          entry.source,
+          running,
+          [CLOCK_A],
+        )
+      : orphanClockExpectation(plan, selectedPath, entry.source, running);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const applied = await writer.commit(plan, expectation);
+
+    assert.equal(applied.outcome, "applied", `${caseName}: ${JSON.stringify(applied)}`);
+    const firstLineEnd = entry.source.indexOf(entry.eol) + entry.eol.length;
+    const expectedSelected = action === "delete-clock"
+      ? entry.source.slice(firstLineEnd)
+      : action === "repair-clock-identity"
+        ? entry.source.replace(`^${CLOCK_A}`, `^${CLOCK_NEW}`)
+        : entry.source.replace(
+            running,
+            formatCanonicalClosedClock(NOW - 60_000, 480, NOW, 480, CLOCK_A),
+          );
+    assert.equal(await access.readText(selectedPath), expectedSelected, caseName);
+    assert.equal(access.transactionCounts.get(selectedPath), 1, caseName);
+    if (action === "repair-clock-identity") {
+      assert.equal(await access.readText(duplicatePath), duplicateSource, caseName);
+      assert.equal(access.transactionCounts.has(duplicatePath), false, caseName);
+    }
+    writer.dispose();
+
+    const transactionsAfterApply = [...access.transactionCounts.entries()];
+    const retryWriter = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+    const retry = await retryWriter.commit(plan, expectation);
+    assert.equal(
+      retry.outcome,
+      action === "clock-out" ? "rejected" : "already-applied",
+      `${caseName}/retry: ${JSON.stringify(retry)}`,
+    );
+    assert.equal(await access.readText(selectedPath), expectedSelected, `${caseName}/retry`);
+    assert.deepEqual([...access.transactionCounts.entries()], transactionsAfterApply, caseName);
+    if (action === "repair-clock-identity") {
+      assert.equal(await access.readText(duplicatePath), duplicateSource, `${caseName}/retry`);
+    }
+    retryWriter.dispose();
+  }
+});
+
+test("orphan recovery rejects genuinely nested list content and lazy continuations", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  const closed = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 120_000, 480, CLOCK_A);
+  for (const entry of [
+    { name: "ordinary-nested", source: `- ${running}\n  > nested\n` },
+    { name: "quoted-nested", source: `> - ${running}\n>   > nested\n` },
+    { name: "nested-tab", source: `>\t>\t-\t${running}\r\n>\t>\t\t>\tnested\r\n` },
+    { name: "lazy", source: `> - ${running}\nlazy continuation\n` },
+  ] as const) for (const action of [
+    "delete-clock",
+    "clock-out",
+    "repair-clock-identity",
+  ] as const) {
+    const caseName = `${entry.name}-${action}`;
+    const selectedPath = `Daily/Attached-${caseName}.md`;
+    const duplicatePath = `Daily/Attached-${caseName}-Duplicate.md`;
+    const duplicateSource = `- ${closed}\n`;
+    const access = new MemoryAtomicTextAccess({
+      [selectedPath]: entry.source,
+      ...(action === "repair-clock-identity" ? { [duplicatePath]: duplicateSource } : {}),
+    });
+    const plan = exactOrphanRecoveryPlan(action, selectedPath, `attached-${caseName}`);
+    const expectation = action === "repair-clock-identity"
+      ? await orphanClockIdentityRepairExpectation(
+          access,
+          plan,
+          selectedPath,
+          entry.source,
+          running,
+          [CLOCK_A],
+        )
+      : orphanClockExpectation(plan, selectedPath, entry.source, running);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const rejected = await writer.commit(plan, expectation);
+
+    assert.equal(
+      rejected.outcome,
+      action === "delete-clock" ? "rejected" : "conflict",
+      `${caseName}: ${JSON.stringify(rejected)}`,
+    );
+    assert.equal(
+      rejected.result?.code,
+      action === "delete-clock" ? "clock-has-attached-content" : "source-conflict",
+      caseName,
+    );
+    assert.equal(rejected.confirmation, "confirmed-no-change", caseName);
+    assert.equal(access.transactionCounts.size, 0, caseName);
+    assert.equal(await access.readText(selectedPath), entry.source, caseName);
+    if (action === "repair-clock-identity") {
+      assert.equal(await access.readText(duplicatePath), duplicateSource, caseName);
+    }
+    writer.dispose();
+  }
+});
+
+test("orphan Delete treats same-container dash setext underlines as attached content", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  const cases = [
+    {
+      name: "ordinary-bare",
+      source: `${running}\n---\n`,
+    },
+    {
+      name: "quoted-bare",
+      source: `> ${running}\n> ---\n`,
+    },
+    {
+      name: "nested-quoted-bare",
+      source: `> > ${running}\n> > ---\n`,
+    },
+    {
+      name: "quoted-bare-crlf",
+      source: `> ${running}\r\n> ---\r\n`,
+    },
+  ] as const;
+
+  for (const entry of cases) {
+    const access = new MemoryAtomicTextAccess({ [PATH]: entry.source });
+    const plan = createMutationPlan({
+      intentId: `setext-delete-${entry.name}`,
+      action: "delete-clock",
+      stages: [{
+        path: PATH,
+        confirmationRequired: false,
+        operations: [{
+          kind: "delete-clock",
+          target: { kind: "clock", id: CLOCK_A },
+          confirmation: {
+            firstActivationEpochMs: NOW - 100,
+            secondActivationEpochMs: NOW,
+            firstTargetKey: CLOCK_A,
+            secondTargetKey: CLOCK_A,
+          },
+        }],
+      }],
+      expectedRunningClockIds: [CLOCK_A],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = orphanClockExpectation(plan, PATH, entry.source, running);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const receipt = await writer.commit(plan, expectation);
+
+    assert.equal(receipt.outcome, "rejected", `${entry.name}: ${JSON.stringify(receipt)}`);
+    assert.equal(receipt.confirmation, "confirmed-no-change", entry.name);
+    assert.equal(receipt.result?.code, "clock-has-attached-content", entry.name);
+    assert.equal(receipt.globalCheck.status, "violated", entry.name);
+    assert.equal(access.transactionCounts.size, 0, entry.name);
+    assert.equal(await access.readText(PATH), entry.source, entry.name);
+    writer.dispose();
+  }
+
+  const quoteExitSource = `> ${running}\n---\n`;
+  const quoteExitAccess = new MemoryAtomicTextAccess({ [PATH]: quoteExitSource });
+  const quoteExitPlan = createMutationPlan({
+    intentId: "setext-delete-lower-quote-exit",
+    action: "delete-clock",
+    stages: [{
+      path: PATH,
+      confirmationRequired: false,
+      operations: [{
+        kind: "delete-clock",
+        target: { kind: "clock", id: CLOCK_A },
+        confirmation: {
+          firstActivationEpochMs: NOW - 100,
+          secondActivationEpochMs: NOW,
+          firstTargetKey: CLOCK_A,
+          secondTargetKey: CLOCK_A,
+        },
+      }],
+    }],
+    expectedRunningClockIds: [CLOCK_A],
+    settingsVersion: CONTEXT.settingsVersion,
+    zoneId: CONTEXT.zoneId,
+  });
+  const quoteExitExpectation = orphanClockExpectation(
+    quoteExitPlan,
+    PATH,
+    quoteExitSource,
+    running,
+  );
+  const quoteExitWriter = new WorkspaceCommitter(quoteExitAccess, { readContext: () => CONTEXT });
+
+  const quoteExit = await quoteExitWriter.commit(quoteExitPlan, quoteExitExpectation);
+
+  assert.equal(quoteExit.outcome, "applied", JSON.stringify(quoteExit));
+  assert.equal(await quoteExitAccess.readText(PATH), "---\n");
+  assert.equal(quoteExitAccess.transactionCounts.get(PATH), 1);
+  quoteExitWriter.dispose();
+});
+
+test("orphan recovery rejects every same-paragraph continuation across containers and mutations", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  const closed = formatCanonicalClosedClock(NOW - 180_000, 480, NOW - 120_000, 480, CLOCK_A);
+  const continuations = [
+    { name: "dash-setext", text: "---" },
+    { name: "ordered-noninterrupt", text: "2.\tcontinuation" },
+    { name: "ordered-empty", text: "1. " },
+    { name: "plus-empty", text: "+ " },
+    { name: "star-empty", text: "* " },
+    { name: "dash-empty", text: "- " },
+    { name: "type-seven-open", text: '<x attr="v">' },
+    { name: "type-seven-close", text: "</x>" },
+  ] as const;
+  const containers = [
+    { name: "ordinary", clockPrefix: "", continuationPrefix: "", eol: "\n" },
+    { name: "quote", clockPrefix: "> ", continuationPrefix: "> ", eol: "\n" },
+    { name: "nested-quote", clockPrefix: "> > ", continuationPrefix: "> > ", eol: "\n" },
+    { name: "quote-lazy", clockPrefix: "> ", continuationPrefix: "", eol: "\n" },
+    { name: "quote-crlf", clockPrefix: "> ", continuationPrefix: "> ", eol: "\r\n" },
+  ] as const;
+
+  for (const continuation of continuations) for (const container of containers) {
+    if (container.name === "quote-lazy" && continuation.name === "dash-setext") continue;
+    for (const action of ["delete-clock", "clock-out", "repair-clock-identity"] as const) {
+      const caseName = `${continuation.name}-${container.name}-${action}`;
+      const selectedPath = `Daily/Paragraph-${caseName}.md`;
+      const duplicatePath = `Daily/Paragraph-${caseName}-Duplicate.md`;
+      const selectedSource = `${container.clockPrefix}${running}${container.eol}${container.continuationPrefix}${continuation.text}${container.eol}`;
+      const duplicateSource = `- ${closed}\n`;
+      const access = new MemoryAtomicTextAccess({
+        [selectedPath]: selectedSource,
+        ...(action === "repair-clock-identity" ? { [duplicatePath]: duplicateSource } : {}),
+      });
+      const plan = action === "delete-clock"
+        ? createMutationPlan({
+            intentId: `paragraph-${caseName}`,
+            action,
+            stages: [{
+              path: selectedPath,
+              confirmationRequired: false,
+              operations: [{
+                kind: "delete-clock",
+                target: { kind: "clock", id: CLOCK_A },
+                confirmation: {
+                  firstActivationEpochMs: NOW - 100,
+                  secondActivationEpochMs: NOW,
+                  firstTargetKey: CLOCK_A,
+                  secondTargetKey: CLOCK_A,
+                },
+              }],
+            }],
+            expectedRunningClockIds: [CLOCK_A],
+            settingsVersion: CONTEXT.settingsVersion,
+            zoneId: CONTEXT.zoneId,
+          })
+        : action === "clock-out"
+          ? createMutationPlan({
+              intentId: `paragraph-${caseName}`,
+              action,
+              stages: [{
+                path: selectedPath,
+                confirmationRequired: false,
+                operations: [{
+                  kind: "clock-out",
+                  target: { kind: "clock", id: CLOCK_A },
+                  close: { clockId: CLOCK_A, endEpochMs: NOW, offsetMinutes: 480 },
+                }],
+              }],
+              expectedRunningClockIds: [CLOCK_A],
+              settingsVersion: CONTEXT.settingsVersion,
+              zoneId: CONTEXT.zoneId,
+            })
+          : createMutationPlan({
+              intentId: `paragraph-${caseName}`,
+              action,
+              stages: [{
+                path: selectedPath,
+                confirmationRequired: true,
+                operations: [{
+                  kind: "repair-clock-identity",
+                  target: { kind: "clock", id: CLOCK_A },
+                  newId: CLOCK_NEW,
+                }],
+              }],
+              expectedRunningClockIds: [CLOCK_A],
+              settingsVersion: CONTEXT.settingsVersion,
+              zoneId: CONTEXT.zoneId,
+            });
+      const expectation = action === "repair-clock-identity"
+        ? await orphanClockIdentityRepairExpectation(
+            access,
+            plan,
+            selectedPath,
+            selectedSource,
+            running,
+            [CLOCK_A],
+          )
+        : orphanClockExpectation(plan, selectedPath, selectedSource, running);
+      const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+      const receipt = await writer.commit(plan, expectation);
+
+      assert.equal(
+        receipt.outcome,
+        action === "delete-clock" ? "rejected" : "conflict",
+        `${caseName}: ${JSON.stringify(receipt)}`,
+      );
+      assert.equal(receipt.confirmation, "confirmed-no-change", caseName);
+      assert.equal(
+        receipt.result?.code,
+        action === "delete-clock" ? "clock-has-attached-content" : "source-conflict",
+        caseName,
+      );
+      assert.equal(receipt.globalCheck.status, "violated", caseName);
+      assert.equal(access.transactionCounts.size, 0, caseName);
+      assert.equal(await access.readText(selectedPath), selectedSource, caseName);
+      if (action === "repair-clock-identity") {
+        assert.equal(await access.readText(duplicatePath), duplicateSource, caseName);
+      }
+      writer.dispose();
+    }
+  }
+});
+
+test("orphan Delete permits actual paragraph-interrupting list and HTML blocks", async () => {
+  const running = formatCanonicalRunningClock(NOW - 60_000, 480, CLOCK_A);
+  for (const entry of [
+    { name: "ordered-one", text: "1. continuation" },
+    { name: "bullet-plus", text: "+ continuation" },
+    { name: "bullet-dash", text: "- continuation" },
+    { name: "html-type-six", text: "<div>" },
+  ] as const) {
+    const source = `${running}\n${entry.text}\n`;
+    const access = new MemoryAtomicTextAccess({ [PATH]: source });
+    const plan = createMutationPlan({
+      intentId: `paragraph-interrupt-${entry.name}`,
+      action: "delete-clock",
+      stages: [{
+        path: PATH,
+        confirmationRequired: false,
+        operations: [{
+          kind: "delete-clock",
+          target: { kind: "clock", id: CLOCK_A },
+          confirmation: {
+            firstActivationEpochMs: NOW - 100,
+            secondActivationEpochMs: NOW,
+            firstTargetKey: CLOCK_A,
+            secondTargetKey: CLOCK_A,
+          },
+        }],
+      }],
+      expectedRunningClockIds: [CLOCK_A],
+      settingsVersion: CONTEXT.settingsVersion,
+      zoneId: CONTEXT.zoneId,
+    });
+    const expectation = orphanClockExpectation(plan, PATH, source, running);
+    const writer = new WorkspaceCommitter(access, { readContext: () => CONTEXT });
+
+    const receipt = await writer.commit(plan, expectation);
+
+    assert.equal(receipt.outcome, "applied", `${entry.name}: ${JSON.stringify(receipt)}`);
+    assert.equal(await access.readText(PATH), `${entry.text}\n`, entry.name);
+    assert.equal(access.transactionCounts.get(PATH), 1, entry.name);
     writer.dispose();
   }
 });

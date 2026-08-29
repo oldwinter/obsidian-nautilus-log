@@ -3,7 +3,7 @@ import type { PlanItem, PlanItemStatus } from "../core/model";
 import { isCanonicalClockId, parseClockText } from "./clock-parser";
 import { createCommitConflict, type CommitConflict } from "./conflicts";
 import type { BlockIdLocation, IdentityLookup } from "./identity-index";
-import { canonicalClockPhysicalLine } from "./logbook-clock";
+import { canonicalClockPhysicalLine, clockHasAttachedContent } from "./logbook-clock";
 import { readLogbook, type LogbookClock, type LogbookReadOptions, type LogbookReadResult } from "./logbook-reader";
 import {
   createCanonicalPreviewToken,
@@ -556,12 +556,19 @@ function exactCanonicalOrphanClock(
     return conflict("source-conflict", action, currentPath, expectation.target.id);
   }
   const parsed = parseClockText(expectation.text);
-  if (
-    parsed.kind !== "record"
-    || parsed.record.format !== "canonical"
-    || parsed.record.clockId !== expectation.target.id
-    || parsed.record.state !== expectation.state
-  ) return conflict("action-no-longer-applicable", action, expectation.path, expectation.target.id);
+  const terminalId = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(expectation.text)?.[1];
+  const selectedMalformedIdentityRepair = action === "repair-clock-identity"
+    && identity?.kind === "selected-repair"
+    && expectation.state === "malformed"
+    && parsed.kind === "malformed"
+    && terminalId === expectation.target.id;
+  const canonicalRecordRecovery = parsed.kind === "record"
+    && parsed.record.format === "canonical"
+    && parsed.record.clockId === expectation.target.id
+    && parsed.record.state === expectation.state;
+  if (!canonicalRecordRecovery && !selectedMalformedIdentityRepair) {
+    return conflict("action-no-longer-applicable", action, expectation.path, expectation.target.id);
+  }
   const clock: LogbookClock = Object.freeze({
     path: currentPath,
     fromOffset: matchingSpan.fromOffset,
@@ -569,6 +576,9 @@ function exactCanonicalOrphanClock(
     text: expectation.text,
     parsed,
   });
+  if (action !== "delete-clock" && clockHasAttachedContent(currentText, clock)) {
+    return conflict("source-conflict", action, expectation.path, expectation.target.id);
+  }
   return Object.freeze({ ok: true, value: Object.freeze({ clock }) });
 }
 

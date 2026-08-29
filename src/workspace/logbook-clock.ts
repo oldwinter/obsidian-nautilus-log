@@ -86,6 +86,10 @@ export interface MarkdownContainerContent {
   readonly quoteDepth: number;
 }
 
+interface MarkdownContainerDetails extends MarkdownContainerContent {
+  readonly quoteIndents: readonly number[];
+}
+
 export interface CanonicalClockPhysicalLine {
   readonly text: string;
   readonly fromColumn: number;
@@ -101,12 +105,14 @@ const BLOCK_ID = /^[A-Za-z0-9-]+$/;
 const LIST_ITEM = /^([ \t]*)([-+*]|[0-9]{1,9}[.)])([ \t]+)(.*)$/;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
-export function markdownContainerContent(lineText: string): MarkdownContainerContent {
+function markdownContainerDetails(lineText: string): MarkdownContainerDetails {
   let contentOffset = 0;
   let quoteDepth = 0;
+  const quoteIndents: number[] = [];
   while (contentOffset < lineText.length) {
-    const marker = /^[ ]{0,3}>[ \t]?/.exec(lineText.slice(contentOffset));
+    const marker = /^([ ]{0,3})>[ \t]?/.exec(lineText.slice(contentOffset));
     if (!marker) break;
+    quoteIndents.push(marker[1]!.length);
     contentOffset += marker[0].length;
     quoteDepth += 1;
   }
@@ -114,6 +120,16 @@ export function markdownContainerContent(lineText: string): MarkdownContainerCon
     content: lineText.slice(contentOffset),
     contentOffset,
     quoteDepth,
+    quoteIndents: Object.freeze(quoteIndents),
+  });
+}
+
+export function markdownContainerContent(lineText: string): MarkdownContainerContent {
+  const container = markdownContainerDetails(lineText);
+  return Object.freeze({
+    content: container.content,
+    contentOffset: container.contentOffset,
+    quoteDepth: container.quoteDepth,
   });
 }
 
@@ -695,8 +711,19 @@ function indentationWidth(text: string): number {
   return width;
 }
 
-function structuralBlockStarts(lineText: string): boolean {
-  if (markdownHtmlBlockStart(lineText)) return true;
+const HTML_TYPE_SIX_PARAGRAPH_INTERRUPT = /^[ \t]*<(address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)/i;
+
+function paragraphInterrupts(lineText: string, sameContainer: boolean): boolean {
+  const list = LIST_ITEM.exec(lineText);
+  if (list) {
+    if (list[4]!.trim().length === 0) return false;
+    const marker = list[2]!;
+    if (/^[0-9]/.test(marker)) return Number(marker.slice(0, -1)) === 1;
+    return true;
+  }
+  if (sameContainer && /^ {0,3}-+[ \t]*$/.test(lineText)) return false;
+  const html = markdownHtmlBlockStart(lineText);
+  if (html) return !html.endsOnBlank || HTML_TYPE_SIX_PARAGRAPH_INTERRUPT.test(lineText);
   return /^ {0,3}(?:>|#{1,6}(?:[ \t]+|$)|`{3,}|~{3,})/.test(lineText)
     || /^ {0,3}(?:[*_-][ \t]*){3,}$/.test(lineText);
 }
@@ -709,7 +736,7 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
   );
   if (clockIndex < 0) mutationError("source-span-mismatch", "CLOCK does not occupy a physical line");
   const clockLine = lines[clockIndex]!;
-  const clockContainer = markdownContainerContent(clockLine.text);
+  const clockContainer = markdownContainerDetails(clockLine.text);
   const clockList = LIST_ITEM.exec(clockContainer.content);
   const physicalClock = canonicalClockPhysicalLine(clockLine.text);
   if (!clockList && (
@@ -727,22 +754,23 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
 
   for (let index = clockIndex + 1; index < lines.length; index += 1) {
     const line = lines[index]!;
-    const container = markdownContainerContent(line.text);
+    const container = markdownContainerDetails(line.text);
     if (container.quoteDepth < clockContainer.quoteDepth) {
       if (separatedByBlank || /^[ \t]*$/.test(container.content)) return false;
-      if (LIST_ITEM.test(container.content) || structuralBlockStarts(container.content)) return false;
+      if (paragraphInterrupts(container.content, false)) return false;
       return true;
     }
-    if (container.quoteDepth > clockContainer.quoteDepth) return true;
+    if (container.quoteDepth > clockContainer.quoteDepth) {
+      if (!clockList) return !separatedByBlank;
+      return container.quoteIndents[clockContainer.quoteDepth]! >= contentIndent;
+    }
     if (/^[ \t]*$/.test(container.content)) {
       separatedByBlank = true;
       continue;
     }
     const lineIndent = indentationWidth(/^([ \t]*)/.exec(container.content)![1]!);
-    const list = LIST_ITEM.exec(container.content);
-    if (list) return lineIndent >= contentIndent;
     if (lineIndent >= contentIndent) return true;
-    if (structuralBlockStarts(container.content)) return false;
+    if (paragraphInterrupts(container.content, true)) return false;
     return !separatedByBlank;
   }
   return false;
