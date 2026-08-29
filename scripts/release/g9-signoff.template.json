@@ -29,7 +29,16 @@
   "approved_deviation_ids": [],
   "scope_exclusions": [],
   "manual_workflows": [],
-  "attestations": [],
+  "attestations": [
+    {
+      "role": "deviation-approval-identity-witness",
+      "name": "",
+      "timestamp": null,
+      "attested": false,
+      "statement": "I attest that every approved deviation's parity reviewer and product/release owner are distinct real people.",
+      "deviation_ids": []
+    }
+  ],
   "repository_state": {
     "before": null,
     "after": null

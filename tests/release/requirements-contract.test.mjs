@@ -194,8 +194,41 @@ test("owner projection and ticket boundaries are bidirectionally set-equal", () 
   assert.deepEqual(boundaries.tickets.map((entry) => entry.ticket), Array.from({ length: 15 }, (_, index) => 17 + index));
 });
 
-test("no unapproved deviation is invented and the sole not-applicable row is reviewed", () => {
-  assert.deepEqual(deviations.deviations, []);
+test("seven deviation drafts are linked but remain fail closed pending approval", () => {
+  const expected = new Map([
+    ["DEV-001", ["UP-CLK-04"]],
+    ["DEV-002", ["UP-INS-02", "UP-SET-03", "UP-SET-13"]],
+    ["DEV-003", ["UP-SET-04"]],
+    ["DEV-004", ["UP-ERR-03", "UP-ERX-08"]],
+    ["DEV-005", ["UP-ERR-08", "UP-ERX-05"]],
+    ["DEV-006", [
+      "UP-SET-08", "UP-SET-10", "UP-EXE-03", "UP-EXE-04", "UP-EXE-05", "UP-EXE-12",
+      "UP-CLK-10", "UP-CMD-02", "UP-ERR-05", "UP-ERR-07", "UP-ERX-06", "UP-ERX-07", "UP-DRF-07",
+    ]],
+    ["DEV-007", ["UP-ERR-06", "UP-ERX-03", "UP-ERX-04"]],
+  ]);
+  assert.deepEqual(deviations.deviations.map((entry) => entry.id), [...expected.keys()]);
+  for (const deviation of deviations.deviations) {
+    assert.equal(deviation.status, "proposed");
+    assert.equal(deviation.approved_at, null);
+    assert.equal(deviation.record_sha256, null);
+    assert.deepEqual(deviation.approvals, []);
+    assert.deepEqual(deviation.requirement_ids, expected.get(deviation.id));
+    assert.match(deviation.record, new RegExp(`^docs/deviations/${deviation.id}[a-z0-9-]*\\.md$`));
+    for (const requirementId of deviation.requirement_ids) {
+      assert.equal(
+        requirements.requirements.find((row) => row.id === requirementId)?.deviation_id,
+        deviation.id,
+      );
+    }
+  }
+  const legendLength = requirements.requirements.find((row) => row.id === "UP-SET-05");
+  assert.equal(legendLength?.disposition, "exact");
+  assert.equal(Object.hasOwn(legendLength, "deviation_id"), false);
+  assert.deepEqual(
+    readJson("tests/fixtures/contracts/scope-public-valid.json").approved_deviation_ids,
+    [...expected.keys()],
+  );
   assert.equal(deviations.not_applicable_approvals.length, 1);
   assert.deepEqual(
     requirements.requirements.filter((row) => row.disposition === "not-applicable").map((row) => row.id),
@@ -205,9 +238,47 @@ test("no unapproved deviation is invented and the sole not-applicable row is rev
   assert.deepEqual(deviations.not_applicable_approvals[0].requirement_ids, ["UP-INS-01"]);
 });
 
-test("public and private scope fixtures fail closed", () => {
-  assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-public-valid.json")), true);
-  assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-private-valid.json")), true);
+test("adapted requirements preserve per-row observable contracts", () => {
+  const rows = new Map(requirements.requirements.map((row) => [row.id, row]));
+  for (const deviation of deviations.deviations) {
+    const statements = deviation.requirement_ids.map((id) => rows.get(id)?.statement);
+    assert.equal(new Set(statements).size, statements.length, `${deviation.id} reuses a generic statement`);
+  }
+  assert.match(rows.get("UP-SET-03").statement, /Start choices `5,6,7,8`/);
+  assert.match(rows.get("UP-SET-10").statement, /Boolean setting, default on/);
+  assert.match(rows.get("UP-SET-10").statement, /failure to warn while the successful CLOCK mutation remains/);
+  assert.match(rows.get("UP-DRF-07").statement, /trigger only toggles the panel/);
+  assert.match(rows.get("UP-DRF-07").statement, /task title has the Shift-`ActiveTaskView` path/);
+  assert.match(rows.get("UP-ERX-05").statement, /Focus an unfinished TODO block before starting timing\./);
+  assert.match(rows.get("UP-ERX-05").statement, /Nautilus Log could not complete that action\./);
+  for (const exactCopy of [
+    "Obsidian workspace leaves are unavailable.",
+    "Obsidian could not move the Active Task view to the front.",
+    "Could not open this task in Active Task.",
+    "The task started, but Obsidian could not show it in Active Task.",
+  ]) {
+    assert.ok(rows.get("UP-ERX-07").statement.includes(`\`${exactCopy}\``));
+  }
+  const executionSurfacesRecord = read(
+    deviations.deviations.find((entry) => entry.id === "DEV-006").record,
+  );
+  for (const exactCopy of [
+    "Obsidian workspace leaves are unavailable.",
+    "Obsidian could not move the Active Task view to the front.",
+    "Could not open this task in Active Task.",
+    "The task started, but Obsidian could not show it in Active Task.",
+  ]) assert.ok(executionSurfacesRecord.includes(`\`${exactCopy}\``));
+  assert.match(rows.get("UP-ERR-03").statement, /explicit user attestation that no other CLOCK writer is enabled/);
+  assert.match(rows.get("UP-ERR-03").statement, /no claim that Spiral Day detected or identified another writer/);
+  const writerConflictRecord = read(deviations.deviations.find((entry) => entry.id === "DEV-004").record);
+  assert.match(writerConflictRecord, /cannot prove that another\s+plugin will not write later/);
+  assert.match(writerConflictRecord, /data-safe index alone never substitutes for attestation/);
+});
+
+test("public and private scope fixtures stay closed until every linked deviation is approved", () => {
+  const allApproved = deviations.deviations.every((entry) => entry.status === "approved");
+  assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-public-valid.json")), allApproved);
+  assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-private-valid.json")), allApproved);
   assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-public-exclusion-invalid.json")), false);
   assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-private-missing-mandatory-invalid.json")), false);
   assert.equal(validateScope(readJson("tests/fixtures/contracts/scope-private-excludes-mandatory-invalid.json")), false);
@@ -263,7 +334,7 @@ test("accepted evidence kind and release-gate matrix are exact", () => {
 test("release inventory exhaustively freezes every #31 repository input", () => {
   const releaseInputs = readJson("scripts/release/release-inputs.json");
   const explicit = new Set(["docs/planning-github-graph.json", "docs/planning-local-links.json", "scripts/check-planning-docs.mjs", "scripts/generate-planning-local-links.mjs", "scripts/generate-requirement-owners.mjs"]);
-  const owned = [".github/workflows", "docs/parity", "scripts/release", "scripts/verify", "tests/fixtures", "tests/release"]
+  const owned = [".github/workflows", "docs/deviations", "docs/parity", "scripts/release", "scripts/verify", "tests/fixtures", "tests/release"]
     .flatMap((directory) => filesBelow(directory));
   assert.deepEqual(
     releaseInputs.candidate_owned,

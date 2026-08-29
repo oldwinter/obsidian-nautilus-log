@@ -24,9 +24,12 @@ const REQUIRED_ATTESTATIONS = [
   "candidate-owner",
   "ci-evidence-controller",
   "data-safety-reviewer",
+  "deviation-approval-identity-witness",
   "parity-reviewer",
   "release-owner",
 ];
+export const DEVIATION_IDENTITY_ATTESTATION_STATEMENT =
+  "I attest that every approved deviation's parity reviewer and product/release owner are distinct real people.";
 const execFileAsync = promisify(execFile);
 
 function sha256(value) {
@@ -460,6 +463,30 @@ export function validateG9Signoff(
       || !Number.isFinite(Date.parse(attestation.timestamp)) || attestation.attested !== true) {
       throw new CandidateError(`G9 attestation ${role} is incomplete`);
     }
+  }
+  const identityWitness = attestations.get("deviation-approval-identity-witness");
+  const attestedDeviationIds = requireArray(
+    identityWitness.deviation_ids,
+    "G9 deviation identity attestation IDs",
+  );
+  const expectedDeviationIds = [...scope.approved_deviation_ids].sort();
+  if (identityWitness.statement !== DEVIATION_IDENTITY_ATTESTATION_STATEMENT
+    || attestedDeviationIds.some((id) => typeof id !== "string" || !/^DEV-[0-9]{3}$/.test(id))
+    || new Set(attestedDeviationIds).size !== attestedDeviationIds.length
+    || JSON.stringify([...attestedDeviationIds].sort()) !== JSON.stringify(expectedDeviationIds)) {
+    throw new CandidateError(
+      "G9 requires a named external human attestation covering the real-person separation of every approved deviation",
+    );
+  }
+  const claimedHumanNames = [
+    attestations.get("parity-reviewer").name,
+    attestations.get("release-owner").name,
+    identityWitness.name,
+  ].map((name) => name.trim().replace(/\s+/g, " ").toLowerCase());
+  if (new Set(claimedHumanNames).size !== claimedHumanNames.length) {
+    throw new CandidateError(
+      "G9 parity reviewer, release owner, and identity witness claimed names must be distinct",
+    );
   }
   for (const phase of ["before", "after"]) {
     const state = signoff.repository_state?.[phase];

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { dirname, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -120,8 +121,8 @@ assert(
   "--live must be review-draft or merge-ready",
 );
 
-function readObject(path) {
-  return git("show", targetSha + ":" + path);
+function readObject(path, sha = targetSha) {
+  return git("show", sha + ":" + path);
 }
 
 function readJsonObject(path) {
@@ -134,6 +135,70 @@ function objectExists(path, sha = targetSha) {
 
 function objectId(path, sha = targetSha) {
   return git("rev-parse", sha + ":" + path);
+}
+
+const deviationApprovalRoles = ["parity-reviewer", "product-release-owner"];
+const claimedReviewerPattern = /^git-email:[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/;
+const approvalArtifactFields = [
+  "schema_version", "deviation_id", "role", "claimed_reviewer", "approved_at", "record_sha256",
+];
+const deviationIdentityAttestationStatement =
+  "I attest that every approved deviation's parity reviewer and product/release owner are distinct real people.";
+
+function normalizedClaimedReviewer(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return claimedReviewerPattern.test(normalized) ? normalized : null;
+}
+
+function approvalSourceDescriptor(sourceRef, deviationId, role) {
+  const match = /^https:\/\/github\.com\/oldwinter\/obsidian-nautilus-log\/blob\/([0-9a-f]{40})\/(docs\/deviations\/approvals\/(DEV-[0-9]{3})\/(parity-reviewer|product-release-owner)\.json)$/.exec(sourceRef ?? "");
+  if (!match || match[3] !== deviationId || match[4] !== role) return null;
+  return { sourceRef, commit: match[1], path: match[2] };
+}
+
+function assertApprovalArtifact(entry, approval, role) {
+  assert(approval.source_refs.length === 1, entry.id + " approval must bind exactly one artifact");
+  const descriptor = approvalSourceDescriptor(approval.source_refs[0], entry.id, role);
+  assert(descriptor, entry.id + " approval source must pin its role artifact in this repository");
+  assert(
+    spawnSync("git", ["merge-base", "--is-ancestor", descriptor.commit, targetSha], { cwd: root }).status === 0,
+    entry.id + " approval artifact commit is not an ancestor of the target candidate",
+  );
+  assert(objectExists(descriptor.path, descriptor.commit), entry.id + " approval artifact Git object is absent");
+  assert(git("cat-file", "-t", descriptor.commit + ":" + descriptor.path) === "blob", entry.id + " approval artifact is not a blob");
+  assert(objectExists(descriptor.path), entry.id + " approval artifact is absent from the target candidate");
+  assert(
+    objectId(descriptor.path, descriptor.commit) === objectId(descriptor.path),
+    entry.id + " approval artifact blob changed after approval",
+  );
+  let artifact;
+  try {
+    artifact = JSON.parse(readObject(descriptor.path, descriptor.commit));
+  } catch (error) {
+    fail(entry.id + " approval artifact is malformed JSON: " + error.message);
+  }
+  assertRequiredFields(artifact, approvalArtifactFields, entry.id + " approval artifact");
+  sameSet(Object.keys(artifact), approvalArtifactFields, entry.id + " approval artifact fields");
+  assert(artifact.schema_version === 1, entry.id + " approval artifact schema_version must be 1");
+  assert(artifact.deviation_id === entry.id, entry.id + " approval artifact has the wrong deviation ID");
+  assert(artifact.role === role, entry.id + " approval artifact has the wrong role");
+  assert(
+    artifact.claimed_reviewer === approval.claimed_reviewer,
+    entry.id + " approval artifact has the wrong claimed reviewer",
+  );
+  const authorEmail = git("show", "-s", "--format=%ae", descriptor.commit).trim().toLowerCase();
+  assert(
+    /^[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/.test(authorEmail),
+    entry.id + " approval artifact commit lacks a stable author email",
+  );
+  assert(
+    normalizedClaimedReviewer(approval.claimed_reviewer) === "git-email:" + authorEmail,
+    entry.id + " claimed reviewer does not match the artifact commit author claim",
+  );
+  assert(artifact.approved_at === approval.approved_at, entry.id + " approval artifact has the wrong timestamp");
+  assert(artifact.record_sha256 === entry.record_sha256
+    && artifact.record_sha256 === approval.record_sha256, entry.id + " approval artifact has the wrong record hash");
+  return { ...descriptor, blobOid: objectId(descriptor.path, descriptor.commit) };
 }
 
 function listObjectFiles(sha = targetSha) {
@@ -175,7 +240,7 @@ const acceptedEvidenceKinds = new Set([
   "UNIT", "CONTRACT", "INTEGRATION", "VAULT", "SCREENSHOT", "KEYBOARD",
   "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
 ]);
-const expectedDeviationIds = [];
+const expectedDeviationIds = range("DEV", 1, 7, 3);
 const objectFiles = listObjectFiles();
 const markdownFiles = objectFiles.filter((path) => path.endsWith(".md")).sort();
 
@@ -596,28 +661,101 @@ report("offline", "requirement-parity-contract", () => {
   assert(Array.isArray(deviations.deviations), "deviations must be an array");
   assert(Array.isArray(deviations.not_applicable_approvals), "not_applicable_approvals must be an array");
   const deviationById = new Map();
+  const proposedDeviationIds = [];
   for (const entry of deviations.deviations) {
     assert(/^DEV-[0-9]{3}$/.test(entry?.id ?? ""), "invalid deviation ID " + String(entry?.id));
     assert(!deviationById.has(entry.id), "duplicate deviation ID " + entry.id);
-    assert(entry.status === "approved", entry.id + " is not approved");
+    assertRequiredFields(
+      entry,
+      [
+        "id", "class", "requirement_ids", "status", "owner", "proposed_at", "approved_at",
+        "record", "record_sha256", "source_refs", "approvals",
+      ],
+      entry.id,
+    );
+    assert(["proposed", "approved"].includes(entry.status), entry.id + " has an invalid status");
+    assert(["HOST", "A11Y", "THEME", "SAFETY"].includes(entry.class), entry.id + " has an invalid class");
+    assert(/^ticket-(?:2[2-9]|3[0-1])$/.test(entry.owner), entry.id + " has an invalid owner");
+    assert(Number.isFinite(Date.parse(entry.proposed_at)), entry.id + " has an invalid proposed_at");
+    assert(/^docs\/deviations\/DEV-[0-9]{3}[a-z0-9-]*\.md$/.test(entry.record), entry.id + " has an invalid record path");
+    assert(objectExists(entry.record), entry.id + " Markdown record is absent");
+    const record = readObject(entry.record);
+    assert(record.includes("# " + entry.id + ":"), entry.id + " Markdown record lacks its heading");
+    for (const heading of [
+      "Upstream observation", "Obsidian behavior", "Rationale and alternatives", "Acceptance",
+      "Rollback and revisit", "Approvals",
+    ]) assert(record.includes("## " + heading), entry.id + " Markdown record lacks " + heading);
+    assertPinnedGithubRefs(entry.source_refs, entry.id + " source_refs");
     uniqueStrings(entry.requirement_ids, entry.id + " requirement_ids");
     assert(
       entry.requirement_ids.every((id) => requirementIdSet.has(id)),
       entry.id + " points to an unknown requirement",
     );
-    const approvals = Array.isArray(entry.approvals)
-      ? entry.approvals
-      : Object.entries(entry.approvals ?? {}).map(([role, approval]) => ({ role, ...approval }));
-    const approvedRoles = new Set(approvals
-      .filter((approval) => typeof approval?.reviewer === "string" && approval.reviewer.trim() !== ""
-        && Number.isFinite(Date.parse(approval.approved_at)))
-      .map((approval) => String(approval.role).replaceAll("_", "-").toLowerCase()));
-    assert([...approvedRoles].some((role) => role.includes("parity")), entry.id + " lacks parity approval");
-    assert(
-      [...approvedRoles].some((role) => role.includes("release") || role.includes("product")),
-      entry.id + " lacks product/release approval",
-    );
+    assert(Array.isArray(entry.approvals), entry.id + " approvals must be an array");
+    if (entry.status === "proposed") {
+      assert(entry.approved_at === null, entry.id + " proposed approved_at must be null");
+      assert(entry.record_sha256 === null, entry.id + " proposed record_sha256 must be null");
+      assert(entry.approvals.length === 0, entry.id + " proposed approvals must be empty");
+      proposedDeviationIds.push(entry.id);
+    } else {
+      assert(Number.isFinite(Date.parse(entry.approved_at)), entry.id + " has an invalid approved_at");
+      assert(/^[0-9a-f]{64}$/.test(entry.record_sha256), entry.id + " has an invalid record hash");
+      assert(
+        createHash("sha256").update(record).digest("hex") === entry.record_sha256,
+        entry.id + " Markdown record hash mismatch",
+      );
+      assert(entry.approvals.length === 2, entry.id + " must have exactly two approvals");
+      const approvalRoles = [];
+      const approvalClaims = [];
+      const approvalDescriptors = [];
+      for (const approval of entry.approvals) {
+        const role = String(approval?.role).replaceAll("_", "-").toLowerCase();
+        assert(deviationApprovalRoles.includes(role), entry.id + " has an invalid approval role");
+        const claimedReviewer = normalizedClaimedReviewer(approval.claimed_reviewer);
+        assert(claimedReviewer !== null, entry.id + " approval lacks a normalized claimed reviewer");
+        assert(
+          approval.claimed_reviewer === claimedReviewer,
+          entry.id + " approval claimed reviewer must be normalized",
+        );
+        assert(Number.isFinite(Date.parse(approval.approved_at)), entry.id + " approval has an invalid timestamp");
+        assert(approval.record_sha256 === entry.record_sha256, entry.id + " approval is bound to another record hash");
+        assert(Array.isArray(approval.source_refs), entry.id + " approval lacks artifact sources");
+        const descriptor = assertApprovalArtifact(entry, approval, role);
+        approvalRoles.push(role);
+        approvalClaims.push(claimedReviewer);
+        approvalDescriptors.push(descriptor);
+      }
+      sameSet(approvalRoles, deviationApprovalRoles, entry.id + " approval roles");
+      assert(
+        new Set(approvalClaims).size === approvalClaims.length,
+        entry.id + " claimed reviewer identifiers must be distinct",
+      );
+      for (const key of ["sourceRef", "commit", "path", "blobOid"]) {
+        assert(
+          new Set(approvalDescriptors.map((descriptor) => descriptor[key])).size === approvalDescriptors.length,
+          entry.id + " approval " + key + " values must be distinct",
+        );
+      }
+    }
     deviationById.set(entry.id, entry);
+  }
+  sameSet(deviationById.keys(), expectedDeviationIds, "registered deviation IDs");
+  const expectedDeviationLinks = new Map([
+    ["DEV-001", ["SAFETY", ["UP-CLK-04"]]],
+    ["DEV-002", ["HOST", ["UP-INS-02", "UP-SET-03", "UP-SET-13"]]],
+    ["DEV-003", ["HOST", ["UP-SET-04"]]],
+    ["DEV-004", ["SAFETY", ["UP-ERR-03", "UP-ERX-08"]]],
+    ["DEV-005", ["HOST", ["UP-ERR-08", "UP-ERX-05"]]],
+    ["DEV-006", ["HOST", [
+      "UP-SET-08", "UP-SET-10", "UP-EXE-03", "UP-EXE-04", "UP-EXE-05", "UP-EXE-12",
+      "UP-CLK-10", "UP-CMD-02", "UP-ERR-05", "UP-ERR-07", "UP-ERX-06", "UP-ERX-07", "UP-DRF-07",
+    ]]],
+    ["DEV-007", ["HOST", ["UP-ERR-06", "UP-ERX-03", "UP-ERX-04"]]],
+  ]);
+  for (const [id, [expectedClass, requirementIds]] of expectedDeviationLinks) {
+    const entry = deviationById.get(id);
+    assert(entry?.class === expectedClass, id + " has the wrong deviation class");
+    sameSequence(entry?.requirement_ids ?? [], requirementIds, id + " requirement links");
   }
   const approvalById = new Map();
   for (const entry of deviations.not_applicable_approvals) {
@@ -707,6 +845,12 @@ report("offline", "requirement-parity-contract", () => {
   }
   sameSet(usedDeviations, deviationById.keys(), "used vs registered deviations");
   sameSet(usedApprovals, approvalById.keys(), "used vs registered not-applicable approvals");
+  assert(
+    proposedDeviationIds.length === 0,
+    "proposed deviations require complete parity-reviewer and product-release-owner approval artifacts; "
+      + "G0 separates only claimed reviewer identifiers and G9 requires the external real-person attestation: "
+      + proposedDeviationIds.join(", "),
+  );
   return "126 rows, required schema fields, closed catalogs/owners/sources/deviations, and empty repository evidence";
 });
 
@@ -826,7 +970,7 @@ report("offline", "release-input-inventory", () => {
   for (const path of candidateOwned) assert(objectExists(path), "candidate_owned path is absent from target: " + path);
   for (const path of transitiveInputs) assert(objectExists(path), "transitive input is absent from target: " + path);
   const exactOwnedInputs = objectFiles.filter((path) => [
-    ".github/workflows/", "docs/parity/", "scripts/release/", "scripts/verify/", "tests/fixtures/", "tests/release/",
+    ".github/workflows/", "docs/deviations/", "docs/parity/", "scripts/release/", "scripts/verify/", "tests/fixtures/", "tests/release/",
   ].some((prefix) => path.startsWith(prefix)) || [
     "docs/planning-github-graph.json", "docs/planning-local-links.json", "scripts/check-planning-docs.mjs",
     "scripts/generate-planning-local-links.mjs", "scripts/generate-requirement-owners.mjs",
@@ -922,6 +1066,18 @@ report("offline", "release-input-inventory", () => {
   assert(g9.evidence_bundle?.index_sha256 === zeroHash, "G9 evidence index identity must begin unresolved");
   assert(g9.release?.draft === false && g9.release?.published === false, "G9 release template must begin unpublished and non-draft");
   assert(g9.repository_state?.before === null && g9.repository_state?.after === null, "G9 repository states must begin unresolved");
+  const identityWitness = g9.attestations.find(
+    (entry) => entry?.role === "deviation-approval-identity-witness",
+  );
+  assert(
+    identityWitness?.attested === false
+      && identityWitness.name === ""
+      && identityWitness.timestamp === null
+      && identityWitness.statement === deviationIdentityAttestationStatement
+      && Array.isArray(identityWitness.deviation_ids)
+      && identityWitness.deviation_ids.length === 0,
+    "G9 template must expose an unresolved external deviation identity witness attestation",
+  );
 
   const runGate = readObject("scripts/release/run-gate.mjs");
   const dryRun = readObject("scripts/release/dry-run.mjs");
@@ -1058,6 +1214,7 @@ report("offline", "evidence-and-trace-contract", () => {
     "TC-DANGLING-001",
     'disposition = "deferred"',
     'deviation_id = "DEV-999"',
+    "adapted requirements preserve per-row observable contracts",
   ]) {
     assert(requirementsTests.includes(phrase), "requirements negative tests lack: " + phrase);
   }
@@ -1065,6 +1222,8 @@ report("offline", "evidence-and-trace-contract", () => {
   for (const phrase of [
     "dirty and unpushed states fail",
     "unknown dispositions, unapproved adaptations, dangling links, and incomplete private scope",
+    "claimed approval identifiers pass structural checks while URL, commit, path, blob, author, role, and hash corruption fails",
+    "approval artifact commits must be candidate ancestors",
     "stale records, retry-only results, and hash corruption",
     "missing, malformed, duplicate, skipped, and corrupt package data",
     "same-SHA invariant",

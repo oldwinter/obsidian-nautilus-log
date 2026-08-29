@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 import {
+  assertCandidateAncestor,
   assertPushedCandidate,
+  candidateBlobOid,
+  candidateCommitAuthorClaim,
   CandidateError,
   listCandidateFiles,
   readCandidateFile,
@@ -15,6 +18,11 @@ import { validateJsonAgainstSchema } from "./json-schema.mjs";
 const UPSTREAM_BASELINE = "973a041aa2f59f3b05bf31db8187efbfea07017a";
 const DISPOSITIONS = new Set(["exact", "host-adapted", "approved-improvement", "not-applicable"]);
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const DEVIATION_APPROVAL_ROLES = ["parity-reviewer", "product-release-owner"];
+const CLAIMED_REVIEWER_PATTERN = /^git-email:[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/;
+const APPROVAL_ARTIFACT_FIELDS = [
+  "schema_version", "deviation_id", "role", "claimed_reviewer", "approved_at", "record_sha256",
+];
 const EVIDENCE_KINDS = new Set([
   "UNIT", "CONTRACT", "VAULT", "INTEGRATION", "SCREENSHOT",
   "KEYBOARD", "A11Y", "LIFECYCLE", "PACKAGE", "MANUAL",
@@ -55,6 +63,7 @@ const REQUIRED_ENVIRONMENT_IDS = [
 ];
 const RELEASE_INPUT_PREFIXES = [
   ".github/workflows/",
+  "docs/deviations/",
   "docs/parity/",
   "scripts/release/",
   "scripts/verify/",
@@ -159,20 +168,97 @@ function rowMap(rows, key, label) {
   return result;
 }
 
-function approvalIsComplete(entry) {
-  if (!entry || entry.status !== "approved") return false;
-  const approvals = Array.isArray(entry.approvals)
-    ? entry.approvals
-    : Object.entries(entry.approvals ?? {}).map(([role, value]) => ({ role, ...value }));
-  const roles = new Set(
-    approvals
-      .filter((approval) => approval && typeof approval.reviewer === "string"
-        && approval.reviewer.trim() && !Number.isNaN(Date.parse(approval.approved_at)))
-      .map((approval) => String(approval.role).replaceAll("_", "-").toLowerCase()),
-  );
-  const parity = [...roles].some((role) => role.includes("parity"));
-  const release = [...roles].some((role) => role.includes("release") || role.includes("product"));
-  return parity && release;
+function normalizedClaimedReviewer(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return CLAIMED_REVIEWER_PATTERN.test(normalized) ? normalized : null;
+}
+
+export function parseDeviationApprovalSource(sourceRef, deviationId, role) {
+  const match = /^https:\/\/github\.com\/oldwinter\/obsidian-nautilus-log\/blob\/([0-9a-f]{40})\/(docs\/deviations\/approvals\/(DEV-[0-9]{3})\/(parity-reviewer|product-release-owner)\.json)$/.exec(sourceRef ?? "");
+  if (!match || match[3] !== deviationId || match[4] !== role) return null;
+  return { sourceRef, commit: match[1], path: match[2] };
+}
+
+function approvalArtifactMatches(payload, entry, approval, role) {
+  try {
+    if (!payload || typeof payload !== "object"
+      || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(payload.blobOid ?? "")
+      || normalizedClaimedReviewer(payload.commitAuthorClaim)
+        !== normalizedClaimedReviewer(approval.claimed_reviewer)) {
+      return false;
+    }
+    const { bytes } = payload;
+    const artifact = JSON.parse(Buffer.isBuffer(bytes) ? bytes.toString("utf8") : String(bytes));
+    if (!artifact || typeof artifact !== "object" || Array.isArray(artifact)
+      || JSON.stringify(Object.keys(artifact).sort()) !== JSON.stringify([...APPROVAL_ARTIFACT_FIELDS].sort())) {
+      return false;
+    }
+    return artifact.schema_version === 1
+      && artifact.deviation_id === entry.id
+      && artifact.role === role
+      && artifact.claimed_reviewer === approval.claimed_reviewer
+      && normalizedClaimedReviewer(artifact.claimed_reviewer)
+        === normalizedClaimedReviewer(approval.claimed_reviewer)
+      && artifact.approved_at === approval.approved_at
+      && artifact.record_sha256 === entry.record_sha256
+      && artifact.record_sha256 === approval.record_sha256;
+  } catch {
+    return false;
+  }
+}
+
+export function deviationApprovalIsComplete(entry, readApprovalArtifact) {
+  if (!entry
+    || entry.status !== "approved"
+    || !/^DEV-[0-9]{3}$/.test(entry.id ?? "")
+    || !["HOST", "A11Y", "THEME", "SAFETY"].includes(entry.class)
+    || !/^docs\/deviations\/DEV-[0-9]{3}[a-z0-9-]*\.md$/.test(entry.record ?? "")
+    || !SHA256_PATTERN.test(entry.record_sha256 ?? "")
+    || Number.isNaN(Date.parse(entry.approved_at))
+    || !Array.isArray(entry.requirement_ids)
+    || entry.requirement_ids.length === 0
+    || new Set(entry.requirement_ids).size !== entry.requirement_ids.length
+    || !Array.isArray(entry.source_refs)
+    || entry.source_refs.length === 0
+    || entry.source_refs.some((ref) => !/^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/blob\/[0-9a-f]{40}\/.+/.test(ref))) {
+    return false;
+  }
+  if (!Array.isArray(entry.approvals) || entry.approvals.length !== 2) return false;
+  const roles = [];
+  const claimedReviewers = [];
+  const descriptors = [];
+  for (const approval of entry.approvals) {
+    const role = String(approval?.role).replaceAll("_", "-").toLowerCase();
+    const claimedReviewer = normalizedClaimedReviewer(approval?.claimed_reviewer);
+    if (!approval || !DEVIATION_APPROVAL_ROLES.includes(role)
+      || claimedReviewer === null
+      || approval.claimed_reviewer !== claimedReviewer
+      || Number.isNaN(Date.parse(approval.approved_at))
+      || approval.record_sha256 !== entry.record_sha256
+      || !Array.isArray(approval.source_refs)
+      || approval.source_refs.length !== 1) {
+      return false;
+    }
+    const descriptor = parseDeviationApprovalSource(approval.source_refs[0], entry.id, role);
+    if (!descriptor || typeof readApprovalArtifact !== "function") return false;
+    let artifact;
+    try {
+      artifact = readApprovalArtifact(descriptor);
+    } catch {
+      return false;
+    }
+    if (artifact == null || !approvalArtifactMatches(artifact, entry, approval, role)) return false;
+    roles.push(role);
+    claimedReviewers.push(claimedReviewer);
+    descriptors.push({ ...descriptor, blobOid: artifact.blobOid });
+  }
+  return JSON.stringify([...roles].sort())
+      === JSON.stringify(DEVIATION_APPROVAL_ROLES)
+    && new Set(claimedReviewers).size === claimedReviewers.length
+    && new Set(descriptors.map(({ sourceRef }) => sourceRef)).size === descriptors.length
+    && new Set(descriptors.map(({ path }) => path)).size === descriptors.length
+    && new Set(descriptors.map(({ commit }) => commit)).size === descriptors.length
+    && new Set(descriptors.map(({ blobOid }) => blobOid)).size === descriptors.length;
 }
 
 function notApplicableApprovalIsComplete(entry, requirementId) {
@@ -189,7 +275,7 @@ function notApplicableApprovalIsComplete(entry, requirementId) {
     && entry.source_refs.length > 0;
 }
 
-export function validateRequirementManifest(manifest, deviations) {
+export function validateRequirementManifest(manifest, deviations, options = {}) {
   if (manifest.schema_version !== 1 || manifest.upstream_baseline_sha !== UPSTREAM_BASELINE) {
     throw new CandidateError("requirements manifest schema or upstream baseline is invalid");
   }
@@ -287,7 +373,8 @@ export function validateRequirementManifest(manifest, deviations) {
 
     if (row.disposition === "host-adapted" || row.disposition === "approved-improvement") {
       const deviation = deviationRows.get(row.deviation_id);
-      if (!approvalIsComplete(deviation) || !deviation.requirement_ids?.includes(id)) {
+      if (!deviationApprovalIsComplete(deviation, options.readApprovalArtifact)
+        || !deviation.requirement_ids?.includes(id)) {
         throw new CandidateError(`${id} lacks a concrete approved deviation`);
       }
       usedDeviations.add(row.deviation_id);
@@ -493,6 +580,33 @@ export function validateCandidateScope(
   return { included: includedSet, excluded: excludedSet };
 }
 
+async function loadDeviationApprovalArtifacts(repository, candidateSha, deviations) {
+  const artifacts = new Map();
+  for (const entry of deviations.deviations ?? []) {
+    if (entry?.status !== "approved" || !Array.isArray(entry.approvals)) continue;
+    for (const approval of entry.approvals) {
+      const role = String(approval?.role).replaceAll("_", "-").toLowerCase();
+      const sourceRef = Array.isArray(approval?.source_refs) && approval.source_refs.length === 1
+        ? approval.source_refs[0]
+        : null;
+      const descriptor = parseDeviationApprovalSource(sourceRef, entry.id, role);
+      if (!descriptor || artifacts.has(descriptor.sourceRef)) continue;
+      await assertCandidateAncestor(repository, descriptor.commit, candidateSha);
+      const [approvedBytes, candidateBytes, commitAuthorClaim, blobOid] = await Promise.all([
+        readCandidateFile(repository, descriptor.commit, descriptor.path),
+        readCandidateFile(repository, candidateSha, descriptor.path),
+        candidateCommitAuthorClaim(repository, descriptor.commit),
+        candidateBlobOid(repository, descriptor.commit, descriptor.path),
+      ]);
+      if (sha256(approvedBytes) !== sha256(candidateBytes)) {
+        throw new CandidateError(`${entry.id} approval artifact blob changed after approval`);
+      }
+      artifacts.set(descriptor.sourceRef, { bytes: approvedBytes, commitAuthorClaim, blobOid });
+    }
+  }
+  return ({ sourceRef }) => artifacts.get(sourceRef);
+}
+
 export async function validateG0({
   repository,
   candidateSha,
@@ -553,16 +667,30 @@ export async function validateG0({
   validateJsonAgainstSchema(requirements, requirementsSchema, "requirements.json");
   validateJsonAgainstSchema(owners, ownersSchema, "requirement-owners.json");
   validateJsonAgainstSchema(boundaries, boundariesSchema, "ticket-boundaries.json");
-  const requirementRows = validateRequirementManifest(requirements, deviations);
+  const readApprovalArtifact = await loadDeviationApprovalArtifacts(repository, candidateSha, deviations);
+  const requirementRows = validateRequirementManifest(requirements, deviations, { readApprovalArtifact });
+  for (const deviation of deviations.deviations) {
+    if (!candidateFiles.includes(deviation.record)) {
+      throw new CandidateError(`${deviation.id} record is absent from the candidate`);
+    }
+    const recordBytes = await readCandidateFile(repository, candidateSha, deviation.record);
+    if (sha256(recordBytes) !== deviation.record_sha256) {
+      throw new CandidateError(`${deviation.id} record hash does not match its approvals`);
+    }
+    const record = recordBytes.toString("utf8");
+    if (!record.includes(`# ${deviation.id}:`)
+      || deviation.requirement_ids.some((id) => !record.includes(`\`${id}\``))) {
+      throw new CandidateError(`${deviation.id} Markdown record lacks its reverse links`);
+    }
+  }
   validateOwnershipProjections(requirementRows, owners, boundaries);
   const scopePartition = validateCandidateScope(scope, candidateSha, requirementRows, {
     requirementsSha256: sha256(requirementsBytes),
     deviationsSha256: sha256(deviationsBytes),
   });
-  const requiredDeviationIds = [...requirementRows.values()]
+  const requiredDeviationIds = [...new Set([...requirementRows.values()]
     .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
-    .map((row) => row.deviation_id)
-    .sort();
+    .map((row) => row.deviation_id))].sort();
   if (JSON.stringify([...scope.approved_deviation_ids].sort()) !== JSON.stringify(requiredDeviationIds)) {
     throw new CandidateError("scope approved deviations do not match the candidate requirement dispositions");
   }

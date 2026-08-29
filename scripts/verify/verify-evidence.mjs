@@ -97,15 +97,27 @@ function evidenceScope(scopePath, candidateSha, requirements, repoRoot, requirem
   const deviationSpec = `${candidateSha}:docs/parity/deviations.json`;
   const deviationBytes = gitBytes(repoRoot, ["show", deviationSpec]);
   const deviations = parseJson(deviationBytes.toString("utf8"), deviationSpec);
-  const rows = validateRequirementManifest(requirements, deviations);
+  const rows = validateRequirementManifest(requirements, deviations, {
+    readApprovalArtifact: ({ commit, path }) => {
+      git(repoRoot, ["merge-base", "--is-ancestor", commit, candidateSha]);
+      const approvedBytes = gitBytes(repoRoot, ["show", `${commit}:${path}`]);
+      const candidateBytes = gitBytes(repoRoot, ["show", `${candidateSha}:${path}`]);
+      if (!approvedBytes.equals(candidateBytes)) fail(`approval artifact blob changed after approval: ${path}`);
+      const authorEmail = git(repoRoot, ["show", "-s", "--format=%ae", commit]).trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/.test(authorEmail)) {
+        fail(`approval artifact commit lacks a stable author email: ${commit}`);
+      }
+      const blobOid = git(repoRoot, ["rev-parse", `${commit}:${path}`]);
+      return { bytes: approvedBytes, commitAuthorClaim: `git-email:${authorEmail}`, blobOid };
+    },
+  });
   const partition = validateCandidateScope(scope, candidateSha, rows, {
     requirementsSha256: createHash("sha256").update(requirementBytes).digest("hex"),
     deviationsSha256: createHash("sha256").update(deviationBytes).digest("hex"),
   });
-  const requiredDeviationIds = [...rows.values()]
+  const requiredDeviationIds = [...new Set([...rows.values()]
     .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
-    .map((row) => row.deviation_id)
-    .sort();
+    .map((row) => row.deviation_id))].sort();
   if (JSON.stringify([...scope.approved_deviation_ids].sort()) !== JSON.stringify(requiredDeviationIds)) {
     fail("--scope approved deviations do not match the exact candidate requirements");
   }

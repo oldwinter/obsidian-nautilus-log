@@ -3,7 +3,15 @@
   "candidate_sha": "1111111111111111111111111111111111111111",
   "requirements_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "deviations_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "approved_deviation_ids": [],
+  "approved_deviation_ids": [
+    "DEV-001",
+    "DEV-002",
+    "DEV-003",
+    "DEV-004",
+    "DEV-005",
+    "DEV-006",
+    "DEV-007"
+  ],
   "release_scope": "public",
   "parity_claim": "v1.0.2-parity",
   "included_requirement_ids": [

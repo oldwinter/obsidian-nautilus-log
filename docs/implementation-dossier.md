@@ -439,6 +439,68 @@ instance still requires a linked, reviewed `DEV-NNN` record and passing evidence
 | `SAFETY` | Explicit Plan Region/ID materialization, semantic CAS, conservative link handling, fail-closed conflicts, no automatic write/repair/retry | Scheduling semantics and explicit workflow remain; unowned Markdown is byte-preserved | New host atomicity/identity capability justifies a narrower approved protocol |
 | `not-applicable` | Roam Depot installation conflict `UP-INS-01` | Obsidian install/package workflow is fully tested | Product again targets Roam distribution |
 
+Proposed [`DEV-001`](deviations/DEV-001-startup-clock-recovery.md) makes the
+already approved SAFETY decision traceable from `UP-CLK-04`: startup still performs the complete
+LOGBOOK scan and reports every legacy overlap, DONE-owner, malformed, or stale
+CLOCK condition, but it never closes, deletes, normalizes, or deduplicates
+Markdown without a fresh user decision. A uniquely owned valid running CLOCK
+resumes; every unsafe or ambiguous state remains read-only until Timing Repair
+previews an exact change and the user confirms it.
+
+The proposed HOST and SAFETY records for ticket #27 are
+[`DEV-002`](deviations/DEV-002-native-host-registration-and-settings.md),
+[`DEV-003`](deviations/DEV-003-remove-obsolete-component-prefix.md),
+[`DEV-004`](deviations/DEV-004-diagnose-clock-writer-conflicts.md),
+[`DEV-005`](deviations/DEV-005-atomic-command-registration-failure.md),
+[`DEV-006`](deviations/DEV-006-native-execution-surfaces.md), and
+[`DEV-007`](deviations/DEV-007-native-vault-error-contract.md). They map only
+Roam-owned scaffold, chrome, navigation, command registration, explicit writer
+attestation plus bounded CLOCK data-conflict checks, and graph-operation language
+to public Obsidian surfaces. Each remains
+release-blocking until the exact record hash has parity-reviewer and
+product-release-owner approval artifacts with distinct claimed identifiers and
+distinct durable sources. That machine-checkable separation is not proof that
+two different people performed the reviews.
+
+Each approved deviation binds exactly two offline-verifiable approval artifacts:
+`docs/deviations/approvals/DEV-NNN/parity-reviewer.json` and
+`docs/deviations/approvals/DEV-NNN/product-release-owner.json`. Each ledger
+approval uses one immutable same-repository `blob/<40-char-commit>/<path>` URL.
+The referenced JSON blob must contain only schema version, deviation ID, role,
+the normalized `git-email:<source-commit-author-email>` `claimed_reviewer`,
+approval timestamp, and the exact record SHA-256, all equal to the ledger and
+the source commit's self-asserted Git author email. The two roles, normalized
+claimed reviewer identifiers, source URLs, commits, paths, and Git blobs must be
+distinct. G0 reads these
+blobs and author metadata from local Git objects, requires both artifact commits to be
+ancestors of the exact candidate, requires the candidate-path blob to remain
+byte-identical to the approved blob, and never trusts URL shape or network state.
+G0 proves only structural integrity and claimed-identifier separation: one
+process can create commits under two email claims, so G0 cannot establish that
+the reviewers are distinct real people. Merge-ready G9 therefore requires a
+named external human identity-witness attestation, covering every frozen
+approved deviation, that the parity reviewer and product/release owner are
+distinct real people. The G9 machine gate validates the attestation's exact
+statement, named roles, timestamps, and deviation set; it records rather than
+independently proves the real-world identity claim. Synthetic fixtures exercise
+only this structure and are not human approval evidence.
+The approval-artifact commits precede the ledger commit, avoiding self-referential
+commit hashes; adding them also updates the exhaustive release-input inventory.
+
+`UP-SET-05` remains exact and has no deviation: the setting visibly offers and
+persists `14`, while the v1.0.2-compatible effective renderer value is `22`;
+`16..28` remain effective as selected. Tests must preserve that contradiction
+rather than silently making `14` effective.
+
+Ticket #27 acceptance for the existing `timing-view.ts`, `panel.ts`,
+`shared-controls.ts`, `execution-entry.ts`, `notices.ts`, execution locale,
+`styles/execution.css`, and `tests/ui/execution/` boundaries includes the visible
+`DEV-001` Timing Repair entry. It must render the read-only diagnostic, preview
+the exact target and replacement, require fresh confirmation, and dispatch the
+approved runtime command. This adds acceptance evidence only: ticket #26 retains
+runtime and write authority, and no primary requirement or module boundary is
+transferred.
+
 Approved semantic resolutions from the data-contract decision are not silently
 filed as native deviations: standard Markdown checkbox mapping, no link/embed
 dereference, no true overnight continuation, and shared progress rounding are
@@ -487,7 +549,7 @@ change invalidates the freeze and returns the candidate to #30 for G0-G6 before
 | G6 visual | Geometry/state assertions, 519/520/521, themes, dense/edge fixtures, screenshot threshold, and human goldens pass |
 | G7 package/policy | Two byte-identical builds, hashes, install/upgrade/uninstall, license/provenance, manifest, and policy pass |
 | G8 private | Declared scope passes G0-G7; mandatory safety/lifecycle/local/package IDs pass; package says private preview |
-| G9 public | Zero exclusions; 114/114 plus every active ID/environment; exact G7 package; five workflows; named final sign-off |
+| G9 public | Zero exclusions; 114/114 plus every active ID/environment; exact G7 package; five workflows; named final sign-off; external human deviation-identity witness attestation |
 
 The package allowlist is `manifest.json`, `main.js`, and optional `styles.css`.
 Ticket #27 owns the composition-root registrations and deterministic build

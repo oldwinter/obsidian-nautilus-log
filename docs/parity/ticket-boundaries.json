@@ -85,6 +85,7 @@
       "ticket": 22,
       "allowed_module_boundaries": [
         ".github/workflows/",
+        "docs/deviations/",
         "docs/parity/deviations.json",
         "docs/parity/requirement-owners.json",
         "docs/parity/requirement-owners.schema.json",

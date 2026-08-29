@@ -53,6 +53,32 @@ export async function assertCandidateObject(repository, candidateSha) {
   return candidateSha;
 }
 
+export async function assertCandidateAncestor(repository, ancestorSha, candidateSha) {
+  requireFullSha(ancestorSha, "approval artifact commit");
+  requireFullSha(candidateSha, "candidate SHA");
+  await Promise.all([
+    assertCandidateObject(repository, ancestorSha),
+    assertCandidateObject(repository, candidateSha),
+  ]);
+  try {
+    await runGit(repository, ["merge-base", "--is-ancestor", ancestorSha, candidateSha]);
+  } catch {
+    throw new CandidateError(
+      `approval artifact commit ${ancestorSha} is not an ancestor of candidate ${candidateSha}`,
+    );
+  }
+  return ancestorSha;
+}
+
+export async function candidateCommitAuthorClaim(repository, commitSha) {
+  await assertCandidateObject(repository, commitSha);
+  const email = (await runGit(repository, ["show", "-s", "--format=%ae", commitSha])).trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9._+-]*@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) {
+    throw new CandidateError(`approval artifact commit ${commitSha} lacks a stable author email`);
+  }
+  return `git-email:${email}`;
+}
+
 export async function readCandidateFile(repository, candidateSha, repositoryPath, options = {}) {
   await assertCandidateObject(repository, candidateSha);
   requireRepositoryPath(repositoryPath);

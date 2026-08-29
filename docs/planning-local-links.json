@@ -214,6 +214,48 @@
     },
     {
       "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-001-startup-clock-recovery.md",
+      "target": "docs/deviations/DEV-001-startup-clock-recovery.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-002-native-host-registration-and-settings.md",
+      "target": "docs/deviations/DEV-002-native-host-registration-and-settings.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-003-remove-obsolete-component-prefix.md",
+      "target": "docs/deviations/DEV-003-remove-obsolete-component-prefix.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-004-diagnose-clock-writer-conflicts.md",
+      "target": "docs/deviations/DEV-004-diagnose-clock-writer-conflicts.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-005-atomic-command-registration-failure.md",
+      "target": "docs/deviations/DEV-005-atomic-command-registration-failure.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-006-native-execution-surfaces.md",
+      "target": "docs/deviations/DEV-006-native-execution-surfaces.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-007-native-vault-error-contract.md",
+      "target": "docs/deviations/DEV-007-native-vault-error-contract.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
       "href": "planning-github-graph.json",
       "target": "docs/planning-github-graph.json",
       "occurrence": 1

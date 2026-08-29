@@ -28,6 +28,164 @@ const initialRequirementStatements = new Map([
 ]);
 const initialIds = [...initialRequirementStatements.keys()];
 const expectedIds = [...upstreamIds, ...initialIds];
+const requirementOverrides = new Map();
+function adapt(ids, deviationId, disposition, statement) {
+  for (const id of ids) {
+    assert(!requirementOverrides.has(id), `duplicate requirement override ${id}`);
+    requirementOverrides.set(id, { deviationId, disposition, statement });
+  }
+}
+
+adapt(
+  ["UP-CLK-04"],
+  "DEV-001",
+  "approved-improvement",
+  "Given multiple legacy open CLOCKs, an open CLOCK under a DONE or otherwise ineligible owner, or malformed CLOCK source; when the runtime initializes or reconciles; the observable result is a bounded full-LOGBOOK read-only diagnostic with zero Markdown writes. Exactly one valid running CLOCK with a uniquely resolved eligible owner resumes; multiple opens, invalid owners, potential-running malformed records, duplicate identities, and ambiguous legacy times enter the specified recovery state. Acceptance also requires source bytes to be preserved, malformed closed history to be excluded from Actual, newest-valid-wins to be offered only by a separately previewed and confirmed Timing Repair, and DONE-owner closure to use a user-selected trusted instant.",
+);
+adapt(
+  ["UP-INS-02"],
+  "DEV-002",
+  "host-adapted",
+  "Given first Obsidian load; when Spiral Day is enabled or installed; the observable result is that native views, commands, settings, and lifecycle disposers are registered in order with zero vault writes and no `roam/render` page, template block, code block, or ClojureScript child. Acceptance also requires idempotent registration and no search for or alteration of legacy-extension blocks.",
+);
+adapt(
+  ["UP-SET-03"],
+  "DEV-002",
+  "host-adapted",
+  "Given the Obsidian Settings panel is open; when Chart Start or End changes; the observable result is Start choices `5,6,7,8`, End choices `18,19,20,21,22,23,24`, persisted plugin settings update, and chart bounds update immediately in every mounted projection. Acceptance also requires no arbitrary start minute or hour outside these lists and no renderer-template rewrite.",
+);
+adapt(
+  ["UP-SET-13"],
+  "DEV-002",
+  "host-adapted",
+  "Given an existing mounted Planner; when any chart setting changes; the observable result is that the open projection immediately follows current validated runtime settings even when migrated stored data or mounted state is stale. Acceptance also requires runtime settings to take precedence and no serialized renderer arguments or template rewrites to exist.",
+);
+adapt(
+  ["UP-SET-04"],
+  "DEV-003",
+  "approved-improvement",
+  "Given the Obsidian Settings panel is open; the Component Prefix control is not exposed because native ItemViews generate no component render text. A migrated custom or empty prefix remains stored but ignored, and Primary Plan discovery uses the canonical Plan Region plus authoritative identity. Acceptance also requires legacy prefix data never to hide an otherwise valid Primary Plan and no Markdown rewrite.",
+);
+adapt(
+  ["UP-ERR-03"],
+  "DEV-004",
+  "approved-improvement",
+  "When Enable Execution is requested, the observable result is a required explicit user attestation that no other CLOCK writer is enabled plus a bounded authoritative CLOCK-index check. If the attestation is absent or the index cannot prove a safe CLOCK data state, a localized danger Notice appears for five seconds, Execution returns off, zero Markdown writes occur, and read-only diagnosis plus Timing Repair are exposed. Acceptance also requires no claim that Spiral Day detected or identified another writer through host state.",
+);
+adapt(
+  ["UP-ERX-08"],
+  "DEV-004",
+  "approved-improvement",
+  "When CLOCK writer exclusivity is unconfirmed or CLOCK data conflicts, the observable result is `Execution remains disabled. Confirm that no other CLOCK writer is enabled and resolve CLOCK conflicts before enabling.` Acceptance also requires a five-second danger Notice, Execution setting reset off, zero Markdown writes, read-only diagnosis, and a Timing Repair entry without claiming another writer was detected.",
+);
+adapt(
+  ["UP-ERR-08"],
+  "DEV-005",
+  "approved-improvement",
+  "When any required public Obsidian command registration fails during Execution activation, the observable result is disposal of every partial command, menu, and UI registration; poller/runtime teardown; persisted Execution off; zero Markdown writes; logged host cause; and a localized five-second Notice: `Nautilus Log commands are unavailable. Execution remains disabled.` Acceptance also requires a deterministic visible failure instead of a console-only setting-handler error.",
+);
+adapt(
+  ["UP-ERX-05"],
+  "DEV-005",
+  "approved-improvement",
+  "When focus or command setup fails, the observable result preserves `Focus an unfinished TODO block before starting timing.` and fallback `Nautilus Log could not complete that action.`; failed native command registration reports `Nautilus Log commands are unavailable. Execution remains disabled.` Acceptance also requires a warning Notice for action failures or atomic failed Execution activation with every partial registration disposed.",
+);
+adapt(
+  ["UP-SET-08"],
+  "DEV-006",
+  "host-adapted",
+  "Given the Obsidian Settings panel is open; when Execution Layer is toggled on; the observable result is a plugin-owned Execution entry, runtime poller, three palette commands, conditional editor commands, and dependent settings. Acceptance also requires default-off to register no panel, poller, commands, or CLOCK writer and any activation failure to reset the setting off.",
+);
+adapt(
+  ["UP-SET-10"],
+  "DEV-006",
+  "host-adapted",
+  "Given Execution Layer is on; when Keep Active Task first in sidebar changes; the observable result is a Boolean setting, default on, controlling automatic singleton `ActiveTaskView` opening and fronting after Clock In or switch. Acceptance also requires a fronting failure to warn while the successful CLOCK mutation remains.",
+);
+adapt(
+  ["UP-EXE-03"],
+  "DEV-006",
+  "host-adapted",
+  "Given Execution Layer is on; when the plugin-owned Execution entry renders idle or active state; the observable result is a compact idle icon, active elapsed time and distinct thread count, and standalone `elapsed · POMO` with an adjacent stop control. Acceptance also requires elapsed danger styling at the POMO threshold and a non-color warning signal for a forgotten CLOCK.",
+);
+adapt(
+  ["UP-EXE-04"],
+  "DEV-006",
+  "host-adapted",
+  "Given the plugin-owned Execution entry is mounted; when its trigger is activated, outside is clicked, or Escape is pressed; the observable result is an accessible Timing/Plan/Review panel that opens and closes accordingly, with Escape restoring trigger focus. Acceptance also requires the header to contain the Nautilus identity and Timing, Plan, and Review tabs.",
+);
+adapt(
+  ["UP-EXE-05"],
+  "DEV-006",
+  "host-adapted",
+  "Given the Execution panel is open and a Primary Plan exists; when the Nautilus identity is activated; the observable result is authoritative Primary Plan navigation in the main editor and a target flash for about 1.2 seconds. Acceptance also requires no Shift alternate on this identity path.",
+);
+adapt(
+  ["UP-EXE-12"],
+  "DEV-006",
+  "host-adapted",
+  "Given a Focused or Recent task row; when its title is activated; the observable result is authoritative task-source navigation in the main editor, while Shift-activation opens or reveals the singleton `ActiveTaskView`. Acceptance also requires this modifier split only for task titles; the `UP-EXE-05` identity path has no Shift alternate.",
+);
+adapt(
+  ["UP-CLK-10"],
+  "DEV-006",
+  "host-adapted",
+  "Given Keep Active Task first in sidebar is on; when Clock In or switch succeeds; the observable result is prompt open, reveal, and focus of one singleton `ActiveTaskView`, with no duplicate task leaves. Acceptance also requires navigation to begin promptly and any warning on failure not to roll back the CLOCK mutation.",
+);
+adapt(
+  ["UP-CMD-02"],
+  "DEV-006",
+  "host-adapted",
+  "Given Execution is on and the Obsidian editor context menu is available; when the menu opens; the observable result is `Nautilus Log: Clock in` only for an unfinished TODO and `Nautilus Log: Clock out` only for the current focused task. Acceptance also requires all context actions to be removed on teardown.",
+);
+adapt(
+  ["UP-ERR-05"],
+  "DEV-006",
+  "host-adapted",
+  "When Locate has no Primary Plan or authoritative source navigation is unavailable, the observable result is a warning or panel notice reporting `No Primary Nautilus Log was found today.` or the native navigation failure. Acceptance also requires Execution-panel actions to place runtime errors in panel notice state and palette/editor commands additionally to show a Notice.",
+);
+adapt(
+  ["UP-ERR-07"],
+  "DEV-006",
+  "host-adapted",
+  "When singleton `ActiveTaskView` opening or fronting fails after a valid Clock In, the observable result is a warning Notice while the CLOCK remains started and the task remains focused. Acceptance also requires Active Task navigation to remain an optional side effect rather than transaction authority.",
+);
+adapt(
+  ["UP-ERX-06"],
+  "DEV-006",
+  "host-adapted",
+  "When Primary or task-source navigation fails, the observable result preserves `No Primary Nautilus Log was found today.` and reports `Obsidian source navigation is unavailable.` or `This task has no authoritative block ID.` as applicable. Acceptance also requires a command Notice or panel notice and no navigation.",
+);
+adapt(
+  ["UP-ERX-07"],
+  "DEV-006",
+  "host-adapted",
+  "When singleton `ActiveTaskView` navigation fails, the exact native branch copy is `Obsidian workspace leaves are unavailable.`, `Obsidian could not move the Active Task view to the front.`, or `Could not open this task in Active Task.`; fallback is exactly `The task started, but Obsidian could not show it in Active Task.` Acceptance also requires a five-second warning Notice while the CLOCK or task mutation remains.",
+);
+adapt(
+  ["UP-DRF-07"],
+  "DEV-006",
+  "host-adapted",
+  "The observable result is that the plugin-owned Execution trigger only toggles the panel, the Nautilus identity locates the Primary Plan in the main editor, and a task title has the Shift-`ActiveTaskView` path. Acceptance also requires preserving this v1.0.2 trigger/identity/title split behavior.",
+);
+adapt(
+  ["UP-ERR-06"],
+  "DEV-007",
+  "host-adapted",
+  "When an Obsidian Vault read, Editor transaction, Markdown insert/update/delete, source-identity check, or authoritative confirmation fails during a timing action, the observable result is rejection with an operation-specific error; a command path warns by Notice, while the Execution panel shows notice state after refresh and logs the error. Acceptance also requires distinct query/read/write/delete, LOGBOOK/CLOCK creation/closure, current-CLOCK ownership, and task-completion failures, with no success before authoritative reread.",
+);
+adapt(
+  ["UP-ERX-03"],
+  "DEV-007",
+  "host-adapted",
+  "When native Markdown read or write capability is unavailable, the observable result distinguishes `Vault read is unavailable.`, `Vault returned unreadable Markdown.`, `Markdown insertion is unavailable.`, `Editor update is unavailable.`, `An authoritative source identity is required for deletion.`, and `Markdown deletion is unavailable.` Acceptance also requires command Notice, panel notice, or activation rejection as appropriate.",
+);
+adapt(
+  ["UP-ERX-04"],
+  "DEV-007",
+  "host-adapted",
+  "When mutation confirmation fails, the observable result distinguishes `Markdown deletion could not be confirmed.`, `LOGBOOK creation could not be confirmed.`, `Clock In could not be confirmed.`, `Clock Out could not read the current CLOCK source.`, `Clock Out could not be confirmed.`, and `Task completion could not be confirmed.` Acceptance also requires panel notice or command Notice and that the operation is not accepted as authoritative.",
+);
 const decisionRef = "https://github.com/oldwinter/obsidian-nautilus-log/blob/278b3e68c0db50c65b33d572a1a14ec4d8d1e05b/docs/decisions/parity-acceptance-matrix-and-release-gates.md";
 const fixtureRef = "https://github.com/oldwinter/obsidian-nautilus-log/blob/f3dcf1a000624a705b8c868a4f681339fcd6bedd/docs/research/behavior-inventory.md#minimal-fixture-corpus-for-obsidian-parity-tests";
 
@@ -306,15 +464,17 @@ const ownershipByRequirementId = new Map(ownershipRequirements.map((row) => [row
 const requirements = expectedIds.map((id) => {
   const inventoryRow = id.startsWith("UP-") ? inventoryRows.get(id.slice(3)) : undefined;
   const isNotApplicable = id === "UP-INS-01";
+  const override = requirementOverrides.get(id);
   return {
     ...ownershipByRequirementId.get(id),
-    statement: inventoryRow ? statementFor(inventoryRow) : initialRequirementStatements.get(id),
+    statement: override?.statement ?? (inventoryRow ? statementFor(inventoryRow) : initialRequirementStatements.get(id)),
     source_refs: inventoryRow ? sourceRefsFor(inventoryRow) : [decisionRef],
-    disposition: isNotApplicable ? "not-applicable" : "exact",
+    disposition: isNotApplicable ? "not-applicable" : override?.disposition ?? "exact",
     fixtures: [...fixtureByRequirement.get(id)],
     tests: testsByRequirement.get(id).map((entry) => entry.id),
     environments: environmentsFor(id),
     evidence: [],
+    ...(override?.deviationId ? { deviation_id: override.deviationId } : {}),
     ...(isNotApplicable ? { not_applicable_approval_id: "NA-001" } : {}),
     status: "active",
   };
@@ -343,12 +503,15 @@ const requirementManifest = {
 
 const allIds = requirements.map((row) => row.id);
 const mandatoryPrivateIds = ["OBS-SAFE-001", "OBS-LIFE-001", "OBS-LOCAL-001", "REL-001", "REL-002"];
+const approvedDeviationIds = [...new Set(requirements
+  .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
+  .map((row) => row.deviation_id))].sort();
 const scopeFixtureBase = {
   schema_version: 1,
   candidate_sha: "1111111111111111111111111111111111111111",
   requirements_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   deviations_sha256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  approved_deviation_ids: [],
+  approved_deviation_ids: approvedDeviationIds,
 };
 const privateExcluded = allIds.filter((id) => !mandatoryPrivateIds.includes(id));
 const fixtures = {

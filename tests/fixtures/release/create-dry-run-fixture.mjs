@@ -9,6 +9,7 @@ import {
   MANDATORY_PRIVATE_REQUIREMENT_IDS,
   REQUIRED_REQUIREMENT_IDS,
 } from "../../../scripts/verify/candidate-g0.mjs";
+import { DEVIATION_IDENTITY_ATTESTATION_STATEMENT } from "../../../scripts/verify/candidate-release.mjs";
 import { buildDeterministicCandidatePackage } from "../../../scripts/verify/candidate-package.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -157,6 +158,85 @@ async function createCandidateRepository(root, sourceRoot) {
   await git(repository, "config", "user.name", "Spiral Day Dry Run");
   await git(repository, "config", "user.email", "dry-run@example.invalid");
   await git(repository, "add", ".");
+  await git(repository, "commit", "-qm", "synthetic approval basis");
+
+  const deviationsPath = path.join(repository, "docs/parity/deviations.json");
+  const deviations = JSON.parse(await readFile(deviationsPath, "utf8"));
+  const approvalPaths = [];
+  for (const entry of deviations.deviations) {
+    const recordSha256 = sha256(await readFile(path.join(repository, entry.record)));
+    const relativePath = `docs/deviations/approvals/${entry.id}/parity-reviewer.json`;
+    approvalPaths.push(relativePath);
+    await json(path.join(repository, relativePath), {
+      schema_version: 1,
+      deviation_id: entry.id,
+      role: "parity-reviewer",
+      claimed_reviewer: "git-email:parity-reviewer@example.invalid",
+      approved_at: "2026-08-29T01:00:00.000Z",
+      record_sha256: recordSha256,
+    });
+  }
+  await git(repository, "add", "docs/deviations/approvals");
+  await git(
+    repository,
+    "-c", "user.name=Dry Run Parity Reviewer",
+    "-c", "user.email=parity-reviewer@example.invalid",
+    "commit", "-qm", "record synthetic parity approvals",
+  );
+  const parityApprovalCommit = await git(repository, "rev-parse", "HEAD");
+
+  for (const entry of deviations.deviations) {
+    const recordSha256 = sha256(await readFile(path.join(repository, entry.record)));
+    const relativePath = `docs/deviations/approvals/${entry.id}/product-release-owner.json`;
+    approvalPaths.push(relativePath);
+    await json(path.join(repository, relativePath), {
+      schema_version: 1,
+      deviation_id: entry.id,
+      role: "product-release-owner",
+      claimed_reviewer: "git-email:release-owner@example.invalid",
+      approved_at: "2026-08-29T01:01:00.000Z",
+      record_sha256: recordSha256,
+    });
+  }
+  await git(repository, "add", "docs/deviations/approvals");
+  await git(
+    repository,
+    "-c", "user.name=Dry Run Release Owner",
+    "-c", "user.email=release-owner@example.invalid",
+    "commit", "-qm", "record synthetic release approvals",
+  );
+  const releaseApprovalCommit = await git(repository, "rev-parse", "HEAD");
+
+  for (const entry of deviations.deviations) {
+    const recordSha256 = sha256(await readFile(path.join(repository, entry.record)));
+    entry.status = "approved";
+    entry.approved_at = "2026-08-29T01:01:00.000Z";
+    entry.record_sha256 = recordSha256;
+    entry.approvals = [
+      {
+        role: "parity-reviewer",
+        claimed_reviewer: "git-email:parity-reviewer@example.invalid",
+        approved_at: "2026-08-29T01:00:00.000Z",
+        record_sha256: recordSha256,
+        source_refs: [
+          `https://github.com/oldwinter/obsidian-nautilus-log/blob/${parityApprovalCommit}/docs/deviations/approvals/${entry.id}/parity-reviewer.json`,
+        ],
+      },
+      {
+        role: "product-release-owner",
+        claimed_reviewer: "git-email:release-owner@example.invalid",
+        approved_at: "2026-08-29T01:01:00.000Z",
+        record_sha256: recordSha256,
+        source_refs: [
+          `https://github.com/oldwinter/obsidian-nautilus-log/blob/${releaseApprovalCommit}/docs/deviations/approvals/${entry.id}/product-release-owner.json`,
+        ],
+      },
+    ];
+  }
+  await json(deviationsPath, deviations);
+  releaseInputs.candidate_owned = [...releaseInputs.candidate_owned, ...approvalPaths].sort();
+  await json(path.join(repository, "scripts/release/release-inputs.json"), releaseInputs);
+  await git(repository, "add", "docs/parity/deviations.json", "scripts/release/release-inputs.json");
   await git(repository, "commit", "-qm", "synthetic exact candidate");
   await git(repository, "branch", "-M", "candidate");
   await execFileAsync("git", ["init", "--bare", "-q", remote]);
@@ -450,6 +530,9 @@ async function createReleaseInputs(root, repository, candidateSha, evidence, opt
   const releaseScope = options.releaseScope ?? "public";
   const includedRequirementIds = options.includedRequirementIds ?? REQUIRED_REQUIREMENT_IDS;
   const included = new Set(includedRequirementIds);
+  const approvedDeviationIds = [...new Set(evidence.candidateRequirements.requirements
+    .filter((row) => row.disposition === "host-adapted" || row.disposition === "approved-improvement")
+    .map((row) => row.deviation_id))].sort();
   const scope = {
     schema_version: 1,
     candidate_sha: candidateSha,
@@ -459,7 +542,7 @@ async function createReleaseInputs(root, repository, candidateSha, evidence, opt
     parity_claim: releaseScope === "public" ? "v1.0.2-parity" : "private-preview",
     included_requirement_ids: includedRequirementIds,
     excluded_requirement_ids: REQUIRED_REQUIREMENT_IDS.filter((id) => !included.has(id)),
-    approved_deviation_ids: [],
+    approved_deviation_ids: approvedDeviationIds,
   };
   await json(path.join(inputRoot, "g8-scope.json"), scope);
   const build = evidence.rebuilt.builds[0];
@@ -570,7 +653,7 @@ async function createReleaseInputs(root, repository, candidateSha, evidence, opt
       published: true,
       target_sha: candidateSha,
     },
-    approved_deviation_ids: [],
+    approved_deviation_ids: [...scope.approved_deviation_ids],
     scope_exclusions: [],
     manual_workflows: workflowIds.map((id, index) => ({
       id,
@@ -590,7 +673,14 @@ async function createReleaseInputs(root, repository, candidateSha, evidence, opt
       name: `dry-run ${role}`,
       timestamp: "2026-08-29T00:00:00.000Z",
       attested: true,
-    })),
+    })).concat({
+      role: "deviation-approval-identity-witness",
+      name: "dry-run external deviation identity witness",
+      timestamp: "2026-08-29T00:00:00.000Z",
+      attested: true,
+      statement: DEVIATION_IDENTITY_ATTESTATION_STATEMENT,
+      deviation_ids: [...scope.approved_deviation_ids],
+    }),
     repository_state: { before: repositoryState, after: structuredClone(repositoryState) },
   };
   await json(path.join(inputRoot, "g9-signoff.json"), signoff);

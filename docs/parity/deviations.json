@@ -1,7 +1,156 @@
 {
   "schema_version": 1,
   "requirement_set": "UPSTREAM-MATRIX-v1+INITIAL-OBS-REL-v1",
-  "deviations": [],
+  "deviations": [
+    {
+      "id": "DEV-001",
+      "requirement_ids": [
+        "UP-CLK-04"
+      ],
+      "status": "proposed",
+      "class": "SAFETY",
+      "owner": "ticket-26",
+      "proposed_at": "2026-08-28T05:35:22+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-001-startup-clock-recovery.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L77-L149",
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/03e7a8d734a3eec99c8be5b8ce0edde65d9e9a54/docs/decisions/timing-write-safety-conflict-handling-and-recovery.md#reload-crash-and-retry-semantics",
+        "https://github.com/oldwinter/obsidian-nautilus-log/blob/564dc5317612ceef47b0d9d22387868bae773c47/docs/parity/source-ledger.json"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-002",
+      "requirement_ids": [
+        "UP-INS-02",
+        "UP-SET-03",
+        "UP-SET-13"
+      ],
+      "status": "proposed",
+      "class": "HOST",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:00:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-002-native-host-registration-and-settings.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/entry-helpers.js#L112-L186",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L397-L407",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/log-core.js#L145-L179"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-003",
+      "requirement_ids": [
+        "UP-SET-04"
+      ],
+      "status": "proposed",
+      "class": "HOST",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:01:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-003-remove-obsolete-component-prefix.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L287-L312",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-core.js#L183-L224"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-004",
+      "requirement_ids": [
+        "UP-ERR-03",
+        "UP-ERX-08"
+      ],
+      "status": "proposed",
+      "class": "SAFETY",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:02:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-004-diagnose-clock-writer-conflicts.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L567-L617",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L437-L447"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-005",
+      "requirement_ids": [
+        "UP-ERR-08",
+        "UP-ERX-05"
+      ],
+      "status": "proposed",
+      "class": "HOST",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:03:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-005-atomic-command-registration-failure.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-commands.js#L21-L50",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L170-L233"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-006",
+      "requirement_ids": [
+        "UP-SET-08",
+        "UP-SET-10",
+        "UP-EXE-03",
+        "UP-EXE-04",
+        "UP-EXE-05",
+        "UP-EXE-12",
+        "UP-CLK-10",
+        "UP-CMD-02",
+        "UP-ERR-05",
+        "UP-ERR-07",
+        "UP-ERX-06",
+        "UP-ERX-07",
+        "UP-DRF-07"
+      ],
+      "status": "proposed",
+      "class": "HOST",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:04:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-006-native-execution-surfaces.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/index.js#L170-L233",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L72-L144",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-topbar.js#L386-L612",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L387-L565"
+      ],
+      "approvals": []
+    },
+    {
+      "id": "DEV-007",
+      "requirement_ids": [
+        "UP-ERR-06",
+        "UP-ERX-03",
+        "UP-ERX-04"
+      ],
+      "status": "proposed",
+      "class": "HOST",
+      "owner": "ticket-22",
+      "proposed_at": "2026-08-29T09:05:00+08:00",
+      "approved_at": null,
+      "record": "docs/deviations/DEV-007-native-vault-error-contract.md",
+      "record_sha256": null,
+      "source_refs": [
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-roam.js#L126-L460",
+        "https://github.com/404KSG/roam-nautilus-log/blob/973a041aa2f59f3b05bf31db8187efbfea07017a/src/timing-runtime.js#L151-L449"
+      ],
+      "approvals": []
+    }
+  ],
   "not_applicable_approvals": [
     {
       "id": "NA-001",

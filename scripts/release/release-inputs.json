@@ -2,6 +2,13 @@
   "schema_version": 1,
   "candidate_owned": [
     ".github/workflows/issue-22-release-evidence.yml",
+    "docs/deviations/DEV-001-startup-clock-recovery.md",
+    "docs/deviations/DEV-002-native-host-registration-and-settings.md",
+    "docs/deviations/DEV-003-remove-obsolete-component-prefix.md",
+    "docs/deviations/DEV-004-diagnose-clock-writer-conflicts.md",
+    "docs/deviations/DEV-005-atomic-command-registration-failure.md",
+    "docs/deviations/DEV-006-native-execution-surfaces.md",
+    "docs/deviations/DEV-007-native-vault-error-contract.md",
     "docs/parity/deviations.json",
     "docs/parity/requirement-owners.json",
     "docs/parity/requirement-owners.schema.json",
