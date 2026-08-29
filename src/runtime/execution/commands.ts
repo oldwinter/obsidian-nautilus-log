@@ -69,6 +69,7 @@ export interface ExecutionCommandContext {
 
 export type ExecutionMutationPreparation =
   | { readonly kind: "prepared"; readonly mutation: PreparedExecutionMutation }
+  | { readonly kind: "confirmed-no-op" }
   | { readonly kind: "rejected"; readonly code: WriteResultCode };
 
 export interface ExecutionMutationIntent {
@@ -161,6 +162,24 @@ function receiptBlocksWrites(receipt: CommitReceipt): boolean {
 
 function receiptSucceeded(receipt: CommitReceipt): boolean {
   return receipt.outcome === "applied" || receipt.outcome === "already-applied";
+}
+
+function sameConfirmedClockState(
+  left: ExecutionClockIndexState,
+  right: ExecutionClockIndexState,
+): boolean {
+  if (left.kind !== right.kind) return false;
+  if (left.kind === "idle" && right.kind === "idle") return true;
+  if (left.kind === "degraded" && right.kind === "degraded") {
+    return left.code === right.code && left.count === right.count;
+  }
+  if (left.kind !== "active" || right.kind !== "active") return false;
+  return left.ownerId === right.ownerId
+    && left.startEpochMs === right.startEpochMs
+    && left.clock.path === right.clock.path
+    && left.clock.fromOffset === right.clock.fromOffset
+    && left.clock.toOffset === right.clock.toOffset
+    && left.clock.text === right.clock.text;
 }
 
 export class ExecutionCoordinator {
@@ -518,6 +537,17 @@ export class ExecutionCoordinator {
     }
     if (prepared.kind === "rejected") {
       return this.#reject(intent.intentId, clocks, prepared.code);
+    }
+    if (prepared.kind === "confirmed-no-op") {
+      const confirmed = await this.#safeScan();
+      if (!sameConfirmedClockState(clocks, confirmed)) {
+        return this.#reject(intent.intentId, confirmed, "action-no-longer-applicable");
+      }
+      return this.#outcome(
+        intent.intentId,
+        "already-applied",
+        this.#setSnapshot("ready", confirmed),
+      );
     }
     const { plan, expectation } = prepared.mutation;
     if (plan.intentId !== intent.intentId
