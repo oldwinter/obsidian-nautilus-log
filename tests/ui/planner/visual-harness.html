@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spiral Day planner visual harness</title>
+    <link rel="stylesheet" href="/planner.css">
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        --background-primary: #ffffff;
+        --background-secondary: #f4f5f7;
+        --background-modifier-border: #d9dde3;
+        --background-modifier-hover: #e9edf2;
+        --text-normal: #2e333b;
+        --text-muted: #68717e;
+        --text-faint: #959da8;
+        --interactive-accent: #356ec9;
+        background: var(--background-secondary);
+        color: var(--text-normal);
+        font: 14px/1.45 system-ui, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+      }
+      body.theme-dark {
+        --background-primary: #202226;
+        --background-secondary: #16181b;
+        --background-modifier-border: #3a3e45;
+        --background-modifier-hover: #30343a;
+        --text-normal: #e7e9ed;
+        --text-muted: #aeb4be;
+        --text-faint: #7f8793;
+        --interactive-accent: #76a7ff;
+        color-scheme: dark;
+      }
+      .harness-bar {
+        align-items: center;
+        background: var(--background-primary);
+        border-bottom: 1px solid var(--background-modifier-border);
+        display: flex;
+        gap: 12px;
+        min-height: 44px;
+        padding: 6px 14px;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .harness-bar strong { margin-right: auto; }
+      .harness-bar label { align-items: center; color: var(--text-muted); display: flex; gap: 5px; font-size: 12px; }
+      .harness-bar select { background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 4px; color: var(--text-normal); min-height: 28px; }
+      .harness-stage { display: flex; justify-content: center; min-height: calc(100vh - 44px); padding: 22px; }
+      .workspace-leaf {
+        align-self: flex-start;
+        background: var(--background-primary);
+        border: 1px solid var(--background-modifier-border);
+        box-shadow: 0 5px 18px rgb(0 0 0 / 8%);
+        max-width: 100%;
+        min-height: 620px;
+        overflow: hidden;
+      }
+      .workspace-leaf__title {
+        align-items: center;
+        border-bottom: 1px solid var(--background-modifier-border);
+        display: flex;
+        font-size: 13px;
+        font-weight: 650;
+        height: 38px;
+        padding: 0 12px;
+      }
+      #planner-surface { padding: 8px 12px 16px; }
+      .harness-icon { font-family: ui-monospace, monospace; font-size: 15px; font-weight: 700; }
+      @media (max-width: 700px) {
+        .harness-bar { align-items: stretch; flex-wrap: wrap; }
+        .harness-bar strong { flex-basis: 100%; }
+        .harness-stage { padding: 10px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="harness-bar">
+      <strong>Spiral Day</strong>
+      <label>Story
+        <select id="story">
+          <option value="confirmed">Confirmed</option>
+          <option value="loading">Loading</option>
+          <option value="missing">Missing</option>
+          <option value="over-limit">Over limit</option>
+          <option value="error">Error</option>
+          <option value="stale">Stale</option>
+          <option value="past">Past day</option>
+          <option value="future">Future day</option>
+        </select>
+      </label>
+      <label>Width
+        <select id="width">
+          <option value="900">900</option>
+          <option value="521">521</option>
+          <option value="520">520</option>
+          <option value="519">519</option>
+          <option value="360">360</option>
+          <option value="320">320</option>
+          <option value="300">300</option>
+        </select>
+      </label>
+      <label>Theme
+        <select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select>
+      </label>
+      <label>Leaf
+        <select id="context"><option value="main">Main</option><option value="sidebar">Sidebar</option></select>
+      </label>
+    </header>
+    <main class="harness-stage">
+      <section id="planner-leaf" class="workspace-leaf" data-width="900">
+        <div class="workspace-leaf__title">Spiral Day - 2026-08-28</div>
+        <div id="planner-surface"></div>
+      </section>
+    </main>
+    <script type="module" src="/harness.js"></script>
+  </body>
+</html>

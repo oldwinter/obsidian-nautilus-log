@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -11,6 +12,7 @@ import * as esbuild from "esbuild";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.join(rootDir, "main.js");
+const stylesOutputPath = path.join(rootDir, "styles.css");
 const productionExtensions = new Set([".css", ".js", ".mjs", ".ts", ".tsx"]);
 const markerExtensions = new Set([
   ".cjs",
@@ -293,24 +295,29 @@ async function validateRequirementContract() {
     fail("requirement-owners.json: requirements must be an array");
   }
 
-  const expected = new Map([
-    ["OBS-LOCAL-001", "src/main.ts"],
+  const expectedFoundation = new Map([
     ["UP-DRF-01", "README.md"],
     ["UP-INS-01", "README.md"],
-    ["UP-INS-02", "src/main.ts"],
   ]);
-  const owned = contract.requirements.filter((row) => row.owner_ticket === 17);
-  if (owned.length !== expected.size) {
-    fail(`requirement-owners.json: ticket 17 owns ${owned.length}, expected ${expected.size}`);
+  const foundationOwned = contract.requirements.filter((row) => row.owner_ticket === 17);
+  if (foundationOwned.length !== expectedFoundation.size) {
+    fail(`requirement-owners.json: ticket 17 owns ${foundationOwned.length}, expected ${expectedFoundation.size}`);
   }
-  for (const row of owned) {
-    if (expected.get(row.id) !== row.owner_module) {
+  for (const row of foundationOwned) {
+    if (expectedFoundation.get(row.id) !== row.owner_module) {
       fail(`requirement-owners.json: unexpected ticket 17 assignment ${row.id} -> ${row.owner_module}`);
     }
-    expected.delete(row.id);
+    expectedFoundation.delete(row.id);
   }
-  if (expected.size !== 0) {
-    fail(`requirement-owners.json: missing ticket 17 IDs ${[...expected.keys()].join(", ")}`);
+  if (expectedFoundation.size !== 0) {
+    fail(`requirement-owners.json: missing ticket 17 IDs ${[...expectedFoundation.keys()].join(", ")}`);
+  }
+
+  for (const id of ["UP-INS-02", "OBS-LOCAL-001"]) {
+    const row = contract.requirements.find((candidate) => candidate.id === id);
+    if (row?.owner_ticket !== 27 || row.owner_module !== "src/main.ts") {
+      fail(`requirement-owners.json: expected ${id} -> ticket 27 src/main.ts`);
+    }
   }
 }
 
@@ -421,10 +428,10 @@ const allowedHostExternals = new Set([
 ]);
 
 function validateRuntimeImports(result) {
-  for (const [inputPath, input] of Object.entries(result.metafile?.inputs ?? {})) {
-    for (const imported of input.imports ?? []) {
+  for (const [outputPath, output] of Object.entries(result.metafile?.outputs ?? {})) {
+    for (const imported of output.imports ?? []) {
       if (imported.external && !allowedHostExternals.has(imported.path)) {
-        fail(`${inputPath}: runtime import ${imported.path} is not an allowed Obsidian host external`);
+        fail(`${outputPath}: runtime import ${imported.path} is not an allowed Obsidian host external`);
       }
     }
   }
@@ -456,6 +463,14 @@ async function createProductionBundle() {
   });
   validateRuntimeImports(result);
   return result;
+}
+
+async function createStylesBundle() {
+  const files = await listFiles("styles", (file) => path.extname(file) === ".css");
+  if (files.length === 0) fail("production styles require at least one styles/**/*.css input");
+  const sections = await Promise.all(files.map(async (file) =>
+    `/* ${file} */\n${(await readText(file)).trimEnd()}\n`));
+  return new TextEncoder().encode(`${sections.join("\n")}\n`);
 }
 
 function onlyOutput(result) {
@@ -492,16 +507,30 @@ function scanBundle(bundleBytes) {
 
 async function buildProduction() {
   await validateFoundation();
-  const [first, second] = await Promise.all([createProductionBundle(), createProductionBundle()]);
+  const [first, second, firstStyles, secondStyles] = await Promise.all([
+    createProductionBundle(),
+    createProductionBundle(),
+    createStylesBundle(),
+    createStylesBundle(),
+  ]);
   const firstBytes = onlyOutput(first);
   const secondBytes = onlyOutput(second);
 
   if (!Buffer.from(firstBytes).equals(Buffer.from(secondBytes))) {
     fail("two production builds from the same tree were not byte-identical");
   }
+  if (!Buffer.from(firstStyles).equals(Buffer.from(secondStyles))) {
+    fail("two stylesheet builds from the same tree were not byte-identical");
+  }
   scanBundle(firstBytes);
-  await writeFile(outputPath, firstBytes);
-  console.log(`build: manifest.json, main.js (${firstBytes.byteLength} bytes, sha256 ${sha256(firstBytes)})`);
+  await Promise.all([
+    writeFile(outputPath, firstBytes),
+    writeFile(stylesOutputPath, firstStyles),
+  ]);
+  console.log(
+    `build: manifest.json, main.js (${firstBytes.byteLength} bytes, sha256 ${sha256(firstBytes)}), `
+    + `styles.css (${firstStyles.byteLength} bytes, sha256 ${sha256(firstStyles)})`,
+  );
 }
 
 function makeCopiedRow() {
@@ -587,7 +616,7 @@ function runProvenanceNegativeTests(knownNotices) {
 function runRuntimeImportPolicyTests() {
   const resultFor = (path) => ({
     metafile: {
-      inputs: {
+      outputs: {
         "src/main.ts": { imports: [{ external: true, kind: "import-statement", path }] },
       },
     },
@@ -615,16 +644,82 @@ async function createLifecycleBundle() {
       build.onResolve({ filter: /^obsidian$/ }, () => ({ path: "obsidian", namespace: "foundation" }));
       build.onLoad({ filter: /.*/, namespace: "foundation" }, () => ({
         contents: `
+          const classList = () => ({ add() {}, remove() {} });
+          export class TFile {}
+          export class MarkdownView {}
+          export class ItemView {}
+          export class Notice {
+            constructor() { this.noticeEl = { dataset: {}, classList: classList() }; }
+          }
+          export class PluginSettingTab {
+            constructor(app, plugin) {
+              this.app = app;
+              this.plugin = plugin;
+              this.containerEl = { replaceChildren() {}, ownerDocument: { createElement() { return {}; } } };
+            }
+            hide() {}
+          }
+          export class Setting {
+            constructor() {}
+          }
+          export function setIcon() {}
           export class Plugin {
-            constructor(app, manifest) { this.app = app; this.manifest = manifest; }
-            addCommand() { globalThis.__foundationState.registrations += 1; }
-            addRibbonIcon() { globalThis.__foundationState.dom += 1; }
-            addSettingTab() { globalThis.__foundationState.registrations += 1; }
-            register() { globalThis.__foundationState.registrations += 1; }
-            registerDomEvent() { globalThis.__foundationState.listeners += 1; }
-            registerEvent() { globalThis.__foundationState.listeners += 1; }
-            registerInterval() { globalThis.__foundationState.timers += 1; }
-            registerView() { globalThis.__foundationState.registrations += 1; }
+            constructor(app, manifest) {
+              this.app = app;
+              this.manifest = manifest;
+              this.cleanups = [];
+              this.commands = new Set();
+            }
+            track(cleanup) { this.cleanups.push(cleanup); }
+            addCommand(command) {
+              globalThis.__foundationState.registrations += 1;
+              this.commands.add(command.id);
+              this.track(() => this.removeCommand(command.id));
+              return command;
+            }
+            removeCommand(id) {
+              if (!this.commands.delete(id)) return;
+              globalThis.__foundationState.registrations -= 1;
+            }
+            addRibbonIcon() {
+              globalThis.__foundationState.dom += 1;
+              let removed = false;
+              const element = {
+                classList: classList(),
+                setAttribute() {},
+                remove() {
+                  if (removed) return;
+                  removed = true;
+                  globalThis.__foundationState.dom -= 1;
+                },
+              };
+              this.track(() => element.remove());
+              return element;
+            }
+            addSettingTab() {
+              globalThis.__foundationState.registrations += 1;
+              this.track(() => { globalThis.__foundationState.registrations -= 1; });
+            }
+            register(callback) { this.track(callback); }
+            registerDomEvent() {
+              globalThis.__foundationState.listeners += 1;
+              this.track(() => { globalThis.__foundationState.listeners -= 1; });
+            }
+            registerEvent() {
+              globalThis.__foundationState.listeners += 1;
+              this.track(() => { globalThis.__foundationState.listeners -= 1; });
+            }
+            registerInterval(handle) { this.track(() => globalThis.clearInterval(handle)); }
+            registerView() {
+              globalThis.__foundationState.registrations += 1;
+              this.track(() => { globalThis.__foundationState.registrations -= 1; });
+            }
+            async loadData() { return undefined; }
+            async saveData() { globalThis.__foundationState.pluginDataWrites += 1; }
+            unload() {
+              this.onunload();
+              for (const cleanup of this.cleanups.splice(0).reverse()) cleanup();
+            }
           }
         `,
         loader: "js",
@@ -655,6 +750,7 @@ async function runLifecycleTest() {
     markdownReads: 0,
     markdownWrites: 0,
     network: 0,
+    pluginDataWrites: 0,
     registrations: 0,
     timers: 0,
   };
@@ -663,27 +759,49 @@ async function runLifecycleTest() {
     [".obsidian/plugins/nautilus-log/data.json", '{"sentinel":"untouched"}\n'],
   ]);
   const before = sha256(JSON.stringify([...notes]));
-  const writeMethods = new Set(["append", "create", "delete", "modify", "process", "rename"]);
-  const vault = new Proxy(
-    {},
-    {
-      get(_target, property) {
-        if (writeMethods.has(String(property))) {
-          return async () => {
-            state.markdownWrites += 1;
-          };
-        }
-        return async () => {
-          state.markdownReads += 1;
-          return null;
-        };
-      },
+  const eventRef = Object.freeze({});
+  const vault = {
+    cachedRead: async () => {
+      state.markdownReads += 1;
+      return "";
     },
-  );
+    getAbstractFileByPath: () => null,
+    getMarkdownFiles: () => [],
+    on: () => eventRef,
+    process: async () => {
+      state.markdownWrites += 1;
+      return "";
+    },
+  };
+  const workspace = {
+    detachLeavesOfType() {},
+    getActiveViewOfType: () => null,
+    getLeavesOfType: () => [],
+    on: () => eventRef,
+    rightSplit: Object.freeze({}),
+  };
+  const app = {
+    metadataCache: { on: () => eventRef },
+    vault,
+    workspace,
+  };
+  let nextTimer = 1;
+  const activeTimers = new Set();
+  const startTimer = () => {
+    const handle = nextTimer++;
+    activeTimers.add(handle);
+    state.timers = activeTimers.size;
+    return handle;
+  };
+  const clearTimer = (handle) => {
+    activeTimers.delete(handle);
+    state.timers = activeTimers.size;
+  };
   const sandbox = {
     __foundationState: state,
-    clearInterval: () => {},
-    clearTimeout: () => {},
+    AbortController,
+    clearInterval: clearTimer,
+    clearTimeout: clearTimer,
     console: {
       error: () => {
         state.consoleErrors += 1;
@@ -702,6 +820,7 @@ async function runLifecycleTest() {
         },
       },
     ),
+    DOMException,
     EventSource: class {
       constructor() {
         state.network += 1;
@@ -719,14 +838,10 @@ async function runLifecycleTest() {
         return false;
       },
     },
-    setInterval: () => {
-      state.timers += 1;
-      return 1;
-    },
-    setTimeout: () => {
-      state.timers += 1;
-      return 1;
-    },
+    performance: { now: () => 0 },
+    setInterval: startTimer,
+    setTimeout: startTimer,
+    TextEncoder,
     WebSocket: class {
       constructor() {
         state.network += 1;
@@ -746,11 +861,17 @@ async function runLifecycleTest() {
 
   for (let cycle = 1; cycle <= 10; cycle += 1) {
     const plugin = new PluginClass(
-      { vault },
+      app,
       { id: "spiral-day", name: "Spiral Day", version: "0.1.0" },
     );
     await plugin.onload();
-    plugin.onunload();
+    plugin.unload();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(state.registrations, 0, `cycle ${cycle} retained registrations`);
+    assert.equal(state.listeners, 0, `cycle ${cycle} retained listeners`);
+    assert.equal(state.dom, 0, `cycle ${cycle} retained DOM`);
+    assert.equal(state.timers, 0, `cycle ${cycle} retained timers`);
   }
 
   assert.deepEqual(state, {
@@ -760,6 +881,7 @@ async function runLifecycleTest() {
     markdownReads: 0,
     markdownWrites: 0,
     network: 0,
+    pluginDataWrites: 0,
     registrations: 0,
     timers: 0,
   });
@@ -774,17 +896,23 @@ async function runTests() {
   await runLifecycleTest();
   const [first, second] = await Promise.all([createProductionBundle(), createProductionBundle()]);
   assert.deepEqual(Buffer.from(onlyOutput(first)), Buffer.from(onlyOutput(second)));
+  const [firstStyles, secondStyles] = await Promise.all([createStylesBundle(), createStylesBundle()]);
+  assert.deepEqual(Buffer.from(firstStyles), Buffer.from(secondStyles));
   scanBundle(onlyOutput(first));
+  execFileSync(process.execPath, ["tests/ui/execution/run.mjs"], {
+    cwd: rootDir,
+    stdio: "inherit",
+  });
   console.log(
-    "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle passed",
+    "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle, execution-ui passed",
   );
 }
 
 async function main() {
   const command = process.argv[2] ?? "validate";
   if (command === "clean") {
-    await rm(outputPath, { force: true });
-    console.log("clean: removed generated main.js");
+    await Promise.all([rm(outputPath, { force: true }), rm(stylesOutputPath, { force: true })]);
+    console.log("clean: removed generated main.js and styles.css");
   } else if (command === "provenance") {
     const result = await loadAndValidateProvenance();
     console.log(

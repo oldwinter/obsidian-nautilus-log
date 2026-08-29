@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spiral Day Execution Surface</title>
+  <link rel="stylesheet" href="/harness.css">
+</head>
+<body>
+  <header class="harness-toolbar">
+    <strong>Spiral Day</strong>
+    <div class="harness-controls">
+      <button type="button" data-state="active">Active</button>
+      <button type="button" data-state="idle">Idle</button>
+      <button type="button" data-state="pomo">POMO</button>
+      <button type="button" id="locale">中文</button>
+      <button type="button" id="theme">Dark</button>
+      <button type="button" id="width">Narrow</button>
+    </div>
+    <button type="button" id="execution-trigger" class="spiral-day-execution-trigger" aria-label="Execution"></button>
+  </header>
+  <main class="harness-workspace">
+    <section class="harness-note">
+      <h1>2026-08-29</h1>
+      <p>Primary plan source remains visible behind the anchored execution surface.</p>
+      <ul>
+        <li>Prepare release evidence</li>
+        <li>Review execution interactions</li>
+      </ul>
+    </section>
+    <aside class="harness-sidebar">
+      <div id="active-task" class="spiral-day-active-task-view"></div>
+    </aside>
+  </main>
+  <script type="module" src="/harness.js"></script>
+</body>
+</html>
