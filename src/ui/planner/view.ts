@@ -116,6 +116,10 @@ function copyDate(date: LogicalDate): LogicalDate {
   return Object.freeze({ ...date });
 }
 
+function sameLogicalDate(left: LogicalDate, right: LogicalDate): boolean {
+  return left.year === right.year && left.month === right.month && left.day === right.day;
+}
+
 export function validatePlannerViewContext(context: PlannerViewContext): PlannerViewContext {
   if (context.bounds.startMinutes < 0 || context.bounds.endMinutes > 24 * 60
     || context.bounds.endMinutes <= context.bounds.startMinutes) {
@@ -354,59 +358,97 @@ function timelineTooltipText(messages: Messages, item: PlannerTimelineItem): str
 }
 
 let plannerSurfaceSequence = 0;
-let plannerTooltipSequence = 0;
 const PLANNER_PATTERN_SEQUENCE = Symbol.for("spiral-day.planner.pattern-sequence");
+const PLANNER_TOOLTIP_SEQUENCE = Symbol.for("spiral-day.planner.tooltip-sequence");
+const PLANNER_PATTERN_RESERVATION = "data-spiral-day-pattern-id-reservation";
 
-function allocatePlannerPatternIds(document: Document): Readonly<{ dots: string; hatch: string }> {
-  let stored: unknown;
+interface PlannerPatternIdAllocation {
+  readonly dots: string;
+  readonly hatch: string;
+  release(): void;
+}
+
+function storedDocumentSequence(document: Document, key: symbol): number {
   try {
-    stored = Reflect.get(document, PLANNER_PATTERN_SEQUENCE);
+    const stored = Reflect.get(document, key);
+    return Number.isSafeInteger(stored) && (stored as number) >= 0 ? stored as number : 0;
   } catch {
-    stored = undefined;
+    return 0;
   }
-  let sequence = Number.isSafeInteger(stored) && (stored as number) >= 0 ? stored as number : 0;
-  const occupiedCount = document.querySelectorAll("[id]").length;
-  const sequentialAttempts = Math.min(1_024, occupiedCount + 1);
-  for (let attempt = 0; attempt < sequentialAttempts; attempt += 1) {
-    sequence = sequence >= Number.MAX_SAFE_INTEGER ? 1 : sequence + 1;
+}
+
+function persistDocumentSequence(document: Document, key: symbol, sequence: number): void {
+  try {
+    Reflect.set(document, key, sequence);
+  } catch {
+    // The sequence expando is an optimization; DOM collision checks remain authoritative.
+  }
+}
+
+function nextDocumentSequence(sequence: number): number {
+  return sequence >= Number.MAX_SAFE_INTEGER ? 1 : sequence + 1;
+}
+
+function plannerPatternIdUnavailable(document: Document, id: string): boolean {
+  return document.getElementById(id) !== null
+    || document.querySelector(`[${PLANNER_PATTERN_RESERVATION}="${id}"]`) !== null;
+}
+
+function reservePlannerPatternIds(
+  document: Document,
+  dots: string,
+  hatch: string,
+): PlannerPatternIdAllocation {
+  const owner = document.head ?? document.documentElement;
+  if (!owner) throw new Error("Planner pattern IDs require an owning document element");
+  const reservations = [dots, hatch].map((id) => {
+    const reservation = document.createElement("meta");
+    reservation.setAttribute(PLANNER_PATTERN_RESERVATION, id);
+    return reservation;
+  });
+  try {
+    owner.append(...reservations);
+  } catch (error) {
+    for (const reservation of reservations) reservation.remove();
+    throw error;
+  }
+  return Object.freeze({
+    dots,
+    hatch,
+    release: () => {
+      for (const reservation of reservations) reservation.remove();
+    },
+  });
+}
+
+function allocatePlannerPatternIds(document: Document): PlannerPatternIdAllocation {
+  let sequence = storedDocumentSequence(document, PLANNER_PATTERN_SEQUENCE);
+  const occupiedCount = document.querySelectorAll(
+    `[id], [${PLANNER_PATTERN_RESERVATION}]`,
+  ).length;
+  for (let attempt = 0; attempt <= occupiedCount; attempt += 1) {
+    sequence = nextDocumentSequence(sequence);
     const dots = `spiral-day-planner-dots-${sequence}`;
     const hatch = `spiral-day-planner-hatch-${sequence}`;
-    if (document.getElementById(dots) !== null || document.getElementById(hatch) !== null) continue;
-    let persisted = false;
-    try {
-      persisted = Reflect.set(document, PLANNER_PATTERN_SEQUENCE, sequence);
-    } catch {
-      persisted = false;
-    }
-    if (persisted) return Object.freeze({ dots, hatch });
-    break;
+    if (plannerPatternIdUnavailable(document, dots)
+      || plannerPatternIdUnavailable(document, hatch)) continue;
+    persistDocumentSequence(document, PLANNER_PATTERN_SEQUENCE, sequence);
+    return reservePlannerPatternIds(document, dots, hatch);
   }
+  throw new Error("Planner pattern ID allocation exhausted its bounded scan");
+}
 
-  for (let attempt = 0; attempt < 32; attempt += 1) {
-    let token: string;
-    try {
-      token = document.defaultView?.crypto.randomUUID() ?? "";
-    } catch {
-      token = "";
-    }
-    if (token === "") {
-      token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${attempt}`;
-    }
-    const dots = `spiral-day-planner-dots-fallback-${token}`;
-    const hatch = `spiral-day-planner-hatch-fallback-${token}`;
-    if (document.getElementById(dots) === null && document.getElementById(hatch) === null) {
-      return Object.freeze({ dots, hatch });
-    }
-  }
-
+function allocatePlannerTooltipId(document: Document): string {
+  let sequence = storedDocumentSequence(document, PLANNER_TOOLTIP_SEQUENCE);
+  const occupiedCount = document.querySelectorAll("[id]").length;
   for (let attempt = 0; attempt <= occupiedCount; attempt += 1) {
-    const dots = `spiral-day-planner-dots-fallback-${attempt}`;
-    const hatch = `spiral-day-planner-hatch-fallback-${attempt}`;
-    if (document.getElementById(dots) === null && document.getElementById(hatch) === null) {
-      return Object.freeze({ dots, hatch });
-    }
+    sequence = nextDocumentSequence(sequence);
+    const id = `spiral-day-planner-tooltip-${sequence}`;
+    if (document.getElementById(id) !== null) continue;
+    persistDocumentSequence(document, PLANNER_TOOLTIP_SEQUENCE, sequence);
+    return id;
   }
-  throw new Error("Planner pattern ID allocation exhausted its bounded fallback");
+  throw new Error("Planner tooltip ID allocation exhausted its bounded scan");
 }
 
 class PlannerSurfaceController implements PlannerSurface {
@@ -421,12 +463,15 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #focus: PlannerFocusManager;
   readonly #live: PlannerLiveAnnouncer;
   readonly #playback: PlannerPlaybackController;
-  readonly #patternIds: Readonly<{ dots: string; hatch: string }>;
+  readonly #patternIds: PlannerPatternIdAllocation;
   #context: PlannerViewContext;
   #connection: RuntimeConnection | undefined;
   #connectionToken: object | undefined;
   #snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
-  #snapshotTransaction: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } | undefined;
+  #snapshotTransaction: {
+    readonly logicalDate: LogicalDate;
+    snapshot?: RuntimeSnapshot<RuntimePlanProjection>;
+  } | undefined;
   #layout: PlannerResponsiveLayout;
   #resize: PlannerResizeSubscription | undefined;
   #visibilityObserver: MutationObserver | undefined;
@@ -439,6 +484,7 @@ class PlannerSurfaceController implements PlannerSurface {
   #motionPreferenceListener: ((event: MediaQueryListEvent) => void) | undefined;
   #playbackFrame: PlannerPlaybackFrame | null = null;
   readonly #renderCleanups: Array<() => void> = [];
+  #destroyCleanupActions: Array<() => void> | undefined;
   #visible = true;
   #destroyed = false;
 
@@ -528,27 +574,24 @@ class PlannerSurfaceController implements PlannerSurface {
     const connection = this.#connection;
     let nextSnapshot = this.#snapshot;
     if (runtimeContextChanged && connection) {
-      const forward: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } = {};
+      const forward: {
+        readonly logicalDate: LogicalDate;
+        snapshot?: RuntimeSnapshot<RuntimePlanProjection>;
+      } = { logicalDate: validated.logicalDate };
       this.#snapshotTransaction = forward;
       try {
         connection.setContext({ logicalDate: validated.logicalDate });
       } catch (error) {
-        const rollback: { snapshot?: RuntimeSnapshot<RuntimePlanProjection> } = {};
+        const rollback: {
+          readonly logicalDate: LogicalDate;
+          snapshot?: RuntimeSnapshot<RuntimePlanProjection>;
+        } = { logicalDate: previous.logicalDate };
         this.#snapshotTransaction = rollback;
         try {
           connection.setContext({ logicalDate: previous.logicalDate });
         } catch (rollbackError) {
           this.#snapshotTransaction = undefined;
-          if (this.#connection === connection) {
-            this.#connection = undefined;
-            this.#connectionToken = undefined;
-          }
-          let disconnectError: unknown;
-          try {
-            connection.disconnect();
-          } catch (caught) {
-            disconnectError = caught;
-          }
+          const disconnectError = this.#retireRuntimeConnection(connection);
           this.#snapshot = undefined;
           this.#playback.cancel("cancelled");
           this.#render();
@@ -562,6 +605,14 @@ class PlannerSurfaceController implements PlannerSurface {
         }
         this.#snapshotTransaction = undefined;
         if (rollback.snapshot) this.#publishSnapshot(rollback.snapshot);
+        const disconnectError = this.#retireRuntimeConnection(connection);
+        this.probeRuntimeNow();
+        if (disconnectError !== undefined) {
+          throw new AggregateError(
+            [error, disconnectError],
+            "Planner runtime context transition failed and connection retirement failed",
+          );
+        }
         throw error;
       }
       this.#snapshotTransaction = undefined;
@@ -617,6 +668,8 @@ class PlannerSurfaceController implements PlannerSurface {
           { logicalDate: this.#context.logicalDate },
           (snapshot) => {
             if (this.#destroyed || this.#connectionToken !== token) return;
+            const admittedDate = this.#snapshotTransaction?.logicalDate ?? this.#context.logicalDate;
+            if (!sameLogicalDate(snapshot.revision.logicalDate, admittedDate)) return;
             if (this.#snapshotTransaction) {
               this.#snapshotTransaction.snapshot = snapshot;
               return;
@@ -643,41 +696,82 @@ class PlannerSurfaceController implements PlannerSurface {
   }
 
   destroy(): void {
-    if (this.#destroyed) return;
-    this.#destroyed = true;
-    this.#connection?.disconnect();
-    this.#connection = undefined;
-    this.#connectionToken = undefined;
-    this.#resize?.disconnect();
-    this.#resize = undefined;
-    this.#visibilityObserver?.disconnect();
-    this.#visibilityObserver = undefined;
-    this.#topologyObserver?.disconnect();
-    this.#topologyObserver = undefined;
-    this.#visibilityAncestors = [];
-    if (this.#documentVisibilityListener) {
-      this.#root.ownerDocument.removeEventListener("visibilitychange", this.#documentVisibilityListener);
+    if (!this.#destroyed) {
+      this.#destroyed = true;
+      const connection = this.#connection;
+      const resize = this.#resize;
+      const visibilityObserver = this.#visibilityObserver;
+      const topologyObserver = this.#topologyObserver;
+      const documentVisibilityListener = this.#documentVisibilityListener;
+      const localeUnsubscribe = this.#localeUnsubscribe;
+      const motionPreference = this.#motionPreference;
+      const motionPreferenceListener = this.#motionPreferenceListener;
+      const probeTimer = this.#probeTimer;
+      const renderCleanups = this.#renderCleanups.splice(0);
+      this.#connection = undefined;
+      this.#connectionToken = undefined;
+      this.#snapshot = undefined;
+      this.#snapshotTransaction = undefined;
+      this.#resize = undefined;
+      this.#visibilityObserver = undefined;
+      this.#topologyObserver = undefined;
+      this.#visibilityAncestors = [];
+      this.#documentVisibilityListener = undefined;
+      this.#localeUnsubscribe = undefined;
+      this.#motionPreference = undefined;
+      this.#motionPreferenceListener = undefined;
+      this.#probeTimer = undefined;
+      this.#destroyCleanupActions = [
+        ...(connection ? [() => connection.disconnect()] : []),
+        ...(resize ? [() => resize.disconnect()] : []),
+        ...(visibilityObserver ? [() => visibilityObserver.disconnect()] : []),
+        ...(topologyObserver ? [() => topologyObserver.disconnect()] : []),
+        ...(documentVisibilityListener
+          ? [() => this.#root.ownerDocument.removeEventListener(
+            "visibilitychange",
+            documentVisibilityListener,
+          )]
+          : []),
+        ...(localeUnsubscribe ? [localeUnsubscribe] : []),
+        ...(motionPreference && motionPreferenceListener
+          ? [() => motionPreference.removeEventListener("change", motionPreferenceListener)]
+          : []),
+        ...(probeTimer === undefined
+          ? []
+          : [() => this.#root.ownerDocument.defaultView?.clearInterval(probeTimer)]),
+        () => this.#patternIds.release(),
+        () => this.#playback.destroy(),
+        () => this.#controls.destroy(),
+        ...renderCleanups,
+        () => this.#live.destroy(),
+        () => this.#root.replaceChildren(),
+        () => this.#root.classList.remove("spiral-day-planner"),
+        () => { this.#root.hidden = false; },
+        () => this.#root.removeAttribute("aria-label"),
+        () => { delete this.#root.dataset.layout; },
+        () => { delete this.#root.dataset.narrow; },
+        () => { delete this.#root.dataset.reducedMotion; },
+      ];
     }
-    this.#documentVisibilityListener = undefined;
-    this.#localeUnsubscribe?.();
-    this.#localeUnsubscribe = undefined;
-    if (this.#motionPreferenceListener) {
-      this.#motionPreference?.removeEventListener("change", this.#motionPreferenceListener);
+
+    const actions = this.#destroyCleanupActions?.splice(0) ?? [];
+    if (actions.length === 0) return;
+    const failures: Array<{ readonly action: () => void; readonly error: unknown }> = [];
+    for (const action of actions) {
+      try {
+        action();
+      } catch (error) {
+        failures.push({ action, error });
+      }
     }
-    this.#motionPreference = undefined;
-    this.#motionPreferenceListener = undefined;
-    this.#clearProbe();
-    this.#playback.destroy();
-    this.#controls.destroy();
-    this.#clearRenderBindings();
-    this.#live.destroy();
-    this.#root.replaceChildren();
-    this.#root.classList.remove("spiral-day-planner");
-    this.#root.hidden = false;
-    this.#root.removeAttribute("aria-label");
-    delete this.#root.dataset.layout;
-    delete this.#root.dataset.narrow;
-    delete this.#root.dataset.reducedMotion;
+    this.#destroyCleanupActions?.push(...failures.map(({ action }) => action));
+    if (failures.length > 0) {
+      throw new AggregateError(
+        failures.map(({ error }) => error),
+        "Planner surface teardown did not complete",
+      );
+    }
+    this.#destroyCleanupActions = undefined;
   }
 
   #scheduleProbe(): void {
@@ -691,6 +785,19 @@ class PlannerSurfaceController implements PlannerSurface {
     if (snapshot.state !== "confirmed") this.#playback.cancel("cancelled");
     this.#snapshot = snapshot;
     this.#render();
+  }
+
+  #retireRuntimeConnection(connection: RuntimeConnection): unknown {
+    if (this.#connection === connection) {
+      this.#connection = undefined;
+      this.#connectionToken = undefined;
+    }
+    try {
+      connection.disconnect();
+      return undefined;
+    } catch (error) {
+      return error;
+    }
   }
 
   #clearProbe(): void {
@@ -1410,7 +1517,7 @@ class PlannerSurfaceController implements PlannerSurface {
   #bindTooltip(target: SVGElement, text: string, companion?: SVGElement): void {
     if (!this.#layout.mountHoverSurface) return;
     const tooltip = element(this.#root.ownerDocument, "div", "spiral-day-planner__tooltip");
-    tooltip.id = `spiral-day-planner-tooltip-${++plannerTooltipSequence}`;
+    tooltip.id = allocatePlannerTooltipId(this.#root.ownerDocument);
     this.#root.ownerDocument.body.append(tooltip);
     const emphasize = (): void => {
       companion?.classList.add("is-emphasized");

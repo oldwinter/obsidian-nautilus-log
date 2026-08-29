@@ -128,6 +128,7 @@ export class SpiralDayPlannerView extends ItemView {
   #surface: PlannerSurface | undefined;
   #surfaceRoot: HTMLElement | undefined;
   #surfaceContext: PlannerViewContext | undefined;
+  readonly #retiredSurfaces: PlannerSurface[] = [];
   #localeUnsubscribe: (() => void) | undefined;
 
   constructor(leaf: WorkspaceLeaf, dependencies: PlannerItemViewDependencies) {
@@ -172,6 +173,7 @@ export class SpiralDayPlannerView extends ItemView {
     this.#logicalDate = nextLogicalDate;
     this.#plannerInstanceId = nextInstanceId;
     this.#surfaceContext = this.#surface ? nextContext : undefined;
+    this.#retryRetiredSurfaces();
   }
 
   override onResize(): void {
@@ -197,6 +199,7 @@ export class SpiralDayPlannerView extends ItemView {
     this.#localeUnsubscribe = this.#dependencies.subscribeLocale?.((locale) => {
       this.#surface?.setLocale(locale);
     });
+    this.#retryRetiredSurfaces();
   }
 
   #stageSurface(
@@ -239,18 +242,41 @@ export class SpiralDayPlannerView extends ItemView {
     this.contentEl.replaceChildren(candidate.root);
     this.#surface = candidate.surface;
     this.#surfaceRoot = candidate.root;
-    previousSurface?.destroy();
-    previousRoot?.remove();
-    candidate.surface.measure();
+    if (previousSurface) this.#retireSurface(previousSurface, previousRoot);
+    try {
+      candidate.surface.measure();
+    } catch {
+      // A later resize retries measurement without invalidating the committed surface swap.
+    }
+  }
+
+  #retireSurface(surface: PlannerSurface, root?: HTMLElement): void {
+    root?.remove();
+    try {
+      surface.destroy();
+    } catch {
+      if (!this.#retiredSurfaces.includes(surface)) this.#retiredSurfaces.push(surface);
+    }
+  }
+
+  #retryRetiredSurfaces(): void {
+    const retired = this.#retiredSurfaces.splice(0);
+    for (const surface of retired) this.#retireSurface(surface);
   }
 
   protected override async onClose(): Promise<void> {
-    this.#localeUnsubscribe?.();
+    try {
+      this.#localeUnsubscribe?.();
+    } catch {
+      // Closing the view must still retire every mounted surface.
+    }
     this.#localeUnsubscribe = undefined;
-    this.#surface?.destroy();
+    const surface = this.#surface;
+    const root = this.#surfaceRoot;
     this.#surface = undefined;
-    this.#surfaceRoot?.remove();
     this.#surfaceRoot = undefined;
+    if (surface) this.#retireSurface(surface, root);
+    this.#retryRetiredSurfaces();
     this.#surfaceContext = undefined;
     this.contentEl.classList.remove("spiral-day-planner-view");
   }

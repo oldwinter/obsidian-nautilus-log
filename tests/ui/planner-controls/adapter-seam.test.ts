@@ -26,7 +26,10 @@ interface CapturedMount {
 interface AdapterSurface {
   readonly destroyCalls: string[];
   readonly localeCalls: string[];
+  readonly measureCalls: string[];
+  destroyFailuresRemaining: number;
   ephemeral?: string;
+  measureFailuresRemaining: number;
   destroy(): void;
   measure(): void;
   setContext(context?: unknown): void;
@@ -44,20 +47,33 @@ interface AdapterSeam {
 test("TC-UP-CTL-01-007 setState commits date and identity only after context and remount succeed", async () => {
   const contextCalls: unknown[] = [];
   let contextFailure: Error | undefined;
-  const surfaces: AdapterSurface[] = [];
   const createSurface = (): AdapterSurface => {
     const surface: AdapterSurface = {
       destroyCalls: [],
+      destroyFailuresRemaining: 0,
       localeCalls: [],
-      destroy() { this.destroyCalls.push("destroy"); },
-      measure() {},
+      measureCalls: [],
+      measureFailuresRemaining: 0,
+      destroy() {
+        this.destroyCalls.push("destroy");
+        if (this.destroyFailuresRemaining > 0) {
+          this.destroyFailuresRemaining -= 1;
+          throw new Error("surface destroy failed");
+        }
+      },
+      measure() {
+        this.measureCalls.push("measure");
+        if (this.measureFailuresRemaining > 0) {
+          this.measureFailuresRemaining -= 1;
+          throw new Error("surface measure failed");
+        }
+      },
       setContext(context?: unknown) {
         contextCalls.push(context);
         if (contextFailure) throw contextFailure;
       },
       setLocale() {},
     };
-    surfaces.push(surface);
     return surface;
   };
   const seam: AdapterSeam = {
@@ -130,17 +146,34 @@ test("TC-UP-CTL-01-007 setState commits date and identity only after context and
   assert.equal((mountedA.root as { parentElement: unknown }).parentElement, view.contentEl);
   assert.equal((seam.mounts[1]!.root as { parentElement: unknown }).parentElement, null);
 
+  surfaceA.destroyFailuresRemaining = 1;
+  let surfaceB: AdapterSurface | undefined;
+  const createCandidateSurface = seam.createSurface!;
+  seam.createSurface = (mount) => {
+    const surface = createCandidateSurface(mount);
+    if (mount.options.instanceId === "atomic-b") {
+      surface.measureFailuresRemaining = 1;
+      surfaceB = surface;
+    }
+    return surface;
+  };
   await view.setState({ logicalDate: dateB, plannerInstanceId: "atomic-b" }, {} as never);
   assert.deepEqual(view.getState(), { logicalDate: dateB, plannerInstanceId: "atomic-b" });
   assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-29");
   assert.equal(seam.mounts.length, 3);
   assert.equal(seam.mounts[2]!.options.instanceId, "atomic-b");
-  assert.deepEqual(surfaceA.destroyCalls, ["destroy"]);
-  const surfaceB = seam.mounts[2]!.surface!;
+  assert.deepEqual(surfaceA.destroyCalls, ["destroy", "destroy"]);
+  const mountedSurfaceB = seam.mounts[2]!.surface!;
+  assert.equal(surfaceB, mountedSurfaceB);
+  assert.deepEqual(mountedSurfaceB.measureCalls, ["measure"]);
+  surfaceB = mountedSurfaceB;
   assert.deepEqual(surfaceB.destroyCalls, []);
   assert.equal((seam.mounts[2]!.root as { parentElement: unknown }).parentElement, view.contentEl);
   assert.equal((mountedA.root as { parentElement: unknown }).parentElement, null);
   assert.deepEqual(contextCalls, []);
+  view.onResize();
+  assert.deepEqual(mountedSurfaceB.measureCalls, ["measure", "measure"]);
+  assert.equal(contextCalls.length, 1);
   seam.mounts[2]!.options.collapseStore.save("atomic-b", true);
   assert.equal(seam.mounts[2]!.options.collapseStore.load("atomic-b"), true);
 
@@ -148,7 +181,7 @@ test("TC-UP-CTL-01-007 setState commits date and identity only after context and
   assert.deepEqual(view.getState(), { logicalDate: dateC, plannerInstanceId: "atomic-b" });
   assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-30");
   assert.equal(seam.mounts.length, 3);
-  assert.equal(contextCalls.length, 1);
+  assert.equal(contextCalls.length, 2);
   assert.deepEqual(surfaceB.destroyCalls, []);
 
   contextFailure = new Error("surface context failed");
@@ -160,7 +193,7 @@ test("TC-UP-CTL-01-007 setState commits date and identity only after context and
   assert.deepEqual(view.getState(), { logicalDate: dateC, plannerInstanceId: "atomic-b" });
   assert.equal(view.getDisplayText(), "Spiral Day - 2026-08-30");
   assert.equal(seam.mounts.length, 3);
-  assert.equal(contextCalls.length, 2);
+  assert.equal(contextCalls.length, 3);
   assert.deepEqual(surfaceB.destroyCalls, []);
 
   seam.mountFailure = new Error("mount failed");
@@ -188,9 +221,18 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
     mounts: [],
     surface: {
       destroyCalls: [],
+      destroyFailuresRemaining: 0,
       localeCalls: [],
-      destroy() { this.destroyCalls.push("destroy"); },
-      measure() {},
+      measureCalls: [],
+      measureFailuresRemaining: 0,
+      destroy() {
+        this.destroyCalls.push("destroy");
+        if (this.destroyFailuresRemaining > 0) {
+          this.destroyFailuresRemaining -= 1;
+          throw new Error("surface destroy failed");
+        }
+      },
+      measure() { this.measureCalls.push("measure"); },
       setContext() {},
       setLocale(locale) { this.localeCalls.push(locale); },
     },
@@ -200,6 +242,7 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
 
   let localeListener: ((locale: string) => void) | undefined;
   let unsubscribeCalls = 0;
+  let unsubscribeFailure = false;
   let resolveContextCalls = 0;
   let resolveContextFailure = false;
   const progressCalls: PlannerProgressIntent[] = [];
@@ -214,6 +257,10 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
       return () => {
         unsubscribeCalls += 1;
         localeListener = undefined;
+        if (unsubscribeFailure) {
+          unsubscribeFailure = false;
+          throw new Error("locale unsubscribe failed");
+        }
       };
     },
     resolveContext: (logicalDate) => {
@@ -304,8 +351,10 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   resolveContextFailure = true;
   assert.throws(() => view.onResize(), /active resolver failure/);
   resolveContextFailure = false;
+  unsubscribeFailure = true;
+  seam.surface.destroyFailuresRemaining = 1;
   await (view as unknown as { onClose(): Promise<void> }).onClose();
-  assert.deepEqual(seam.surface.destroyCalls, ["destroy", "destroy", "destroy"]);
+  assert.deepEqual(seam.surface.destroyCalls, ["destroy", "destroy", "destroy", "destroy"]);
   assert.equal(unsubscribeCalls, 2);
 
   delete (globalThis as typeof globalThis & { __issue24PlannerAdapterSeam?: AdapterSeam })

@@ -132,6 +132,7 @@ declare global {
       focusProgress(id?: string): boolean;
       openDisclosure(key: "overflow" | "overview" | "schedule" | "warnings"): boolean;
       runMatrix(): Promise<readonly HarnessState[]>;
+      setAdapterEvidenceWidth(width: number): Promise<Readonly<Record<string, boolean | number | string>>>;
       setDebugEntry(enabled: boolean): void;
       setLocale(locale: SupportedLocale): void;
       setReducedMotion(enabled: boolean): void;
@@ -183,6 +184,7 @@ let patternEvidenceContainer: HTMLElement | undefined;
 let patternEvidenceViews: SpiralDayPlannerView[] = [];
 let patternReloadSurfaces: PlannerSurface[] = [];
 let patternReloadFrames: HTMLIFrameElement[] = [];
+let patternReloadTooltipIds: string[] = [];
 
 type PatternProbeModule = Readonly<{
   mountPatternProbe: typeof mountPlannerSurface;
@@ -1164,10 +1166,9 @@ window.issue24Harness = {
       oldRoot,
       runtime,
       context,
-      { instanceId: "pattern-before-module-reload" },
+      { instanceId: "pattern-before-module-reload", locale: "en" },
     ));
     await nextFrame();
-    oldWrapper.style.display = "none";
 
     const visibleWrapper = document.createElement("div");
     visibleWrapper.className = "planner-leaf";
@@ -1181,7 +1182,7 @@ window.issue24Harness = {
       visibleRoot,
       runtime,
       context,
-      { instanceId: "pattern-after-module-reload" },
+      { instanceId: "pattern-after-module-reload", locale: "zh-CN" },
     ));
     await nextFrame();
     await nextFrame();
@@ -1211,6 +1212,36 @@ window.issue24Harness = {
       && visibleState.svg.contains(visibleState.hatch)
       && visibleState.svg.contains(visibleState.dots)
     );
+    const tooltipResolution = (root: HTMLElement) => {
+      const target = root.querySelector<SVGElement>(
+        ".spiral-day-planner__available[aria-describedby]",
+      );
+      const id = target?.getAttribute("aria-describedby") ?? "";
+      target?.dispatchEvent(new FocusEvent("focus"));
+      const tooltip = document.getElementById(id);
+      return {
+        current: id !== ""
+          && tooltip?.classList.contains("spiral-day-planner__tooltip") === true
+          && tooltip.textContent === target?.getAttribute("aria-label"),
+        id,
+        text: tooltip?.textContent ?? "",
+      };
+    };
+    const oldTooltip = tooltipResolution(oldRoot);
+    const visibleTooltip = tooltipResolution(visibleRoot);
+    patternReloadTooltipIds = [
+      ...oldRoot.querySelectorAll<SVGElement>("[aria-describedby]"),
+      ...visibleRoot.querySelectorAll<SVGElement>("[aria-describedby]"),
+    ].map((target) => target.getAttribute("aria-describedby") ?? "").filter(Boolean);
+    const tooltipIdsUniqueAcrossModuleReload = patternReloadTooltipIds.length > 0
+      && new Set(patternReloadTooltipIds).size === patternReloadTooltipIds.length
+      && patternReloadTooltipIds.every((id) => document.querySelectorAll(`#${CSS.escape(id)}`).length === 1);
+    const tooltipsResolveToCurrentSurface = oldTooltip.current
+      && visibleTooltip.current
+      && oldTooltip.id !== visibleTooltip.id
+      && oldTooltip.text !== visibleTooltip.text;
+    oldWrapper.style.display = "none";
+    await nextFrame();
 
     const frame = document.createElement("iframe");
     frame.style.height = "1000px";
@@ -1242,6 +1273,8 @@ window.issue24Harness = {
       laterModuleSurfaceVisible: visibleState.svg.getBoundingClientRect().width > 0
         && visibleState.elapsed.getBoundingClientRect().width > 0
         && visibleState.progress.getBoundingClientRect().width > 0,
+      tooltipIdsUniqueAcrossModuleReload,
+      tooltipsResolveToCurrentSurface,
       visibleFillsResolveWithinOwningSurface,
     });
   },
@@ -1249,6 +1282,7 @@ window.issue24Harness = {
     await this.closePatternEvidence();
     const module = await importPatternProbe("/pattern-probe-a.js");
     const registry = Symbol.for("spiral-day.planner.pattern-sequence");
+    const tooltipRegistry = Symbol.for("spiral-day.planner.tooltip-sequence");
     const context = { logicalDate: DISPLAYED_DATE, bounds: BOUNDS, hostContext: "main" } as const;
     const container = document.createElement("section");
     container.id = "pattern-hostile-evidence";
@@ -1294,27 +1328,36 @@ window.issue24Harness = {
       patternReloadFrames.push(frame);
       const frameDocument = frame.contentDocument!;
       if (hostileCase === "getter-throws") {
-        Object.defineProperty(frameDocument, registry, {
-          configurable: true,
-          get() { throw new Error("hostile registry getter"); },
-        });
+        for (const key of [registry, tooltipRegistry]) {
+          Object.defineProperty(frameDocument, key, {
+            configurable: true,
+            get() { throw new Error("hostile registry getter"); },
+          });
+        }
       } else if (hostileCase === "setter-throws") {
-        Object.defineProperty(frameDocument, registry, {
-          configurable: true,
-          get() { return 0; },
-          set() { throw new Error("hostile registry setter"); },
-        });
+        for (const key of [registry, tooltipRegistry]) {
+          Object.defineProperty(frameDocument, key, {
+            configurable: true,
+            get() { return 0; },
+            set() { throw new Error("hostile registry setter"); },
+          });
+        }
       } else {
-        Object.defineProperty(frameDocument, registry, {
-          configurable: true,
-          value: Number.MAX_SAFE_INTEGER,
-          writable: true,
-        });
+        for (const key of [registry, tooltipRegistry]) {
+          Object.defineProperty(frameDocument, key, {
+            configurable: true,
+            value: Number.MAX_SAFE_INTEGER,
+            writable: true,
+          });
+        }
         for (const kind of ["dots", "hatch"] as const) {
           const occupied = frameDocument.createElement("div");
           occupied.id = `spiral-day-planner-${kind}-1`;
           frameDocument.body.append(occupied);
         }
+        const occupiedTooltip = frameDocument.createElement("div");
+        occupiedTooltip.id = "spiral-day-planner-tooltip-1";
+        frameDocument.body.append(occupiedTooltip);
       }
       const root = frameDocument.createElement("div");
       root.style.width = "900px";
@@ -1328,14 +1371,92 @@ window.issue24Harness = {
         ));
         await nextFrame();
         const patterns = [...root.querySelectorAll<SVGPatternElement>("defs pattern")];
+        const tooltipIds = [...root.querySelectorAll<SVGElement>("[aria-describedby]")]
+          .map((target) => target.getAttribute("aria-describedby") ?? "")
+          .filter(Boolean);
         results.set(hostileCase, patterns.length === 2
           && new Set(patterns.map((pattern) => pattern.id)).size === 2
-          && patterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern));
+          && patterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern)
+          && tooltipIds.length > 0
+          && new Set(tooltipIds).size === tooltipIds.length
+          && tooltipIds.every((id) => frameDocument.getElementById(id)?.getAttribute("role") === "tooltip"));
       } catch {
         results.set(hostileCase, false);
       }
     }
+    const stagedFrame = document.createElement("iframe");
+    stagedFrame.style.height = "1000px";
+    stagedFrame.style.left = "-10000px";
+    stagedFrame.style.position = "fixed";
+    stagedFrame.style.width = "920px";
+    document.body.append(stagedFrame);
+    patternReloadFrames.push(stagedFrame);
+    const stagedDocument = stagedFrame.contentDocument!;
+    Object.defineProperty(stagedDocument, registry, {
+      configurable: true,
+      value: 0,
+      writable: false,
+    });
+    const stagedRoots: HTMLElement[] = [];
+    const stagedRuntime: PlannerRuntimePort = {
+      state: "ready",
+      connect(_context, listener, visible = true) {
+        if (visible) listener(currentSnapshot());
+        return Object.freeze({
+          setContext() {},
+          setVisible(nextVisible: boolean) {
+            if (nextVisible) listener(currentSnapshot());
+          },
+          refresh() { listener(currentSnapshot()); },
+          disconnect() {},
+        });
+      },
+    };
+    const originalDateNow = Date.now;
+    const originalRandom = Math.random;
+    const originalUuid = Object.getOwnPropertyDescriptor(globalThis.crypto, "randomUUID");
+    try {
+      for (let index = 0; index < 4; index += 1) {
+        Date.now = index < 2 ? () => 0 : () => { throw new Error("hostile clock"); };
+        Math.random = index < 2 ? () => 0 : () => { throw new Error("hostile random"); };
+        Object.defineProperty(globalThis.crypto, "randomUUID", {
+          configurable: true,
+          value: index % 2 === 0 ? undefined : () => { throw new Error("hostile UUID"); },
+        });
+        const root = stagedDocument.createElement("div");
+        root.style.display = "none";
+        root.style.width = "900px";
+        stagedDocument.body.append(root);
+        stagedRoots.push(root);
+        patternReloadSurfaces.push(module.mountPatternProbe(
+          root,
+          stagedRuntime,
+          context,
+          { instanceId: `pattern-hostile-staged-${index}` },
+        ));
+      }
+    } finally {
+      Date.now = originalDateNow;
+      Math.random = originalRandom;
+      if (originalUuid) Object.defineProperty(globalThis.crypto, "randomUUID", originalUuid);
+      else Reflect.deleteProperty(globalThis.crypto, "randomUUID");
+    }
+    const stagedReservations = [...stagedDocument.querySelectorAll<HTMLMetaElement>(
+      "meta[data-spiral-day-pattern-id-reservation]",
+    )].map((reservation) => reservation.getAttribute("data-spiral-day-pattern-id-reservation") ?? "");
+    for (const root of stagedRoots) root.style.display = "";
+    await nextFrame();
+    await nextFrame();
+    const stagedPatternIds = stagedRoots.flatMap((root) => (
+      [...root.querySelectorAll<SVGPatternElement>("defs pattern")].map((pattern) => pattern.id)
+    ));
+    const entropyIndependentHiddenReservations = stagedReservations.length === 8
+      && stagedPatternIds.length === 8
+      && new Set(stagedReservations).size === 8
+      && new Set(stagedPatternIds).size === 8
+      && stagedPatternIds.every((id) => stagedReservations.includes(id));
     return Object.freeze({
+      entropyIndependentHiddenReservations,
       getterThrowFallsBack: results.get("getter-throws") === true,
       maxSafeWrapSkipsOccupied: results.get("max-safe-wrap") === true,
       nonWritableRegistryRenders,
@@ -1401,8 +1522,11 @@ window.issue24Harness = {
         day,
       }));
     };
-    let mode: "rollback-fails" | "rollback-succeeds" | "success" = "rollback-succeeds";
+    let mode: "rollback-fails" | "rollback-queues-b" | "rollback-succeeds" | "success" = "rollback-succeeds";
     let disconnectCalls = 0;
+    let disconnectFailure = false;
+    let localeUnsubscribeCalls = 0;
+    let localeUnsubscribeFailure = false;
     let connectCalls = 0;
     const contextDays: number[] = [];
     const transactionRuntime: PlannerRuntimePort = {
@@ -1414,6 +1538,10 @@ window.issue24Harness = {
           setContext(nextContext) {
             contextDays.push(nextContext.logicalDate.day);
             if (nextContext.logicalDate.day === dateB.day) {
+              if (mode === "rollback-queues-b") {
+                queueMicrotask(() => listener(snapshotFor(dateB, boundsB)));
+                throw new Error("candidate context failed after queueing B");
+              }
               listener(snapshotFor(dateB, boundsB));
               if (mode !== "success") throw new Error("candidate context failed");
               return;
@@ -1423,15 +1551,38 @@ window.issue24Harness = {
           },
           setVisible() {},
           refresh() {},
-          disconnect() { disconnectCalls += 1; },
+          disconnect() {
+            disconnectCalls += 1;
+            if (disconnectFailure) {
+              disconnectFailure = false;
+              throw new Error("disconnect failed once");
+            }
+          },
         });
       },
     };
+    const baseMessages = createMessages({ locale: "en" });
+    const teardownMessages = Object.freeze({
+      get locale() { return baseMessages.locale; },
+      setLocale(locale: string) { return baseMessages.setLocale(locale); },
+      subscribe(listener: Parameters<typeof baseMessages.subscribe>[0]) {
+        const unsubscribe = baseMessages.subscribe(listener);
+        return () => {
+          localeUnsubscribeCalls += 1;
+          unsubscribe();
+          if (localeUnsubscribeFailure) {
+            localeUnsubscribeFailure = false;
+            throw new Error("locale unsubscribe failed once");
+          }
+        };
+      },
+      t: baseMessages.t.bind(baseMessages) as typeof baseMessages.t,
+    });
     const surface = mountPlannerSurface(root, transactionRuntime, {
       logicalDate: DISPLAYED_DATE,
       bounds: BOUNDS,
       hostContext: "main",
-    }, { instanceId: "context-transaction" });
+    }, { instanceId: "context-transaction", messages: teardownMessages });
     await nextFrame();
     const title = () => root.querySelector(".spiral-day-planner__center-title")?.textContent;
     const hours = () => [...root.querySelectorAll(".spiral-day-planner__hour")]
@@ -1447,7 +1598,24 @@ window.issue24Harness = {
     const rollbackSuccessPreservedA = title() === "2026-08-28"
       && hours().includes("5")
       && contextDays.join(",") === "29,28"
-      && disconnectCalls === 0;
+      && disconnectCalls === 1
+      && connectCalls === 2;
+
+    mode = "rollback-queues-b";
+    let delayedCandidateThrew = false;
+    try {
+      surface.setContext({ logicalDate: dateB, bounds: boundsB, hostContext: "main" });
+    } catch {
+      delayedCandidateThrew = true;
+    }
+    await Promise.resolve();
+    await nextFrame();
+    const delayedCandidateRejected = delayedCandidateThrew
+      && disconnectCalls === 2
+      && connectCalls === 3
+      && title() === "2026-08-28"
+      && hours().includes("5")
+      && !hours().includes("10");
 
     mode = "rollback-fails";
     let rollbackFailureThrew = false;
@@ -1458,13 +1626,13 @@ window.issue24Harness = {
     }
     await nextFrame();
     const unavailable = root.querySelector<HTMLElement>(".spiral-day-planner__status");
-    const rollbackFailureDisconnected = disconnectCalls === 1
+    const rollbackFailureDisconnected = disconnectCalls === 3
       && unavailable?.dataset.state === "unavailable"
       && unavailable.textContent === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
 
     surface.probeRuntimeNow();
     await nextFrame();
-    const probeRecoveredA = connectCalls === 2 && title() === "2026-08-28" && hours().includes("5");
+    const probeRecoveredA = connectCalls === 4 && title() === "2026-08-28" && hours().includes("5");
     mode = "success";
     surface.setContext({ logicalDate: dateB, bounds: boundsB, hostContext: "main" });
     await nextFrame();
@@ -1472,9 +1640,34 @@ window.issue24Harness = {
       && !hours().includes("5")
       && hours().includes("10");
 
-    surface.destroy();
+    disconnectFailure = true;
+    localeUnsubscribeFailure = true;
+    let guardedDestroyThrew = false;
+    try {
+      surface.destroy();
+    } catch {
+      guardedDestroyThrew = true;
+    }
+    const guardedDestroyCompleted = guardedDestroyThrew
+      && disconnectCalls === 4
+      && localeUnsubscribeCalls === 1
+      && root.childElementCount === 0
+      && !root.classList.contains("spiral-day-planner")
+      && root.dataset.layout === undefined;
+    let destroyRetryCompleted = true;
+    try {
+      surface.destroy();
+    } catch {
+      destroyRetryCompleted = false;
+    }
+    destroyRetryCompleted = destroyRetryCompleted
+      && disconnectCalls === 5
+      && localeUnsubscribeCalls === 2;
     root.remove();
     return Object.freeze({
+      delayedCandidateRejected,
+      destroyRetryCompleted,
+      guardedDestroyCompleted,
       probeRecoveredA,
       rollbackFailureDisconnected,
       rollbackFailureThrew,
@@ -1899,6 +2092,10 @@ window.issue24Harness = {
     patternEvidenceViews = [];
     for (const surface of patternReloadSurfaces) surface.destroy();
     patternReloadSurfaces = [];
+    if (patternReloadTooltipIds.some((id) => document.getElementById(id) !== null)) {
+      throw new Error("Pattern evidence left a tooltip portal behind");
+    }
+    patternReloadTooltipIds = [];
     for (const frame of patternReloadFrames) frame.remove();
     patternReloadFrames = [];
     patternEvidenceContainer?.remove();
@@ -1943,6 +2140,32 @@ window.issue24Harness = {
       }
     }
     return Object.freeze(results);
+  },
+  async setAdapterEvidenceWidth(nextWidth) {
+    if (!adapterView || ![320, 519, 520, 521].includes(nextWidth)) {
+      throw new RangeError("Adapter evidence requires an open view and a canonical boundary width");
+    }
+    adapterRoot.style.width = `${nextWidth + 20}px`;
+    adapterView.onResize();
+    await nextFrame();
+    const root = adapterRoot.querySelector<HTMLElement>(
+      ":scope > .spiral-day-planner-view__surface.spiral-day-planner",
+    );
+    if (!root) throw new Error("Adapter evidence surface is not mounted");
+    root.querySelector<HTMLElement>("button")?.focus();
+    const style = getComputedStyle(root);
+    return Object.freeze({
+      contentWidth: root.clientWidth
+        - Number.parseFloat(style.paddingLeft)
+        - Number.parseFloat(style.paddingRight),
+      focusedWithin: root.contains(document.activeElement),
+      height: root.getBoundingClientRect().height,
+      horizontalOverflow: root.scrollWidth > root.clientWidth,
+      layout: root.dataset.layout ?? "",
+      outerWidth: root.getBoundingClientRect().width,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
+    });
   },
   setDebugEntry(enabled) {
     debugEntry = enabled;

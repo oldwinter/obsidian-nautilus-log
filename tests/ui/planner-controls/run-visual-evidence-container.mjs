@@ -90,6 +90,18 @@ function differentPixelCount(leftBuffer, rightBuffer) {
   return differentPixels;
 }
 
+function nonUniformPixelCount(buffer) {
+  const image = PNG.sync.read(buffer);
+  const baseline = image.data.subarray(0, 4);
+  let pixels = 0;
+  for (let offset = 4; offset < image.data.length; offset += 4) {
+    if ([0, 1, 2, 3].some((channel) => Math.abs(image.data[offset + channel] - baseline[channel]) > 16)) {
+      pixels += 1;
+    }
+  }
+  return pixels;
+}
+
 async function patternedPixelCount(locator) {
   await locator.scrollIntoViewIfNeeded();
   const originalStyle = await locator.getAttribute("style");
@@ -366,6 +378,35 @@ try {
   const adapterLifecycle = await page.evaluate(() => window.issue24Harness.assertAdapterLifecycle());
   failUnless(Object.values(adapterLifecycle).every(Boolean),
     `Production adapter lifecycle seam failed: ${JSON.stringify(adapterLifecycle)}`);
+  const adapterWrapper = page.locator(
+    "#adapter-planner > .spiral-day-planner-view__surface.spiral-day-planner",
+  );
+  const adapterWrapperEvidence = [];
+  for (const width of [320, 519, 520, 521]) {
+    const contract = await page.evaluate(
+      (nextWidth) => window.issue24Harness.setAdapterEvidenceWidth(nextWidth),
+      width,
+    );
+    failUnless(contract.contentWidth === width
+        && contract.outerWidth === width + 20
+        && contract.paddingLeft === "10px"
+        && contract.paddingRight === "10px"
+        && contract.layout === (width <= 520 ? "compact" : "wide")
+        && contract.height > 0
+        && !contract.horizontalOverflow
+        && contract.focusedWithin,
+    `Production adapter wrapper geometry failed at ${width}: ${JSON.stringify(contract)}`);
+    const image = await adapterWrapper.screenshot({
+      path: join(OUTPUT_DIRECTORY, `adapter-production-wrapper-${width}.png`),
+      animations: "disabled",
+      caret: "hide",
+      scale: "device",
+    });
+    const pixels = nonUniformPixelCount(image);
+    failUnless(pixels > 1_000,
+      `Production adapter wrapper is visually blank at ${width}: ${pixels}`);
+    adapterWrapperEvidence.push({ contract, pixels, width });
+  }
   await page.evaluate(() => window.issue24Harness.closeAdapterEvidence());
   const patternIsolation = await page.evaluate(() => window.issue24Harness.assertPatternIsolation());
   failUnless(Object.values(patternIsolation).every(Boolean),
@@ -494,6 +535,7 @@ try {
     `Plugin initiated browser network requests: ${JSON.stringify(browserNetworkAttempts)}`);
   await writeFile(join(OUTPUT_DIRECTORY, "env-vis-result.json"), `${JSON.stringify({
     adapterLifecycle,
+    adapterWrapperEvidence,
     patternIsolation,
     patternReloadIsolation,
     patternRegistryHostility,
@@ -508,7 +550,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true adapterWrapperPixels=${adapterWrapperEvidence.map(({ pixels }) => pixels).join("/")} patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;
