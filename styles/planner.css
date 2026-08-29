@@ -227,6 +227,7 @@
 }
 
 .spiral-day-planner__elapsed {
+  fill: url(#spiral-day-planner-hatch);
   pointer-events: none;
   stroke: var(--spiral-day-past);
   stroke-width: 0.7px;
@@ -279,6 +280,7 @@
 }
 
 .spiral-day-planner__progress {
+  fill: url(#spiral-day-planner-dots);
   pointer-events: none;
   stroke: none;
 }
