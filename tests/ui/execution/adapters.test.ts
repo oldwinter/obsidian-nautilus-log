@@ -13,7 +13,7 @@ test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and remov
   const plugin = {
     addCommand(command: Record<string, unknown>) {
       registered.push(command);
-      return command;
+      return { ...command, id: `spiral-day:${String(command.id)}` };
     },
     removeCommand(id: string) {
       removed.push(id);

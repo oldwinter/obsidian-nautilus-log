@@ -10,7 +10,7 @@ export interface ExecutionCommandDependencies {
 
 export class ExecutionCommandRegistry {
   readonly #dependencies: ExecutionCommandDependencies;
-  readonly #registered: Command[] = [];
+  readonly #registered: string[] = [];
 
   constructor(dependencies: ExecutionCommandDependencies) {
     this.#dependencies = dependencies;
@@ -40,16 +40,18 @@ export class ExecutionCommandRegistry {
       },
     ];
     commands.forEach((command, index) => {
-      this.#registered.push(this.#dependencies.plugin.addCommand({
-        id: `execution-${index + 1}`,
+      const id = `execution-${index + 1}`;
+      this.#dependencies.plugin.addCommand({
+        id,
         ...command,
-      }));
+      });
+      this.#registered.push(id);
     });
   }
 
   stop(): void {
-    for (const command of this.#registered.splice(0)) {
-      this.#dependencies.plugin.removeCommand(command.id);
+    for (const id of this.#registered.splice(0)) {
+      this.#dependencies.plugin.removeCommand(id);
     }
   }
 

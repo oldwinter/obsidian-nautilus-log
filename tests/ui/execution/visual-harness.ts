@@ -212,15 +212,19 @@ const surface = mountExecutionPanel({
       level: outcome.outcome === "applied" ? "info" : "warning",
     };
   },
-  recent: () => [{
-    key: "recent-1",
-    ownerId: "nl-33333333-3333-4333-8333-333333333333",
-    path: PATH,
-    sourceOrder: 2,
-    label: "Check release artifact hashes",
-    actualMinutes: 12,
-  }],
+  subscribeRecent(listener) {
+    listener([{
+      key: "recent-1",
+      ownerId: "nl-33333333-3333-4333-8333-333333333333",
+      path: PATH,
+      sourceOrder: 2,
+      label: "Check release artifact hashes",
+      actualMinutes: 12,
+    }]);
+    return () => undefined;
+  },
   navigatePrimary: () => undefined,
+  openActiveTask: () => undefined,
   navigateTask: () => undefined,
 }, { trigger, messages, renderIcon });
 

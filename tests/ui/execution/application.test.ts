@@ -47,6 +47,150 @@ function source(lines: readonly string[]): string {
   return `${OPEN}\n${lines.join("\n")}\n${CLOSE}\n`;
 }
 
+class StartupRaceAccess extends MemoryAtomicTextAccess {
+  #remainingSourceChanges: number;
+
+  constructor(files: Record<string, string>, sourceChanges = 1) {
+    super(files);
+    this.#remainingSourceChanges = sourceChanges;
+  }
+
+  override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    const text = await super.readText(path, signal);
+    if (this.#remainingSourceChanges > 0) {
+      this.#remainingSourceChanges -= 1;
+      this.notifyCacheChange(path);
+    }
+    return text;
+  }
+}
+
+class CountingAtomicTextAccess extends MemoryAtomicTextAccess {
+  reads = 0;
+
+  override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    this.reads += 1;
+    return super.readText(path, signal);
+  }
+}
+
+test("startup re-scans once after a transient source change and restores the running CLOCK", async () => {
+  const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
+  const initial = source([
+    `- [ ] Alpha 30m ^${PLAN_A}`,
+    "  - LOGBOOK::",
+    `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
+  ]);
+  const access = new StartupRaceAccess({ [PATH]: initial });
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 5_000),
+  });
+
+  const started = await application.start();
+  assert.equal(started.status, "ready");
+  assert.equal(started.execution.kind, "active");
+  assert.equal(started.focused?.ownerId, PLAN_A);
+  assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("refresh performs at most one extra read-only scan after consecutive host cache races", async () => {
+  const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
+  const initial = source([
+    `- [ ] Alpha 30m ^${PLAN_A}`,
+    "  - LOGBOOK::",
+    `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
+  ]);
+  const access = new StartupRaceAccess({ [PATH]: initial }, 2);
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 7_500),
+  });
+
+  const started = await application.start();
+  assert.equal(started.status, "ready");
+  assert.equal(started.execution.kind, "active");
+  assert.equal(started.focused?.ownerId, PLAN_A);
+  assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("resume starts a fresh scan when suspend invalidates an in-flight refresh", async () => {
+  const initial = source([`- [ ] Alpha 30m ^${PLAN_A}`]);
+  const active = source([
+    `- [ ] Alpha 30m ^${PLAN_A}`,
+    "  - LOGBOOK::",
+    "    - CLOCK: [2026-08-29 Sat 09:30:00.000 +08:00] ^nl-clock-11111111-1111-4111-8111-111111111111",
+  ]);
+  const access = new MemoryAtomicTextAccess({ [PATH]: initial });
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 8_000),
+  });
+  await application.start();
+
+  const gate = access.pauseAfterReads(PATH, 1);
+  const refreshing = application.refresh();
+  await gate.entered;
+  application.suspend();
+  access.modify(PATH, active);
+  const resuming = application.resume();
+  gate.release();
+
+  await refreshing;
+  const resumed = await resuming;
+  assert.equal(resumed.status, "ready");
+  assert.equal(resumed.execution.kind, "active");
+  assert.equal(resumed.focused?.ownerId, PLAN_A);
+  assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("dispatch waits for an in-flight read-only refresh before rebuilding the execution index", async () => {
+  const initial = source([`- [ ] Alpha 30m ^${PLAN_A}`]);
+  const access = new CountingAtomicTextAccess({ [PATH]: initial });
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 9_000),
+  });
+  await application.start();
+  const alpha = await reference(initial, PLAN_A, 0);
+
+  const gate = access.pauseAfterReads(PATH, 1);
+  const refreshing = application.refresh();
+  await gate.entered;
+  const readsAtGate = access.reads;
+  const dispatching = application.dispatch({ type: "clock-in", intentId: "clock-in-after-refresh", target: alpha });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(access.reads, readsAtGate);
+  assert.equal(access.transactionCounts.get(PATH), undefined);
+  gate.release();
+
+  await refreshing;
+  const outcome = await dispatching;
+  assert.equal(outcome.outcome, "applied", JSON.stringify(outcome));
+  assert.equal(application.snapshot.focused?.ownerId, PLAN_A);
+  assert.equal(access.transactionCounts.get(PATH), 1);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
 test("application serializes Clock In, switch, idempotent Clock In, and Clock Out against fresh Markdown", async () => {
   const initial = source([
     `- [ ] Alpha 30m ^${PLAN_A}`,

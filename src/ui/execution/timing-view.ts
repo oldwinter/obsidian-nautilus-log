@@ -28,6 +28,7 @@ export interface TimingViewOptions {
   readonly messages: ExecutionMessages;
   readonly renderIcon: ExecutionIconRenderer;
   readonly dispatch: (intent: ExecutionApplicationIntent) => void;
+  readonly openActiveTask: () => void;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
@@ -68,7 +69,19 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
   const { snapshot, messages } = options;
   const section = executionElement(root.ownerDocument, "section", "spiral-day-execution__timing");
   const focused = snapshot.focused;
-  if (!focused) {
+  if (!focused && (snapshot.status === "degraded"
+    || snapshot.status === "stale"
+    || snapshot.status === "starting")) {
+    const unavailable = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty");
+    const heading = executionElement(root.ownerDocument, "strong");
+    heading.textContent = snapshot.status === "degraded"
+      ? messages.t("execution", "status.degraded")
+      : messages.t("execution", "status.stale");
+    const detail = executionElement(root.ownerDocument, "p");
+    detail.textContent = messages.t("execution", "error.refresh");
+    unavailable.append(heading, detail);
+    section.append(unavailable);
+  } else if (!focused) {
     const empty = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty");
     const heading = executionElement(root.ownerDocument, "strong");
     heading.textContent = messages.t("execution", "timing.idle");
@@ -88,6 +101,7 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
         }),
       });
       appendPending(pomo, options.pending.has("standalone-pomo"), messages);
+      if (snapshot.writeBlocked) pomo.disabled = true;
       empty.append(pomo);
     } else {
       const elapsed = executionElement(root.ownerDocument, "span", "spiral-day-execution__elapsed");
@@ -112,6 +126,7 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
         }),
       });
       appendPending(stop, options.pending.has("standalone-pomo"), messages);
+      if (snapshot.writeBlocked) stop.disabled = true;
       const timer = executionElement(root.ownerDocument, "div", "spiral-day-execution__standalone");
       timer.append(elapsed, stop);
       empty.append(timer);
@@ -147,6 +162,14 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     heading.append(elapsed);
 
     const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__actions");
+    const openActiveTask = executionIconButton({
+      document: root.ownerDocument,
+      label: messages.t("execution", "action.openActiveTask"),
+      icon: "focus",
+      renderIcon: options.renderIcon,
+      className: "spiral-day-execution__secondary-action",
+      onActivate: options.openActiveTask,
+    });
     const clockOut = executionIconButton({
       document: root.ownerDocument,
       label: messages.t("execution", "action.clockOut"),
@@ -186,7 +209,12 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     appendPending(clockOut, options.pending.has("clock-out"), messages);
     appendPending(complete, options.pending.has(`task:${focused.ownerId}`), messages);
     appendPending(remove, options.pending.has("delete-clock"), messages);
-    actions.append(clockOut, complete, remove);
+    if (snapshot.writeBlocked) {
+      clockOut.disabled = true;
+      complete.disabled = true;
+      remove.disabled = true;
+    }
+    actions.append(openActiveTask, clockOut, complete, remove);
     current.append(label, heading, actions);
     if (snapshot.execution.kind === "forgotten") {
       const warning = executionElement(root.ownerDocument, "p", "spiral-day-execution__warning");
