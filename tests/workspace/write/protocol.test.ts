@@ -3162,6 +3162,14 @@ test("orphan recovery preserves sibling blocks after list and blank paragraph bo
     { name: "quoted-three-space-ordered", source: `> ${running}\r\n   1. sibling\r\n`, eol: "\r\n" },
     { name: "quoted-three-space-html", source: `> ${running}\n   <div>\n`, eol: "\n" },
     { name: "quoted-closing-type-six-html", source: `> ${running}\n> </div>\n`, eol: "\n" },
+    { name: "ordinary-tab-list-sibling-quote", source: `-\t${running}\n> nested\n`, eol: "\n" },
+    { name: "quoted-tab-list-sibling-quote", source: `> -\t${running}\n> > nested\n`, eol: "\n" },
+    {
+      name: "nested-tab-list-sibling-quote-crlf",
+      source: `> > -\t${running}\r\n> > > nested\r\n`,
+      eol: "\r\n",
+    },
+    { name: "quoted-space-list-sibling-quote", source: `> -   ${running}\n> > nested\n`, eol: "\n" },
     {
       name: "nested-tab-list-sibling-quote",
       source: `>\t>\t-\t${running}\r\n>\t>\t>\tnested\r\n`,
@@ -3257,6 +3265,11 @@ test("orphan recovery rejects genuinely nested list content and lazy continuatio
     { name: "quoted-tab-padding-lf", source: `> - ${running}\n>\t> nested\n` },
     { name: "quoted-tab-padding-crlf", source: `> - ${running}\r\n>\t> nested\r\n` },
     { name: "nested-tab", source: `>\t>\t-\t${running}\r\n>\t>\t\t>\tnested\r\n` },
+    { name: "ordinary-tab-list-marker", source: `-\t${running}\n    > nested\n` },
+    { name: "quoted-tab-list-marker-lf", source: `> -\t${running}\n>   > nested\n` },
+    { name: "quoted-tab-list-marker-crlf", source: `> -\t${running}\r\n>   > nested\r\n` },
+    { name: "nested-tab-list-marker", source: `> > -\t${running}\n> >     > nested\n` },
+    { name: "quoted-space-list-marker", source: `> -   ${running}\n>     > nested\n` },
     { name: "lazy", source: `> - ${running}\nlazy continuation\n` },
   ] as const) for (const action of [
     "delete-clock",

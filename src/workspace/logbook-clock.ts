@@ -87,6 +87,7 @@ export interface MarkdownContainerContent {
 }
 
 interface MarkdownContainerDetails extends MarkdownContainerContent {
+  readonly contentColumn: number;
   readonly quoteIndents: readonly number[];
 }
 
@@ -128,6 +129,7 @@ function markdownContainerDetails(lineText: string): MarkdownContainerDetails {
   }
   return Object.freeze({
     content: lineText.slice(contentOffset),
+    contentColumn: visualColumn,
     contentOffset,
     quoteDepth,
     quoteIndents: Object.freeze(quoteIndents),
@@ -454,10 +456,16 @@ function lineEndingForLine(source: string, line: PhysicalLine): MarkdownLineEndi
   return ending === "\n" || ending === "\r" || ending === "\r\n" ? ending : undefined;
 }
 
+function visualWidthFromColumn(text: string, startColumn: number): number {
+  let column = startColumn;
+  for (const character of text) {
+    column = character === "\t" ? column + (4 - column % 4) : column + 1;
+  }
+  return column - startColumn;
+}
+
 function visualWidth(text: string): number {
-  let width = 0;
-  for (const character of text) width = character === "\t" ? width + (4 - width % 4) : width + 1;
-  return width;
+  return visualWidthFromColumn(text, 0);
 }
 
 function childIndent(lineText: string): string {
@@ -772,12 +780,17 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
     || clockLine.fromOffset + physicalClock.toColumn !== clock.toOffset
   )) mutationError("source-span-mismatch", "CLOCK is not a standalone physical line");
   const contentIndent = clockList
-    ? visualWidth(clockList[1]! + clockList[2]! + clockList[3]!)
+    ? visualWidthFromColumn(
+        clockList[1]! + clockList[2]! + clockList[3]!,
+        clockContainer.contentColumn,
+      )
     : indentationWidth(clockContainer.content.slice(
         0,
         physicalClock!.fromColumn - clockContainer.contentOffset,
       )) + 1;
-  const containerIndent = clockList ? indentationWidth(clockList[1]!) : 0;
+  const containerIndent = clockList
+    ? visualWidthFromColumn(clockList[1]!, clockContainer.contentColumn)
+    : 0;
   let separatedByBlank = false;
 
   for (let index = clockIndex + 1; index < lines.length; index += 1) {
