@@ -1145,7 +1145,10 @@ function currentFileRunningFacts(
             scope: "accepted-logbook",
             parsed: clock.parsed,
           });
-          if (!potentialClockIsSelectedPlanRepair(indexedClock, plan, expectation, "before")) {
+          if (
+            !potentialClockIsSelectedPlanRepair(indexedClock, plan, expectation, "before")
+            && !potentialClockIsSelectedClockRepair(indexedClock, plan, expectation, "before")
+          ) {
             blockingPotential = true;
           }
           const rawIdMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(clock.text);
@@ -1353,6 +1356,28 @@ function selectedClockIdentityRepair(
   return undefined;
 }
 
+function potentialClockIsSelectedClockRepair(
+  clock: IndexedClockSource,
+  plan: MutationPlan,
+  expectation: MutationExpectation,
+  phase: "before" | "after",
+): boolean {
+  if (clock.parsed.kind !== "malformed" || !clock.parsed.potentialRunning) return false;
+  const repair = selectedClockIdentityRepair(plan, expectation);
+  if (!repair || repair.expected.state !== "potential-running") return false;
+  const oldTerminal = `^${repair.operation.target.id}`;
+  if (!repair.expected.text.endsWith(oldTerminal)) return false;
+  const repairedText = `${repair.expected.text.slice(0, -oldTerminal.length)}^${repair.operation.newId}`;
+  const expectedText = phase === "before" ? repair.expected.text : repairedText;
+  const expectedId = phase === "before" ? repair.operation.target.id : repair.operation.newId;
+  return clock.path === repair.expected.path
+    && clock.fromOffset === repair.expected.span.fromOffset
+    && clock.toOffset === repair.expected.span.toOffset
+    && clock.text === expectedText
+    && indexedClockKey(clock) === expectedId
+    && clock.ownerId === repair.expected.ownerId;
+}
+
 function runningClockIsSelectedRecovery(
   clock: IndexedClockSource,
   plan: MutationPlan,
@@ -1457,6 +1482,9 @@ function globalPrecondition(
     const selectedPlanRepair = plan.action === "repair-plan-item-identity"
       && unresolvedPotential.every((clock) =>
         potentialClockIsSelectedPlanRepair(clock, plan, expectation, "before"));
+    const selectedClockRepair = plan.action === "repair-clock-identity"
+      && unresolvedPotential.every((clock) =>
+        potentialClockIsSelectedClockRepair(clock, plan, expectation, "before"));
     const normalize = plan.stages.flatMap((stage) => stage.operations)
       .find((operation): operation is Extract<FileMutationOperation, { kind: "normalize-legacy-clock" }> =>
         operation.kind === "normalize-legacy-clock",
@@ -1475,7 +1503,7 @@ function globalPrecondition(
       && clock.text === expected.text
       && (normalize?.target.id !== undefined
         || (clock.fromOffset === expected.span.fromOffset && clock.toOffset === expected.span.toOffset)));
-    if (!selectedPlanRepair && (
+    if (!selectedPlanRepair && !selectedClockRepair && (
       action !== "normalize-legacy-clock"
       || unresolvedPotential.length !== 1
       || selected.length !== 1
@@ -1653,9 +1681,12 @@ async function switchAdmission(
   } catch {
     currentTargetText = undefined;
   }
+  const liveSnapshot = index.safetySnapshot;
+  if (!liveSnapshot.complete || liveSnapshot.generation !== snapshot.generation) {
+    return conflict("source-conflict", plan.action, running.path);
+  }
   if (
     currentTargetText === undefined
-    || !index.safetySnapshot.complete
     || !switchTargetEndStateMatches(
       running.path,
       currentTargetText,
@@ -2862,6 +2893,7 @@ export class WorkspaceCommitter {
     result: CommitConflict,
     sources: readonly SourceReceiptInput[] = [],
     expectation?: MutationExpectation,
+    selectedInvalidOwner = false,
   ): Promise<CommitReceipt> {
     const snapshot = this.#index.safetySnapshot;
     const facts = expectation && snapshot.complete
@@ -2876,7 +2908,8 @@ export class WorkspaceCommitter {
       globalCheck: {
         status: !snapshot.complete
           ? "unavailable"
-          : result.code === "clock-owner-invalid"
+          : selectedInvalidOwner
+            || result.code === "clock-owner-invalid"
             || facts.potentialRunning.length > 0
             || facts.running.length > 1
             ? "violated"
@@ -3207,6 +3240,7 @@ export class WorkspaceCommitter {
       return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
     }
     if (!snapshot.complete) return this.#stoppedReceipt(plan, "rejected", conflict("source-over-limit", plan.action));
+    let selectedInvalidOwnerAtAdmission = false;
     const invalidOwner = await invalidClockOwnerPrecondition(
       this.#index,
       this.#access,
@@ -3214,11 +3248,33 @@ export class WorkspaceCommitter {
       expectation,
       this.#logbookOptions,
       () => this.#disposed,
+      "before",
+      () => { selectedInvalidOwnerAtAdmission = true; },
+    );
+    const stoppedAfterOwnerAdmission = (
+      outcome: StageStopped["outcome"],
+      result: CommitConflict,
+      sources: readonly SourceReceiptInput[] = [],
+    ) => this.#stoppedReceipt(
+      plan,
+      outcome,
+      result,
+      sources,
+      expectation,
+      selectedInvalidOwnerAtAdmission,
     );
     if (this.#disposed) {
-      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action));
+      return stoppedAfterOwnerAdmission(
+        "rejected",
+        conflict("action-no-longer-applicable", plan.action),
+      );
     }
-    if (invalidOwner) return this.#stoppedReceipt(plan, isConflictOutcome(invalidOwner), invalidOwner, [], expectation);
+    if (invalidOwner) {
+      return stoppedAfterOwnerAdmission(
+        isConflictOutcome(invalidOwner),
+        invalidOwner,
+      );
+    }
     const initialFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
     if (deleteIsAuthoritativelyAbsent(plan, expectation, this.#index, this.#logbookOptions)) {
       return createCommitReceipt({
@@ -3237,10 +3293,10 @@ export class WorkspaceCommitter {
       this.#logbookOptions,
     );
     if (this.#disposed) {
-      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+      return stoppedAfterOwnerAdmission("rejected", conflict("action-no-longer-applicable", plan.action));
     }
     if (admittedSwitch && admittedSwitch !== "ready" && admittedSwitch !== "already-applied") {
-      return this.#stoppedReceipt(plan, isConflictOutcome(admittedSwitch), admittedSwitch, [], expectation);
+      return stoppedAfterOwnerAdmission(isConflictOutcome(admittedSwitch), admittedSwitch);
     }
     if (admittedSwitch === "already-applied") {
       return createCommitReceipt({
@@ -3259,10 +3315,10 @@ export class WorkspaceCommitter {
       this.#logbookOptions,
     );
     if (this.#disposed) {
-      return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+      return stoppedAfterOwnerAdmission("rejected", conflict("action-no-longer-applicable", plan.action));
     }
     if (identityEndState && identityEndState !== "already-applied") {
-      return this.#stoppedReceipt(plan, isConflictOutcome(identityEndState), identityEndState, [], expectation);
+      return stoppedAfterOwnerAdmission(isConflictOutcome(identityEndState), identityEndState);
     }
     if (identityEndState === "already-applied") {
       let selectedInvalidOwner = false;
@@ -3277,27 +3333,25 @@ export class WorkspaceCommitter {
         () => { selectedInvalidOwner = true; },
       );
       if (this.#disposed) {
-        return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+        return stoppedAfterOwnerAdmission("rejected", conflict("action-no-longer-applicable", plan.action));
       }
       const liveIdentitySnapshot = this.#index.safetySnapshot;
       if (!liveIdentitySnapshot.complete || liveIdentitySnapshot.generation !== snapshot.generation) {
         const changedGlobalState = conflict("source-conflict", plan.action);
-        return this.#stoppedReceipt(
-          plan,
+        return stoppedAfterOwnerAdmission(
           isConflictOutcome(changedGlobalState),
           changedGlobalState,
-          [],
-          expectation,
         );
       }
       if (finalOwner) {
-        return this.#stoppedReceipt(plan, isConflictOutcome(finalOwner), finalOwner, [], expectation);
+        return stoppedAfterOwnerAdmission(isConflictOutcome(finalOwner), finalOwner);
       }
       const blockingPotential = initialFacts.potentialRunning.find((clock) =>
-        !potentialClockIsSelectedPlanRepair(clock, plan, expectation, "after"));
+        !potentialClockIsSelectedPlanRepair(clock, plan, expectation, "after")
+        && !potentialClockIsSelectedClockRepair(clock, plan, expectation, "after"));
       if (blockingPotential) {
         const potential = conflict("potential-running-clock", plan.action, blockingPotential.path);
-        return this.#stoppedReceipt(plan, isConflictOutcome(potential), potential, [], expectation);
+        return stoppedAfterOwnerAdmission(isConflictOutcome(potential), potential);
       }
       const expectedFinalRunningClockIds = finalGlobalExpectation(
         plan,
@@ -3309,12 +3363,9 @@ export class WorkspaceCommitter {
         || !arraysEqual(sortedRunningKeys(initialFacts.running), expectedFinalRunningClockIds)
       ) {
         const changedGlobalState = conflict("source-conflict", plan.action);
-        return this.#stoppedReceipt(
-          plan,
+        return stoppedAfterOwnerAdmission(
           isConflictOutcome(changedGlobalState),
           changedGlobalState,
-          [],
-          expectation,
         );
       }
       const status = selectedInvalidOwner
@@ -3331,17 +3382,17 @@ export class WorkspaceCommitter {
       });
     }
     const invalidRepair = repairPrecondition(this.#index, plan, expectation, this.#logbookOptions);
-    if (invalidRepair) return this.#stoppedReceipt(plan, isConflictOutcome(invalidRepair), invalidRepair, [], expectation);
+    if (invalidRepair) return stoppedAfterOwnerAdmission(isConflictOutcome(invalidRepair), invalidRepair);
     const beforeConflict = globalPrecondition(this.#index, expectation, plan, this.#logbookOptions);
-    if (beforeConflict) return this.#stoppedReceipt(plan, isConflictOutcome(beforeConflict), beforeConflict, [], expectation);
+    if (beforeConflict) return stoppedAfterOwnerAdmission(isConflictOutcome(beforeConflict), beforeConflict);
     const relocatedPaths: string[] = [];
     for (const stage of plan.stages) {
       const relocated = relocateStagePath(stage, expectation, this.#index);
-      if (typeof relocated !== "string") return this.#stoppedReceipt(plan, isConflictOutcome(relocated), relocated, [], expectation);
+      if (typeof relocated !== "string") return stoppedAfterOwnerAdmission(isConflictOutcome(relocated), relocated);
       relocatedPaths.push(relocated);
     }
     if (new Set(relocatedPaths).size !== relocatedPaths.length) {
-      return this.#stoppedReceipt(plan, "conflict", conflict("source-conflict", plan.action, relocatedPaths[0]), [], expectation);
+      return stoppedAfterOwnerAdmission("conflict", conflict("source-conflict", plan.action, relocatedPaths[0]));
     }
 
     const sources: SourceReceiptInput[] = [];
@@ -3354,7 +3405,10 @@ export class WorkspaceCommitter {
     for (const [stageIndex, stage] of plan.stages.entries()) {
       if (this.#disposed) {
         if (sources.length === 0) {
-          return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action, stage.path, stageIndex), [], expectation);
+          return stoppedAfterOwnerAdmission(
+            "rejected",
+            conflict("action-no-longer-applicable", plan.action, stage.path, stageIndex),
+          );
         }
         return createCommitReceipt({
           intentId: plan.intentId,
@@ -3490,7 +3544,7 @@ export class WorkspaceCommitter {
               : result.result,
           });
         }
-        return this.#stoppedReceipt(plan, result.outcome, result.result, result.sources, expectation);
+        return stoppedAfterOwnerAdmission(result.outcome, result.result, result.sources);
       }
       if (result.source) sources.push(result.source);
       if (result.confirmedNoChange) confirmedNoChange.push(result.confirmedNoChange);
@@ -3541,6 +3595,10 @@ export class WorkspaceCommitter {
         || (global.status !== "confirmed"
           && plan.action === "repair-clock-identity"
           && finalFacts.potentialRunning.length === 0)
+        || (global.status !== "confirmed" && plan.action === "repair-clock-identity"
+          && finalFacts.potentialRunning.length > 0
+          && finalFacts.potentialRunning.every((clock) =>
+            potentialClockIsSelectedClockRepair(clock, plan, expectation, "after")))
         || (global.status !== "confirmed" && plan.action === "repair-plan-item-identity"
           && finalFacts.potentialRunning.length > 0
           && finalFacts.potentialRunning.every((clock) =>

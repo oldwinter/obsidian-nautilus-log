@@ -233,7 +233,13 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
     && input.clock.parsed.diagnostics[0]?.code === "ambiguous-local-time"
     ? ambiguousLegacyState(input.clock.text)
     : undefined;
-  if (!record && !selectedFoldState) throw new TypeError("CLOCK expectation requires a parsed record or selected DST fold");
+  const selectedIdentifiedPotential = input.target.id !== undefined
+    && observedId === input.target.id
+    && input.clock.parsed.kind === "malformed"
+    && input.clock.parsed.potentialRunning;
+  if (!record && !selectedFoldState && !selectedIdentifiedPotential) {
+    throw new TypeError("CLOCK expectation requires a parsed record, selected DST fold, or exact identified potential CLOCK");
+  }
   if (input.target.id !== undefined && observedId !== input.target.id) {
     throw new TypeError("CLOCK expectation identity mismatch");
   }
@@ -265,7 +271,8 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
       toColumn: 0,
     }),
     text: input.clock.text,
-    state: record?.state ?? (selectedFoldState === "running" ? "potential-running" : "closed"),
+    state: record?.state
+      ?? (selectedIdentifiedPotential || selectedFoldState === "running" ? "potential-running" : "closed"),
     ownerId: input.clock.ownerId,
   });
 }
@@ -580,13 +587,19 @@ export function revalidateClockExpectation(
       && clock.parsed.kind === "malformed"
       && ambiguousLegacyState(clock.text) === "closed"
     )) {
-      return clock.parsed.kind === "malformed"
-        && (expectation.state === "closed" || clock.parsed.potentialRunning)
-        && clock.parsed.diagnostics.length === 1
-        && clock.parsed.diagnostics[0]?.code === "ambiguous-local-time"
-        && clock.fromOffset === expectation.span.fromOffset
+      const exactExpectedBytes = clock.fromOffset === expectation.span.fromOffset
         && clock.toOffset === expectation.span.toOffset
         && clock.text === expectation.text;
+      const selectedMalformedIdentityRepair = action === "repair-clock-identity"
+        && expectation.state === "potential-running"
+        && expectation.target.id !== undefined
+        && clock.parsed.kind === "malformed"
+        && clock.parsed.potentialRunning;
+      const selectedFold = clock.parsed.kind === "malformed"
+        && (expectation.state === "closed" || clock.parsed.potentialRunning)
+        && clock.parsed.diagnostics.length === 1
+        && clock.parsed.diagnostics[0]?.code === "ambiguous-local-time";
+      return exactExpectedBytes && (selectedMalformedIdentityRepair || selectedFold);
     }
     if (clock.parsed.kind !== "record") return false;
     return expectation.target.id

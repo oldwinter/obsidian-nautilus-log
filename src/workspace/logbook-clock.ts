@@ -453,10 +453,12 @@ export function createClockIdentityRepairEdit(
 ): ByteEdit {
   assertClockId(newId);
   assertClockSource(source, clock);
-  if (clock.parsed.kind !== "record" || !clock.parsed.record.clockId) {
+  const rawIdMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*$/.exec(clock.text);
+  const rawId = rawIdMatch && isCanonicalClockId(rawIdMatch[1]!) ? rawIdMatch[1]! : undefined;
+  const oldId = clock.parsed.kind === "record" ? clock.parsed.record.clockId : rawId;
+  if (!oldId) {
     mutationError("source-span-mismatch", "CLOCK does not have the expected terminal identity");
   }
-  const oldId = clock.parsed.record.clockId;
   const terminal = `^${oldId}`;
   if (!clock.text.endsWith(terminal)) {
     mutationError("source-span-mismatch", "CLOCK identity is not terminal in the selected source");
