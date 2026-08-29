@@ -7,6 +7,16 @@ export interface SystemClock {
   clearTimeout(handle: TimerHandle): void;
 }
 
+export interface ClockSample {
+  readonly wallEpochMs: number;
+  readonly monotonicMs: number;
+  readonly timeZone: string;
+}
+
+export interface PairedSystemClock extends SystemClock {
+  sample(): ClockSample;
+}
+
 export interface ZonedTimeParts {
   readonly timeZone: string;
   readonly year: number;
@@ -20,7 +30,7 @@ export interface ZonedTimeParts {
 
 interface ManualTimer {
   readonly handle: TimerHandle;
-  readonly deadline: number;
+  readonly monotonicDeadline: number;
   readonly callback: () => void;
 }
 
@@ -99,7 +109,7 @@ export function zonedTimeParts(
   });
 }
 
-export class RealSystemClock implements SystemClock {
+export class RealSystemClock implements PairedSystemClock {
   now(): number {
     return Date.now();
   }
@@ -107,6 +117,14 @@ export class RealSystemClock implements SystemClock {
   timeZone(): string {
     const detected = new Intl.DateTimeFormat().resolvedOptions().timeZone;
     return canonicalTimeZone(detected || "UTC");
+  }
+
+  sample(): ClockSample {
+    return Object.freeze({
+      wallEpochMs: Date.now(),
+      monotonicMs: globalThis.performance.now(),
+      timeZone: this.timeZone(),
+    });
   }
 
   setTimeout(callback: () => void, delayMilliseconds: number): TimerHandle {
@@ -118,8 +136,9 @@ export class RealSystemClock implements SystemClock {
   }
 }
 
-export class ManualSystemClock implements SystemClock {
+export class ManualSystemClock implements PairedSystemClock {
   private currentEpochMilliseconds: number;
+  private currentMonotonicMilliseconds: number;
   private currentTimeZone: string;
   private nextHandle = 1;
   private readonly timers = new Map<TimerHandle, ManualTimer>();
@@ -127,11 +146,15 @@ export class ManualSystemClock implements SystemClock {
   private clearedTimerCount = 0;
   private firedTimerCount = 0;
 
-  constructor(epochMilliseconds = 0, timeZone = "UTC") {
+  constructor(epochMilliseconds = 0, timeZone = "UTC", monotonicMilliseconds = 0) {
     if (!Number.isFinite(epochMilliseconds)) {
       throw new RangeError("Epoch milliseconds must be finite");
     }
+    if (!Number.isFinite(monotonicMilliseconds) || monotonicMilliseconds < 0) {
+      throw new RangeError("Monotonic milliseconds must be finite and nonnegative");
+    }
     this.currentEpochMilliseconds = epochMilliseconds;
+    this.currentMonotonicMilliseconds = monotonicMilliseconds;
     this.currentTimeZone = canonicalTimeZone(timeZone);
   }
 
@@ -141,6 +164,14 @@ export class ManualSystemClock implements SystemClock {
 
   timeZone(): string {
     return this.currentTimeZone;
+  }
+
+  sample(): ClockSample {
+    return Object.freeze({
+      wallEpochMs: this.currentEpochMilliseconds,
+      monotonicMs: this.currentMonotonicMilliseconds,
+      timeZone: this.currentTimeZone,
+    });
   }
 
   get totalScheduledTimerCount(): number {
@@ -159,6 +190,24 @@ export class ManualSystemClock implements SystemClock {
     this.currentTimeZone = canonicalTimeZone(timeZone);
   }
 
+  setWallTime(epochMilliseconds: number): void {
+    if (!Number.isFinite(epochMilliseconds)) {
+      throw new RangeError("Epoch milliseconds must be finite");
+    }
+    this.currentEpochMilliseconds = epochMilliseconds;
+  }
+
+  advanceMonotonicBy(milliseconds: number): void {
+    if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+      throw new RangeError("Monotonic advance must be finite and nonnegative");
+    }
+    this.advanceClocks(
+      this.currentEpochMilliseconds,
+      this.currentMonotonicMilliseconds + milliseconds,
+      false,
+    );
+  }
+
   setTimeout(callback: () => void, delayMilliseconds: number): TimerHandle {
     if (!Number.isFinite(delayMilliseconds) || delayMilliseconds < 0) {
       throw new RangeError("Timer delay must be finite and nonnegative");
@@ -168,7 +217,7 @@ export class ManualSystemClock implements SystemClock {
     this.scheduledTimerCount += 1;
     this.timers.set(handle, {
       handle,
-      deadline: this.currentEpochMilliseconds + delayMilliseconds,
+      monotonicDeadline: this.currentMonotonicMilliseconds + delayMilliseconds,
       callback,
     });
     return handle;
@@ -195,23 +244,39 @@ export class ManualSystemClock implements SystemClock {
       throw new RangeError("Manual clock cannot move backwards");
     }
 
+    const wallDelta = epochMilliseconds - this.currentEpochMilliseconds;
+    this.advanceClocks(
+      epochMilliseconds,
+      this.currentMonotonicMilliseconds + wallDelta,
+      true,
+    );
+  }
+
+  private advanceClocks(
+    targetEpochMilliseconds: number,
+    targetMonotonicMilliseconds: number,
+    advanceWallWithMonotonic: boolean,
+  ): void {
     while (true) {
       let next: ManualTimer | undefined;
       for (const timer of this.timers.values()) {
-        if (timer.deadline > epochMilliseconds) continue;
+        if (timer.monotonicDeadline > targetMonotonicMilliseconds) continue;
         if (next === undefined
-          || timer.deadline < next.deadline
-          || (timer.deadline === next.deadline && timer.handle < next.handle)) {
+          || timer.monotonicDeadline < next.monotonicDeadline
+          || (timer.monotonicDeadline === next.monotonicDeadline && timer.handle < next.handle)) {
           next = timer;
         }
       }
       if (next === undefined) break;
 
       this.timers.delete(next.handle);
-      this.currentEpochMilliseconds = next.deadline;
+      const monotonicDelta = next.monotonicDeadline - this.currentMonotonicMilliseconds;
+      this.currentMonotonicMilliseconds = next.monotonicDeadline;
+      if (advanceWallWithMonotonic) this.currentEpochMilliseconds += monotonicDelta;
       this.firedTimerCount += 1;
       next.callback();
     }
-    this.currentEpochMilliseconds = epochMilliseconds;
+    this.currentMonotonicMilliseconds = targetMonotonicMilliseconds;
+    if (advanceWallWithMonotonic) this.currentEpochMilliseconds = targetEpochMilliseconds;
   }
 }
