@@ -53,6 +53,8 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
 
   let localeListener: ((locale: string) => void) | undefined;
   let unsubscribeCalls = 0;
+  let resolveContextCalls = 0;
+  let resolveContextFailure = false;
   const progressCalls: PlannerProgressIntent[] = [];
   const runtime = { state: "ready", connect: () => { throw new Error("surface is seam-stubbed"); } };
   const dependencies: PlannerItemViewDependencies = {
@@ -67,11 +69,15 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
         localeListener = undefined;
       };
     },
-    resolveContext: (logicalDate) => ({
-      logicalDate,
-      bounds: { startMinutes: 300, endMinutes: 1_440 },
-      hostContext: "main",
-    }),
+    resolveContext: (logicalDate) => {
+      resolveContextCalls += 1;
+      if (resolveContextFailure) throw new Error("active resolver failure");
+      return {
+        logicalDate,
+        bounds: { startMinutes: 300, endMinutes: 1_440 },
+        hostContext: "main",
+      };
+    },
   };
   const leaf = { getViewState: () => ({ state: {} }) };
   const view = createPlannerViewFactory(dependencies)(leaf as never);
@@ -140,11 +146,17 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   assert.equal(localeListener, undefined);
   assert.equal((view.contentEl.classList as unknown as { contains(value: string): boolean })
     .contains("spiral-day-planner-view"), false);
+  const resolveCallsAfterClose = resolveContextCalls;
+  view.onResize();
+  assert.equal(resolveContextCalls, resolveCallsAfterClose);
 
   await (view as unknown as { onOpen(): Promise<void> }).onOpen();
   assert.equal(seam.mounts.length, 3);
   assert.equal(seam.mounts[2]!.options.instanceId, "adapter-b");
   assert.equal(seam.mounts[2]!.options.collapseStore.load("adapter-b"), true);
+  resolveContextFailure = true;
+  assert.throws(() => view.onResize(), /active resolver failure/);
+  resolveContextFailure = false;
   await (view as unknown as { onClose(): Promise<void> }).onClose();
   assert.deepEqual(seam.surface.destroyCalls, ["destroy", "destroy", "destroy"]);
   assert.equal(unsubscribeCalls, 2);

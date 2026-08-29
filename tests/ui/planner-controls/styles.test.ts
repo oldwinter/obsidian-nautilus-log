@@ -6,6 +6,7 @@ import { constrainedPlannerContentWidth } from "./harness-layout.ts";
 
 test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast, and non-color cues", async () => {
   const css = await readFile("styles/theme.css", "utf8");
+  const plannerCss = await readFile("styles/planner.css", "utf8");
   const viewSource = await readFile("src/ui/planner/view.ts", "utf8");
   const profile = JSON.parse(await readFile(
     "tests/ui/planner-controls/env-vis-profile.json",
@@ -45,6 +46,7 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.match(css, /@media \(forced-colors: active\)/);
   assert.match(css, /stroke-dasharray/);
   assert.match(css, /text-decoration: line-through/);
+  assert.doesNotMatch(plannerCss, /url\(#spiral-day-planner-(?:hatch|dots)\)/);
   for (const className of [
     "spiral-day-planner__debug-geometry",
     "spiral-day-planner__debug-rectangle",

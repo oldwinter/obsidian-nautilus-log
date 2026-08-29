@@ -354,6 +354,7 @@ function timelineTooltipText(messages: Messages, item: PlannerTimelineItem): str
 }
 
 let plannerSurfaceSequence = 0;
+let plannerPatternSequence = 0;
 let plannerTooltipSequence = 0;
 
 class PlannerSurfaceController implements PlannerSurface {
@@ -368,6 +369,7 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #focus: PlannerFocusManager;
   readonly #live: PlannerLiveAnnouncer;
   readonly #playback: PlannerPlaybackController;
+  readonly #patternIds: Readonly<{ dots: string; hatch: string }>;
   #context: PlannerViewContext;
   #connection: RuntimeConnection | undefined;
   #snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
@@ -400,6 +402,11 @@ class PlannerSurfaceController implements PlannerSurface {
       ? createMessages()
       : createMessages({ locale: options.locale }));
     this.#onProgressIntent = options.onProgressIntent;
+    const patternSequence = ++plannerPatternSequence;
+    this.#patternIds = Object.freeze({
+      dots: `spiral-day-planner-dots-${patternSequence}`,
+      hatch: `spiral-day-planner-hatch-${patternSequence}`,
+    });
     this.#layout = plannerLayoutForWidth(plannerContainerWidth(root), context.hostContext);
     root.classList.add("spiral-day-planner");
     root.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));
@@ -862,7 +869,7 @@ class PlannerSurfaceController implements PlannerSurface {
       this.#content.append(this.#renderSchedule(spiral, projection));
     }
     this.#appendDiagnostics(displayedProjection);
-    if (controlsState.debugEnabled) {
+    if (this.#controls.debugControl && controlsState.debugEnabled) {
       const debug = element(this.#root.ownerDocument, "pre", "spiral-day-planner__debug-overlay");
       debug.textContent = this.#messages.t("planner", "debug.geometry", {
         width: Math.round(spiral.geometry.width),
@@ -1043,7 +1050,7 @@ class PlannerSurfaceController implements PlannerSurface {
 
     const defs = svgElement(document, "defs");
     const hatch = svgElement(document, "pattern");
-    hatch.id = "spiral-day-planner-hatch";
+    hatch.id = this.#patternIds.hatch;
     hatch.setAttribute("width", "6");
     hatch.setAttribute("height", "6");
     hatch.setAttribute("patternUnits", "userSpaceOnUse");
@@ -1056,7 +1063,7 @@ class PlannerSurfaceController implements PlannerSurface {
     hatchLine.setAttribute("class", "spiral-day-planner__hatch-line");
     hatch.append(hatchLine);
     const dots = svgElement(document, "pattern");
-    dots.id = "spiral-day-planner-dots";
+    dots.id = this.#patternIds.dots;
     dots.setAttribute("width", "5");
     dots.setAttribute("height", "5");
     dots.setAttribute("patternUnits", "userSpaceOnUse");
@@ -1075,6 +1082,7 @@ class PlannerSurfaceController implements PlannerSurface {
     if (model.elapsedPath) {
       const elapsed = svgElement(document, "path", "spiral-day-planner__elapsed");
       elapsed.setAttribute("d", model.elapsedPath);
+      elapsed.style.fill = `url(\"#${this.#patternIds.hatch}\")`;
       svg.append(elapsed);
     }
     for (const tick of model.ticks) {
@@ -1162,7 +1170,7 @@ class PlannerSurfaceController implements PlannerSurface {
       center.append(time);
     }
     svg.append(center);
-    if (this.#controls.state.debugEnabled) {
+    if (this.#controls.debugControl && this.#controls.state.debugEnabled) {
       const debugGeometry = svgElement(document, "g", "spiral-day-planner__debug-geometry");
       debugGeometry.dataset.debugGeometry = "true";
       debugGeometry.setAttribute("aria-hidden", "true");
@@ -1216,6 +1224,7 @@ class PlannerSurfaceController implements PlannerSurface {
     if (item.progressPercent > 0 && !item.completed) {
       const progress = svgElement(this.#root.ownerDocument, "path", "spiral-day-planner__progress");
       progress.setAttribute("d", item.path);
+      progress.style.fill = `url(\"#${this.#patternIds.dots}\")`;
       group.append(progress);
     }
     const accessibleName = timelineAccessibleName(this.#messages, item);

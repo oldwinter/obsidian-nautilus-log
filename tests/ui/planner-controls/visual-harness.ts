@@ -119,11 +119,13 @@ declare global {
       assertLayoutFocusRestoration(): Promise<boolean>;
       assertLifecycleReparenting(): Promise<boolean>;
       assertMediaQueryLifecycle(): Promise<boolean>;
+      assertPatternIsolation(): Promise<Readonly<Record<string, boolean>>>;
       assertPlaybackStopsOnContextChange(): Promise<boolean>;
       assertPlaybackStopsOnRuntimeState(): Promise<boolean>;
       assertReplicaRemount(): boolean;
       assertTooltipClearsWhenHidden(): Promise<boolean>;
       closeAdapterEvidence(): Promise<void>;
+      closePatternEvidence(): Promise<void>;
       focusProgress(id?: string): boolean;
       openDisclosure(key: "overflow" | "overview" | "schedule" | "warnings"): boolean;
       runMatrix(): Promise<readonly HarnessState[]>;
@@ -174,6 +176,8 @@ let adapterView: SpiralDayPlannerView | undefined;
 let adapterIntentCount = 0;
 let adapterLocale: SupportedLocale = "en";
 const adapterLocaleListeners = new Set<(locale: string) => void>();
+let patternEvidenceContainer: HTMLElement | undefined;
+let patternEvidenceViews: SpiralDayPlannerView[] = [];
 
 const items: HarnessItem[] = [
   {
@@ -790,7 +794,17 @@ window.issue24Harness = {
     adapterIntentCount = 0;
     adapterLocale = "en";
     let adapterHostContext: "main" | "sidebar" = "main";
-    const ordinaryDebugAbsent = primaryRoot.querySelector('[data-control="debug"]') === null;
+    const ordinaryDebugArtifactsAbsent = () => {
+      const state = surfaceState(primaryRoot);
+      return !state.debugControlVisible
+        && !state.debugEnabled
+        && state.debugGeometryGroups === 0
+        && state.debugRectangles === 0
+        && state.debugCenterMarkers === 0
+        && state.debugGuideCircles === 0
+        && state.debugValues === "";
+    };
+    const ordinaryDebugAbsentInitially = ordinaryDebugArtifactsAbsent();
     const identitySuffix = String(Date.now());
     const identityA = `browser-adapter-a-${identitySuffix}`;
     const identityB = `browser-adapter-b-${identitySuffix}`;
@@ -921,6 +935,7 @@ window.issue24Harness = {
       && debugOnButton.title === "debug is on"
       && debugOnButton.getAttribute("aria-pressed") === "true"
       && adapterRoot.querySelector(".spiral-day-planner__live-region")?.textContent === "debug is on";
+    const ordinaryDebugAbsentWhileEnabled = ordinaryDebugArtifactsAbsent();
     debugOnButton?.click();
     await nextFrame();
     const debugOffState = surfaceState(adapterRoot);
@@ -936,6 +951,7 @@ window.issue24Harness = {
       && debugOffAgainButton.title === "debug is off"
       && debugOffAgainButton.getAttribute("aria-pressed") === "false"
       && adapterRoot.querySelector(".spiral-day-planner__live-region")?.textContent === "debug is off";
+    const ordinaryDebugAbsentAfterDisable = ordinaryDebugArtifactsAbsent();
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="play"]')?.click();
     const playbackStarted = adapterRoot.querySelector('[data-control="play"]')
       ?.getAttribute("aria-disabled") === "true";
@@ -1002,7 +1018,9 @@ window.issue24Harness = {
       mainScheduleCanReopen,
       mainWideToCompactScheduleOpen,
       opened,
-      ordinaryDebugAbsent,
+      ordinaryDebugAbsentAfterDisable,
+      ordinaryDebugAbsentInitially,
+      ordinaryDebugAbsentWhileEnabled,
       playbackStarted,
       progressBound,
       remountedB,
@@ -1017,6 +1035,88 @@ window.issue24Harness = {
       sidebarWideToCompactScheduleFolded,
       stableMainTogglePreserved,
       tornDown,
+    });
+  },
+  async assertPatternIsolation() {
+    await this.closePatternEvidence();
+    const container = document.createElement("section");
+    container.id = "pattern-evidence";
+    container.style.background = "var(--background-primary)";
+    container.style.width = "920px";
+    document.body.append(container);
+    patternEvidenceContainer = container;
+    const roots: HTMLElement[] = [];
+    const wrappers: HTMLElement[] = [];
+    for (let index = 0; index < 4; index += 1) {
+      const wrapper = document.createElement("div");
+      wrapper.className = "planner-leaf";
+      wrapper.style.width = "920px";
+      const root = document.createElement("div");
+      root.style.width = "900px";
+      if (index === 3) root.id = "pattern-evidence-visible";
+      wrapper.append(root);
+      container.append(wrapper);
+      roots.push(root);
+      wrappers.push(wrapper);
+      const view = createPlannerViewFactory({
+        runtime,
+        defaultLogicalDate: () => DISPLAYED_DATE,
+        debugControl: () => false,
+        resolveContext: (logicalDate) => ({ logicalDate, bounds: BOUNDS, hostContext: "main" }),
+      })({ contentEl: root, getViewState: () => ({ state: {} }) } as never);
+      await view.setState({
+        logicalDate: DISPLAYED_DATE,
+        plannerInstanceId: index === 0 ? 'pattern\"><label data-injected="true">' : `pattern-leaf-${index}`,
+      }, {} as never);
+      await (view as unknown as { onOpen(): Promise<void> }).onOpen();
+      patternEvidenceViews.push(view);
+    }
+    await nextFrame();
+    await nextFrame();
+
+    const patternState = () => roots.map((root) => {
+      const svg = root.querySelector<SVGSVGElement>("svg.spiral-day-planner__spiral")!;
+      const patterns = [...svg.querySelectorAll<SVGPatternElement>("defs pattern")];
+      const hatch = patterns.find((pattern) => pattern.querySelector(".spiral-day-planner__hatch-line"))!;
+      const dots = patterns.find((pattern) => pattern.querySelector(".spiral-day-planner__progress-dot"))!;
+      const elapsed = svg.querySelector<SVGPathElement>(".spiral-day-planner__elapsed")!;
+      const progress = svg.querySelector<SVGPathElement>(".spiral-day-planner__progress")!;
+      return { dots, elapsed, hatch, progress, svg };
+    });
+    const initial = patternState();
+    const initialIds = initial.flatMap(({ dots, hatch }) => [hatch.id, dots.id]);
+    const idsUniqueAcrossFourLeaves = new Set(initialIds).size === 8;
+    const idsRejectInputInjection = initialIds.every((id) => /^spiral-day-planner-(?:hatch|dots)-[1-9][0-9]*$/.test(id))
+      && document.querySelector('[data-injected="true"]') === null;
+    const fillsResolveWithinOwningSurface = initial.every(({ dots, elapsed, hatch, progress, svg }) => (
+      elapsed.style.fill === `url(\"#${hatch.id}\")`
+      && progress.style.fill === `url(\"#${dots.id}\")`
+      && document.getElementById(hatch.id) === hatch
+      && document.getElementById(dots.id) === dots
+      && svg.contains(hatch)
+      && svg.contains(dots)
+    ));
+
+    for (const view of patternEvidenceViews) view.onResize();
+    await nextFrame();
+    const rerendered = patternState();
+    const idsStableForSurfaceLifetime = rerendered.every(({ dots, hatch }, index) => (
+      hatch.id === initial[index]!.hatch.id && dots.id === initial[index]!.dots.id
+    ));
+    wrappers[0]!.style.display = "none";
+    await nextFrame();
+    const visible = rerendered[3]!;
+    const earlierLeafHidden = getComputedStyle(wrappers[0]!).display === "none";
+    const laterLeafVisible = visible.svg.getBoundingClientRect().width > 0
+      && visible.elapsed.getBoundingClientRect().width > 0
+      && visible.progress.getBoundingClientRect().width > 0;
+    return Object.freeze({
+      earlierLeafHidden,
+      fillsResolveWithinOwningSurface,
+      idsRejectInputInjection,
+      idsStableForSurfaceLifetime,
+      idsUniqueAcrossFourLeaves,
+      laterLeafVisible,
     });
   },
   assertAcceptance,
@@ -1451,6 +1551,14 @@ window.issue24Harness = {
     adapterLeaf.hidden = true;
     adapterRoot.style.removeProperty("box-sizing");
     adapterRoot.style.removeProperty("width");
+  },
+  async closePatternEvidence() {
+    for (const view of patternEvidenceViews) {
+      await (view as unknown as { onClose(): Promise<void> }).onClose();
+    }
+    patternEvidenceViews = [];
+    patternEvidenceContainer?.remove();
+    patternEvidenceContainer = undefined;
   },
   focusProgress(id = "nl-urgent") {
     const target = progressElement(id);

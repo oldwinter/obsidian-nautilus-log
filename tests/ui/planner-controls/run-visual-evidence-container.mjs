@@ -76,6 +76,34 @@ function comparePng(expectedBuffer, receivedBuffer, comparison, relative) {
   return Object.freeze({ differentPixels, differentPixelRatio, totalPixels });
 }
 
+function differentPixelCount(leftBuffer, rightBuffer) {
+  const left = PNG.sync.read(leftBuffer);
+  const right = PNG.sync.read(rightBuffer);
+  failUnless(left.width === right.width && left.height === right.height,
+    `Pixel probe dimensions differ: ${left.width}x${left.height} vs ${right.width}x${right.height}`);
+  let differentPixels = 0;
+  for (let offset = 0; offset < left.data.length; offset += 4) {
+    if ([0, 1, 2, 3].some((channel) => Math.abs(left.data[offset + channel] - right.data[offset + channel]) > 16)) {
+      differentPixels += 1;
+    }
+  }
+  return differentPixels;
+}
+
+async function patternedPixelCount(locator) {
+  await locator.scrollIntoViewIfNeeded();
+  const originalStyle = await locator.getAttribute("style");
+  await locator.evaluate((element) => element.style.setProperty("stroke", "none", "important"));
+  const visible = await locator.screenshot({ animations: "disabled", caret: "hide", scale: "device" });
+  await locator.evaluate((element) => element.style.setProperty("opacity", "0", "important"));
+  const hidden = await locator.screenshot({ animations: "disabled", caret: "hide", scale: "device" });
+  await locator.evaluate((element, style) => {
+    if (style === null) element.removeAttribute("style");
+    else element.setAttribute("style", style);
+  }, originalStyle);
+  return differentPixelCount(visible, hidden);
+}
+
 async function collectBrowserNetworkAttempts(page, phase, output) {
   const attempts = await page.evaluate(() => {
     const recorded = [...(globalThis.__issue24NetworkAttempts ?? [])];
@@ -335,6 +363,24 @@ try {
   failUnless(Object.values(adapterLifecycle).every(Boolean),
     `Production adapter lifecycle seam failed: ${JSON.stringify(adapterLifecycle)}`);
   await page.evaluate(() => window.issue24Harness.closeAdapterEvidence());
+  const patternIsolation = await page.evaluate(() => window.issue24Harness.assertPatternIsolation());
+  failUnless(Object.values(patternIsolation).every(Boolean),
+    `Production adapter pattern isolation failed: ${JSON.stringify(patternIsolation)}`);
+  const elapsedPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-evidence-visible .spiral-day-planner__elapsed"),
+  );
+  const progressPatternPixels = await patternedPixelCount(
+    page.locator("#pattern-evidence-visible .spiral-day-planner__progress").first(),
+  );
+  failUnless(elapsedPatternPixels > 20 && progressPatternPixels > 20,
+    `Visible later leaf lacks patterned pixels: ${JSON.stringify({ elapsedPatternPixels, progressPatternPixels })}`);
+  await page.locator("#pattern-evidence-visible").screenshot({
+    path: join(OUTPUT_DIRECTORY, "pattern-evidence-visible.png"),
+    animations: "disabled",
+    caret: "hide",
+    scale: "device",
+  });
+  await page.evaluate(() => window.issue24Harness.closePatternEvidence());
   const interactionNames = [
     "assertConnectFailureState",
     "assertRuntimeProbeInterval",
@@ -413,6 +459,8 @@ try {
     `Plugin initiated browser network requests: ${JSON.stringify(browserNetworkAttempts)}`);
   await writeFile(join(OUTPUT_DIRECTORY, "env-vis-result.json"), `${JSON.stringify({
     adapterLifecycle,
+    patternIsolation,
+    patternPixels: { elapsed: elapsedPatternPixels, progress: progressPatternPixels },
     interactionChecks: interactions.length,
     matrixStates: matrix.length,
     pluginRequests: browserNetworkAttempts.length,
@@ -421,7 +469,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} interactions=${interactions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;
