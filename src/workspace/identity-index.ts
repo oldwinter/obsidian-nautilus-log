@@ -1,9 +1,10 @@
+import { parseGrammar } from "../core/grammar-v1";
 import {
   isCanonicalClockId,
-  parseClockText,
   type ClockParseResult,
   type ParseClockOptions,
 } from "./clock-parser";
+import { canonicalClockPhysicalLine, markdownContainerContent } from "./logbook-clock";
 import { readLogbook, type LogbookClock } from "./logbook-reader";
 import { markdownHtmlBlockStart } from "./plan-region";
 import { resolvePrimaryPlan } from "./primary-plan-resolver";
@@ -380,21 +381,6 @@ async function* outsideFenceLines(
   if (pendingTableHeader) yield pendingTableHeader;
 }
 
-function markdownContainerContent(content: string): {
-  readonly content: string;
-  readonly quoteDepth: number;
-} {
-  let offset = 0;
-  let quoteDepth = 0;
-  while (offset < content.length) {
-    const marker = /^[ ]{0,3}>[ \t]?/.exec(content.slice(offset));
-    if (!marker) break;
-    offset += marker[0].length;
-    quoteDepth += 1;
-  }
-  return { content: content.slice(offset), quoteDepth };
-}
-
 function indentationWidth(text: string): number {
   let width = 0;
   for (const character of text) {
@@ -425,21 +411,16 @@ function canonicalClockOnLine(
   blockId: BlockIdLocation | undefined,
 ): IndexedClockSource | undefined {
   if (!blockId || !isCanonicalClockId(blockId.id)) return undefined;
-  const contentOffset = line.content.indexOf("CLOCK: [");
-  if (contentOffset < 0) return undefined;
-  const raw = line.content.slice(contentOffset);
-  const trailing = /[ \t]*$/.exec(raw)![0].length;
-  const text = raw.slice(0, raw.length - trailing);
-  const parsed = parseClockText(text);
-  if (parsed.kind === "not-clock") return undefined;
+  const located = canonicalClockPhysicalLine(line.content);
+  if (!located || located.clockId !== blockId.id) return undefined;
   return Object.freeze({
     path,
-    fromOffset: line.start + contentOffset,
-    toOffset: line.start + contentOffset + text.length,
-    text,
+    fromOffset: line.start + located.fromColumn,
+    toOffset: line.start + located.toColumn,
+    text: located.text,
     clockId: blockId.id,
     scope: "canonical-global" as const,
-    parsed,
+    parsed: located.parsed,
   });
 }
 
@@ -467,6 +448,24 @@ function isValidStructuredClock(clock: LogbookClock, path: string, text: string)
     && clock.toOffset >= clock.fromOffset
     && clock.toOffset <= text.length
     && text.slice(clock.fromOffset, clock.toOffset) === clock.text;
+}
+
+function isSafetyRelevantClock(clock: Pick<LogbookClock, "parsed">): boolean {
+  return clock.parsed.kind === "record"
+    ? clock.parsed.record.state === "running"
+    : clock.parsed.kind === "malformed" && clock.parsed.potentialRunning;
+}
+
+function upsertClock(
+  clocks: Map<string, IndexedClockSource>,
+  entry: IndexedClockSource,
+): void {
+  const key = clockKey(entry);
+  const existing = clocks.get(key);
+  if (!existing) clocks.set(key, entry);
+  else if (!existing.ownerId && entry.ownerId) {
+    clocks.set(key, Object.freeze({ ...existing, ownerId: entry.ownerId }));
+  }
 }
 
 function normalizeLimits(overrides: Partial<WorkspaceIndexLimits> | undefined): WorkspaceIndexLimits {
@@ -521,6 +520,7 @@ async function defaultStructuredClockReader(
   options: ParseClockOptions,
 ): Promise<readonly LogbookClock[]> {
   const clocks: LogbookClock[] = [];
+  let safetyClockCount = 0;
   if (context.sourceBytes > MAX_STRUCTURED_SOURCE_BYTES) {
     if (await hasPlanOpeningMarker(text, context.checkpoint)) throw STRUCTURED_INPUT_LIMIT;
     return Object.freeze(clocks);
@@ -534,16 +534,25 @@ async function defaultStructuredClockReader(
   await context.checkpoint();
   if (!primary.region) return Object.freeze(clocks);
   if (primary.limitExceeded) throw STRUCTURED_INPUT_LIMIT;
+  const parsed = parseGrammar({ version: primary.region.version, candidates: primary.candidates });
+  const parsedAnonymousSources = new Set(parsed.items
+    .filter((item) => !item.source.blockId)
+    .map((item) => item.source));
   for (const candidate of primary.candidates) {
     await context.checkpoint();
-    if (candidate.status === "foreign" || !candidate.source.blockId) continue;
+    if (
+      candidate.status === "foreign"
+      || (!candidate.source.blockId && !parsedAnonymousSources.has(candidate.source))
+    ) continue;
     const logbook = readLogbook(text, {
       path,
       itemFromOffset: candidate.source.itemSpan.fromOffset,
       itemToOffset: candidate.source.itemSpan.toOffset,
-      ownerId: candidate.source.blockId,
-    }, { ...options, maxClockRecords: maximumClockRecords - clocks.length });
+      ...(candidate.source.blockId ? { ownerId: candidate.source.blockId } : {}),
+    }, options);
     if (!logbook.complete) throw CLOCK_RECORD_LIMIT;
+    safetyClockCount += logbook.clocks.filter(isSafetyRelevantClock).length;
+    if (safetyClockCount > maximumClockRecords) throw CLOCK_RECORD_LIMIT;
     clocks.push(...logbook.clocks);
   }
   return Object.freeze(clocks);
@@ -559,7 +568,9 @@ export class WorkspaceIndex {
   #generation = 0;
   #dirty = true;
   #locations: ReadonlyMap<string, readonly BlockIdLocation[]> = new Map();
+  #safetyLocations: ReadonlyMap<string, readonly BlockIdLocation[]> = new Map();
   #snapshot: WorkspaceIndexSnapshot = frozenEmptySnapshot(0, "not-built");
+  #safetySnapshot: WorkspaceIndexSnapshot = frozenEmptySnapshot(0, "not-built");
 
   constructor(access: WorkspaceIndexTextAccess, options: WorkspaceIndexOptions = {}) {
     this.#access = access;
@@ -586,12 +597,18 @@ export class WorkspaceIndex {
     return this.#snapshot;
   }
 
+  get safetySnapshot(): WorkspaceIndexSnapshot {
+    return this.#safetySnapshot;
+  }
+
   invalidate(_change: SourceChange): void {
     this.#revision += 1;
     this.#rebuildAttempt += 1;
     this.#dirty = true;
     this.#locations = new Map();
+    this.#safetyLocations = new Map();
     this.#snapshot = frozenEmptySnapshot(this.#generation, "source-changed");
+    this.#safetySnapshot = frozenEmptySnapshot(this.#generation, "source-changed");
   }
 
   clear(): void {
@@ -599,7 +616,9 @@ export class WorkspaceIndex {
     this.#rebuildAttempt += 1;
     this.#dirty = true;
     this.#locations = new Map();
+    this.#safetyLocations = new Map();
     this.#snapshot = frozenEmptySnapshot(this.#generation, "not-built");
+    this.#safetySnapshot = frozenEmptySnapshot(this.#generation, "not-built");
   }
 
   dispose(): void {
@@ -615,6 +634,16 @@ export class WorkspaceIndex {
       });
     }
     return identityLookup(this.#locations, id);
+  }
+
+  safetyIdentity(id: string): IdentityLookup {
+    if (!this.#safetySnapshot.complete) {
+      return Object.freeze({
+        kind: "unavailable" as const,
+        reason: this.#safetySnapshot.reason ?? "not-built",
+      });
+    }
+    return identityLookup(this.#safetyLocations, id);
   }
 
   async rebuild(signal?: AbortSignal): Promise<WorkspaceIndexSnapshot> {
@@ -647,6 +676,15 @@ export class WorkspaceIndex {
     const byteLengths = new Map<string, number>();
     const mutableLocations = new Map<string, BlockIdLocation[]>();
     const clocks = new Map<string, IndexedClockSource>();
+    const safetyClocks = new Map<string, IndexedClockSource>();
+    let publicClockLimitExceeded = false;
+    const trackPublicClock = (entry: IndexedClockSource): void => {
+      if (publicClockLimitExceeded) return;
+      upsertClock(clocks, entry);
+      if (clocks.size <= this.#limits.maxClockRecords) return;
+      publicClockLimitExceeded = true;
+      clocks.clear();
+    };
     let markdownBytes = 0;
     let blockIds = 0;
     let lastYield = Date.now();
@@ -734,8 +772,9 @@ export class WorkspaceIndex {
           }
           const canonical = canonicalClockOnLine(line, path, location);
           if (canonical) {
-            clocks.set(clockKey(canonical), canonical);
-            if (clocks.size > this.#limits.maxClockRecords) {
+            trackPublicClock(canonical);
+            if (isSafetyRelevantClock(canonical)) safetyClocks.set(clockKey(canonical), canonical);
+            if (safetyClocks.size > this.#limits.maxClockRecords) {
               return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
                 markdownFiles: paths.length,
                 markdownBytes,
@@ -895,36 +934,30 @@ export class WorkspaceIndex {
             blockIds,
           });
         }
-        if (!clock.ownerId || lookup.lookup(clock.ownerId).kind !== "unique") continue;
         if (clock.parsed.kind === "not-clock") continue;
         const entry: IndexedClockSource = Object.freeze({
           path: clock.path,
           fromOffset: clock.fromOffset,
           toOffset: clock.toOffset,
           text: clock.text,
-          ownerId: clock.ownerId,
+          ...(clock.ownerId ? { ownerId: clock.ownerId } : {}),
           ...(clock.parsed.kind === "record" && clock.parsed.record.clockId
             ? { clockId: clock.parsed.record.clockId }
             : {}),
           scope: "accepted-logbook",
           parsed: clock.parsed,
         });
-        const key = clockKey(entry);
-        const existing = clocks.get(key);
-        if (!existing) clocks.set(key, entry);
-        else if (!existing.ownerId) clocks.set(key, Object.freeze({ ...existing, ownerId: clock.ownerId }));
-        if (clocks.size > this.#limits.maxClockRecords) {
-          return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
-            markdownFiles: paths.length, markdownBytes, blockIds,
-          });
+        if (isSafetyRelevantClock(clock)) {
+          upsertClock(safetyClocks, entry);
+          if (safetyClocks.size > this.#limits.maxClockRecords) {
+            return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
+              markdownFiles: paths.length, markdownBytes, blockIds,
+            });
+          }
         }
-      }
-      if (clocks.size > this.#limits.maxClockRecords) {
-        return this.#publishIncomplete(attempt, generation, "clock-record-limit", {
-          markdownFiles: paths.length,
-          markdownBytes,
-          blockIds,
-        });
+        const publicOwnerEligible = clock.ownerId !== undefined
+          && lookup.lookup(clock.ownerId).kind === "unique";
+        if (publicOwnerEligible) trackPublicClock(entry);
       }
       if (signal?.aborted) return this.#publishIncomplete(attempt, generation, "cancelled", {
         markdownFiles: paths.length, markdownBytes, blockIds,
@@ -949,20 +982,42 @@ export class WorkspaceIndex {
       entry.parsed.kind === "record" && entry.parsed.record.state === "running"));
     const potentialRunning = Object.freeze(clockEntries.filter((entry) =>
       entry.parsed.kind === "malformed" && entry.parsed.potentialRunning));
+    const safetyClockEntries = Object.freeze([...safetyClocks.values()]);
+    const safetyRunning = Object.freeze(safetyClockEntries.filter((entry) =>
+      entry.parsed.kind === "record" && entry.parsed.record.state === "running"));
+    const safetyPotentialRunning = Object.freeze(safetyClockEntries.filter((entry) =>
+      entry.parsed.kind === "malformed" && entry.parsed.potentialRunning));
     if (attempt !== this.#rebuildAttempt) return this.#snapshot;
     this.#generation = generation;
-    this.#locations = locations;
-    this.#snapshot = Object.freeze({
+    this.#locations = publicClockLimitExceeded ? new Map() : locations;
+    this.#safetyLocations = locations;
+    this.#snapshot = publicClockLimitExceeded
+      ? frozenEmptySnapshot(generation, "clock-record-limit", {
+        markdownFiles: paths.length,
+        markdownBytes,
+        blockIds,
+      })
+      : Object.freeze({
+        generation,
+        complete: true,
+        markdownFiles: paths.length,
+        markdownBytes,
+        blockIds,
+        clocks: clockEntries,
+        running,
+        potentialRunning,
+      });
+    this.#safetySnapshot = Object.freeze({
       generation,
       complete: true,
       markdownFiles: paths.length,
       markdownBytes,
       blockIds,
-      clocks: clockEntries,
-      running,
-      potentialRunning,
+      clocks: safetyClockEntries,
+      running: safetyRunning,
+      potentialRunning: safetyPotentialRunning,
     });
-    this.#dirty = false;
+    this.#dirty = publicClockLimitExceeded;
     return this.#snapshot;
   }
 
@@ -975,7 +1030,9 @@ export class WorkspaceIndex {
     if (attempt !== this.#rebuildAttempt) return this.#snapshot;
     this.#generation = generation;
     this.#locations = new Map();
+    this.#safetyLocations = new Map();
     this.#snapshot = frozenEmptySnapshot(generation, reason, counts);
+    this.#safetySnapshot = frozenEmptySnapshot(generation, reason, counts);
     this.#dirty = true;
     return this.#snapshot;
   }
