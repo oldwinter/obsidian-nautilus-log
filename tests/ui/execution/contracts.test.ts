@@ -27,6 +27,15 @@ test("locale refresh updates static execution panel controls", async () => {
     'tabs.setLabel("plan", options.messages.t("execution", "tab.plan"))',
     'tabs.setLabel("review", options.messages.t("execution", "tab.review"))',
   ]) assert.equal(panel.includes(staticControl), true, staticControl);
+  assert.match(panel, /if \(opened\) place\(\)/);
+});
+
+test("non-button ribbon triggers expose keyboard activation and focus return", async () => {
+  const panel = await readFile("src/ui/execution/panel.ts", "utf8");
+  assert.match(panel, /trigger\.setAttribute\("role", "button"\)/);
+  assert.match(panel, /trigger\.tabIndex = 0/);
+  assert.match(panel, /event\.key !== "Enter" && event\.key !== " "/);
+  assert.match(panel, /if \(restoreFocus\) trigger\.focus\(\)/);
 });
 
 test("execution styles cover interaction states and the build discovers every styles CSS file", async () => {
@@ -68,4 +77,39 @@ test("plan refresh preserves the unscheduled disclosure state", async () => {
   const planView = await readFile("src/ui/execution/plan-view.ts", "utf8");
   assert.match(planView, /querySelector<HTMLDetailsElement>\("\.spiral-day-execution__unscheduled"\)/);
   assert.match(planView, /unscheduled\.open = unscheduledOpen/);
+});
+
+test("unavailable and working execution states disable mutation controls", async () => {
+  const [timingView, planView] = await Promise.all([
+    readFile("src/ui/execution/timing-view.ts", "utf8"),
+    readFile("src/ui/execution/plan-view.ts", "utf8"),
+  ]);
+  assert.match(timingView, /snapshot\.status === "degraded"/);
+  assert.match(timingView, /snapshot\.writeBlocked/);
+  assert.match(planView, /pending \|\| options\.execution\.writeBlocked/);
+});
+
+test("active Timing exposes the singleton Active Task view without coupling it to a mutation", async () => {
+  const [panel, timingView, main] = await Promise.all([
+    readFile("src/ui/execution/panel.ts", "utf8"),
+    readFile("src/ui/execution/timing-view.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(panel, /openActiveTask: \(\) => void Promise\.resolve\(port\.openActiveTask\(\)\)/);
+  assert.match(timingView, /messages\.t\("execution", "action\.openActiveTask"\)/);
+  assert.match(timingView, /actions\.append\(openActiveTask, clockOut, complete, remove\)/);
+  assert.match(main, /openActiveTask: async \(\) => \{\s*await openActiveTaskView\(this\.app\);/);
+});
+
+test("Recent rebuilds after host invalidation and reaches the panel as a projected subscription", async () => {
+  const [panel, main] = await Promise.all([
+    readFile("src/ui/execution/panel.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(panel, /port\.subscribeRecent\(\(snapshot\) => \{/);
+  assert.match(main, /snapshot\.state !== "dirty" \|\| this\.#historyRefreshQueued/);
+  assert.match(main, /this\.#historyIndex\?\.snapshot\.state === "dirty"/);
+  assert.match(main, /listener\(this\.#recentExecutionTasks\(\)\)/);
+  assert.match(main, /new HistoryIndex\(this\.#atomicAccess\)/);
+  assert.doesNotMatch(main, /new HistoryIndex\(this\.#atomicAccess, \{ identityIndex:/);
 });

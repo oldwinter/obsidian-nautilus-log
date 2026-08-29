@@ -123,8 +123,8 @@ function appendTaskRow(
       }),
     });
     const pending = options.pending.has(`task:${key}`);
-    clock.disabled = pending;
-    progress.disabled = pending;
+    clock.disabled = pending || options.execution.writeBlocked;
+    progress.disabled = pending || options.execution.writeBlocked;
     clock.setAttribute("aria-busy", String(pending));
     progress.setAttribute("aria-busy", String(pending));
     actions.append(clock, progress);

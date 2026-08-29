@@ -36,11 +36,12 @@ export interface ExecutionPanelPort {
   readonly dispatch: (intent: ExecutionApplicationIntent) => Promise<ExecutionCommandOutcome>;
   readonly outcomeFeedback: (outcome: ExecutionCommandOutcome) => ExecutionPanelFeedback;
   readonly navigatePrimary: () => void | Promise<void>;
+  readonly openActiveTask: () => void | Promise<void>;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
   ) => void | Promise<void>;
-  readonly recent?: () => readonly ExecutionRecentTask[];
+  readonly subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => () => void;
   readonly createReviewSurface?: (root: HTMLElement) => ExecutionReviewSurface;
 }
 
@@ -102,6 +103,11 @@ export function mountExecutionPanel(
 ): ExecutionPanelSurface {
   const { trigger } = options;
   const document = trigger.ownerDocument;
+  const triggerNeedsButtonSemantics = trigger.tagName !== "BUTTON";
+  if (triggerNeedsButtonSemantics) {
+    trigger.setAttribute("role", "button");
+    trigger.tabIndex = 0;
+  }
   const popover = executionElement(document, "section", "spiral-day-execution");
   popover.hidden = true;
   popover.setAttribute("role", "dialog");
@@ -146,6 +152,7 @@ export function mountExecutionPanel(
 
   let execution: ExecutionApplicationSnapshot | undefined;
   let plan: RuntimeSnapshot<RuntimePlanProjection> | undefined;
+  let recent: readonly ExecutionRecentTask[] = Object.freeze([]);
   let opened = false;
   let destroyed = false;
   let timer: number | undefined;
@@ -272,11 +279,12 @@ export function mountExecutionPanel(
     renderTimingView(timingPanel, {
       nowEpochMs: port.now(),
       snapshot: execution,
-      recent: port.recent?.() ?? [],
+      recent,
       pending,
       messages: options.messages,
       renderIcon: options.renderIcon,
       dispatch,
+      openActiveTask: () => void Promise.resolve(port.openActiveTask()).catch(options.onError),
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
       requestDelete,
     });
@@ -297,6 +305,7 @@ export function mountExecutionPanel(
       empty.textContent = options.messages.t("execution", "review.pending");
       reviewPanel.append(empty);
     }
+    if (opened) place();
   };
 
   const place = (): void => {
@@ -332,7 +341,13 @@ export function mountExecutionPanel(
     if (opened) place();
   };
   const onTrigger = (): void => opened ? surface.close(false) : surface.open();
+  const onTriggerKeyDown = (event: KeyboardEvent): void => {
+    if (!triggerNeedsButtonSemantics || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    onTrigger();
+  };
   trigger.addEventListener("click", onTrigger);
+  trigger.addEventListener("keydown", onTriggerKeyDown);
   document.addEventListener("pointerdown", onDocumentPointerDown, true);
   document.addEventListener("keydown", onDocumentKeyDown, true);
   document.defaultView?.addEventListener("resize", onResize);
@@ -343,6 +358,10 @@ export function mountExecutionPanel(
   });
   const unsubscribePlan = port.subscribePlan((snapshot) => {
     plan = snapshot;
+    render();
+  });
+  const unsubscribeRecent = port.subscribeRecent((snapshot) => {
+    recent = snapshot;
     render();
   });
 
@@ -394,8 +413,10 @@ export function mountExecutionPanel(
       destroyed = true;
       unsubscribeExecution();
       unsubscribePlan();
+      unsubscribeRecent();
       review?.destroy();
       trigger.removeEventListener("click", onTrigger);
+      trigger.removeEventListener("keydown", onTriggerKeyDown);
       document.removeEventListener("pointerdown", onDocumentPointerDown, true);
       document.removeEventListener("keydown", onDocumentKeyDown, true);
       document.defaultView?.removeEventListener("resize", onResize);

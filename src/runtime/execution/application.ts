@@ -289,6 +289,31 @@ function applicationStatus(runtime: ExecutionRuntimeSnapshot): ExecutionApplicat
   return "ready";
 }
 
+function refreshedRuntime(
+  prior: ExecutionRuntimeSnapshot,
+  clocks: ExecutionClockIndexState,
+): ExecutionRuntimeSnapshot {
+  const clockDiagnosticOnly = prior.status === "degraded"
+    && prior.clocks.kind === "degraded"
+    && prior.code === prior.clocks.code;
+  const replaceClockStatus = prior.status === "ready" || clockDiagnosticOnly;
+  const status = replaceClockStatus
+    ? clocks.kind === "degraded" ? "degraded" : "ready"
+    : prior.status;
+  const code = replaceClockStatus
+    ? clocks.kind === "degraded" ? clocks.code : undefined
+    : prior.code;
+  return Object.freeze({
+    status,
+    clocks,
+    writeBlocked: replaceClockStatus
+      ? clocks.kind === "degraded"
+      : prior.writeBlocked || clocks.kind === "degraded",
+    pluginDataRevision: prior.pluginDataRevision,
+    ...(code ? { code } : {}),
+  });
+}
+
 export class ExecutionApplication {
   readonly #access: AtomicTextAccess;
   readonly #pluginData: PluginDataStore;
@@ -305,6 +330,11 @@ export class ExecutionApplication {
   #stopped = false;
   #generation = 0;
   #refreshGeneration = 0;
+  #refreshAgain = false;
+  #refreshPromise: Promise<ExecutionApplicationSnapshot> | undefined;
+  #refreshPromiseGeneration: number | undefined;
+  #dispatchDepth = 0;
+  #sourceRefreshPending = false;
   #snapshot: ExecutionApplicationSnapshot;
 
   constructor(dependencies: ExecutionApplicationDependencies) {
@@ -388,6 +418,11 @@ export class ExecutionApplication {
     try {
       const runtime = await this.#coordinator.start();
       this.#subscribeToSourceChanges();
+      if (runtime.clocks.kind === "degraded"
+        && runtime.clocks.code === "clock-index-unavailable"
+        && runtime.clocks.reason === "source-changed") {
+        return this.refresh();
+      }
       await this.#publishConfirmed(runtime);
       return this.#snapshot;
     } catch (error) {
@@ -399,6 +434,8 @@ export class ExecutionApplication {
   suspend(): void {
     if (this.#stopped) return;
     this.#refreshGeneration += 1;
+    this.#refreshAgain = false;
+    this.#sourceRefreshPending = false;
     this.#unsubscribeSource?.();
     this.#unsubscribeSource = undefined;
   }
@@ -412,21 +449,52 @@ export class ExecutionApplication {
 
   async refresh(): Promise<ExecutionApplicationSnapshot> {
     if (!this.#started || this.#stopped) return this.#snapshot;
+    if (this.#refreshPromise) {
+      const pending = this.#refreshPromise;
+      if (this.#refreshPromiseGeneration !== this.#refreshGeneration) {
+        await pending;
+        if (this.#refreshPromise === pending) {
+          this.#refreshPromise = undefined;
+          this.#refreshPromiseGeneration = undefined;
+        }
+        if (this.#stopped) return this.#snapshot;
+        const current = this.#refreshPromise;
+        return current ?? this.refresh();
+      }
+      this.#refreshAgain = true;
+      return pending;
+    }
     const generation = ++this.#refreshGeneration;
-    const clocks = await this.#clockReader.scan();
-    if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
-    const runtime = Object.freeze({
-      ...this.#coordinator.snapshot,
-      clocks,
-      writeBlocked: this.#coordinator.snapshot.writeBlocked || clocks.kind === "degraded",
-      ...(clocks.kind === "degraded" ? { code: clocks.code } : {}),
-    });
-    await this.#publishConfirmed(runtime);
-    return this.#snapshot;
+    const pending = this.#runRefresh(generation);
+    this.#refreshPromise = pending;
+    this.#refreshPromiseGeneration = generation;
+    try {
+      return await pending;
+    } finally {
+      if (this.#refreshPromise === pending) {
+        this.#refreshPromise = undefined;
+        this.#refreshPromiseGeneration = undefined;
+      }
+    }
   }
 
   async dispatch(intent: ExecutionApplicationIntent): Promise<ExecutionCommandOutcome> {
     safeIntentId(intent.intentId);
+    const refresh = this.#refreshPromise;
+    if (refresh) await refresh;
+    this.#dispatchDepth += 1;
+    try {
+      return await this.#dispatchIntent(intent);
+    } finally {
+      this.#dispatchDepth -= 1;
+      if (this.#dispatchDepth === 0 && this.#sourceRefreshPending && !this.#stopped) {
+        this.#sourceRefreshPending = false;
+        void this.refresh();
+      }
+    }
+  }
+
+  async #dispatchIntent(intent: ExecutionApplicationIntent): Promise<ExecutionCommandOutcome> {
     if (intent.type === "start-standalone-pomo") {
       return this.#settle(this.#coordinator.startStandalonePomo(intent.intentId));
     }
@@ -466,6 +534,8 @@ export class ExecutionApplication {
     if (this.#stopped) return;
     this.#stopped = true;
     this.#refreshGeneration += 1;
+    this.#refreshAgain = false;
+    this.#sourceRefreshPending = false;
     this.#unsubscribeSource?.();
     this.#unsubscribeSource = undefined;
     let failure: { readonly error: unknown } | undefined;
@@ -488,10 +558,31 @@ export class ExecutionApplication {
     return outcome;
   }
 
+  async #runRefresh(generation: number): Promise<ExecutionApplicationSnapshot> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      this.#refreshAgain = false;
+      const clocks = await this.#clockReader.scan();
+      if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
+      const sourceChanged = clocks.kind === "degraded"
+        && clocks.code === "clock-index-unavailable"
+        && clocks.reason === "source-changed";
+      if (attempt === 0 && (sourceChanged || this.#refreshAgain)) continue;
+      if (this.#refreshAgain) return this.#snapshot;
+      const runtime = refreshedRuntime(this.#coordinator.snapshot, clocks);
+      await this.#publishConfirmed(runtime);
+      return this.#snapshot;
+    }
+    return this.#snapshot;
+  }
+
   #subscribeToSourceChanges(): void {
     if (this.#unsubscribeSource) return;
     this.#unsubscribeSource = this.#access.onChange(() => {
       if (this.#stopped) return;
+      if (this.#dispatchDepth > 0) {
+        this.#sourceRefreshPending = true;
+        return;
+      }
       this.#publish(this.#makeSnapshot(this.#coordinator.snapshot, "stale", "source-changed"));
       void this.refresh();
     });

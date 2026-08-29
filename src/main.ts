@@ -55,7 +55,7 @@ import { ReviewCoordinator } from "./runtime/review/coordinator";
 import type { RuntimeSnapshot } from "./runtime/snapshots";
 import { RealSystemClock, zonedTimeParts } from "./runtime/system-clock";
 import { ObsidianAtomicTextAccess, type AtomicTextAccess } from "./workspace/commit";
-import { HistoryIndex } from "./workspace/history-index";
+import { HistoryIndex, type HistoryIndexSnapshot } from "./workspace/history-index";
 import { WorkspaceIndex } from "./workspace/identity-index";
 import type {
   SourceChange,
@@ -182,6 +182,7 @@ export default class SpiralDayPlugin extends Plugin {
   #workspaceIndex: WorkspaceIndex | undefined;
   #projectionRuntime: NautilusProjectionRuntime | undefined;
   #historyIndex: HistoryIndex | undefined;
+  #historyUnsubscribe: Unsubscribe | undefined;
   #reviewCoordinator: ReviewCoordinator | undefined;
   #reviewPort: ReviewEntryPort | undefined;
   #messages: ExecutionMessages | undefined;
@@ -194,6 +195,8 @@ export default class SpiralDayPlugin extends Plugin {
   #planConnection: ReturnType<NautilusProjectionRuntime["connect"]> | undefined;
   #planSnapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
   readonly #planListeners = new Set<(snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void>();
+  readonly #recentListeners = new Set<(recent: readonly ExecutionRecentTask[]) => void>();
+  #historyRefreshQueued = false;
   #intentSequence = 0;
   #stopping = false;
 
@@ -224,7 +227,8 @@ export default class SpiralDayPlugin extends Plugin {
       locale: this.#pluginData.data.settings.language,
       namespaces: { execution: executionNamespace },
     });
-    this.#historyIndex = new HistoryIndex(this.#atomicAccess, { identityIndex: this.#workspaceIndex });
+    this.#historyIndex = new HistoryIndex(this.#atomicAccess);
+    this.#historyUnsubscribe = this.#historyIndex.subscribe((snapshot) => this.#onHistorySnapshot(snapshot));
     this.#reviewCoordinator = new ReviewCoordinator(this.#historyIndex);
     this.#sourceNavigator = new ObsidianSourceNavigator({
       app: this.app,
@@ -359,10 +363,13 @@ export default class SpiralDayPlugin extends Plugin {
         navigatePrimary: async () => {
           await this.#requireNavigator().openPrimary(this.#primaryPath());
         },
+        openActiveTask: async () => {
+          await openActiveTaskView(this.app);
+        },
         navigateTask: async (target: SourceTaskReference, location: "main" | "sidebar") => {
           await this.#requireNavigator().openTask(target, location);
         },
-        recent: () => this.#recentExecutionTasks(),
+        subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => this.#subscribeRecent(listener),
         createReviewSurface: (root: HTMLElement) => this.#requireReviewPort().createSurface(root),
       } as const;
       this.#executionEntry = new ExecutionEntryAdapter({
@@ -582,6 +589,28 @@ export default class SpiralDayPlugin extends Plugin {
     return () => this.#planListeners.delete(listener);
   }
 
+  #subscribeRecent(listener: (recent: readonly ExecutionRecentTask[]) => void): Unsubscribe {
+    this.#recentListeners.add(listener);
+    listener(this.#recentExecutionTasks());
+    return () => this.#recentListeners.delete(listener);
+  }
+
+  #onHistorySnapshot(snapshot: HistoryIndexSnapshot): void {
+    if (snapshot.state === "current") {
+      const recent = this.#recentExecutionTasks();
+      for (const listener of [...this.#recentListeners]) listener(recent);
+      return;
+    }
+    if (snapshot.state !== "dirty" || this.#historyRefreshQueued) return;
+    this.#historyRefreshQueued = true;
+    queueMicrotask(() => {
+      this.#historyRefreshQueued = false;
+      if (!this.#stopping && this.#historyIndex?.snapshot.state === "dirty") {
+        this.#requestReviewRefresh();
+      }
+    });
+  }
+
   #requestReviewRefresh(): void {
     void this.#refreshReview().catch((error: unknown) => {
       console.error("Spiral Day Review refresh", error);
@@ -753,6 +782,9 @@ export default class SpiralDayPlugin extends Plugin {
     this.#planConnection?.disconnect();
     this.#planConnection = undefined;
     this.#planListeners.clear();
+    this.#recentListeners.clear();
+    this.#historyUnsubscribe?.();
+    this.#historyUnsubscribe = undefined;
     this.#reviewCoordinator?.dispose();
     this.#reviewCoordinator = undefined;
     this.#historyIndex = undefined;
