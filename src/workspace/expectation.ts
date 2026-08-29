@@ -50,7 +50,7 @@ export interface ClockExpectation {
   readonly sourceText: string;
   readonly span: SourceSpan;
   readonly text: string;
-  readonly state: "running" | "closed" | "potential-running";
+  readonly state: "running" | "closed" | "potential-running" | "malformed";
   readonly ownerId: string | undefined;
 }
 
@@ -233,12 +233,11 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
     && input.clock.parsed.diagnostics[0]?.code === "ambiguous-local-time"
     ? ambiguousLegacyState(input.clock.text)
     : undefined;
-  const selectedIdentifiedPotential = input.target.id !== undefined
+  const selectedIdentifiedMalformed = input.target.id !== undefined
     && observedId === input.target.id
-    && input.clock.parsed.kind === "malformed"
-    && input.clock.parsed.potentialRunning;
-  if (!record && !selectedFoldState && !selectedIdentifiedPotential) {
-    throw new TypeError("CLOCK expectation requires a parsed record, selected DST fold, or exact identified potential CLOCK");
+    && input.clock.parsed.kind === "malformed";
+  if (!record && !selectedFoldState && !selectedIdentifiedMalformed) {
+    throw new TypeError("CLOCK expectation requires a parsed record, selected DST fold, or exact identified malformed CLOCK");
   }
   if (input.target.id !== undefined && observedId !== input.target.id) {
     throw new TypeError("CLOCK expectation identity mismatch");
@@ -272,7 +271,12 @@ export function createClockExpectation(input: CreateClockExpectationInput): Cloc
     }),
     text: input.clock.text,
     state: record?.state
-      ?? (selectedIdentifiedPotential || selectedFoldState === "running" ? "potential-running" : "closed"),
+      ?? (selectedFoldState === "running"
+        || (selectedIdentifiedMalformed && input.clock.parsed.kind === "malformed" && input.clock.parsed.potentialRunning)
+        ? "potential-running"
+        : selectedFoldState === "closed"
+          ? "closed"
+          : "malformed"),
     ownerId: input.clock.ownerId,
   });
 }
@@ -582,7 +586,7 @@ export function revalidateClockExpectation(
     return conflict("anonymous-source-changed", action, expectation.path);
   }
   const found = clocksInItems(currentPath, currentText, logbookOptions).filter(({ clock }) => {
-    if (expectation.state === "potential-running" || (
+    if (expectation.state === "potential-running" || expectation.state === "malformed" || (
       expectation.state === "closed"
       && clock.parsed.kind === "malformed"
       && ambiguousLegacyState(clock.text) === "closed"
@@ -591,10 +595,9 @@ export function revalidateClockExpectation(
         && clock.toOffset === expectation.span.toOffset
         && clock.text === expectation.text;
       const selectedMalformedIdentityRepair = action === "repair-clock-identity"
-        && expectation.state === "potential-running"
         && expectation.target.id !== undefined
         && clock.parsed.kind === "malformed"
-        && clock.parsed.potentialRunning;
+        && (expectation.state === "malformed" || clock.parsed.potentialRunning);
       const selectedFold = clock.parsed.kind === "malformed"
         && (expectation.state === "closed" || clock.parsed.potentialRunning)
         && clock.parsed.diagnostics.length === 1
@@ -626,8 +629,10 @@ export function revalidateClockExpectation(
     ? result.clock.parsed.record.state
     : result.clock.parsed.kind === "malformed" && ambiguousLegacyState(result.clock.text) === "closed"
       ? "closed"
-      : result.clock.parsed.kind === "malformed" && result.clock.parsed.potentialRunning
+    : result.clock.parsed.kind === "malformed" && result.clock.parsed.potentialRunning
         ? "potential-running"
+      : result.clock.parsed.kind === "malformed"
+        ? "malformed"
       : undefined;
   if (currentState !== expectation.state || result.clock.ownerId !== expectation.ownerId) {
     return conflict("action-no-longer-applicable", action, currentPath, expectation.target.id);

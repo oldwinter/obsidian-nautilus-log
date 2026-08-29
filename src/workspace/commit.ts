@@ -1433,6 +1433,7 @@ async function invalidClockOwnerPrecondition(
   stopped: () => boolean,
   phase: "before" | "after" = "before",
   onSelectedInvalidOwner?: () => void,
+  onInvalidOwner?: () => void,
 ): Promise<CommitConflict | undefined> {
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   const texts = new Map<string, string>();
@@ -1458,6 +1459,7 @@ async function invalidClockOwnerPrecondition(
       }
     }
     if (!valid) {
+      onInvalidOwner?.();
       if (!runningClockIsSelectedRecovery(clock, plan, expectation, phase)) {
         return conflict("clock-owner-invalid", plan.action, clock.path);
       }
@@ -2895,6 +2897,30 @@ export class WorkspaceCommitter {
     expectation?: MutationExpectation,
     selectedInvalidOwner = false,
   ): Promise<CommitReceipt> {
+    const ownerSnapshot = this.#index.safetySnapshot;
+    let ownerCheckCurrent = true;
+    let invalidOwner = selectedInvalidOwner;
+    if (expectation && ownerSnapshot.complete) {
+      const ownerFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
+      if (ownerFacts.running.length > 0) {
+        let observedInvalidOwner = false;
+        await invalidClockOwnerPrecondition(
+          this.#index,
+          this.#access,
+          plan,
+          expectation,
+          this.#logbookOptions,
+          () => this.#disposed,
+          "after",
+          undefined,
+          () => { observedInvalidOwner = true; },
+        );
+        const afterOwnerCheck = this.#index.safetySnapshot;
+        ownerCheckCurrent = afterOwnerCheck.complete
+          && afterOwnerCheck.generation === ownerSnapshot.generation;
+        if (ownerCheckCurrent) invalidOwner ||= observedInvalidOwner;
+      }
+    }
     const snapshot = this.#index.safetySnapshot;
     const facts = expectation && snapshot.complete
       ? reconciledClockFacts(this.#index, expectation, this.#logbookOptions)
@@ -2906,9 +2932,9 @@ export class WorkspaceCommitter {
       sources,
       confirmation: outcome === "failed-no-change" ? "confirmed-no-change" : outcome === "uncertain" ? "unconfirmed" : outcome === "invariant-broken" ? "invariant-broken" : "confirmed-no-change",
       globalCheck: {
-        status: !snapshot.complete
+        status: !snapshot.complete || !ownerCheckCurrent
           ? "unavailable"
-          : selectedInvalidOwner
+          : invalidOwner
             || result.code === "clock-owner-invalid"
             || facts.potentialRunning.length > 0
             || facts.running.length > 1
@@ -3371,6 +3397,7 @@ export class WorkspaceCommitter {
       const status = selectedInvalidOwner
         || initialFacts.potentialRunning.length > 0
         || initialFacts.running.length > 1
+        || selectedClockIdentityRepair(plan, expectation)?.expected.state === "malformed"
         ? "violated"
         : "confirmed";
       return createCommitReceipt({
@@ -3589,7 +3616,9 @@ export class WorkspaceCommitter {
       && expectedFinal !== undefined
       && arraysEqual(global.ids, expectedFinal)
       && (
-        ((plan.action === "repair-clock-identity" || plan.action === "repair-plan-item-identity")
+        (plan.action === "repair-clock-identity"
+          && selectedClockIdentityRepair(plan, expectation)?.expected.state === "malformed")
+        || ((plan.action === "repair-clock-identity" || plan.action === "repair-plan-item-identity")
           && selectedInvalidOwner
           && finalFacts.potentialRunning.length === 0)
         || (global.status !== "confirmed"

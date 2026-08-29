@@ -711,8 +711,18 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
   const clockLine = lines[clockIndex]!;
   const clockContainer = markdownContainerContent(clockLine.text);
   const clockList = LIST_ITEM.exec(clockContainer.content);
-  if (!clockList) mutationError("source-span-mismatch", "CLOCK is not a list item");
-  const contentIndent = visualWidth(clockList[1]! + clockList[2]! + clockList[3]!);
+  const physicalClock = canonicalClockPhysicalLine(clockLine.text);
+  if (!clockList && (
+    !physicalClock?.standalone
+    || clockLine.fromOffset + physicalClock.fromColumn !== clock.fromOffset
+    || clockLine.fromOffset + physicalClock.toColumn !== clock.toOffset
+  )) mutationError("source-span-mismatch", "CLOCK is not a standalone physical line");
+  const contentIndent = clockList
+    ? visualWidth(clockList[1]! + clockList[2]! + clockList[3]!)
+    : indentationWidth(clockContainer.content.slice(
+        0,
+        physicalClock!.fromColumn - clockContainer.contentOffset,
+      )) + 1;
   let separatedByBlank = false;
 
   for (let index = clockIndex + 1; index < lines.length; index += 1) {
