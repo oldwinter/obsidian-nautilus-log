@@ -38,6 +38,7 @@ test("execution styles cover interaction states and the build discovers every st
     ".spiral-day-execution__tabpanel",
     ".spiral-day-execution__tab[aria-selected=\"true\"]",
     ".spiral-day-active-task-view",
+    ".spiral-day-execution-pomo-stop[hidden]",
     "@media (prefers-reduced-motion: reduce)",
     "@media (forced-colors: active)",
   ]) assert.equal(styles.includes(selector), true, selector);
@@ -61,4 +62,10 @@ test("elapsed timers update in place without replacing focused controls", async 
   assert.doesNotMatch(panel, /setInterval\(\(\) => render\(\), 1_000\)/);
   assert.match(activeTask, /setInterval\(\(\) => this\.#tick\(\), 1_000\)/);
   assert.doesNotMatch(activeTask, /setInterval\(\(\) => this\.#render\(\), 1_000\)/);
+});
+
+test("plan refresh preserves the unscheduled disclosure state", async () => {
+  const planView = await readFile("src/ui/execution/plan-view.ts", "utf8");
+  assert.match(planView, /querySelector<HTMLDetailsElement>\("\.spiral-day-execution__unscheduled"\)/);
+  assert.match(planView, /unscheduled\.open = unscheduledOpen/);
 });

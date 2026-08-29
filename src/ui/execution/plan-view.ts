@@ -144,6 +144,9 @@ function appendState(root: HTMLElement, heading: string, detail: string): void {
 }
 
 export function renderPlanView(root: HTMLElement, options: PlanViewOptions): void {
+  const unscheduledOpen = root
+    .querySelector<HTMLDetailsElement>(".spiral-day-execution__unscheduled")
+    ?.open ?? false;
   root.replaceChildren();
   const snapshot = options.snapshot;
   if (!snapshot || snapshot.state === "loading" || snapshot.state === "hidden" || snapshot.state === "stale") {
@@ -192,6 +195,7 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     && item.status === "open"
     && !placed.has(taskKey(item)));
   const unscheduled = executionElement(root.ownerDocument, "details", "spiral-day-execution__unscheduled");
+  unscheduled.open = unscheduledOpen;
   const summary = executionElement(root.ownerDocument, "summary");
   const summaryTitle = executionElement(root.ownerDocument, "span");
   summaryTitle.textContent = options.messages.t("execution", "plan.unscheduled");

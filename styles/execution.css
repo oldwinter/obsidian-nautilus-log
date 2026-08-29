@@ -367,6 +367,10 @@
   color: var(--spiral-day-execution-danger, #b42334);
 }
 
+.spiral-day-execution-pomo-stop[hidden] {
+  display: none;
+}
+
 .spiral-day-execution-notice[data-level="warning"] {
   border: 1px solid var(--spiral-day-execution-warning, #805800);
 }
