@@ -471,7 +471,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#connection?.setContext({ logicalDate: validated.logicalDate });
     if (hostChanged) {
       this.#resize?.disconnect();
-      this.#layout = plannerLayoutForWidth(plannerContainerWidth(this.#root), validated.hostContext);
+      this.#applyLayout(plannerLayoutForWidth(plannerContainerWidth(this.#root), validated.hostContext));
       this.#resize = observePlannerContainer(this.#root, validated.hostContext, (layout) => {
         this.#applyLayout(layout);
         this.#render();

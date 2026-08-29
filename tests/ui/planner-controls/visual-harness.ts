@@ -852,6 +852,32 @@ window.issue24Harness = {
     adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")
       ?.querySelector<HTMLElement>("summary")?.click();
     await nextFrame();
+    adapterHostContext = "sidebar";
+    await adapterView.setState({
+      logicalDate: DISPLAYED_DATE,
+      plannerInstanceId: identityA,
+    }, {} as never);
+    await nextFrame();
+    const sameInstanceSidebarScheduleFolded = adapterView.getState().plannerInstanceId === identityA
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
+    adapterHostContext = "main";
+    await adapterView.setState({
+      logicalDate: DISPLAYED_DATE,
+      plannerInstanceId: identityA,
+    }, {} as never);
+    await nextFrame();
+    const sameInstanceMainScheduleOpen = adapterView.getState().plannerInstanceId === identityA
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
+    adapterHostContext = "sidebar";
+    adapterView.onResize();
+    await nextFrame();
+    const resizedSameInstanceSidebarScheduleFolded = adapterView.getState().plannerInstanceId === identityA
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
+    adapterHostContext = "main";
+    adapterView.onResize();
+    await nextFrame();
+    const resizedSameInstanceMainScheduleOpen = adapterView.getState().plannerInstanceId === identityA
+      && adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === true;
     adapterRoot.style.width = "520px";
     adapterView.onResize();
     await nextFrame();
@@ -980,7 +1006,11 @@ window.issue24Harness = {
       playbackStarted,
       progressBound,
       remountedB,
+      resizedSameInstanceMainScheduleOpen,
+      resizedSameInstanceSidebarScheduleFolded,
       restoredB,
+      sameInstanceMainScheduleOpen,
+      sameInstanceSidebarScheduleFolded,
       sidebarCompactScheduleInitiallyFolded,
       sidebarReachedWide,
       sidebarScheduleFoldedAfterReopen,

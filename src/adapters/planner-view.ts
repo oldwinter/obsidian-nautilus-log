@@ -168,6 +168,10 @@ export class SpiralDayPlannerView extends ItemView {
   }
 
   override onResize(): void {
+    const context = validatePlannerViewContext(
+      this.#dependencies.resolveContext(this.#logicalDate, this.leaf),
+    );
+    this.#surface?.setContext(context);
     this.#surface?.measure();
   }
 

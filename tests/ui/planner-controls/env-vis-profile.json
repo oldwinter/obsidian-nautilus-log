@@ -1,6 +1,6 @@
 {
   "schema": "spiral-day-env-vis-v1",
-  "revision": "r5",
+  "revision": "r6",
   "image": {
     "repository": "mcr.microsoft.com/playwright",
     "tag": "v1.62.1-noble",
