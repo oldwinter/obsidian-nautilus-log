@@ -279,6 +279,35 @@ test("concurrent lifecycle starts share one scan and one result", async () => {
   assert.equal(runtime.port.saveCount, 0);
 });
 
+test("a confirmed no-op stays inside the FIFO and never enters the committer", async () => {
+  const runtime = harness({ states: [active(), active(undefined, undefined, undefined, 2)] });
+  await runtime.coordinator.start();
+  const outcome = await runtime.coordinator.dispatchMutation({
+    intentId: "already-focused",
+    action: "clock-in",
+    prepare: () => ({ kind: "confirmed-no-op" }),
+  });
+  assert.equal(outcome.outcome, "already-applied");
+  assert.equal(outcome.code, undefined);
+  assert.equal(outcome.snapshot.clocks.kind, "active");
+  assert.equal(runtime.committer.attempts.length, 0);
+  assert.equal(runtime.reader.scans, 3);
+});
+
+test("a no-op loses authority when the confirmed CLOCK state changes", async () => {
+  const runtime = harness({ states: [active(), active(), idle(3)] });
+  await runtime.coordinator.start();
+  const outcome = await runtime.coordinator.dispatchMutation({
+    intentId: "stale-no-op",
+    action: "clock-in",
+    prepare: () => ({ kind: "confirmed-no-op" }),
+  });
+  assert.equal(outcome.outcome, "rejected");
+  assert.equal(outcome.code, "action-no-longer-applicable");
+  assert.equal(outcome.snapshot.clocks.kind, "idle");
+  assert.equal(runtime.committer.attempts.length, 0);
+});
+
 test("TC-UP-CLK-01-001 Clock In commits once then publishes the confirmed CLOCK", async () => {
   const runtime = harness({
     states: [idle(), idle(2), active("task-a", 10_000, CLOCK_A, 3)],
