@@ -22,6 +22,7 @@ import {
 import { WorkspaceIndex, type IdentityLookup, type IndexedClockSource, type WorkspaceIndexOptions } from "./identity-index";
 import {
   LogbookClockMutationError,
+  canonicalClockPhysicalLine,
   clockHasAttachedContent,
   createClockIdentityRepairEdit,
   createCloseRunningClockEdit,
@@ -33,6 +34,7 @@ import {
   createRunningClockInsertionEdits,
   formatCanonicalClosedClock,
   formatCanonicalRunningClock,
+  markdownContainerContent,
 } from "./logbook-clock";
 import { readLogbook, type LogbookReadOptions } from "./logbook-reader";
 import {
@@ -765,18 +767,6 @@ function synchronousPhysicalLines(text: string): readonly SynchronousPhysicalLin
   return lines;
 }
 
-function synchronousContainer(content: string): { readonly content: string; readonly quoteDepth: number } {
-  let offset = 0;
-  let quoteDepth = 0;
-  while (offset < content.length) {
-    const marker = /^[ ]{0,3}>[ \t]?/.exec(content.slice(offset));
-    if (!marker) break;
-    offset += marker[0].length;
-    quoteDepth += 1;
-  }
-  return { content: content.slice(offset), quoteDepth };
-}
-
 function synchronousIndentationWidth(text: string): number {
   let width = 0;
   for (const character of text) width = character === "\t" ? width + (4 - width % 4) : width + 1;
@@ -818,7 +808,7 @@ function synchronousOutsideFenceLines(text: string): readonly SynchronousPhysica
       if (line.content === "---" || line.content === "...") frontmatter = false;
       continue;
     }
-    const container = synchronousContainer(line.content);
+    const container = markdownContainerContent(line.content);
     if (pendingTableHeader) {
       if (synchronousTableDelimiter(container.content)) {
         pendingTableHeader = undefined;
@@ -1174,25 +1164,23 @@ function currentFileRunningFacts(
   }
 
   for (const line of synchronousOutsideFenceLines(text)) {
-    const prefix = /^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?/.exec(line.content)?.[0] ?? "";
-    const raw = line.content.slice(prefix.length);
-    const clockText = raw.slice(0, raw.length - /[ \t]*$/.exec(raw)![0].length);
-    const idMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)$/.exec(clockText);
-    if (clockText.startsWith("CLOCK: [") && idMatch && isCanonicalClockId(idMatch[1]!)) {
-      const parsed = parseClockText(clockText);
-      const fromOffset = line.start + prefix.length;
-      const toOffset = fromOffset + clockText.length;
+    const located = canonicalClockPhysicalLine(line.content);
+    if (located) {
+      const clockText = located.text;
+      const parsed = located.parsed;
+      const fromOffset = line.start + located.fromColumn;
+      const toOffset = line.start + located.toColumn;
       if (structuredLocations.has(`${fromOffset}\0${toOffset}`)) continue;
       if (parsed.kind === "record" && parsed.record.state === "running") {
         fingerprints.add(runningFingerprint(
-          idMatch[1]!, path, fromOffset, toOffset, clockText, undefined,
+          located.clockId, path, fromOffset, toOffset, clockText, undefined,
         ));
         const indexedClock: IndexedClockSource = Object.freeze({
           path,
           fromOffset,
           toOffset,
           text: clockText,
-          clockId: idMatch[1]!,
+          clockId: located.clockId,
           scope: "canonical-global",
           parsed,
         });
@@ -1201,7 +1189,7 @@ function currentFileRunningFacts(
       else if (parsed.kind === "malformed" && parsed.potentialRunning) {
         potential = true;
         blockingPotential = true;
-        potentialFingerprints.add(runningFingerprint(idMatch[1]!, path, fromOffset, toOffset, clockText, undefined));
+        potentialFingerprints.add(runningFingerprint(located.clockId, path, fromOffset, toOffset, clockText, undefined));
       }
     }
   }
@@ -1419,6 +1407,7 @@ async function invalidClockOwnerPrecondition(
   logbookOptions: LogbookReadOptions,
   stopped: () => boolean,
   phase: "before" | "after" = "before",
+  onSelectedInvalidOwner?: () => void,
 ): Promise<CommitConflict | undefined> {
   const facts = reconciledClockFacts(index, expectation, logbookOptions);
   const texts = new Map<string, string>();
@@ -1443,8 +1432,11 @@ async function invalidClockOwnerPrecondition(
         }
       }
     }
-    if (!valid && !runningClockIsSelectedRecovery(clock, plan, expectation, phase)) {
-      return conflict("clock-owner-invalid", plan.action, clock.path);
+    if (!valid) {
+      if (!runningClockIsSelectedRecovery(clock, plan, expectation, phase)) {
+        return conflict("clock-owner-invalid", plan.action, clock.path);
+      }
+      onSelectedInvalidOwner?.();
     }
   }
   return undefined;
@@ -3273,6 +3265,7 @@ export class WorkspaceCommitter {
       return this.#stoppedReceipt(plan, isConflictOutcome(identityEndState), identityEndState, [], expectation);
     }
     if (identityEndState === "already-applied") {
+      let selectedInvalidOwner = false;
       const finalOwner = await invalidClockOwnerPrecondition(
         this.#index,
         this.#access,
@@ -3281,9 +3274,21 @@ export class WorkspaceCommitter {
         this.#logbookOptions,
         () => this.#disposed,
         "after",
+        () => { selectedInvalidOwner = true; },
       );
       if (this.#disposed) {
         return this.#stoppedReceipt(plan, "rejected", conflict("action-no-longer-applicable", plan.action), [], expectation);
+      }
+      const liveIdentitySnapshot = this.#index.safetySnapshot;
+      if (!liveIdentitySnapshot.complete || liveIdentitySnapshot.generation !== snapshot.generation) {
+        const changedGlobalState = conflict("source-conflict", plan.action);
+        return this.#stoppedReceipt(
+          plan,
+          isConflictOutcome(changedGlobalState),
+          changedGlobalState,
+          [],
+          expectation,
+        );
       }
       if (finalOwner) {
         return this.#stoppedReceipt(plan, isConflictOutcome(finalOwner), finalOwner, [], expectation);
@@ -3312,7 +3317,9 @@ export class WorkspaceCommitter {
           expectation,
         );
       }
-      const status = initialFacts.potentialRunning.length > 0 || initialFacts.running.length > 1
+      const status = selectedInvalidOwner
+        || initialFacts.potentialRunning.length > 0
+        || initialFacts.running.length > 1
         ? "violated"
         : "confirmed";
       return createCommitReceipt({
@@ -3502,6 +3509,7 @@ export class WorkspaceCommitter {
       return this.#unloadAfterHostReceipt(plan, sources, semanticChanges, identities);
     }
     const finalGeneration = finalSnapshot.generation;
+    let selectedInvalidOwner = false;
     const finalInvalidOwner = finalSnapshot.complete
       ? await invalidClockOwnerPrecondition(
           this.#index,
@@ -3511,6 +3519,7 @@ export class WorkspaceCommitter {
           this.#logbookOptions,
           () => this.#disposed,
           "after",
+          () => { selectedInvalidOwner = true; },
         )
       : undefined;
     if (this.#disposed) {
@@ -3522,13 +3531,17 @@ export class WorkspaceCommitter {
       : relocateLegacyKeys(plannedFinal, legacyKeyRelocations);
     const finalFacts = reconciledClockFacts(this.#index, expectation, this.#logbookOptions);
     const global = validateFinalGlobal(this.#index, expectedFinal, expectation, this.#logbookOptions);
-    const confirmedDegradedIdentityRepair = global.status !== "confirmed"
-      && finalSnapshot.complete
+    const confirmedDegradedIdentityRepair = finalSnapshot.complete
       && expectedFinal !== undefined
       && arraysEqual(global.ids, expectedFinal)
       && (
-        (plan.action === "repair-clock-identity" && finalFacts.potentialRunning.length === 0)
-        || (plan.action === "repair-plan-item-identity"
+        ((plan.action === "repair-clock-identity" || plan.action === "repair-plan-item-identity")
+          && selectedInvalidOwner
+          && finalFacts.potentialRunning.length === 0)
+        || (global.status !== "confirmed"
+          && plan.action === "repair-clock-identity"
+          && finalFacts.potentialRunning.length === 0)
+        || (global.status !== "confirmed" && plan.action === "repair-plan-item-identity"
           && finalFacts.potentialRunning.length > 0
           && finalFacts.potentialRunning.every((clock) =>
             potentialClockIsSelectedPlanRepair(clock, plan, expectation, "after")))

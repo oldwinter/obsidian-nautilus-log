@@ -1,10 +1,10 @@
 import { parseGrammar } from "../core/grammar-v1";
 import {
   isCanonicalClockId,
-  parseClockText,
   type ClockParseResult,
   type ParseClockOptions,
 } from "./clock-parser";
+import { canonicalClockPhysicalLine, markdownContainerContent } from "./logbook-clock";
 import { readLogbook, type LogbookClock } from "./logbook-reader";
 import { markdownHtmlBlockStart } from "./plan-region";
 import { resolvePrimaryPlan } from "./primary-plan-resolver";
@@ -381,21 +381,6 @@ async function* outsideFenceLines(
   if (pendingTableHeader) yield pendingTableHeader;
 }
 
-function markdownContainerContent(content: string): {
-  readonly content: string;
-  readonly quoteDepth: number;
-} {
-  let offset = 0;
-  let quoteDepth = 0;
-  while (offset < content.length) {
-    const marker = /^[ ]{0,3}>[ \t]?/.exec(content.slice(offset));
-    if (!marker) break;
-    offset += marker[0].length;
-    quoteDepth += 1;
-  }
-  return { content: content.slice(offset), quoteDepth };
-}
-
 function indentationWidth(text: string): number {
   let width = 0;
   for (const character of text) {
@@ -426,21 +411,16 @@ function canonicalClockOnLine(
   blockId: BlockIdLocation | undefined,
 ): IndexedClockSource | undefined {
   if (!blockId || !isCanonicalClockId(blockId.id)) return undefined;
-  const contentOffset = line.content.indexOf("CLOCK: [");
-  if (contentOffset < 0) return undefined;
-  const raw = line.content.slice(contentOffset);
-  const trailing = /[ \t]*$/.exec(raw)![0].length;
-  const text = raw.slice(0, raw.length - trailing);
-  const parsed = parseClockText(text);
-  if (parsed.kind === "not-clock") return undefined;
+  const located = canonicalClockPhysicalLine(line.content);
+  if (!located || located.clockId !== blockId.id) return undefined;
   return Object.freeze({
     path,
-    fromOffset: line.start + contentOffset,
-    toOffset: line.start + contentOffset + text.length,
-    text,
+    fromOffset: line.start + located.fromColumn,
+    toOffset: line.start + located.toColumn,
+    text: located.text,
     clockId: blockId.id,
     scope: "canonical-global" as const,
-    parsed,
+    parsed: located.parsed,
   });
 }
 

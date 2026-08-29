@@ -3,6 +3,7 @@ import type { PlanItem, PlanItemStatus } from "../core/model";
 import { isCanonicalClockId, parseClockText } from "./clock-parser";
 import { createCommitConflict, type CommitConflict } from "./conflicts";
 import type { BlockIdLocation, IdentityLookup } from "./identity-index";
+import { canonicalClockPhysicalLine } from "./logbook-clock";
 import { readLogbook, type LogbookClock, type LogbookReadOptions, type LogbookReadResult } from "./logbook-reader";
 import {
   createCanonicalPreviewToken,
@@ -504,13 +505,12 @@ function exactCanonicalClockPhysicalLine(
   const physicalEnd = newlineOffset < 0 ? source.length : newlineOffset;
   const lineEnd = source[physicalEnd - 1] === "\r" ? physicalEnd - 1 : physicalEnd;
   const line = source.slice(lineStart, lineEnd);
-  const prefix = /^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?/.exec(line)?.[0] ?? "";
-  const fromOffset = lineStart + prefix.length;
-  const toOffset = fromOffset + expectedText.length;
+  const located = canonicalClockPhysicalLine(line);
+  if (!located?.standalone || located.text !== expectedText) return undefined;
+  const fromOffset = lineStart + located.fromColumn;
+  const toOffset = lineStart + located.toColumn;
   if (
-    source.slice(fromOffset, toOffset) !== expectedText
-    || !/^[ \t]*$/.test(source.slice(toOffset, lineEnd))
-    || identity.fromOffset < fromOffset
+    identity.fromOffset < fromOffset
     || identity.toOffset > toOffset
   ) return undefined;
   return Object.freeze({ fromOffset, toOffset });
@@ -528,10 +528,19 @@ function exactCanonicalOrphanClock(
     || expectation.target.id === undefined
     || expectation.ownerId !== undefined
   ) return undefined;
-  if (!identity || identity.kind !== "unique" || identity.location.path !== currentPath) {
+  const location = identity?.kind === "unique"
+    ? identity.location
+    : identity?.kind === "selected-repair"
+      ? identity.identity.locations.find((candidate) =>
+          candidate.id === expectation.target.id
+          && candidate.path === identity.selectedSpan.path
+          && candidate.fromOffset >= identity.selectedSpan.fromOffset
+          && candidate.toOffset <= identity.selectedSpan.toOffset)
+      : undefined;
+  if (!location || location.path !== currentPath) {
     return conflict("source-conflict", action, currentPath, expectation.target.id);
   }
-  const matchingSpan = exactCanonicalClockPhysicalLine(currentText, expectation.text, identity.location);
+  const matchingSpan = exactCanonicalClockPhysicalLine(currentText, expectation.text, location);
   if (!matchingSpan) {
     return conflict("source-conflict", action, currentPath, expectation.target.id);
   }

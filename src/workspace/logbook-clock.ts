@@ -1,4 +1,9 @@
-import { isCanonicalClockId, parseClockText, type ClockRecord } from "./clock-parser";
+import {
+  isCanonicalClockId,
+  parseClockText,
+  type ClockParseResult,
+  type ClockRecord,
+} from "./clock-parser";
 import {
   readLogbook,
   type LogbookClock,
@@ -75,11 +80,65 @@ export interface NormalizeLegacyClockInput {
   readonly endOffsetMinutes?: number;
 }
 
+export interface MarkdownContainerContent {
+  readonly content: string;
+  readonly contentOffset: number;
+  readonly quoteDepth: number;
+}
+
+export interface CanonicalClockPhysicalLine {
+  readonly text: string;
+  readonly fromColumn: number;
+  readonly toColumn: number;
+  readonly clockId: string;
+  readonly parsed: ClockParseResult;
+  readonly standalone: boolean;
+}
+
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const GENERATED_PLAN_ITEM_ID = /^nl-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const BLOCK_ID = /^[A-Za-z0-9-]+$/;
 const LIST_ITEM = /^([ \t]*)([-+*]|[0-9]{1,9}[.)])([ \t]+)(.*)$/;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export function markdownContainerContent(lineText: string): MarkdownContainerContent {
+  let contentOffset = 0;
+  let quoteDepth = 0;
+  while (contentOffset < lineText.length) {
+    const marker = /^[ ]{0,3}>[ \t]?/.exec(lineText.slice(contentOffset));
+    if (!marker) break;
+    contentOffset += marker[0].length;
+    quoteDepth += 1;
+  }
+  return Object.freeze({
+    content: lineText.slice(contentOffset),
+    contentOffset,
+    quoteDepth,
+  });
+}
+
+export function canonicalClockPhysicalLine(lineText: string): CanonicalClockPhysicalLine | undefined {
+  const container = markdownContainerContent(lineText);
+  const trimmed = container.content.slice(0, container.content.length - /[ \t]*$/.exec(container.content)![0].length);
+  const clockColumn = trimmed.indexOf("CLOCK: [");
+  if (clockColumn < 0) return undefined;
+  const text = trimmed.slice(clockColumn);
+  const idMatch = /(?:^|[ \t])\^([A-Za-z0-9-]+)$/.exec(text);
+  if (!idMatch || !isCanonicalClockId(idMatch[1]!)) return undefined;
+  const parsed = parseClockText(text);
+  if (parsed.kind === "not-clock") return undefined;
+  const leading = trimmed.slice(0, clockColumn);
+  const standalone = /^[ \t]*(?:(?:[-+*]|\d+[.)])[ \t]+)?$/.test(leading);
+  const fromColumn = container.contentOffset + clockColumn;
+  return Object.freeze({
+    text,
+    fromColumn,
+    toColumn: fromColumn + text.length,
+    clockId: idMatch[1]!,
+    parsed,
+    standalone,
+  });
+}
 
 function mutationError(code: LogbookClockMutationErrorCode, message: string): never {
   throw new LogbookClockMutationError(code, message);
@@ -648,22 +707,30 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
   );
   if (clockIndex < 0) mutationError("source-span-mismatch", "CLOCK does not occupy a physical line");
   const clockLine = lines[clockIndex]!;
-  const clockList = LIST_ITEM.exec(clockLine.text);
+  const clockContainer = markdownContainerContent(clockLine.text);
+  const clockList = LIST_ITEM.exec(clockContainer.content);
   if (!clockList) mutationError("source-span-mismatch", "CLOCK is not a list item");
   const contentIndent = visualWidth(clockList[1]! + clockList[2]! + clockList[3]!);
   let separatedByBlank = false;
 
   for (let index = clockIndex + 1; index < lines.length; index += 1) {
     const line = lines[index]!;
-    if (/^[ \t]*$/.test(line.text)) {
+    const container = markdownContainerContent(line.text);
+    if (container.quoteDepth < clockContainer.quoteDepth) {
+      if (/^[ \t]*$/.test(container.content)) return false;
+      const lazyIndent = indentationWidth(/^([ \t]*)/.exec(container.content)![1]!);
+      return lazyIndent >= contentIndent;
+    }
+    if (container.quoteDepth > clockContainer.quoteDepth) return true;
+    if (/^[ \t]*$/.test(container.content)) {
       separatedByBlank = true;
       continue;
     }
-    const lineIndent = indentationWidth(/^([ \t]*)/.exec(line.text)![1]!);
-    const list = LIST_ITEM.exec(line.text);
+    const lineIndent = indentationWidth(/^([ \t]*)/.exec(container.content)![1]!);
+    const list = LIST_ITEM.exec(container.content);
     if (list) return lineIndent >= contentIndent;
     if (lineIndent >= contentIndent) return true;
-    if (structuralBlockStarts(line.text)) return false;
+    if (structuralBlockStarts(container.content)) return false;
     return !separatedByBlank;
   }
   return false;

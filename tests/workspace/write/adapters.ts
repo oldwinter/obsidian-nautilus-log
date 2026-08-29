@@ -59,6 +59,11 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
   readonly #beforeCallbackGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
   readonly #primitiveReadGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
   readonly #afterApplyGates = new Map<string, { readonly entered: () => void; readonly wait: Promise<void> }>();
+  readonly #readGates = new Map<string, {
+    remaining: number;
+    readonly entered: () => void;
+    readonly wait: Promise<void>;
+  }>();
   #failNextConfirmationRead = false;
   #failConfirmationAfterTransform = false;
   #insideAtomic = false;
@@ -107,6 +112,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       }
       const text = await super.readText(path, signal);
       this.#afterRead();
+      await this.#waitAfterRead(path);
       return text;
     }
     if (signal?.aborted) throw new DOMException("The operation was aborted", "AbortError");
@@ -117,6 +123,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     try {
       const text = readFileSync(this.#absolute(path), "utf8");
       this.#afterRead();
+      await this.#waitAfterRead(path);
       return text;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
@@ -225,6 +232,17 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
     this.#afterTransformReadRace = { remaining: reads, armed: false, mutate };
   }
 
+  pauseAfterReads(path: string, reads: number): { readonly entered: Promise<void>; readonly release: () => void } {
+    if (!Number.isSafeInteger(reads) || reads < 1) throw new RangeError("reads must be positive");
+    const normalized = normalizeVaultRelativePath(path);
+    let signalEntered!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>((resolve) => { signalEntered = resolve; });
+    const wait = new Promise<void>((resolve) => { release = resolve; });
+    this.#readGates.set(normalized, { remaining: reads, entered: signalEntered, wait });
+    return Object.freeze({ entered, release });
+  }
+
   #afterRead(): void {
     const race = this.#afterTransformReadRace;
     if (race?.armed) {
@@ -234,6 +252,17 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
         race.mutate();
       }
     }
+  }
+
+  async #waitAfterRead(path: string): Promise<void> {
+    const normalized = normalizeVaultRelativePath(path);
+    const gate = this.#readGates.get(normalized);
+    if (!gate) return;
+    gate.remaining -= 1;
+    if (gate.remaining > 0) return;
+    this.#readGates.delete(normalized);
+    gate.entered();
+    await gate.wait;
   }
 
   primitiveFor(path: string): SourceWritePrimitive {
@@ -347,6 +376,7 @@ export class MemoryAtomicTextAccess extends MemoryTextAccess implements AtomicTe
       }
       const text = await innerReader?.();
       this.#afterRead();
+      await this.#waitAfterRead(normalized);
       return text;
     };
     const result = await access.atomicTransform(normalized, countedTransform, (enteredPrimitive, reader) => {
