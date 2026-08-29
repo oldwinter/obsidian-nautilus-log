@@ -7,6 +7,7 @@ export type ExecutionIconName =
   | "chevron-down"
   | "chevron-right"
   | "clock"
+  | "copy"
   | "external-link"
   | "focus"
   | "refresh"

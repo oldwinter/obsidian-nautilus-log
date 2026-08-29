@@ -10,6 +10,7 @@ export type ExecutionCatalog = Readonly<{
   "action.clockOut": string;
   "action.complete": string;
   "action.deleteClock": string;
+  "action.copyTaskLink": string;
   "action.openSource": string;
   "action.openActiveTask": string;
   "action.stopPomo": string;
@@ -65,9 +66,11 @@ export type ExecutionCatalog = Readonly<{
   "settings.dailyNoteFormat": string;
   "notice.applied": string;
   "notice.alreadyApplied": string;
+  "notice.taskLinkCopied": string;
   "notice.failed": string;
   "notice.sourceUnavailable": string;
   "error.refresh": string;
+  "error.copyTaskLink": string;
   "error.unconfirmed": string;
   "error.executionInactive": string;
   "error.overlap": string;
@@ -110,6 +113,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "action.clockOut": "Clock out",
   "action.complete": "Complete",
   "action.deleteClock": "Delete current CLOCK",
+  "action.copyTaskLink": "Copy task link",
   "action.openSource": "Open source",
   "action.openActiveTask": "Open active task",
   "action.stopPomo": "Stop POMO",
@@ -165,9 +169,11 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "Daily Note date format",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
+  "notice.taskLinkCopied": "Active task link copied.",
   "notice.failed": "The change was not applied.",
   "notice.sourceUnavailable": "Source navigation is unavailable.",
   "error.refresh": "Timing data could not be refreshed.",
+  "error.copyTaskLink": "The active task link could not be copied.",
   "error.unconfirmed": "The graph change could not be confirmed.",
   "error.executionInactive": "Actual Time Tracking is no longer active.",
   "error.overlap": "Legacy overlapping CLOCK records could not be reconciled.",

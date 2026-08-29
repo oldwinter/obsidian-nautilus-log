@@ -1,5 +1,6 @@
 import {
   ItemView,
+  Notice,
   setIcon,
   type App,
   type IconName,
@@ -12,6 +13,7 @@ import {
 } from "../ui/execution/active-task-view";
 import type { ExecutionIconName, ExecutionMessages } from "../ui/execution/shared-controls";
 import type { SourceTaskReference } from "./source-navigation";
+import type { TaskLinkCopyResult } from "./task-link";
 
 export const ACTIVE_TASK_VIEW_TYPE = "spiral-day-active-task";
 
@@ -22,6 +24,7 @@ export interface ActiveTaskViewDependencies {
   readonly messages: ExecutionMessages;
   readonly subscribeLocale?: (listener: () => void) => () => void;
   readonly openSource: (target: SourceTaskReference) => void | Promise<void>;
+  readonly copyLink: (target: SourceTaskReference, label: string) => TaskLinkCopyResult | Promise<TaskLinkCopyResult>;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -30,6 +33,7 @@ const ICONS = Object.freeze({
   "chevron-down": "chevron-down",
   "chevron-right": "chevron-right",
   clock: "clock",
+  copy: "copy",
   "external-link": "external-link",
   focus: "focus",
   refresh: "refresh-cw",
@@ -102,6 +106,17 @@ export class SpiralDayActiveTaskView extends ItemView {
           ownerId: focused.ownerId,
           sourceOrder: focused.sourceOrder,
         })).catch((error: unknown) => this.#dependencies.onError?.(error));
+      },
+      onCopyLink: () => {
+        if (!focused) return;
+        void Promise.resolve(this.#dependencies.copyLink({
+          path: focused.path,
+          ownerId: focused.ownerId,
+          sourceOrder: focused.sourceOrder,
+        }, focused.label)).then((result) => {
+          const key = result.kind === "copied" ? "notice.taskLinkCopied" : "error.copyTaskLink";
+          new Notice(this.#dependencies.messages.t("execution", key), result.kind === "copied" ? 3_000 : 5_000);
+        }).catch((error: unknown) => this.#dependencies.onError?.(error));
       },
     });
   }

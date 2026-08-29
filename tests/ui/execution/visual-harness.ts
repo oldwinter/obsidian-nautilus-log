@@ -177,6 +177,7 @@ function renderActive(): void {
     messages,
     renderIcon,
     onOpenSource: () => undefined,
+    onCopyLink: () => undefined,
   });
 }
 

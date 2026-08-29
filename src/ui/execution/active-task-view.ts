@@ -13,6 +13,7 @@ export interface ActiveTaskSurfaceOptions {
   readonly messages: ExecutionMessages;
   readonly renderIcon: ExecutionIconRenderer;
   readonly onOpenSource: () => void;
+  readonly onCopyLink: () => void;
 }
 
 export function updateActiveTaskElapsed(
@@ -77,17 +78,27 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     label: options.messages.t("execution", "action.openSource"),
     icon: "external-link",
     renderIcon: options.renderIcon,
-    className: "spiral-day-active-task__open",
+    className: "spiral-day-active-task__action spiral-day-active-task__open",
     onActivate: options.onOpenSource,
   });
+  const copy = executionIconButton({
+    document: root.ownerDocument,
+    label: options.messages.t("execution", "action.copyTaskLink"),
+    icon: "copy",
+    renderIcon: options.renderIcon,
+    className: "spiral-day-active-task__action spiral-day-active-task__copy",
+    onActivate: options.onCopyLink,
+  });
+  const actions = executionElement(root.ownerDocument, "div", "spiral-day-active-task__actions");
+  actions.append(open, copy);
   const hint = executionElement(root.ownerDocument, "p", "spiral-day-active-task__hint");
   hint.textContent = options.messages.t("execution", "active.keyboardHint");
   article.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
+    if (event.target !== article || (event.key !== "Enter" && event.key !== " ")) return;
     event.preventDefault();
     options.onOpenSource();
   });
-  article.append(title, timing, open, hint);
+  article.append(title, timing, actions, hint);
   root.append(article);
   updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
 }
