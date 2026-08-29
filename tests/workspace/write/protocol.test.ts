@@ -2315,9 +2315,14 @@ test("quoted orphan Delete distinguishes attached content from quote and list bo
       expectedCode: "clock-has-attached-content",
     },
     {
+      name: "zero-indent-lazy-continuation",
+      source: `# Quoted orphan\n> - ${running}\nlazy continuation\n`,
+      expectedCode: "clock-has-attached-content",
+    },
+    {
       name: "quote-exit",
-      source: `# Quoted orphan\n> - ${running}\nOutside quote\n`,
-      expectedAfter: "# Quoted orphan\nOutside quote\n",
+      source: `# Quoted orphan\n> - ${running}\n\nOutside quote\n`,
+      expectedAfter: "# Quoted orphan\n\nOutside quote\n",
     },
     {
       name: "same-depth-sibling",

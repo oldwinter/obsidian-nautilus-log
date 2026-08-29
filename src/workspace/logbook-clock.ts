@@ -717,9 +717,9 @@ export function clockHasAttachedContent(source: string, clock: LogbookClock): bo
     const line = lines[index]!;
     const container = markdownContainerContent(line.text);
     if (container.quoteDepth < clockContainer.quoteDepth) {
-      if (/^[ \t]*$/.test(container.content)) return false;
-      const lazyIndent = indentationWidth(/^([ \t]*)/.exec(container.content)![1]!);
-      return lazyIndent >= contentIndent;
+      if (separatedByBlank || /^[ \t]*$/.test(container.content)) return false;
+      if (LIST_ITEM.test(container.content) || structuralBlockStarts(container.content)) return false;
+      return true;
     }
     if (container.quoteDepth > clockContainer.quoteDepth) return true;
     if (/^[ \t]*$/.test(container.content)) {
