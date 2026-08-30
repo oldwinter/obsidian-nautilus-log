@@ -262,7 +262,7 @@
 .spiral-day-execution__icon-button,
 .spiral-day-execution__primary-action,
 .spiral-day-execution__secondary-action,
-.spiral-day-active-task__open {
+.spiral-day-active-task__action {
   align-items: center;
   border: 1px solid transparent;
   border-radius: 5px;
@@ -276,7 +276,7 @@
 
 .spiral-day-execution__icon-button,
 .spiral-day-execution__secondary-action,
-.spiral-day-active-task__open {
+.spiral-day-active-task__action {
   background: transparent;
   color: var(--text-muted, #626b78);
 }
@@ -289,7 +289,7 @@
 
 .spiral-day-execution__icon-button:hover:not(:disabled),
 .spiral-day-execution__secondary-action:hover:not(:disabled),
-.spiral-day-active-task__open:hover:not(:disabled) {
+.spiral-day-active-task__action:hover:not(:disabled) {
   background: var(--spiral-day-execution-hover);
   border-color: var(--spiral-day-execution-border);
   color: var(--text-normal, #252a32);
@@ -527,8 +527,11 @@
   margin-top: 10px;
 }
 
-.spiral-day-active-task__open {
+.spiral-day-active-task__actions {
+  display: flex;
+  gap: 6px;
   margin-top: 9px;
+  min-height: 32px;
 }
 
 .spiral-day-active-task__details {
@@ -553,7 +556,7 @@
   .spiral-day-execution__icon-button,
   .spiral-day-execution__primary-action,
   .spiral-day-execution__secondary-action,
-  .spiral-day-active-task__open {
+  .spiral-day-active-task__action {
     flex-basis: 44px;
     height: 44px;
     width: 44px;

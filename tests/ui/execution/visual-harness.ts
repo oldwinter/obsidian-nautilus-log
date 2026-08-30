@@ -159,7 +159,7 @@ function renderIcon(element: HTMLElement, icon: string): void {
   glyph.setAttribute("aria-hidden", "true");
   glyph.textContent = ({
     check: "✓", clock: "◷", "external-link": "↗", square: "■", timer: "◴", trash: "×", x: "×",
-    "chevron-down": "⌄", "chevron-right": "›", focus: "◎", refresh: "↻",
+    "chevron-down": "⌄", "chevron-right": "›", copy: "⧉", focus: "◎", refresh: "↻",
   } as Record<string, string>)[icon] ?? "·";
   element.replaceChildren(glyph);
 }
@@ -177,6 +177,7 @@ function renderActive(): void {
     messages,
     renderIcon,
     onOpenSource: () => undefined,
+    onCopyLink: () => undefined,
   });
 }
 

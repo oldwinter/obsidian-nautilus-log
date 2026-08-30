@@ -14,6 +14,7 @@ const ICONS = Object.freeze({
   "chevron-down": "chevron-down",
   "chevron-right": "chevron-right",
   clock: "clock",
+  copy: "copy",
   "external-link": "external-link",
   focus: "focus",
   refresh: "refresh-cw",

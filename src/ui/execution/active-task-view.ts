@@ -13,6 +13,7 @@ export interface ActiveTaskSurfaceOptions {
   readonly messages: ExecutionMessages;
   readonly renderIcon: ExecutionIconRenderer;
   readonly onOpenSource: () => void;
+  readonly onCopyLink: () => void;
 }
 
 export type ActiveTaskSurfaceMode = "active" | "idle" | "pomo" | "unavailable";
@@ -110,10 +111,20 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     label: options.messages.t("execution", "action.openSource"),
     icon: "external-link",
     renderIcon: options.renderIcon,
-    className: "spiral-day-active-task__open",
+    className: "spiral-day-active-task__action spiral-day-active-task__open",
     onActivate: options.onOpenSource,
   });
-  article.append(title, timing, open);
+  const copy = executionIconButton({
+    document: root.ownerDocument,
+    label: options.messages.t("execution", "action.copyTaskLink"),
+    icon: "copy",
+    renderIcon: options.renderIcon,
+    className: "spiral-day-active-task__action spiral-day-active-task__copy",
+    onActivate: options.onCopyLink,
+  });
+  const actions = executionElement(root.ownerDocument, "div", "spiral-day-active-task__actions");
+  actions.append(open, copy);
+  article.append(title, timing, actions);
   root.append(article);
   updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
 }

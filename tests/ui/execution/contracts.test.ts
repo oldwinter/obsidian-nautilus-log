@@ -147,7 +147,7 @@ test("active task surface uses explicit commands instead of a focusable article 
   const activeTask = await readFile("src/ui/execution/active-task-view.ts", "utf8");
   assert.doesNotMatch(activeTask, /article\.tabIndex/);
   assert.doesNotMatch(activeTask, /keyboardHint/);
-  assert.match(activeTask, /className: "spiral-day-active-task__open"/);
+  assert.match(activeTask, /className: "spiral-day-active-task__action spiral-day-active-task__open"/);
 });
 
 test("unavailable and working execution states disable mutation controls", async () => {
@@ -170,6 +170,22 @@ test("active Timing exposes the singleton Active Task view without coupling it t
   assert.match(timingView, /messages\.t\("execution", "action\.openActiveTask"\)/);
   assert.match(timingView, /actions\.append\(openActiveTask, clockOut, complete, remove\)/);
   assert.match(main, /openActiveTask: async \(\) => \{\s*await openActiveTaskView\(this\.app\);/);
+});
+
+test("Active Task copy links use an explicit accessible action in narrow sidebars", async () => {
+  const [surface, activeTask, styles, main] = await Promise.all([
+    readFile("src/ui/execution/active-task-view.ts", "utf8"),
+    readFile("src/adapters/active-task-view.ts", "utf8"),
+    readFile("styles/execution.css", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(surface, /messages\.t\("execution", "action\.copyTaskLink"\)/);
+  assert.match(surface, /className: "spiral-day-active-task__action spiral-day-active-task__copy"/);
+  assert.doesNotMatch(surface, /article\.addEventListener\("keydown"/);
+  assert.match(activeTask, /"notice\.taskLinkCopied" : "error\.copyTaskLink"/);
+  assert.match(styles, /\.spiral-day-active-task__actions \{\s*display: flex;\s*gap: 6px;/);
+  assert.match(styles, /@media \(pointer: coarse\)[\s\S]*?\.spiral-day-active-task__action \{[\s\S]*?height: 44px;/);
+  assert.match(main, /copyLink: \(target, label\) => copyTaskMarkdownLink\(\{/);
 });
 
 test("Recent rebuilds after host invalidation and reaches the panel as a projected subscription", async () => {

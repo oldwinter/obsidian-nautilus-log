@@ -30,6 +30,7 @@ import {
   type SourceLocationResult,
   type SourceTaskReference,
 } from "./adapters/source-navigation";
+import { copyTaskMarkdownLink } from "./adapters/task-link";
 import { calendarDayBounds, type LogicalDate } from "./core/day";
 import type { EpochInterval } from "./core/history";
 import type { ReviewClock } from "./core/review";
@@ -273,6 +274,11 @@ export default class SpiralDayPlugin extends Plugin {
       openSource: async (target) => {
         await this.#requireNavigator().openTask(target);
       },
+      copyLink: (target, label) => copyTaskMarkdownLink({
+        app: this.app,
+        target,
+        label,
+      }),
       onError: (error) => this.#reportError(error),
     }));
     this.addRibbonIcon("shell", "Open Spiral Day", () => {
