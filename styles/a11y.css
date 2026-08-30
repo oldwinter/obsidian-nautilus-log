@@ -63,6 +63,26 @@
   overflow-wrap: anywhere;
 }
 
+@media (pointer: coarse) {
+  .spiral-day-planner__icon-button {
+    block-size: 44px;
+    flex-basis: 44px;
+    inline-size: 44px;
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+
+  .spiral-day-planner__controls {
+    grid-auto-columns: 44px;
+    height: 44px;
+  }
+
+  .spiral-day-planner__disclosure-summary,
+  .spiral-day-planner__interactive-item {
+    min-block-size: 44px;
+  }
+}
+
 .spiral-day-planner__interactive-item-title,
 .spiral-day-planner__row-title,
 .spiral-day-planner__row-meta {

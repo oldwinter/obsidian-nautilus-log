@@ -63,6 +63,7 @@ export interface ExecutionPanelSurface {
 
 const DELETE_CONFIRMATION_WINDOW_MS = 2_500;
 let intentSequence = 0;
+let panelSequence = 0;
 
 function intentId(prefix: string, now: number): string {
   intentSequence += 1;
@@ -109,10 +110,15 @@ export function mountExecutionPanel(
     trigger.tabIndex = 0;
   }
   const popover = executionElement(document, "section", "spiral-day-execution");
+  panelSequence += 1;
+  popover.id = `spiral-day-execution-dialog-${panelSequence}`;
   popover.hidden = true;
   popover.setAttribute("role", "dialog");
   popover.setAttribute("aria-modal", "false");
   popover.setAttribute("aria-label", options.messages.t("execution", "surface.name"));
+  trigger.setAttribute("aria-controls", popover.id);
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-haspopup", "dialog");
 
   const header = executionElement(document, "header", "spiral-day-execution__header");
   const identity = executionElement(document, "button", "spiral-day-execution__identity");
@@ -156,22 +162,40 @@ export function mountExecutionPanel(
   let opened = false;
   let destroyed = false;
   let timer: number | undefined;
+  let deleteTimer: number | undefined;
   let deleteActivation: { readonly key: string; readonly epochMs: number } | undefined;
   const pending = new Set<string>();
   const review = port.createReviewSurface?.(reviewPanel);
 
-  const showFeedback = (next: ExecutionPanelFeedback): void => {
+  const showFeedback = (next: ExecutionPanelFeedback, kind?: string): void => {
     feedback.hidden = false;
     feedback.dataset.level = next.level;
+    if (kind) feedback.dataset.kind = kind;
+    else delete feedback.dataset.kind;
     feedback.textContent = next.message;
     live.textContent = next.message;
   };
 
+  const clearDeleteActivation = (clearFeedback = true): void => {
+    deleteActivation = undefined;
+    delete popover.dataset.deleteArmed;
+    if (deleteTimer !== undefined) {
+      document.defaultView?.clearTimeout(deleteTimer);
+      deleteTimer = undefined;
+    }
+    if (clearFeedback && feedback.dataset.kind === "delete-confirmation") {
+      feedback.hidden = true;
+      feedback.textContent = "";
+      delete feedback.dataset.kind;
+    }
+  };
+
   const updateTrigger = (): void => {
+    const surfaceName = options.messages.t("execution", "surface.name");
+    trigger.setAttribute("aria-label", surfaceName);
     if (!execution) return;
     trigger.dataset.state = execution.execution.kind;
     trigger.setAttribute("aria-expanded", String(opened));
-    trigger.setAttribute("aria-label", options.messages.t("execution", "surface.name"));
     let pomoStartEpochMs: number | null = null;
     if (execution.execution.kind === "active" || execution.execution.kind === "forgotten") {
       pomoStartEpochMs = execution.execution.taskPomoStartEpochMs;
@@ -179,11 +203,16 @@ export function mountExecutionPanel(
       pomoStartEpochMs = execution.standalonePomoStartEpochMs;
     }
     if (execution.focused) {
-      trigger.dataset.elapsed = formatExecutionDuration(port.now() - execution.focused.clock.startEpochMs);
-      trigger.dataset.threads = "1";
+      const elapsed = formatExecutionDuration(port.now() - execution.focused.clock.startEpochMs);
+      trigger.dataset.elapsed = elapsed;
+      trigger.dataset.threads = options.messages.t("execution", "timing.active");
+      trigger.setAttribute("aria-label", `${surfaceName}: ${execution.focused.label}, ${elapsed}`);
     } else if (execution.standalonePomoStartEpochMs !== null) {
-      trigger.dataset.elapsed = formatExecutionDuration(port.now() - execution.standalonePomoStartEpochMs);
-      trigger.dataset.threads = "POMO";
+      const elapsed = formatExecutionDuration(port.now() - execution.standalonePomoStartEpochMs);
+      const pomo = options.messages.t("execution", "timing.pomo");
+      trigger.dataset.elapsed = elapsed;
+      trigger.dataset.threads = pomo;
+      trigger.setAttribute("aria-label", `${surfaceName}: ${pomo}, ${elapsed}`);
     } else {
       delete trigger.dataset.elapsed;
       delete trigger.dataset.threads;
@@ -224,6 +253,7 @@ export function mountExecutionPanel(
     if (pending.has(key) || destroyed) return;
     feedback.hidden = true;
     feedback.textContent = "";
+    delete feedback.dataset.kind;
     pending.add(key);
     render();
     void port.dispatch(input).then((outcome) => {
@@ -245,15 +275,21 @@ export function mountExecutionPanel(
     if (!deleteActivation
       || deleteActivation.key !== clock.targetKey
       || now - deleteActivation.epochMs > DELETE_CONFIRMATION_WINDOW_MS) {
+      clearDeleteActivation(false);
       deleteActivation = Object.freeze({ key: clock.targetKey, epochMs: now });
+      popover.dataset.deleteArmed = "true";
       showFeedback({
         message: options.messages.t("execution", "timing.deleteConfirm"),
         level: "warning",
-      });
+      }, "delete-confirmation");
+      const activation = deleteActivation;
+      deleteTimer = document.defaultView?.setTimeout(() => {
+        if (deleteActivation === activation) clearDeleteActivation(true);
+      }, DELETE_CONFIRMATION_WINDOW_MS);
       return;
     }
     const first = deleteActivation;
-    deleteActivation = undefined;
+    clearDeleteActivation(false);
     dispatch({
       type: "delete-clock",
       intentId: intentId("delete-clock", now),
@@ -383,10 +419,10 @@ export function mountExecutionPanel(
       }
     },
     close(restoreFocus = false) {
+      clearDeleteActivation(true);
       if (!opened) return;
       opened = false;
       popover.hidden = true;
-      deleteActivation = undefined;
       if (timer !== undefined) {
         document.defaultView?.clearInterval(timer);
         timer = undefined;
@@ -403,6 +439,7 @@ export function mountExecutionPanel(
       tabs.setLabel("timing", options.messages.t("execution", "tab.timing"));
       tabs.setLabel("plan", options.messages.t("execution", "tab.plan"));
       tabs.setLabel("review", options.messages.t("execution", "tab.review"));
+      clearDeleteActivation(true);
       feedback.hidden = true;
       feedback.textContent = "";
       render();
