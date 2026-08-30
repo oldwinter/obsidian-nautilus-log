@@ -55,6 +55,17 @@ function taskKey(item: PlanItem<RuntimePlanItemSource>): string {
   return item.source.blockId ?? `${item.source.path}:${item.sourceOrder}`;
 }
 
+export function isCurrentExecutionItem(
+  item: PlanItem<RuntimePlanItemSource>,
+  execution: ExecutionApplicationSnapshot,
+): boolean {
+  const focused = execution.focused;
+  return focused !== undefined
+    && focused.path === item.source.path
+    && focused.ownerId === item.source.blockId
+    && focused.sourceOrder === item.source.sourceOrder;
+}
+
 function appendTaskRow(
   parent: HTMLElement,
   item: PlanItem<RuntimePlanItemSource>,
@@ -63,10 +74,11 @@ function appendTaskRow(
   range?: readonly [number, number],
 ): void {
   const key = taskKey(item);
+  const current = isCurrentExecutionItem(item, options.execution);
   const row = executionElement(parent.ownerDocument, "li", "spiral-day-execution__plan-row");
   row.dataset.kind = item.kind;
   row.dataset.urgent = String(item.urgent);
-  row.dataset.current = String(options.execution.focused?.ownerId === item.source.blockId);
+  row.dataset.current = String(current);
   const body = executionElement(parent.ownerDocument, "div", "spiral-day-execution__plan-row-body");
   const title = executionElement(parent.ownerDocument, "button", "spiral-day-execution__task-title");
   title.type = "button";
@@ -78,7 +90,7 @@ function appendTaskRow(
   }, event.shiftKey ? "sidebar" : "main"));
   body.append(title);
   const metadata = executionElement(parent.ownerDocument, "span", "spiral-day-execution__row-meta");
-  if (options.execution.focused?.ownerId === item.source.blockId) {
+  if (current) {
     metadata.textContent = options.messages.t("execution", "timing.active");
   } else if (range) {
     metadata.textContent = options.messages.t("execution", "plan.range", {
@@ -98,18 +110,6 @@ function appendTaskRow(
   const actions = executionElement(parent.ownerDocument, "div", "spiral-day-execution__row-actions");
   if (item.kind === "flexible-task" && item.status === "open" && item.executionEligible) {
     const target = targetReference(item, projection);
-    const clock = executionIconButton({
-      document: parent.ownerDocument,
-      label: options.messages.t("execution", "action.clockIn"),
-      icon: "clock",
-      renderIcon: options.renderIcon,
-      className: "spiral-day-execution__icon-button",
-      onActivate: () => options.dispatch({
-        type: "clock-in",
-        intentId: `clock-in-${key}-${options.nowEpochMs}`,
-        target,
-      }),
-    });
     const progress = executionIconButton({
       document: parent.ownerDocument,
       label: options.messages.t("execution", "action.complete"),
@@ -123,11 +123,26 @@ function appendTaskRow(
       }),
     });
     const pending = options.pending.has(`task:${key}`);
-    clock.disabled = pending || options.execution.writeBlocked;
     progress.disabled = pending || options.execution.writeBlocked;
-    clock.setAttribute("aria-busy", String(pending));
     progress.setAttribute("aria-busy", String(pending));
-    actions.append(clock, progress);
+    if (!current) {
+      const clock = executionIconButton({
+        document: parent.ownerDocument,
+        label: options.messages.t("execution", "action.clockIn"),
+        icon: "clock",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__icon-button",
+        onActivate: () => options.dispatch({
+          type: "clock-in",
+          intentId: `clock-in-${key}-${options.nowEpochMs}`,
+          target,
+        }),
+      });
+      clock.disabled = pending || options.execution.writeBlocked;
+      clock.setAttribute("aria-busy", String(pending));
+      actions.append(clock);
+    }
+    actions.append(progress);
   }
   row.append(body, actions);
   parent.append(row);

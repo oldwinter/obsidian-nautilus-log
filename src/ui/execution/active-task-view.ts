@@ -15,6 +15,15 @@ export interface ActiveTaskSurfaceOptions {
   readonly onOpenSource: () => void;
 }
 
+export type ActiveTaskSurfaceMode = "active" | "idle" | "pomo" | "unavailable";
+
+export function activeTaskSurfaceMode(snapshot: ExecutionApplicationSnapshot): ActiveTaskSurfaceMode {
+  if (snapshot.status === "degraded" || snapshot.status === "stopped") return "unavailable";
+  if (snapshot.focused) return "active";
+  if (snapshot.standalonePomoStartEpochMs !== null) return "pomo";
+  return "idle";
+}
+
 export function updateActiveTaskElapsed(
   root: HTMLElement,
   snapshot: ExecutionApplicationSnapshot,
@@ -22,14 +31,15 @@ export function updateActiveTaskElapsed(
 ): void {
   const focused = snapshot.focused;
   const elapsed = root.querySelector<HTMLTimeElement>(".spiral-day-active-task__elapsed");
-  if (!focused || !elapsed) return;
-  const elapsedMs = Math.max(0, nowEpochMs - focused.clock.startEpochMs);
+  const startEpochMs = focused?.clock.startEpochMs ?? snapshot.standalonePomoStartEpochMs;
+  if (startEpochMs === null || !elapsed) return;
+  const elapsedMs = Math.max(0, nowEpochMs - startEpochMs);
   elapsed.dateTime = `PT${Math.floor(elapsedMs / 1_000)}S`;
   elapsed.textContent = formatExecutionDuration(elapsedMs);
-  const pomoStart = snapshot.execution.kind === "active" || snapshot.execution.kind === "forgotten"
+  const pomoStart = focused && (snapshot.execution.kind === "active" || snapshot.execution.kind === "forgotten")
     ? snapshot.execution.taskPomoStartEpochMs
-    : null;
-  if (snapshot.execution.kind === "forgotten"
+    : snapshot.standalonePomoStartEpochMs;
+  if ((focused && snapshot.execution.kind === "forgotten")
     || (pomoStart !== null
       && snapshot.pomoThresholdMinutes > 0
       && nowEpochMs - pomoStart >= snapshot.pomoThresholdMinutes * 60_000)) {
@@ -43,7 +53,8 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
   root.replaceChildren();
   root.classList.add("spiral-day-active-task");
   const focused = options.snapshot.focused;
-  if (!focused || options.snapshot.status === "degraded" || options.snapshot.status === "stopped") {
+  const mode = activeTaskSurfaceMode(options.snapshot);
+  if (mode === "unavailable") {
     root.dataset.state = "unavailable";
     const state = executionElement(root.ownerDocument, "div", "spiral-day-active-task__unavailable");
     const title = executionElement(root.ownerDocument, "h2");
@@ -61,9 +72,31 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     return;
   }
 
+  if (mode === "idle" || mode === "pomo") {
+    root.dataset.state = mode;
+    const state = executionElement(root.ownerDocument, "section", "spiral-day-active-task__empty");
+    const title = executionElement(root.ownerDocument, "h2");
+    title.textContent = options.messages.t("execution", mode === "pomo" ? "timing.pomo" : "timing.idle");
+    const detail = executionElement(root.ownerDocument, "p");
+    detail.textContent = options.messages.t("execution", "timing.noActive");
+    state.append(title, detail);
+    if (mode === "pomo") {
+      const timing = executionElement(root.ownerDocument, "div", "spiral-day-active-task__timing");
+      const timingLabel = executionElement(root.ownerDocument, "span");
+      timingLabel.textContent = options.messages.t("execution", "active.elapsed");
+      const elapsed = executionElement(root.ownerDocument, "time", "spiral-day-active-task__elapsed");
+      timing.append(timingLabel, elapsed);
+      state.append(timing);
+    }
+    root.append(state);
+    updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
+    return;
+  }
+
+  if (!focused) return;
+
   root.dataset.state = options.snapshot.execution.kind;
   const article = executionElement(root.ownerDocument, "article", "spiral-day-active-task__content");
-  article.tabIndex = 0;
   article.setAttribute("aria-label", `${options.messages.t("execution", "active.title")}: ${focused.label}`);
   const title = executionElement(root.ownerDocument, "h2");
   title.textContent = focused.label;
@@ -80,14 +113,7 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     className: "spiral-day-active-task__open",
     onActivate: options.onOpenSource,
   });
-  const hint = executionElement(root.ownerDocument, "p", "spiral-day-active-task__hint");
-  hint.textContent = options.messages.t("execution", "active.keyboardHint");
-  article.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    options.onOpenSource();
-  });
-  article.append(title, timing, open, hint);
+  article.append(title, timing, open);
   root.append(article);
   updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
 }

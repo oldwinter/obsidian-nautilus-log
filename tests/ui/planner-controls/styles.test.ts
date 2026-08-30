@@ -153,6 +153,7 @@ test("TC-OBS-A11Y-001-002 a11y layer separates focus, stabilizes controls, and r
   assert.match(css, /0 0 0 4px var\(--spiral-day-focus\)/);
   assert.match(css, /block-size: 32px/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /@media \(pointer: coarse\)[\s\S]*block-size: 44px/);
   assert.match(css, /\[data-reduced-motion="true"\]/);
   assert.match(css, /animation: none !important/);
   assert.match(css, /transition: none !important/);

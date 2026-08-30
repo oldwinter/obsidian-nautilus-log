@@ -18,10 +18,12 @@ test("UP-VIS-05 styles preserve semantic tokens, exact breakpoints, focus, and r
   }
   assert.match(css, /@container spiral-day-planner \(max-width: 520px\)/);
   assert.match(css, /@container spiral-day-planner \(max-width: 360px\)/);
-  assert.match(css, /max-height: 48vh/);
+  assert.match(css, /max-height: min\(58vh, 560px\)/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /prefers-reduced-motion: reduce/);
-  assert.match(css, /opacity: 0\.38/);
+  assert.match(css, /\.spiral-day-planner__collapsed-control[\s\S]*margin-inline-start: auto/);
+  assert.match(css, /\.spiral-day-planner__target\[role="button"\][\s\S]*cursor: pointer/);
+  assert.match(css, /max-width: min\(252px, calc\(100vw - 24px\)\)/);
   assert.doesNotMatch(css, /external-label\[data-tone="completed"\][\s\S]*?opacity: 0\.72/);
   assert.match(css, /var\(--spiral-day-border, var\(--background-modifier-border/);
 });

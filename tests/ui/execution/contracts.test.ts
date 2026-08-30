@@ -5,6 +5,21 @@ import test from "node:test";
 import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
 import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolver";
+import type { PlanItem } from "../../../src/core/model";
+import type { ExecutionApplicationSnapshot } from "../../../src/runtime/execution/application";
+import type { RuntimePlanItemSource } from "../../../src/runtime/projection-runtime";
+import { activeTaskSurfaceMode } from "../../../src/ui/execution/active-task-view";
+import { isCurrentExecutionItem } from "../../../src/ui/execution/plan-view";
+
+function snapshot(
+  overrides: Partial<ExecutionApplicationSnapshot> = {},
+): ExecutionApplicationSnapshot {
+  return {
+    status: "ready",
+    standalonePomoStartEpochMs: null,
+    ...overrides,
+  } as ExecutionApplicationSnapshot;
+}
 
 test("execution locale catalogs have exact keys and switch without fallback", () => {
   assert.deepEqual(Object.keys(enExecution).sort(), Object.keys(zhCNExecution).sort());
@@ -34,8 +49,46 @@ test("non-button ribbon triggers expose keyboard activation and focus return", a
   const panel = await readFile("src/ui/execution/panel.ts", "utf8");
   assert.match(panel, /trigger\.setAttribute\("role", "button"\)/);
   assert.match(panel, /trigger\.tabIndex = 0/);
+  assert.match(panel, /trigger\.setAttribute\("aria-controls", popover\.id\)/);
+  assert.match(panel, /trigger\.setAttribute\("aria-haspopup", "dialog"\)/);
+  assert.match(panel, /execution\.focused\.label/);
   assert.match(panel, /event\.key !== "Enter" && event\.key !== " "/);
   assert.match(panel, /if \(restoreFocus\) trigger\.focus\(\)/);
+});
+
+test("active task surface distinguishes idle, standalone POMO, active, and unavailable", () => {
+  assert.equal(activeTaskSurfaceMode(snapshot()), "idle");
+  assert.equal(activeTaskSurfaceMode(snapshot({ standalonePomoStartEpochMs: 1_000 })), "pomo");
+  assert.equal(activeTaskSurfaceMode(snapshot({ focused: {} as never })), "active");
+  assert.equal(activeTaskSurfaceMode(snapshot({ status: "degraded" })), "unavailable");
+  assert.equal(activeTaskSurfaceMode(snapshot({ status: "stopped", focused: {} as never })), "unavailable");
+});
+
+test("plan marks only the exact focused task as current", () => {
+  const focused = {
+    ownerId: "task-1",
+    path: "Daily/2026-08-30.md",
+    sourceOrder: 2,
+  } as NonNullable<ExecutionApplicationSnapshot["focused"]>;
+  const item = {
+    source: { path: focused.path, blockId: focused.ownerId, sourceOrder: focused.sourceOrder },
+  } as PlanItem<RuntimePlanItemSource>;
+  const execution = snapshot({ focused });
+  assert.equal(isCurrentExecutionItem(item, execution), true);
+  assert.equal(isCurrentExecutionItem({
+    source: { ...item.source, sourceOrder: 3 },
+  } as PlanItem<RuntimePlanItemSource>, execution), false);
+  assert.equal(isCurrentExecutionItem({
+    source: { ...item.source, blockId: "task-2" },
+  } as PlanItem<RuntimePlanItemSource>, execution), false);
+});
+
+test("delete confirmation expires and clears its armed visual state", async () => {
+  const panel = await readFile("src/ui/execution/panel.ts", "utf8");
+  assert.match(panel, /const DELETE_CONFIRMATION_WINDOW_MS = 2_500/);
+  assert.match(panel, /popover\.dataset\.deleteArmed = "true"/);
+  assert.match(panel, /setTimeout\(\(\) => \{/);
+  assert.match(panel, /clearDeleteActivation\(true\)/);
 });
 
 test("execution styles cover interaction states and the build discovers every styles CSS file", async () => {
@@ -48,6 +101,10 @@ test("execution styles cover interaction states and the build discovers every st
     ".spiral-day-execution__tab[aria-selected=\"true\"]",
     ".spiral-day-active-task-view",
     ".spiral-day-execution-pomo-stop[hidden]",
+    ".spiral-day-execution[data-delete-armed=\"true\"]",
+    ".theme-dark .spiral-day-execution-trigger",
+    "button[aria-busy=\"true\"]",
+    "@media (pointer: coarse)",
     "@media (prefers-reduced-motion: reduce)",
     "@media (forced-colors: active)",
   ]) assert.equal(styles.includes(selector), true, selector);
@@ -77,6 +134,20 @@ test("plan refresh preserves the unscheduled disclosure state", async () => {
   const planView = await readFile("src/ui/execution/plan-view.ts", "utf8");
   assert.match(planView, /querySelector<HTMLDetailsElement>\("\.spiral-day-execution__unscheduled"\)/);
   assert.match(planView, /unscheduled\.open = unscheduledOpen/);
+});
+
+test("plan omits the redundant clock-in action for the current task", async () => {
+  const planView = await readFile("src/ui/execution/plan-view.ts", "utf8");
+  assert.match(planView, /const current = isCurrentExecutionItem\(item, options\.execution\)/);
+  assert.match(planView, /if \(!current\) \{[\s\S]*?type: "clock-in"/);
+  assert.match(planView, /row\.dataset\.current = String\(current\)/);
+});
+
+test("active task surface uses explicit commands instead of a focusable article shortcut", async () => {
+  const activeTask = await readFile("src/ui/execution/active-task-view.ts", "utf8");
+  assert.doesNotMatch(activeTask, /article\.tabIndex/);
+  assert.doesNotMatch(activeTask, /keyboardHint/);
+  assert.match(activeTask, /className: "spiral-day-active-task__open"/);
 });
 
 test("unavailable and working execution states disable mutation controls", async () => {
