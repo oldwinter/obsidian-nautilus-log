@@ -8,6 +8,7 @@ const entryPoints = [
   "tests/ui/planner/responsive-layout.test.ts",
   "tests/ui/planner/spiral.test.ts",
   "tests/ui/planner/styles.test.ts",
+  "tests/ui/planner/summary.test.ts",
   "tests/ui/planner/view-model.test.ts",
 ];
 

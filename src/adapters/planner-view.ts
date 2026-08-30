@@ -7,6 +7,7 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import type { LogicalDate } from "../core/day";
+import type { PlannerSummaryCopyOutcome } from "../ui/planner/summary";
 import {
   createMemoryPlannerCollapseStore,
   type PlannerCollapseStore,
@@ -28,6 +29,7 @@ export interface PlannerItemViewDependencies {
   readonly runtime: PlannerRuntimePort;
   readonly defaultLogicalDate: () => LogicalDate;
   readonly debugControl?: () => boolean;
+  readonly copySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
   readonly dispatchPlannerProgress?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly locale?: () => string;
   readonly subscribeLocale?: (listener: (locale: string) => void) => () => void;
@@ -44,6 +46,7 @@ export interface OpenPlannerViewResult {
 
 const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
   collapse: "chevron-up",
+  copy: "copy",
   debug: "bug",
   expand: "chevron-down",
   "hide-completed": "eye-off",
@@ -226,6 +229,9 @@ export class SpiralDayPlannerView extends ItemView {
           debugControl: this.#dependencies.debugControl?.() ?? false,
           instanceId,
           locale: this.#dependencies.locale?.() ?? "en",
+          ...(this.#dependencies.copySummary
+            ? { onCopySummary: this.#dependencies.copySummary }
+            : {}),
           ...(this.#dependencies.dispatchPlannerProgress
             ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }
             : {}),
