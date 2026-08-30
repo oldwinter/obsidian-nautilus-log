@@ -948,7 +948,9 @@ report("offline", "release-input-inventory", () => {
   for (const phrase of [
     "implement/issue-22-evidence",
     "fetch-depth: 0",
-    "node-version: 22.23.2",
+    "actions/checkout@v7.0.1",
+    "actions/setup-node@v7.0.0",
+    "node-version: 24.20.0",
     "node --test tests/release/*.test.mjs",
     "node scripts/release/dry-run.mjs",
     "node scripts/check-planning-docs.mjs --sha HEAD",

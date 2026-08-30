@@ -12,7 +12,8 @@ Foundation version: `0.1.0`
 ## Requirements
 
 - Obsidian desktop 1.7.7 or later
-- Node.js 18 or later for development
+- Node.js 24.20.0 LTS for development (`.node-version`)
+- npm 12.0.2 (`package.json#packageManager`)
 
 Mobile loading is intentionally disabled.
 
