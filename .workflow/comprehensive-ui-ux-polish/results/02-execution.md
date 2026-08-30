@@ -1,0 +1,46 @@
+# Packet 02-execution result
+
+## Accepted
+
+1. **P1 - Give execution semantics dark-theme-safe tokens.** The execution surface defines its own danger and warning fallbacks on `.spiral-day-execution, .spiral-day-active-task`, but the brighter dark values in `styles/theme.css` are scoped only to `.spiral-day-planner`. As rendered in dark mode, `#b42334` and `#805800` have only 2.45:1 and 2.51:1 contrast against `#202226`; this affects `.spiral-day-execution__elapsed[data-warning="true"]`, `.spiral-day-active-task__elapsed[data-warning="true"]`, `.spiral-day-execution__danger-action`, `.spiral-day-execution__feedback[data-level]`, and `.spiral-day-execution-trigger[data-warning="true"]::after`. Define shared light/dark semantic tokens for execution and use more than color alone for warnings. Sources: `styles/execution.css:1-12`, `styles/execution.css:108-123`, `styles/execution.css:215-218`, `styles/execution.css:349-364`, `styles/theme.css:20-35`.
+
+2. **P1 - Separate an intentional idle state from an unavailable Active Task state.** `renderActiveTaskSurface()` routes every `!focused` snapshot through `.spiral-day-active-task__unavailable`, so a healthy ready/idle or standalone-POMO snapshot says that the current task "could not be confirmed" and source navigation is disabled. Render a quiet empty/idle state for ready snapshots without a focused task, reserve unavailable/details for degraded or stopped data, and represent standalone POMO as timing rather than an error. Sources: `src/ui/execution/active-task-view.ts:42-61` (`!focused || status === "degraded" || status === "stopped"`), `styles/execution.css:389-398`; confirmed in the live harness after selecting Idle.
+
+3. **P1 - Keep destructive confirmation feedback synchronized with the 2.5-second contract.** The first delete activation sets `.spiral-day-execution__feedback` to "Activate again", but no timer expires the message or visually arms/disarms `.spiral-day-execution__danger-action`; `deleteActivation` is cleared only by a later request or closing the popover. After the validity window, the notice remains actionable-looking although the next activation merely starts a new window. Preserve the double-activation semantics, but add an explicit armed state on the delete control, auto-clear it and its live feedback at `DELETE_CONFIRMATION_WINDOW_MS`, and retain action order. Sources: `src/ui/execution/panel.ts:64`, `src/ui/execution/panel.ts:163-168`, `src/ui/execution/panel.ts:243-268`, `src/ui/execution/panel.ts:385-395`, `src/ui/execution/timing-view.ts:201-217`; live harness verification showed the notice still visible after 3 seconds.
+
+4. **P1 - Do not offer Clock in on the task already being timed.** `appendTaskRow()` marks the row with `data-current="true"`, but its action condition checks only flexible/open/eligible, so the current row still renders an enabled Clock in button beside Complete. The compact and desktop harness both exposed this contradiction. Keep the existing row action order for other tasks, but omit or disable Clock in for the exact current target and expose the current state in accessible text. Sources: `src/ui/execution/plan-view.ts:65-100`, `src/ui/execution/plan-view.ts:101-130`, selector `.spiral-day-execution__plan-row[data-current="true"]`.
+
+5. **P2 - Preserve simultaneous urgent and current state cues.** The urgent rule for `.spiral-day-execution__plan-row[data-urgent="true"]` is immediately overridden by the later current rule for background and border color. In the harness, the active urgent task therefore looked current but not urgent. Use independent channels, such as a current inset/marker plus an urgent edge or icon, including a compound `[data-current="true"][data-urgent="true"]` rule; do not rely on color alone. Sources: `src/ui/execution/plan-view.ts:65-69`, `styles/execution.css:297-314`.
+
+6. **P2 - Make the forgotten-timer accent actually render.** `.spiral-day-execution__current` declares only a top border, while `.spiral-day-execution__current[data-forgotten="true"]` changes `border-inline-start-color` without declaring an inline-start border width/style. The intended warning edge is therefore absent; only elapsed text and the paragraph carry the state. Add a real warning edge or inset marker and keep `.spiral-day-execution__warning` as the textual explanation. Sources: `src/ui/execution/timing-view.ts:145-162`, `src/ui/execution/timing-view.ts:219-223`, `styles/execution.css:159-184`, selector `.spiral-day-execution__current[data-forgotten="true"]`.
+
+7. **P2 - Visually distinguish pending work from write-blocked controls.** `appendPending()` and plan-row pending handling set `disabled` plus `aria-busy`, while `writeBlocked` sets only `disabled`; CSS renders every disabled button with the same 0.48 opacity and has no `[aria-busy="true"]` treatment. Users cannot tell "working" from "unavailable", and plan-row pending controls do not receive the pending title used by Timing. Add a stable busy glyph/progress treatment for `[aria-busy="true"]`, a distinct blocked treatment/reason for non-busy disabled controls, and keep dimensions fixed to avoid row shift. Sources: `src/ui/execution/timing-view.ts:39-43`, `src/ui/execution/timing-view.ts:209-216`, `src/ui/execution/plan-view.ts:125-130`, `styles/execution.css:240-253`, `styles/execution.css:286-289`.
+
+8. **P2 - Make active context available without pseudo-content or visible usage instructions.** The ribbon trigger displays elapsed/thread state only through `::after`, while `updateTrigger()` leaves its accessible name as generic "Execution"; `data-threads="1"` is also an opaque visible label. Conversely, Active Task makes the whole article a tab stop, nests a separate Open source button, and displays "Press Enter" guidance as page content. Give the trigger a dynamic accessible label with task/timer state, replace the opaque thread count with meaningful compact status, keep one clear source-opening affordance, and move the keyboard hint to accessible naming/tooltip rather than permanent body copy. Sources: `src/ui/execution/panel.ts:170-197`, `styles/execution.css:349-364`, `src/ui/execution/active-task-view.ts:64-90`, selectors `.spiral-day-execution-trigger[data-elapsed]`, `.spiral-day-active-task__content`, and `.spiral-day-active-task__hint`.
+
+## Rejected
+
+- Rejected card-heavy or modal-within-popover redesigns. The appropriate direction is a quiet Obsidian-native command surface with stronger hierarchy, not decorative containers.
+- Rejected changing the Timing action order (`Open active task`, `Clock out`, `Complete`, `Delete`) or replacing the exact double-activation delete safety contract.
+- Rejected removing roving-tab keyboard behavior, Escape-to-close/focus return, Shift-click sidebar navigation, native `details/summary`, live-region announcements, reduced-motion handling, or forced-colors support.
+- Rejected broad dependency, runtime, writer, navigation, or host-adapter changes; all recommendations are achievable within execution DOM state and styling boundaries.
+
+## Decisions
+
+- Treat Timing as the primary status/action surface, Plan as a dense scannable queue, and Active Task as a persistent at-a-glance companion. Keep their visual language consistent through shared semantic tokens, 32px fixed icon controls, tabular timer figures, and the existing 420px popover cap.
+- Use independent visual channels for current, urgent, forgotten, busy, blocked, warning, and destructive states. A state may combine with another, so selector ordering must not erase meaning.
+- Preserve compact responsive behavior. At 320px width, the Chinese Plan rows, expanded unscheduled section, and action buttons fit without horizontal overflow; polish should retain that property.
+- Keep source titles as the dominant click target and icons for familiar commands, with accessible labels and tooltips. Do not add permanent instructional copy solely to explain keyboard behavior.
+
+## Risks
+
+- The visual harness does not construct the production Review surface (`createReviewSurface` is absent), so this packet verifies only the panel's `.spiral-day-execution__empty` fallback for Review. Review-specific polish needs its owning packet/surface verification.
+- The harness approximates Obsidian host tokens and icons. Final token contrast, ribbon geometry, popover anchoring, and sidebar chrome still require real Obsidian light/dark/high-contrast validation.
+- Existing tests mostly assert source contracts and selector presence; they do not currently catch the idle/unavailable mapping, expired delete feedback, current-row Clock in action, compound urgent/current styling, or dark-mode contrast regressions.
+
+## Verification
+
+- Read-only source audit covered `styles/execution.css`, `styles/theme.css`, `styles/a11y.css`, all `src/ui/execution/**`, execution locale catalogs, Active Task host adapter, and `tests/ui/execution/**`.
+- Live visual harness checked active Timing, Plan, Review fallback, Idle/unavailable, destructive first activation and expiry, light/dark themes, English/Chinese locale, and 1280x720, 390x844, and 320x640 viewports. The 320px Chinese Plan surface had no horizontal overflow.
+- `node tests/ui/execution/run.mjs`: 27 tests passed, 0 failed.
+- No production code, tests, or screenshots were modified.
