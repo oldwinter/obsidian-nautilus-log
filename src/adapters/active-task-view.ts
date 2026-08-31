@@ -25,6 +25,7 @@ export interface ActiveTaskViewDependencies {
   readonly subscribeLocale?: (listener: () => void) => () => void;
   readonly openSource: (target: SourceTaskReference) => void | Promise<void>;
   readonly copyLink: (target: SourceTaskReference, label: string) => TaskLinkCopyResult | Promise<TaskLinkCopyResult>;
+  readonly clockOut: () => void | Promise<void>;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -49,6 +50,7 @@ export class SpiralDayActiveTaskView extends ItemView {
   #unsubscribeLocale: (() => void) | undefined;
   #timer: number | undefined;
   #snapshot: ExecutionApplicationSnapshot;
+  #clockOutPending = false;
 
   constructor(leaf: WorkspaceLeaf, dependencies: ActiveTaskViewDependencies) {
     super(leaf);
@@ -118,6 +120,27 @@ export class SpiralDayActiveTaskView extends ItemView {
           new Notice(this.#dependencies.messages.t("execution", key), result.kind === "copied" ? 3_000 : 5_000);
         }).catch((error: unknown) => this.#dependencies.onError?.(error));
       },
+      onClockOut: () => this.#clockOut(),
+    });
+  }
+
+  #clockOut(): void {
+    if (this.#clockOutPending || this.#snapshot.writeBlocked || !this.#snapshot.focused) return;
+    this.#clockOutPending = true;
+    const button = this.contentEl.querySelector<HTMLButtonElement>(".spiral-day-active-task__clock-out");
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
+    void Promise.resolve().then(() => this.#dependencies.clockOut()).catch((error: unknown) => {
+      this.#dependencies.onError?.(error);
+    }).finally(() => {
+      this.#clockOutPending = false;
+      const current = this.contentEl.querySelector<HTMLButtonElement>(".spiral-day-active-task__clock-out");
+      if (!current) return;
+      current.disabled = this.#snapshot.writeBlocked;
+      current.removeAttribute("aria-busy");
+      current.focus();
     });
   }
 

@@ -14,6 +14,7 @@ export interface ActiveTaskSurfaceOptions {
   readonly renderIcon: ExecutionIconRenderer;
   readonly onOpenSource: () => void;
   readonly onCopyLink: () => void;
+  readonly onClockOut: () => void;
 }
 
 export type ActiveTaskSurfaceMode = "active" | "idle" | "pomo" | "unavailable";
@@ -122,8 +123,17 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     className: "spiral-day-active-task__action spiral-day-active-task__copy",
     onActivate: options.onCopyLink,
   });
+  const clockOut = executionIconButton({
+    document: root.ownerDocument,
+    label: options.messages.t("execution", "action.clockOut"),
+    icon: "square",
+    renderIcon: options.renderIcon,
+    className: "spiral-day-active-task__action spiral-day-active-task__clock-out",
+    onActivate: options.onClockOut,
+  });
+  clockOut.disabled = options.snapshot.writeBlocked;
   const actions = executionElement(root.ownerDocument, "div", "spiral-day-active-task__actions");
-  actions.append(open, copy);
+  actions.append(open, copy, clockOut);
   article.append(title, timing, actions);
   root.append(article);
   updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
