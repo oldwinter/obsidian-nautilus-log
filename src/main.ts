@@ -359,6 +359,7 @@ export default class SpiralDayPlugin extends Plugin {
       });
       const port = {
         now: () => this.#requireClock().now(),
+        refresh: () => application.refresh(),
         subscribeExecution: (listener: (snapshot: ExecutionApplicationSnapshot) => void) => application.subscribe(listener),
         subscribePlan: (listener: (snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void) => this.#subscribePlan(listener),
         dispatch: (intent: ExecutionApplicationIntent) => this.#dispatchExecution(intent, false),

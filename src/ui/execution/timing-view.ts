@@ -28,6 +28,7 @@ export interface TimingViewOptions {
   readonly messages: ExecutionMessages;
   readonly renderIcon: ExecutionIconRenderer;
   readonly dispatch: (intent: ExecutionApplicationIntent) => void;
+  readonly refresh: () => void;
   readonly openActiveTask: () => void;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
@@ -79,7 +80,16 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
       : messages.t("execution", "status.stale");
     const detail = executionElement(root.ownerDocument, "p");
     detail.textContent = messages.t("execution", "error.refresh");
-    unavailable.append(heading, detail);
+    const retry = executionIconButton({
+      document: root.ownerDocument,
+      label: messages.t("execution", "action.retry"),
+      icon: "refresh",
+      renderIcon: options.renderIcon,
+      className: "spiral-day-execution__secondary-action",
+      onActivate: options.refresh,
+    });
+    appendPending(retry, options.pending.has("refresh"), messages);
+    unavailable.append(heading, detail, retry);
     section.append(unavailable);
   } else if (!focused) {
     const empty = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty");

@@ -66,6 +66,7 @@ export type ExecutionCatalog = Readonly<{
   "settings.dailyNoteFormat": string;
   "notice.applied": string;
   "notice.alreadyApplied": string;
+  "notice.refreshed": string;
   "notice.taskLinkCopied": string;
   "notice.failed": string;
   "notice.sourceUnavailable": string;
@@ -169,6 +170,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "Daily Note date format",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
+  "notice.refreshed": "Timing data refreshed.",
   "notice.taskLinkCopied": "Active task link copied.",
   "notice.failed": "The change was not applied.",
   "notice.sourceUnavailable": "Source navigation is unavailable.",

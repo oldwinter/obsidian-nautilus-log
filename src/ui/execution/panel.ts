@@ -31,6 +31,7 @@ export interface ExecutionPanelFeedback {
 
 export interface ExecutionPanelPort {
   readonly now: () => number;
+  readonly refresh: () => Promise<ExecutionApplicationSnapshot>;
   readonly subscribeExecution: (listener: (snapshot: ExecutionApplicationSnapshot) => void) => () => void;
   readonly subscribePlan: (listener: (snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void) => () => void;
   readonly dispatch: (intent: ExecutionApplicationIntent) => Promise<ExecutionCommandOutcome>;
@@ -270,6 +271,30 @@ export function mountExecutionPanel(
     });
   };
 
+  const refreshExecution = (): void => {
+    if (pending.has("refresh") || destroyed) return;
+    pending.add("refresh");
+    feedback.hidden = true;
+    feedback.textContent = "";
+    render();
+    void Promise.resolve().then(() => port.refresh()).then((snapshot) => {
+      const recovered = snapshot.status === "ready";
+      showFeedback({
+        message: options.messages.t("execution", recovered ? "notice.refreshed" : "error.refresh"),
+        level: recovered ? "info" : "warning",
+      });
+    }, (error: unknown) => {
+      showFeedback({
+        message: options.messages.t("execution", "error.refresh"),
+        level: "warning",
+      });
+      options.onError?.(error);
+    }).finally(() => {
+      pending.delete("refresh");
+      render();
+    });
+  };
+
   const requestDelete = (clock: NonNullable<ExecutionApplicationSnapshot["focused"]>["clock"]): void => {
     const now = port.now();
     if (!deleteActivation
@@ -320,6 +345,7 @@ export function mountExecutionPanel(
       messages: options.messages,
       renderIcon: options.renderIcon,
       dispatch,
+      refresh: refreshExecution,
       openActiveTask: () => void Promise.resolve(port.openActiveTask()).catch(options.onError),
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
       requestDelete,
