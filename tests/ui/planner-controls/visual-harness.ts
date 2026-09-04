@@ -1055,7 +1055,10 @@ window.issue24Harness = {
     adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
     await nextFrame();
     const completedHidden = adapterRoot.querySelector('[data-tone="completed"]') === null;
-    adapterRoot.querySelector<HTMLButtonElement>('[data-control="completed"]')?.click();
+    await (adapterView as unknown as { onClose(): Promise<void> }).onClose();
+    await (adapterView as unknown as { onOpen(): Promise<void> }).onOpen();
+    await nextFrame();
+    const completedHiddenAfterReopen = adapterRoot.querySelector('[data-tone="completed"]') === null;
     const debugOffButton = adapterRoot.querySelector<HTMLButtonElement>('[data-control="debug"]');
     const debugInitiallyOff = debugOffButton?.textContent === "debug is off"
       && debugOffButton.querySelector(".spiral-day-planner__debug-state-text")?.textContent === "debug is off"
@@ -1113,7 +1116,8 @@ window.issue24Harness = {
     }, {} as never);
     await nextFrame();
     const remountedB = adapterView.getState().plannerInstanceId === identityB
-      && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") === null;
+      && adapterRoot.querySelector(".spiral-day-planner__collapsed-control") === null
+      && adapterRoot.querySelector('[data-tone="completed"]') !== null;
     const sidebarCompactScheduleInitiallyFolded = adapterRoot
       .querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open === false;
     adapterRoot.style.width = "541px";
@@ -1148,6 +1152,7 @@ window.issue24Harness = {
       collapsedA,
       collapsedB,
       completedHidden,
+      completedHiddenAfterReopen,
       completedInitiallyVisible,
       debugDisabledAgain,
       debugEnabled,

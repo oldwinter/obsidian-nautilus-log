@@ -19,6 +19,11 @@ export interface PlannerCollapseStore {
   save(instanceId: string, collapsed: boolean): void;
 }
 
+export interface PlannerCompletedVisibilityStore {
+  load(instanceId: string): boolean | undefined;
+  save(instanceId: string, showCompleted: boolean): void;
+}
+
 export interface PlannerDebugStore {
   readonly enabled: boolean;
   setEnabled(enabled: boolean): void;
@@ -30,6 +35,14 @@ export function createMemoryPlannerCollapseStore(): PlannerCollapseStore {
   return Object.freeze({
     load: (instanceId: string) => values.get(instanceId),
     save: (instanceId: string, collapsed: boolean) => values.set(instanceId, collapsed),
+  });
+}
+
+export function createMemoryPlannerCompletedVisibilityStore(): PlannerCompletedVisibilityStore {
+  const values = new Map<string, boolean>();
+  return Object.freeze({
+    load: (instanceId: string) => values.get(instanceId),
+    save: (instanceId: string, showCompleted: boolean) => values.set(instanceId, showCompleted),
   });
 }
 
@@ -53,12 +66,14 @@ export function createPlannerDebugStore(initial = false): PlannerDebugStore {
 }
 
 const defaultCollapseStore = createMemoryPlannerCollapseStore();
+const defaultCompletedVisibilityStore = createMemoryPlannerCompletedVisibilityStore();
 const defaultDebugStore = createPlannerDebugStore();
 
 export interface PlannerControlsOptions {
   readonly debugControl?: boolean;
   readonly debugStore?: PlannerDebugStore;
   readonly collapseStore?: PlannerCollapseStore;
+  readonly completedVisibilityStore?: PlannerCompletedVisibilityStore;
   readonly instanceId: string;
   readonly onChange?: (change: PlannerControlChange) => void;
 }
@@ -77,9 +92,10 @@ export interface PlannerControlsController {
 export function createPlannerControls(options: PlannerControlsOptions): PlannerControlsController {
   if (options.instanceId.trim() === "") throw new RangeError("Planner controls require an instance ID");
   const collapseStore = options.collapseStore ?? defaultCollapseStore;
+  const completedVisibilityStore = options.completedVisibilityStore ?? defaultCompletedVisibilityStore;
   const debugStore = options.debugStore ?? defaultDebugStore;
   let collapsed = collapseStore.load(options.instanceId) ?? false;
-  let showCompleted = true;
+  let showCompleted = completedVisibilityStore.load(options.instanceId) ?? true;
   let playbackRunning = false;
   let destroyed = false;
 
@@ -109,7 +125,9 @@ export function createPlannerControls(options: PlannerControlsOptions): PlannerC
     },
     toggleCompleted() {
       if (destroyed) return false;
-      showCompleted = !showCompleted;
+      const next = !showCompleted;
+      completedVisibilityStore.save(options.instanceId, next);
+      showCompleted = next;
       publish("completed");
       return true;
     },
