@@ -102,6 +102,7 @@ test("execution styles cover interaction states and the build discovers every st
     ".spiral-day-active-task-view",
     ".spiral-day-execution-pomo-stop[hidden]",
     ".spiral-day-execution[data-delete-armed=\"true\"]",
+    "max-width: calc(100vw - 24px)",
     ".theme-dark .spiral-day-execution-trigger",
     "button[aria-busy=\"true\"]",
     "@media (pointer: coarse)",

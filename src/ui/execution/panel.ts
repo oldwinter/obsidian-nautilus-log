@@ -6,6 +6,7 @@ import type { ExecutionCommandOutcome } from "../../runtime/execution/commands";
 import type { RuntimePlanProjection } from "../../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../../runtime/snapshots";
 import { renderPlanView } from "./plan-view";
+import { executionPopoverPlacement } from "./panel-layout";
 import {
   ExecutionRovingTabs,
   executionElement,
@@ -346,19 +347,16 @@ export function mountExecutionPanel(
 
   const place = (): void => {
     const rect = trigger.getBoundingClientRect();
-    const width = Math.min(420, Math.max(280, document.documentElement.clientWidth - 24));
-    const left = Math.min(
-      document.documentElement.clientWidth - width - 12,
-      Math.max(12, rect.left + rect.width - width),
-    );
-    popover.style.width = `${width}px`;
-    popover.style.left = `${left}px`;
     const height = popover.getBoundingClientRect().height;
-    const top = Math.max(12, Math.min(
-      rect.bottom + 8,
-      document.documentElement.clientHeight - height - 12,
-    ));
-    popover.style.top = `${top}px`;
+    const placement = executionPopoverPlacement({
+      viewportWidth: document.documentElement.clientWidth,
+      viewportHeight: document.documentElement.clientHeight,
+      trigger: rect,
+      contentHeight: height,
+    });
+    popover.style.width = `${placement.width}px`;
+    popover.style.left = `${placement.left}px`;
+    popover.style.top = `${placement.top}px`;
   };
 
   const onDocumentPointerDown = (event: PointerEvent): void => {
