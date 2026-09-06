@@ -21,6 +21,7 @@ import {
   bindPlannerProgressTarget,
   createPlannerControls,
   type PlannerCollapseStore,
+  type PlannerCompletedVisibilityStore,
   type PlannerControlsController,
   type PlannerProgressIntent,
   type PlannerProgressTarget,
@@ -82,6 +83,7 @@ export type PlannerIconRenderer = (element: HTMLElement, icon: PlannerIconName) 
 
 export interface PlannerSurfaceOptions {
   readonly collapseStore?: PlannerCollapseStore;
+  readonly completedVisibilityStore?: PlannerCompletedVisibilityStore;
   readonly debugControl?: boolean;
   readonly instanceId?: string;
   readonly locale?: string;
@@ -585,6 +587,9 @@ class PlannerSurfaceController implements PlannerSurface {
       this.#controls = createPlannerControls({
         instanceId: options.instanceId ?? `planner-${++plannerSurfaceSequence}`,
         ...(options.collapseStore ? { collapseStore: options.collapseStore } : {}),
+        ...(options.completedVisibilityStore
+          ? { completedVisibilityStore: options.completedVisibilityStore }
+          : {}),
         debugControl: options.debugControl ?? false,
         onChange: () => this.#render(),
       });

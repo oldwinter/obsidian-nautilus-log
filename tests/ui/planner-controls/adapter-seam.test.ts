@@ -13,6 +13,10 @@ interface CapturedMount {
       load(instanceId: string): boolean | undefined;
       save(instanceId: string, collapsed: boolean): void;
     };
+    readonly completedVisibilityStore: {
+      load(instanceId: string): boolean | undefined;
+      save(instanceId: string, showCompleted: boolean): void;
+    };
     readonly instanceId: string;
     readonly locale: string;
     readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
@@ -306,6 +310,8 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   assert.equal(view.getState().plannerInstanceId, "adapter-b");
   remounted.options.collapseStore.save("adapter-b", true);
   assert.equal(remounted.options.collapseStore.load("adapter-b"), true);
+  remounted.options.completedVisibilityStore.save("adapter-b", false);
+  assert.equal(remounted.options.completedVisibilityStore.load("adapter-b"), false);
 
   const storage = (view.contentEl.ownerDocument.defaultView?.localStorage as Storage & {
     failReads: boolean;
@@ -313,9 +319,14 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   });
   storage.failReads = true;
   assert.equal(remounted.options.collapseStore.load("adapter-b"), undefined);
+  assert.equal(remounted.options.completedVisibilityStore.load("adapter-b"), undefined);
   storage.failReads = false;
   storage.failWrites = true;
   assert.throws(() => remounted.options.collapseStore.save("adapter-b", false), /storage write failed/);
+  assert.throws(
+    () => remounted.options.completedVisibilityStore.save("adapter-b", true),
+    /storage write failed/,
+  );
   storage.failWrites = false;
 
   const intent: PlannerProgressIntent = {
@@ -348,6 +359,7 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   assert.equal(seam.mounts.length, 3);
   assert.equal(seam.mounts[2]!.options.instanceId, "adapter-b");
   assert.equal(seam.mounts[2]!.options.collapseStore.load("adapter-b"), true);
+  assert.equal(seam.mounts[2]!.options.completedVisibilityStore.load("adapter-b"), false);
   resolveContextFailure = true;
   assert.throws(() => view.onResize(), /active resolver failure/);
   resolveContextFailure = false;

@@ -5,6 +5,7 @@ import {
   FORBIDDEN_LATER_MAIN_PLANNER_CONTROLS,
   bindPlannerProgressTarget,
   createMemoryPlannerCollapseStore,
+  createMemoryPlannerCompletedVisibilityStore,
   createPlannerControls,
   createPlannerDebugStore,
   dispatchPlannerProgress,
@@ -39,6 +40,33 @@ test("TC-UP-CTL-01-001 completed visibility starts shown and remains independent
   assert.equal(second.state.showCompleted, true);
   first.destroy();
   second.destroy();
+});
+
+test("TC-UP-CTL-01-001 completed visibility restores only for the same planner identity", () => {
+  const completedVisibilityStore = createMemoryPlannerCompletedVisibilityStore();
+  const first = createPlannerControls({ instanceId: "planner-a", completedVisibilityStore });
+  first.toggleCompleted();
+  first.destroy();
+
+  const restored = createPlannerControls({ instanceId: "planner-a", completedVisibilityStore });
+  const independent = createPlannerControls({ instanceId: "planner-b", completedVisibilityStore });
+  assert.equal(restored.state.showCompleted, false);
+  assert.equal(independent.state.showCompleted, true);
+  restored.destroy();
+  independent.destroy();
+});
+
+test("TC-UP-CTL-01-001 failed completed visibility persistence leaves presentation unchanged", () => {
+  const controls = createPlannerControls({
+    instanceId: "failing-store",
+    completedVisibilityStore: {
+      load: () => true,
+      save: () => { throw new Error("storage failed"); },
+    },
+  });
+  assert.throws(() => controls.toggleCompleted(), /storage failed/);
+  assert.equal(controls.state.showCompleted, true);
+  controls.destroy();
 });
 
 test("TC-UP-CTL-03-001 collapse state is keyed by renderer identity and only same identity restores it", () => {

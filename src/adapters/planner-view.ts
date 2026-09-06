@@ -9,7 +9,9 @@ import {
 import type { LogicalDate } from "../core/day";
 import {
   createMemoryPlannerCollapseStore,
+  createMemoryPlannerCompletedVisibilityStore,
   type PlannerCollapseStore,
+  type PlannerCompletedVisibilityStore,
   type PlannerProgressIntent,
 } from "../ui/planner/controls";
 import {
@@ -52,8 +54,10 @@ const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
 });
 
 const COLLAPSE_STORAGE_PREFIX = "spiral-day:planner-collapsed:";
+const COMPLETED_VISIBILITY_STORAGE_PREFIX = "spiral-day:planner-show-completed:";
 const ADAPTER_CLEANUP_DRAIN_ATTEMPTS = 3;
 const transientCollapseStore = createMemoryPlannerCollapseStore();
+const transientCompletedVisibilityStore = createMemoryPlannerCompletedVisibilityStore();
 let plannerInstanceSequence = 0;
 
 function createPlannerInstanceId(): string {
@@ -81,6 +85,23 @@ function collapseStore(storage: Storage | undefined): PlannerCollapseStore {
     },
     save(instanceId: string, collapsed: boolean) {
       storage.setItem(`${COLLAPSE_STORAGE_PREFIX}${instanceId}`, String(collapsed));
+    },
+  });
+}
+
+function completedVisibilityStore(storage: Storage | undefined): PlannerCompletedVisibilityStore {
+  if (!storage) return transientCompletedVisibilityStore;
+  return Object.freeze({
+    load(instanceId: string) {
+      try {
+        const value = storage.getItem(`${COMPLETED_VISIBILITY_STORAGE_PREFIX}${instanceId}`);
+        return value === "true" ? true : value === "false" ? false : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    save(instanceId: string, showCompleted: boolean) {
+      storage.setItem(`${COMPLETED_VISIBILITY_STORAGE_PREFIX}${instanceId}`, String(showCompleted));
     },
   });
 }
@@ -223,6 +244,7 @@ export class SpiralDayPlannerView extends ItemView {
         context,
         {
           collapseStore: collapseStore(documentStorage(this.contentEl.ownerDocument)),
+          completedVisibilityStore: completedVisibilityStore(documentStorage(this.contentEl.ownerDocument)),
           debugControl: this.#dependencies.debugControl?.() ?? false,
           instanceId,
           locale: this.#dependencies.locale?.() ?? "en",
