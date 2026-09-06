@@ -197,6 +197,10 @@
   margin-top: 3px;
 }
 
+.spiral-day-execution__empty > .spiral-day-execution__secondary-action {
+  margin-top: 8px;
+}
+
 .spiral-day-execution__current[data-forgotten="true"] {
   background: color-mix(in srgb, var(--spiral-day-execution-warning) 8%, var(--spiral-day-execution-surface-subtle));
   border-color: color-mix(in srgb, var(--spiral-day-execution-warning) 52%, var(--spiral-day-execution-border));

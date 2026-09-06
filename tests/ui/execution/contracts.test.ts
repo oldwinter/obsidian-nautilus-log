@@ -161,6 +161,25 @@ test("unavailable and working execution states disable mutation controls", async
   assert.match(planView, /pending \|\| options\.execution\.writeBlocked/);
 });
 
+test("timing recovery exposes a guarded localized retry without a mutation intent", async () => {
+  const [panel, timingView, main, execution] = await Promise.all([
+    readFile("src/ui/execution/panel.ts", "utf8"),
+    readFile("src/ui/execution/timing-view.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+    readFile("src/i18n/locales/en/execution.ts", "utf8"),
+  ]);
+  assert.match(panel, /readonly refresh: \(\) => Promise<ExecutionApplicationSnapshot>/);
+  assert.match(panel, /if \(pending\.has\("refresh"\) \|\| destroyed\) return/);
+  assert.match(panel, /Promise\.resolve\(\)\.then\(\(\) => port\.refresh\(\)\)/);
+  assert.match(panel, /pending\.add\("refresh"\)/);
+  assert.match(panel, /pending\.delete\("refresh"\)/);
+  assert.match(timingView, /messages\.t\("execution", "action\.retry"\)/);
+  assert.match(timingView, /icon: "refresh"/);
+  assert.match(timingView, /options\.pending\.has\("refresh"\)/);
+  assert.match(main, /refresh: \(\) => application\.refresh\(\)/);
+  assert.match(execution, /"notice\.refreshed": string/);
+});
+
 test("active Timing exposes the singleton Active Task view without coupling it to a mutation", async () => {
   const [panel, timingView, main] = await Promise.all([
     readFile("src/ui/execution/panel.ts", "utf8"),

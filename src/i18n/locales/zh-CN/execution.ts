@@ -66,6 +66,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "日记日期格式",
   "notice.applied": "更改已确认。",
   "notice.alreadyApplied": "已经是最新状态。",
+  "notice.refreshed": "计时数据已刷新。",
   "notice.taskLinkCopied": "当前任务链接已复制。",
   "notice.failed": "更改未应用。",
   "notice.sourceUnavailable": "来源导航不可用。",

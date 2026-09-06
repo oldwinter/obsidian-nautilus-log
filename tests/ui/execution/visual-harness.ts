@@ -147,10 +147,34 @@ const plan = Object.freeze({
 }) as unknown as RuntimeSnapshot<RuntimePlanProjection>;
 
 let snapshot = runtime("active");
+let refreshCalls = 0;
 const executionListeners = new Set<(value: ExecutionApplicationSnapshot) => void>();
 const planListeners = new Set<(value: RuntimeSnapshot<RuntimePlanProjection>) => void>();
 const trigger = document.querySelector<HTMLButtonElement>("#execution-trigger")!;
 const activeTask = document.querySelector<HTMLElement>("#active-task")!;
+
+function degradedRuntime(): ExecutionApplicationSnapshot {
+  const base = runtime("idle");
+  const code = "clock-index-unavailable" as const;
+  return Object.freeze({
+    ...base,
+    status: "degraded" as const,
+    runtime: Object.freeze({
+      ...base.runtime,
+      status: "degraded" as const,
+      clocks: Object.freeze({
+        kind: "degraded" as const,
+        generation: 5,
+        code,
+        count: 1,
+        clocks: Object.freeze([]),
+      }),
+    }),
+    execution: Object.freeze({ kind: "degraded" as const, code, count: 1 }),
+    writeBlocked: true,
+    code,
+  });
+}
 
 function renderIcon(element: HTMLElement, icon: string): void {
   element.dataset.icon = icon;
@@ -227,10 +251,19 @@ const surface = mountExecutionPanel({
   navigatePrimary: () => undefined,
   openActiveTask: () => undefined,
   navigateTask: () => undefined,
+  refresh: async () => {
+    refreshCalls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    if (snapshot.status === "degraded") publish(runtime("idle"));
+    return snapshot;
+  },
 }, { trigger, messages, renderIcon });
 
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-state]")) {
-  button.addEventListener("click", () => publish(runtime(button.dataset.state as "active" | "idle" | "pomo")));
+  button.addEventListener("click", () => {
+    if (button.dataset.state === "degraded") publish(degradedRuntime());
+    else publish(runtime(button.dataset.state as "active" | "idle" | "pomo"));
+  });
 }
 document.querySelector<HTMLButtonElement>("#locale")!.addEventListener("click", (event) => {
   const next = messages.locale === "en" ? "zh" : "en";
@@ -268,6 +301,7 @@ Object.assign(window, {
         right: rect.right,
         viewportHeight: document.documentElement.clientHeight,
         viewportWidth: document.documentElement.clientWidth,
+        refreshCalls,
       };
     },
     surface,
