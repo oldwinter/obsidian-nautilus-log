@@ -18,6 +18,7 @@ import { ExecutionCommandRegistry } from "./adapters/commands";
 import { registerExecutionEditorMenu } from "./adapters/editor-menu";
 import { ExecutionEntryAdapter } from "./adapters/execution-entry";
 import { executionOutcomeNotice, showExecutionNotice } from "./adapters/notices";
+import { copyPlannerSummary } from "./adapters/plan-summary";
 import {
   createPlannerViewFactory,
   openPlannerView,
@@ -253,6 +254,7 @@ export default class SpiralDayPlugin extends Plugin {
     this.registerView(PLANNER_VIEW_TYPE, createPlannerViewFactory({
       runtime: this.#projectionRuntime,
       defaultLogicalDate: () => logicalDateAt(this.#requireClock()),
+      copySummary: (summary) => copyPlannerSummary({ summary }),
       dispatchPlannerProgress: (intent) => this.#dispatchPlannerProgress(intent),
       locale: () => this.#requireMessages().locale,
       subscribeLocale: (listener) => this.#requireMessages().subscribe(listener),

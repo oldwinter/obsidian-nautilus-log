@@ -45,7 +45,10 @@ export type PlannerCatalog = Readonly<{
   "announcement.progressPending": MessageFunction<{ title: string }>;
   "announcement.progressRequested": MessageFunction<{ title: string; percent: number }>;
   "announcement.progressReopened": MessageFunction<{ title: string }>;
+  "announcement.summaryCopied": string;
+  "announcement.summaryCopyFailed": string;
   "control.collapse": string;
+  "control.copySummary": string;
   "control.debugDisable": string;
   "control.debugEnable": string;
   "control.expand": string;
@@ -100,6 +103,9 @@ export type PlannerCatalog = Readonly<{
   "status.overLimitUnknownDetail": MessageFunction<{ actual: number; limit: number }>;
   "status.staleDetail": string;
   "status.unavailableDetail": string;
+  "summary.empty": string;
+  "summary.schedule": string;
+  "summary.unscheduled": string;
   "surface.name": string;
   "tooltip.item": MessageFunction<{
     kind: string;

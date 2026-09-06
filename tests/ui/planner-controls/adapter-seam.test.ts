@@ -6,6 +6,7 @@ import {
   type PlannerItemViewDependencies,
 } from "../../../src/adapters/planner-view.ts";
 import type { PlannerProgressIntent } from "../../../src/ui/planner/controls.ts";
+import type { PlannerSummaryCopyOutcome } from "../../../src/ui/planner/summary.ts";
 
 interface CapturedMount {
   readonly options: {
@@ -19,6 +20,7 @@ interface CapturedMount {
     };
     readonly instanceId: string;
     readonly locale: string;
+    readonly onCopySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
     readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
     readonly renderIcon: (element: HTMLElement, icon: "play") => void;
   };
@@ -250,10 +252,15 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   let resolveContextCalls = 0;
   let resolveContextFailure = false;
   const progressCalls: PlannerProgressIntent[] = [];
+  const summaryCalls: string[] = [];
   const runtime = { state: "ready", connect: () => { throw new Error("surface is seam-stubbed"); } };
   const dependencies: PlannerItemViewDependencies = {
     runtime: runtime as PlannerItemViewDependencies["runtime"],
     defaultLogicalDate: () => ({ year: 2026, month: 8, day: 28 }),
+    copySummary: async (summary) => {
+      summaryCalls.push(summary);
+      return "copied";
+    },
     dispatchPlannerProgress: (intent) => { progressCalls.push(intent); },
     locale: () => "zh-CN",
     subscribeLocale(listener) {
@@ -298,6 +305,8 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   mount.options.renderIcon(iconElement, "play");
   assert.deepEqual(seam.iconCalls, ["play"]);
   assert.equal(iconElement.icon, "play");
+  assert.equal(await mount.options.onCopySummary?.("day summary"), "copied");
+  assert.deepEqual(summaryCalls, ["day summary"]);
 
   await view.setState({
     logicalDate: { year: 2026, month: 8, day: 28 },

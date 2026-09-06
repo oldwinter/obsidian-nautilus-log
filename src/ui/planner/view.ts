@@ -59,6 +59,10 @@ import {
   type PlannerSpiralModel,
   type PlannerTimelineItem,
 } from "./spiral";
+import {
+  formatPlannerSummary,
+  type PlannerSummaryCopyOutcome,
+} from "./summary";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const RUNTIME_PROBE_MILLISECONDS = 5_000;
@@ -78,7 +82,7 @@ export interface PlannerViewContext {
   readonly hostContext: PlannerHostContext;
 }
 
-export type PlannerIconName = "collapse" | "debug" | "expand" | "hide-completed" | "show-completed" | "play";
+export type PlannerIconName = "collapse" | "copy" | "debug" | "expand" | "hide-completed" | "show-completed" | "play";
 export type PlannerIconRenderer = (element: HTMLElement, icon: PlannerIconName) => void;
 
 export interface PlannerSurfaceOptions {
@@ -88,6 +92,7 @@ export interface PlannerSurfaceOptions {
   readonly instanceId?: string;
   readonly locale?: string;
   readonly messages?: Messages;
+  readonly onCopySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
   readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly renderIcon?: PlannerIconRenderer;
   readonly reducedMotion?: boolean;
@@ -243,6 +248,7 @@ function defaultIconRenderer(button: HTMLElement, icon: PlannerIconName): void {
   button.dataset.icon = icon;
   const fallback = {
     collapse: "-",
+    copy: "=",
     debug: "#",
     expand: "+",
     "hide-completed": "o",
@@ -512,6 +518,7 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #runtime: PlannerRuntimePort;
   readonly #renderIcon: PlannerIconRenderer;
   readonly #messages: Messages;
+  readonly #onCopySummary: PlannerSurfaceOptions["onCopySummary"];
   readonly #onProgressIntent: ((intent: PlannerProgressIntent) => void | Promise<void>) | undefined;
   readonly #controls: PlannerControlsController;
   readonly #disclosures: PlannerDisclosuresController;
@@ -558,6 +565,7 @@ class PlannerSurfaceController implements PlannerSurface {
     this.#messages = options.messages ?? (options.locale === undefined
       ? createMessages()
       : createMessages({ locale: options.locale }));
+    this.#onCopySummary = options.onCopySummary;
     this.#onProgressIntent = options.onProgressIntent;
     const acquisitions: Array<() => void> = [];
     try {
@@ -1129,7 +1137,9 @@ class PlannerSurfaceController implements PlannerSurface {
         ? "control-completed"
         : icon === "debug"
           ? "control-debug"
-          : "control-play";
+          : icon === "copy"
+            ? "control-copy"
+            : "control-play";
     this.#renderIcon(button, icon);
     button.addEventListener("click", () => {
       if (button.getAttribute("aria-disabled") !== "true") action();
@@ -1199,6 +1209,33 @@ class PlannerSurfaceController implements PlannerSurface {
         },
       ),
     );
+    if (this.#onCopySummary) {
+      let copyButton: HTMLButtonElement;
+      copyButton = this.#createIconButton(
+        "copy",
+        this.#messages.t("planner", "control.copySummary"),
+        () => {
+          copyButton.setAttribute("aria-busy", "true");
+          copyButton.setAttribute("aria-disabled", "true");
+          void Promise.resolve(this.#onCopySummary?.(formatPlannerSummary(
+            projection,
+            this.#context.bounds,
+            this.#messages,
+          ))).then((outcome) => {
+            this.#live.announce(this.#messages.t(
+              "planner",
+              outcome === "copied" ? "announcement.summaryCopied" : "announcement.summaryCopyFailed",
+            ), outcome === "copied" ? "polite" : "assertive");
+          }).catch(() => {
+            this.#live.announce(this.#messages.t("planner", "announcement.summaryCopyFailed"), "assertive");
+          }).finally(() => {
+            copyButton.removeAttribute("aria-busy");
+            copyButton.removeAttribute("aria-disabled");
+          });
+        },
+      );
+      controls.append(copyButton);
+    }
     const play = this.#createIconButton(
       "play",
       this.#messages.t("planner", controlsState.playbackRunning ? "control.playbackRunning" : "control.play"),
