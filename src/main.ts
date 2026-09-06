@@ -279,6 +279,12 @@ export default class SpiralDayPlugin extends Plugin {
         target,
         label,
       }),
+      clockOut: async () => {
+        await this.#dispatchExecution({
+          type: "clock-out",
+          intentId: this.#intentId("active-task-clock-out"),
+        }, true);
+      },
       onError: (error) => this.#reportError(error),
     }));
     this.addRibbonIcon("shell", "Open Spiral Day", () => {

@@ -202,6 +202,7 @@ function renderActive(): void {
     renderIcon,
     onOpenSource: () => undefined,
     onCopyLink: () => undefined,
+    onClockOut: () => publish(runtime("idle")),
   });
 }
 

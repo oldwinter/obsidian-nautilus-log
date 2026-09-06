@@ -208,6 +208,25 @@ test("Active Task copy links use an explicit accessible action in narrow sidebar
   assert.match(main, /copyLink: \(target, label\) => copyTaskMarkdownLink\(\{/);
 });
 
+test("Active Task clocks out through the guarded execution path", async () => {
+  const [surface, activeTask, styles, main] = await Promise.all([
+    readFile("src/ui/execution/active-task-view.ts", "utf8"),
+    readFile("src/adapters/active-task-view.ts", "utf8"),
+    readFile("styles/execution.css", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(surface, /messages\.t\("execution", "action\.clockOut"\)/);
+  assert.match(surface, /className: "spiral-day-active-task__action spiral-day-active-task__clock-out"/);
+  assert.match(surface, /clockOut\.disabled = options\.snapshot\.writeBlocked/);
+  assert.match(activeTask, /this\.#clockOutPending \|\| this\.#snapshot\.writeBlocked \|\| !this\.#snapshot\.focused/);
+  assert.match(activeTask, /button\.setAttribute\("aria-busy", "true"\)/);
+  assert.match(activeTask, /Promise\.resolve\(\)\.then\(\(\) => this\.#dependencies\.clockOut\(\)\)/);
+  assert.match(activeTask, /current\.focus\(\)/);
+  assert.match(styles, /\.spiral-day-active-task__clock-out \{/);
+  assert.match(styles, /:is\(\.spiral-day-execution, \.spiral-day-active-task\) button\[aria-busy="true"\]/);
+  assert.match(main, /intentId: this\.#intentId\("active-task-clock-out"\)/);
+});
+
 test("Recent rebuilds after host invalidation and reaches the panel as a projected subscription", async () => {
   const [panel, main] = await Promise.all([
     readFile("src/ui/execution/panel.ts", "utf8"),
