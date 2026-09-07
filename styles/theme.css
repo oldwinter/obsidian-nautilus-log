@@ -100,11 +100,20 @@
   color: var(--text-normal, #252a32);
   display: grid;
   gap: 2px 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   min-height: 42px;
   padding: 6px 8px;
   text-align: left;
   width: 100%;
+}
+
+.spiral-day-planner__interactive-item-dot {
+  background: var(--spiral-day-row-tone);
+  border-radius: 50%;
+  block-size: 7px;
+  grid-row: 1 / span 2;
+  inline-size: 7px;
+  justify-self: center;
 }
 
 .spiral-day-planner__interactive-item[role="button"] {
@@ -134,6 +143,32 @@
 .spiral-day-planner__interactive-item-state {
   color: var(--text-muted, #626b78);
   font-size: 0.82em;
+}
+
+.spiral-day-planner__interactive-item-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spiral-day-planner__interactive-item-state {
+  grid-column: 2 / -1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container spiral-day-planner (max-width: 360px) {
+  .spiral-day-planner__interactive-item {
+    grid-template-columns: 8px minmax(0, 1fr);
+  }
+
+  .spiral-day-planner__interactive-item-meta,
+  .spiral-day-planner__interactive-item-state {
+    grid-column: 2;
+  }
 }
 
 .spiral-day-planner__debug-overlay {
