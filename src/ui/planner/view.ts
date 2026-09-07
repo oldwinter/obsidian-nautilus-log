@@ -1375,6 +1375,8 @@ class PlannerSurfaceController implements PlannerSurface {
       row.dataset.plannerFocusKey = `row-${item.id}`;
       const name = timelineAccessibleName(this.#messages, item);
       row.setAttribute("aria-label", name);
+      const dot = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-dot");
+      dot.setAttribute("aria-hidden", "true");
       const title = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-title");
       title.textContent = item.title;
       const meta = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-meta");
@@ -1382,7 +1384,7 @@ class PlannerSurfaceController implements PlannerSurface {
       const state = element(details.ownerDocument, "span", "spiral-day-planner__interactive-item-state");
       state.textContent = [timelineKind(this.#messages, item), timelineStates(this.#messages, item)]
         .filter(Boolean).join(" | ");
-      row.append(title, meta, state);
+      row.append(dot, title, meta, state);
       this.#bindProgressTarget(row, item, projection);
       list.append(row);
     }

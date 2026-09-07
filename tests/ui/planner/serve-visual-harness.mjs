@@ -5,7 +5,7 @@ import process from "node:process";
 import { build } from "esbuild";
 
 const port = Number(process.env.SPIRAL_DAY_HARNESS_PORT ?? 4173);
-const [bundle, html, css] = await Promise.all([
+const [bundle, html, ...styles] = await Promise.all([
   build({
     absWorkingDir: process.cwd(),
     bundle: true,
@@ -17,10 +17,14 @@ const [bundle, html, css] = await Promise.all([
     write: false,
   }),
   readFile("tests/ui/planner/visual-harness.html"),
-  readFile("styles/planner.css"),
+  readFile("styles/a11y.css", "utf8"),
+  readFile("styles/execution.css", "utf8"),
+  readFile("styles/planner.css", "utf8"),
+  readFile("styles/theme.css", "utf8"),
 ]);
 const javascript = bundle.outputFiles[0]?.contents;
 if (!javascript) throw new Error("Visual harness bundle was empty");
+const css = styles.join("\n");
 
 const server = createServer((request, response) => {
   if (request.url === "/harness.js") {
