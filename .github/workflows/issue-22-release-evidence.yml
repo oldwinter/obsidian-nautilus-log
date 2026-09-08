@@ -31,9 +31,6 @@ jobs:
   browser-evidence:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      PLAYWRIGHT_MODULE: ${{ runner.temp }}/review-browser/node_modules/playwright
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/review-browsers
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.0.0
@@ -42,6 +39,9 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - name: Configure browser test paths
+        run: |
+          printf '%s\n' "PLAYWRIGHT_MODULE=$RUNNER_TEMP/review-browser/node_modules/playwright" "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/review-browsers" >> "$GITHUB_ENV"
       - name: Install pinned browser test runtime
         run: |
           npm install --prefix "$RUNNER_TEMP/review-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
