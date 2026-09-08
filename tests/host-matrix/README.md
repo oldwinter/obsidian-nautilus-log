@@ -23,6 +23,37 @@ tested bytes. The runner copies only `main.js`, `manifest.json`, and `styles.css
 It supplies its own `data.json` with Execution enabled and English plugin labels.
 The host may use a different system language.
 
+For a required version lane, pass `--expected-app-version` and
+`--expected-electron-version`. For the minimum official installer these are
+`1.7.7` and `32.2.5`. The driver compares the actual application title and
+renderer runtime at startup and after every reload. A version mismatch fails
+before plugin enablement at startup; an automatically updated app cannot count
+as minimum-version proof. Obtaining and verifying the official installer is a
+separate prerequisite.
+
+Add `--review` to run the Review suite against a package that includes Review.
+It checks past/current/future source targets, disabled past/future mutation
+controls, and the prior-day recorded metrics. Its 12 rendering states cover
+English and Simplified Chinese, Default light and dark themes, and actual
+Electron zoom factors of 80%, 100%, and 200%. Language changes use the plugin's
+native Settings dropdown, including a separate settings window when the host
+creates one. Theme changes use Obsidian's theme operation; zoom uses Electron's
+`webFrame` and records the returned factor. These checks do not emulate a
+different host, replace system fonts, or certify pixel parity.
+
+The Review suite performs source navigation with Enter, checks date-button
+focus retention and a visible focus outline, and confirms Escape returns focus
+to the Execution trigger. It compares all Markdown hashes after read-only
+navigation and display changes. After the clean lifecycle sequence, it clocks
+in today's dedicated Review task and waits one real minute. The initial
+`Not started` state and absent rounded Actual value are expected until that
+whole-minute boundary; the script then requires `Live` and `1m`. It completes
+the task, checks the same CLOCK closes, and proves the rest of the note remains
+byte-for-byte intact. Reload must preserve the completed task and source while
+resetting the in-memory Review date selection to Today. These results are
+written before the separate active-CLOCK reload scenario, so its failure cannot
+erase completed Review checks. `review-sources.json` retains the write snapshots.
+
 The output directory must not exist. Each invocation creates a new `profile`,
 `vault`, and `evidence` directory. The runner passes its profile to the executable
 and discovers CDP only through that profile's `DevToolsActivePort` file. Before
@@ -30,10 +61,12 @@ enabling the plugin or accepting the disposable vault's trust dialog, it checks
 the renderer's actual profile argument, actual vault path, and empty community
 plugin set. It never opens a configured user vault, reads global Obsidian
 settings, changes the installed application, or controls an existing process.
-It terminates only the child process it launched. The 180-second deadline bounds
-the automated run. Output remains available for inspection after exit.
+It terminates only the child process it launched. The automated deadline is
+180 seconds, or 300 seconds with `--review` to include the real minute of timing.
+Output remains available for inspection after exit.
 
-The fixture contains three generated Daily Notes around the runner's local date.
+The fixture contains three generated Daily Notes around the runner's local date,
+four tasks per note, and one closed 12-minute CLOCK in the prior-day note.
 Their content and hashes are recorded. The checks cover Planner collapse and
 completed visibility, Execution keyboard tab selection, Escape focus restoration,
 source navigation, and ten clean Planner/Execution open-close-disable-enable

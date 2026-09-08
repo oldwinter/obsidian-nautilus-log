@@ -40,6 +40,7 @@ export async function runLifecycleCycles({ page, pluginId, openPlanner, openExec
 }
 
 export async function runClockReload({ page, fixture, openExecution, check, screenshot, readSource, verifyIsolation }) {
+  const beforeSource = await readSource(() => true);
   const clockOut = page.getByRole("tabpanel", { name: "Timing", exact: true })
     .getByRole("button", { name: "Clock out", exact: true });
   await openExecution();
@@ -50,8 +51,8 @@ export async function runClockReload({ page, fixture, openExecution, check, scre
   await alpha.getByRole("button", { name: "Clock in", exact: true }).click();
   await page.getByRole("tab", { name: "Timing", exact: true }).click();
   await clockOut.waitFor();
-  const clockInSource = await readSource((source) => source.includes("CLOCK:"));
-  const clockLines = clockInSource.split("\n").filter((line) => line.includes("CLOCK:"));
+  const clockInSource = await readSource((source) => source.split("CLOCK:").length === beforeSource.split("CLOCK:").length + 1);
+  const clockLines = clockInSource.split("\n").filter((line) => line.includes("CLOCK:") && !beforeSource.includes(line));
   check("clock-in-one-open-record", clockLines.length === 1 && !clockLines[0].includes("]--["), clockLines);
   await screenshot("clock-active");
   await page.keyboard.press("Escape");
@@ -69,10 +70,11 @@ export async function runClockReload({ page, fixture, openExecution, check, scre
   await screenshot("clock-restored-after-reload");
   await clockOut.click();
   await clockOut.waitFor({ state: "hidden" });
-  const clockOutSource = await readSource((source) => source.includes("]--["));
-  const closed = clockOutSource.split("\n").filter((line) => line.includes("CLOCK:"));
+  const clockOutSource = await readSource((source) => source.split("\n")
+    .some((line) => line.includes("CLOCK:") && !beforeSource.includes(line) && line.includes("]--[")));
+  const closed = clockOutSource.split("\n").filter((line) => line.includes("CLOCK:") && !beforeSource.includes(line));
   check("clock-out-closes-same-record", closed.length === 1 && closed[0].includes("]--[")
     && closed[0].split("^").at(-1) === clockLines[0].split("^").at(-1), closed);
   await screenshot("clock-stopped");
-  return { clockInSource, reloadSource, clockOutSource };
+  return { beforeSource, clockInSource, reloadSource, clockOutSource };
 }

@@ -8,17 +8,22 @@ import { createRequire } from "node:module";
 import { parseArgs } from "node:util";
 import { syntheticFixture } from "./fixture.mjs";
 import { PLANNER_TYPE, runLifecycleCycles, runClockReload } from "../lifecycle/real-host.mjs";
+import { runReviewReadOnly, runReviewWrites } from "./review.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
-  "candidate-sha": { type: "string" }, help: { type: "boolean" },
+  "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
+  "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
 assert(!values["candidate-sha"] || /^[a-f0-9]{40}$/.test(values["candidate-sha"]), "Candidate SHA must have 40 lowercase hex characters");
+for (const name of ["expected-app-version", "expected-electron-version"]) {
+  assert(!values[name] || /^\d+\.\d+\.\d+$/.test(values[name]), `Invalid --${name}`);
+}
 const require = createRequire(import.meta.url);
 const playwrightModule = process.env.PLAYWRIGHT_MODULE || "playwright";
 const { chromium } = require(playwrightModule);
@@ -69,9 +74,11 @@ const report = {
   status: "running",
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
+  expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
+  scenarios: values.review ? ["planner", "execution", "lifecycle", "clock-reload", "review"] : ["planner", "execution", "lifecycle", "clock-reload"],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "lifecycle/real-host.mjs"]) },
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
     pluginData: fixture.pluginData, files: await markdownHashes() },
@@ -91,6 +98,13 @@ const report = {
 function check(id, passed, observed) {
   report.assertions.push({ id, passed, observed });
   assert(passed, `${id} failed: ${JSON.stringify(observed)}`);
+}
+function checkHostVersions(observed) {
+  const actualApp = observed.title.match(/Obsidian\s+v?(\d+\.\d+\.\d+)/)?.[1];
+  if (report.expectedVersions.app) check("expected-obsidian-version", actualApp === report.expectedVersions.app,
+    { expected: report.expectedVersions.app, actual: actualApp ?? null, title: observed.title });
+  if (report.expectedVersions.electron) check("expected-electron-version", observed.versions.electron === report.expectedVersions.electron,
+    { expected: report.expectedVersions.electron, actual: observed.versions.electron });
 }
 const startupArgs = [`--user-data-dir=${profile}`, "--remote-debugging-port=0", "--remote-debugging-address=127.0.0.1",
   `--log-net-log=${join(evidence, "electron-netlog.json")}`, "--no-first-run", "--no-default-browser-check"];
@@ -113,10 +127,11 @@ let childExit;
 let exitPromise;
 let networkAttached = false;
 let isolationVerified = false;
+const maximumRunMilliseconds = values.review ? 300000 : 180000;
 const deadline = setTimeout(() => {
   report.deadlineExceeded = true;
   child?.kill("SIGTERM");
-}, 180000);
+}, maximumRunMilliseconds);
 const stdout = [];
 const stderr = [];
 async function screenshot(name) {
@@ -136,7 +151,23 @@ async function openPlanner() {
 async function openExecution() {
   const trigger = page.locator(".spiral-day-execution-trigger");
   if (await trigger.getAttribute("aria-expanded") !== "true") await trigger.click();
-  await page.getByRole("dialog", { name: "Execution", exact: true }).waitFor();
+  await page.locator(".spiral-day-execution[role=dialog]").waitFor();
+}
+async function readSource(accept) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const source = await readFile(join(vault, fixture.today.path), "utf8");
+    if (accept(source)) return source;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  throw new Error("Expected source was not persisted to disk within 10 seconds");
+}
+async function verifyIsolation() {
+  const current = await page.evaluate(() => ({ vault: app.vault.adapter.getBasePath(),
+    profile: process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice("--user-data-dir=".length),
+    title: document.title, versions: process.versions }));
+  check("reload-preserves-isolation", await realpath(current.vault) === await realpath(vault)
+    && await realpath(current.profile) === await realpath(profile), current);
+  checkHostVersions(current);
 }
 try {
   child = spawn(executable, startupArgs, { stdio: ["ignore", "pipe", "pipe"] });
@@ -187,6 +218,7 @@ try {
   check("isolated-profile", actualProfile && await realpath(actualProfile) === await realpath(profile), actualProfile);
   check("plugin-disabled-before-instrumentation", runtime.loadedPlugins.length === 0 && runtime.enabledPlugins.length === 0, runtime.loadedPlugins);
   check("real-electron-runtime", Boolean(runtime.versions.electron && runtime.versions.chrome), runtime.versions);
+  checkHostVersions(runtime);
   isolationVerified = true;
   await json(join(evidence, "isolation.json"), { vault: runtime.vault, profile: actualProfile, pid: child.pid, runtime });
   console.log(`Isolated host verified. Obsidian ${runtime.title}; Electron ${runtime.versions.electron}.`);
@@ -231,25 +263,22 @@ try {
   const afterNavigation = await markdownHashes();
   report.sourceHashes.afterNavigation = afterNavigation;
   check("read-only-navigation-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterNavigation), afterNavigation);
+  if (values.review) {
+    report.reviewReadOnly = await runReviewReadOnly({ page, fixture, openExecution, check, screenshot, markdownHashes });
+  }
   report.lifecycle = await runLifecycleCycles({ page, pluginId: manifest.id, openPlanner, openExecution, check, screenshot });
   const afterLifecycle = await markdownHashes();
   report.sourceHashes.afterLifecycle = afterLifecycle;
   check("lifecycle-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterLifecycle), afterLifecycle);
+  if (values.review) {
+    report.reviewWrites = await runReviewWrites({ page, fixture, openExecution, check, screenshot,
+      markdownHashes, readSource, verifyIsolation,
+      saveSources: (sources) => json(join(evidence, "review-sources.json"), sources),
+    });
+    await json(join(evidence, "review-sources.json"), report.reviewWrites);
+  }
   const clock = await runClockReload({ page, fixture, openExecution, check, screenshot,
-    readSource: async (accept) => {
-      for (let attempt = 0; attempt < 100; attempt += 1) {
-        const source = await readFile(join(vault, fixture.today.path), "utf8");
-        if (accept(source)) return source;
-        await new Promise((resolveWait) => setTimeout(resolveWait, 100));
-      }
-      throw new Error("CLOCK source was not persisted to disk within 10 seconds");
-    },
-    verifyIsolation: async () => {
-      const current = await page.evaluate(() => ({ vault: app.vault.adapter.getBasePath(),
-        profile: process.argv.find((arg) => arg.startsWith("--user-data-dir="))?.slice("--user-data-dir=".length) }));
-      check("reload-preserves-isolation", await realpath(current.vault) === await realpath(vault)
-        && await realpath(current.profile) === await realpath(profile), current);
-    },
+    readSource, verifyIsolation,
   });
   await json(join(evidence, "clock-sources.json"), clock);
   const afterClock = await markdownHashes();
@@ -262,7 +291,7 @@ try {
     && clock.clockOutSource.split("<!-- nautilus-log:plan/v1 -->")[0]
     === fixture.today.source.split("<!-- nautilus-log:plan/v1 -->")[0], fixture.today.path);
   check("clock-preserves-all-other-note-bytes", clock.clockOutSource
-    .replace(/^  - LOGBOOK::\n    - CLOCK:.*\n/m, "") === fixture.today.source, fixture.today.path);
+    .replace(/^  - LOGBOOK::\n    - CLOCK:.*\n/m, "") === clock.beforeSource, fixture.today.path);
   report.package.afterRun = await fileHashes(installedPlugin, packageFiles);
   check("plugin-bytes-unchanged", JSON.stringify(sourcePackage) === JSON.stringify(report.package.afterRun), report.package.afterRun);
   await page.keyboard.press("Escape");
@@ -273,7 +302,7 @@ try {
   check("no-renderer-console-errors", errors.length === 0, errors);
   const pluginRequests = report.network.filter((request) => request.pluginAttributed);
   check("no-plugin-attributed-renderer-requests", pluginRequests.length === 0, pluginRequests);
-  check("within-runner-deadline", !report.deadlineExceeded, "180 seconds");
+  check("within-runner-deadline", !report.deadlineExceeded, `${maximumRunMilliseconds / 1000} seconds`);
   report.status = "passed";
 } catch (error) {
   report.status = "failed";
@@ -288,6 +317,13 @@ try {
         .map((element) => element.textContent),
       executionTriggerLabels: [...document.querySelectorAll(".spiral-day-execution-trigger")]
         .map((element) => element.getAttribute("aria-label")),
+      review: [...document.querySelectorAll(".spiral-day-review")].map((element) => ({
+        date: element.querySelector("input[type=date]")?.value,
+        busy: element.getAttribute("aria-busy"), text: element.textContent,
+        rows: [...element.querySelectorAll(".spiral-day-review__row")].map((row) => ({
+          title: row.querySelector(".spiral-day-review__title")?.textContent, state: row.dataset.state,
+        })),
+      })),
     })).catch((captureError) => ({ captureError: captureError.message }));
     report.sourceHashes = { ...report.sourceHashes, atFailure: await markdownHashes() };
     await screenshot("failure").catch(() => {});
