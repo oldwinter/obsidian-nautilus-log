@@ -8,6 +8,14 @@ Use Node 24.20.0 and an installed Playwright package. No downloaded browser is
 needed. Keep Playwright outside the plugin package if it is not already in your
 development environment.
 
+Every run hovers the Planner's Alpha SVG label and waits 900 ms for the host's
+delayed tooltip handler. It records the exact hovered SVG ancestry, `aria-label`,
+native SVG title, Playwright accessibility snapshot, and new page errors in
+`planner-tooltip.json`. The accessible Alpha name and zero page errors are
+required. Add `--planner-tooltip-only` for this short read-only probe without
+Execution, lifecycle, or CLOCK scenarios; it cannot be combined with `--review`.
+The same isolated launcher, version guards, package hashes, and cleanup apply.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

@@ -11,18 +11,21 @@ import { PLANNER_TYPE, runLifecycleCycles, runClockReload } from "../lifecycle/r
 import { runReviewReadOnly, runReviewWrites } from "./review.mjs";
 import { beginHostPrivacy, finishHostPrivacy } from "../privacy/host.mjs";
 import { finalizeOwnedHost } from "../lifecycle/cleanup.mjs";
+import { observePlannerTooltip } from "./planner-tooltip.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
   "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
   privacy: { type: "boolean" },
+  "planner-tooltip-only": { type: "boolean" },
   "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
+assert(!values["planner-tooltip-only"] || !values.review, "--planner-tooltip-only cannot be combined with --review");
 assert(!values["candidate-sha"] || /^[a-f0-9]{40}$/.test(values["candidate-sha"]), "Candidate SHA must have 40 lowercase hex characters");
 for (const name of ["expected-app-version", "expected-electron-version"]) {
   assert(!values[name] || /^\d+\.\d+\.\d+$/.test(values[name]), `Invalid --${name}`);
@@ -78,10 +81,10 @@ const report = {
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
   expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
-  scenarios: ["planner", "execution", "lifecycle", "clock-reload", ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
+  scenarios: [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
     persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
@@ -260,68 +263,80 @@ try {
   check("activation-preserves-all-markdown", JSON.stringify(report.fixture.files) === JSON.stringify(beforeNavigation), beforeNavigation);
   await openPlanner();
   await screenshot("planner");
-  for (const [name, expected] of [["Collapse planner", "Expand planner"], ["Expand planner", "Collapse planner"],
-    ["Hide completed items", "Show completed items"], ["Show completed items", "Hide completed items"]]) {
-    await page.getByRole("button", { name, exact: true }).click();
-    await page.getByRole("button", { name: expected, exact: true }).waitFor();
-    check(`planner-${name}`, true, { activated: name, observedControl: expected });
-  }
-  await openExecution();
-  await screenshot("execution-timing");
-  await page.keyboard.press("Escape");
-  check("execution-escape-restores-trigger", await page.locator(".spiral-day-execution-trigger")
-    .evaluate((element) => element === document.activeElement), "Execution ribbon trigger");
-  await page.locator(".spiral-day-execution-trigger").press("Enter");
-  const timingTab = page.getByRole("tab", { name: "Timing", exact: true });
-  await timingTab.focus();
-  await timingTab.press("ArrowRight");
-  check("execution-keyboard-plan-tab", await page.getByRole("tab", { name: "Plan", exact: true })
-    .getAttribute("aria-selected") === "true", "Plan selected after ArrowRight");
-  const alphaTitle = page.getByRole("button", { name: "Host fixture Alpha", exact: true });
-  if (!await alphaTitle.isVisible()) await page.locator(".spiral-day-execution__unscheduled > summary").click();
-  await alphaTitle.waitFor();
-  await screenshot("execution-plan");
-  await alphaTitle.click();
-  await page.waitForFunction((path) => app.workspace.getActiveFile()?.path === path, fixture.today.path);
-  check("execution-source-navigation", true, fixture.today.path);
-  await page.keyboard.press("Escape");
-  const afterNavigation = await markdownHashes();
-  report.sourceHashes.afterNavigation = afterNavigation;
-  check("read-only-navigation-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterNavigation), afterNavigation);
-  if (values.review) {
-    report.reviewReadOnly = await runReviewReadOnly({ page, fixture, openExecution, check, screenshot, markdownHashes });
-  }
-  report.lifecycle = await runLifecycleCycles({ page, pluginId: manifest.id, openPlanner, openExecution, check, screenshot });
-  const afterLifecycle = await markdownHashes();
-  report.sourceHashes.afterLifecycle = afterLifecycle;
-  check("lifecycle-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterLifecycle), afterLifecycle);
-  if (values.review) {
-    report.reviewWrites = await runReviewWrites({ page, fixture, openExecution, check, screenshot,
-      markdownHashes, readSource, verifyIsolation,
-      saveSources: (sources) => json(join(evidence, "review-sources.json"), sources),
+  report.plannerTooltip = await observePlannerTooltip({ page, pageErrors: report.pageErrors, screenshot });
+  await json(join(evidence, "planner-tooltip.json"), report.plannerTooltip);
+  const svgName = report.plannerTooltip.target.ariaLabel ?? report.plannerTooltip.target.title;
+  check("planner-svg-accessible-name", svgName?.includes("Host fixture Alpha")
+    && report.plannerTooltip.accessibleTree.includes(`img ${JSON.stringify(svgName)}`), report.plannerTooltip.accessibleTree);
+  check("planner-svg-real-hover", report.plannerTooltip.hovered.some((element) => element.class?.includes("spiral-day-planner__external-label")), report.plannerTooltip.hovered);
+  check("planner-svg-tooltip-delay-observed", report.plannerTooltip.elapsedMilliseconds >= 900, report.plannerTooltip.elapsedMilliseconds);
+  check("planner-svg-hover-no-page-errors", report.plannerTooltip.newPageErrors.length === 0, report.plannerTooltip.newPageErrors);
+  if (!values["planner-tooltip-only"]) {
+    for (const [name, expected] of [["Collapse planner", "Expand planner"], ["Expand planner", "Collapse planner"],
+      ["Hide completed items", "Show completed items"], ["Show completed items", "Hide completed items"]]) {
+      await page.getByRole("button", { name, exact: true }).click();
+      await page.getByRole("button", { name: expected, exact: true }).waitFor();
+      check(`planner-${name}`, true, { activated: name, observedControl: expected });
+    }
+    await openExecution();
+    await screenshot("execution-timing");
+    await page.keyboard.press("Escape");
+    check("execution-escape-restores-trigger", await page.locator(".spiral-day-execution-trigger")
+      .evaluate((element) => element === document.activeElement), "Execution ribbon trigger");
+    await page.locator(".spiral-day-execution-trigger").press("Enter");
+    const timingTab = page.getByRole("tab", { name: "Timing", exact: true });
+    await timingTab.focus();
+    await timingTab.press("ArrowRight");
+    check("execution-keyboard-plan-tab", await page.getByRole("tab", { name: "Plan", exact: true })
+      .getAttribute("aria-selected") === "true", "Plan selected after ArrowRight");
+    const alphaTitle = page.getByRole("button", { name: "Host fixture Alpha", exact: true });
+    if (!await alphaTitle.isVisible()) await page.locator(".spiral-day-execution__unscheduled > summary").click();
+    await alphaTitle.waitFor();
+    await screenshot("execution-plan");
+    await alphaTitle.click();
+    await page.waitForFunction((path) => app.workspace.getActiveFile()?.path === path, fixture.today.path);
+    check("execution-source-navigation", true, fixture.today.path);
+    await page.keyboard.press("Escape");
+    const afterNavigation = await markdownHashes();
+    report.sourceHashes.afterNavigation = afterNavigation;
+    check("read-only-navigation-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterNavigation), afterNavigation);
+    if (values.review) {
+      report.reviewReadOnly = await runReviewReadOnly({ page, fixture, openExecution, check, screenshot, markdownHashes });
+    }
+    report.lifecycle = await runLifecycleCycles({ page, pluginId: manifest.id, openPlanner, openExecution, check, screenshot });
+    const afterLifecycle = await markdownHashes();
+    report.sourceHashes.afterLifecycle = afterLifecycle;
+    check("lifecycle-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(afterLifecycle), afterLifecycle);
+    if (values.review) {
+      report.reviewWrites = await runReviewWrites({ page, fixture, openExecution, check, screenshot,
+        markdownHashes, readSource, verifyIsolation,
+        saveSources: (sources) => json(join(evidence, "review-sources.json"), sources),
+      });
+      await json(join(evidence, "review-sources.json"), report.reviewWrites);
+    }
+    const clock = await runClockReload({ page, fixture, openExecution, check, screenshot,
+      readSource, verifyIsolation,
     });
-    await json(join(evidence, "review-sources.json"), report.reviewWrites);
+    await json(join(evidence, "clock-sources.json"), clock);
+    const afterClock = await markdownHashes();
+    report.sourceHashes.afterClock = afterClock;
+    check("clock-writes-only-today", Object.keys(afterClock).length === Object.keys(beforeNavigation).length
+      && Object.keys(beforeNavigation).every((path) => path === fixture.today.path
+        || beforeNavigation[path].sha256 === afterClock[path]?.sha256), afterClock);
+    check("clock-preserves-outside-region", clock.clockOutSource.split("<!-- /nautilus-log:plan -->")[1]
+      === fixture.today.source.split("<!-- /nautilus-log:plan -->")[1]
+      && clock.clockOutSource.split("<!-- nautilus-log:plan/v1 -->")[0]
+      === fixture.today.source.split("<!-- nautilus-log:plan/v1 -->")[0], fixture.today.path);
+    check("clock-preserves-all-other-note-bytes", clock.clockOutSource
+      .replace(/^  - LOGBOOK::\n    - CLOCK:.*\n/m, "") === clock.beforeSource, fixture.today.path);
+  } else {
+    check("planner-tooltip-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(await markdownHashes()), beforeNavigation);
   }
-  const clock = await runClockReload({ page, fixture, openExecution, check, screenshot,
-    readSource, verifyIsolation,
-  });
-  await json(join(evidence, "clock-sources.json"), clock);
-  const afterClock = await markdownHashes();
-  report.sourceHashes.afterClock = afterClock;
-  check("clock-writes-only-today", Object.keys(afterClock).length === Object.keys(beforeNavigation).length
-    && Object.keys(beforeNavigation).every((path) => path === fixture.today.path
-      || beforeNavigation[path].sha256 === afterClock[path]?.sha256), afterClock);
-  check("clock-preserves-outside-region", clock.clockOutSource.split("<!-- /nautilus-log:plan -->")[1]
-    === fixture.today.source.split("<!-- /nautilus-log:plan -->")[1]
-    && clock.clockOutSource.split("<!-- nautilus-log:plan/v1 -->")[0]
-    === fixture.today.source.split("<!-- nautilus-log:plan/v1 -->")[0], fixture.today.path);
-  check("clock-preserves-all-other-note-bytes", clock.clockOutSource
-    .replace(/^  - LOGBOOK::\n    - CLOCK:.*\n/m, "") === clock.beforeSource, fixture.today.path);
   report.package.afterRun = await fileHashes(installedPlugin, packageFiles);
   check("plugin-bytes-unchanged", JSON.stringify(sourcePackage) === JSON.stringify(report.package.afterRun), report.package.afterRun);
   await page.keyboard.press("Escape");
   await openPlanner();
-  await screenshot("planner-after-ten-cycles");
+  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : "planner-after-ten-cycles");
   check("no-renderer-page-errors", report.pageErrors.length === 0, report.pageErrors);
   const errors = report.console.filter((event) => event.type === "error");
   check("no-renderer-console-errors", errors.length === 0, errors);
