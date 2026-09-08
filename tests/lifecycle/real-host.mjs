@@ -48,6 +48,8 @@ export async function runClockReload({ page, fixture, openExecution, check, scre
   const alpha = page.locator(".spiral-day-execution__plan-row").filter({
     has: page.getByRole("button", { name: "Host fixture Alpha", exact: true }),
   });
+  if (!await alpha.isVisible()) await page.locator(".spiral-day-execution__unscheduled > summary").click();
+  await alpha.waitFor();
   await alpha.getByRole("button", { name: "Clock in", exact: true }).click();
   await page.getByRole("tab", { name: "Timing", exact: true }).click();
   await clockOut.waitFor();

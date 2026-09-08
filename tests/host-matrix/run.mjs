@@ -271,9 +271,11 @@ try {
   await timingTab.press("ArrowRight");
   check("execution-keyboard-plan-tab", await page.getByRole("tab", { name: "Plan", exact: true })
     .getAttribute("aria-selected") === "true", "Plan selected after ArrowRight");
-  await page.getByRole("button", { name: "Host fixture Alpha", exact: true }).waitFor();
+  const alphaTitle = page.getByRole("button", { name: "Host fixture Alpha", exact: true });
+  if (!await alphaTitle.isVisible()) await page.locator(".spiral-day-execution__unscheduled > summary").click();
+  await alphaTitle.waitFor();
   await screenshot("execution-plan");
-  await page.getByRole("button", { name: "Host fixture Alpha", exact: true }).click();
+  await alphaTitle.click();
   await page.waitForFunction((path) => app.workspace.getActiveFile()?.path === path, fixture.today.path);
   check("execution-source-navigation", true, fixture.today.path);
   await page.keyboard.press("Escape");

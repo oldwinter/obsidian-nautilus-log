@@ -110,6 +110,9 @@ record, and clocks out the same record. Markdown hashes before activation, after
 navigation, after lifecycle use, and after CLOCK writes distinguish read-only
 use from the intentional write. CLOCK checks also preserve the note's text
 outside the Plan Region.
+When the remaining day cannot fit Alpha, the driver expands the real Unscheduled
+disclosure to reach the same task and its Clock in action. It does not change
+the date, task duration, host clock, or CLOCK/reload assertions.
 
 Read `evidence/report.json` for assertion results, errors, package hashes, host
 metadata, source hashes, renderer requests and their initiators, and screenshot
