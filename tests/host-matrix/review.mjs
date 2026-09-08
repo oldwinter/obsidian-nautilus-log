@@ -50,6 +50,43 @@ async function selectDate(page, day, locale = "en") {
   await page.locator(".spiral-day-review[aria-busy=false]").waitFor();
 }
 
+async function reviewControlsAfterScroll(page) {
+  const controls = page.locator(".spiral-day-review button:visible, .spiral-day-review input:visible");
+  const observations = [];
+  for (const control of await controls.all()) {
+    await control.scrollIntoViewIfNeeded();
+    observations.push(await control.evaluate((element) => {
+      const rect = element.getBoundingClientRect().toJSON();
+      const clip = { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
+      const ancestors = [];
+      for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        if (!/(auto|scroll|hidden|clip)/.test(`${style.overflowX} ${style.overflowY}`)) continue;
+        const bounds = ancestor.getBoundingClientRect();
+        const area = { left: bounds.left + ancestor.clientLeft, top: bounds.top + ancestor.clientTop,
+          right: bounds.left + ancestor.clientLeft + ancestor.clientWidth,
+          bottom: bounds.top + ancestor.clientTop + ancestor.clientHeight };
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+          clip.left = Math.max(clip.left, area.left);
+          clip.right = Math.min(clip.right, area.right);
+        }
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+          clip.top = Math.max(clip.top, area.top);
+          clip.bottom = Math.min(clip.bottom, area.bottom);
+        }
+        ancestors.push({ className: ancestor.className, scrollTop: ancestor.scrollTop,
+          clientHeight: ancestor.clientHeight, scrollHeight: ancestor.scrollHeight, area });
+      }
+      const centerElement = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return { label: element.getAttribute("aria-label") || element.textContent, rect, clip, ancestors,
+        fullyVisible: rect.width > 0 && rect.height > 0 && rect.left >= clip.left - 1
+          && rect.right <= clip.right + 1 && rect.top >= clip.top - 1 && rect.bottom <= clip.bottom + 1,
+        centerExposed: element === centerElement || element.contains(centerElement) };
+    }));
+  }
+  return observations;
+}
+
 export async function runReviewReadOnly({ page, fixture, openExecution, check, screenshot, markdownHashes }) {
   const before = await markdownHashes();
   const states = [];
@@ -101,10 +138,14 @@ export async function runReviewReadOnly({ page, fixture, openExecution, check, s
         const observed = await page.evaluate(() => {
           const panel = document.querySelector(".spiral-day-execution");
           const root = document.querySelector(".spiral-day-review");
+          const scroll = root.closest(".spiral-day-execution__tabpanel");
           return { zoom: require("electron").webFrame.getZoomFactor(),
             theme: document.body.classList.contains("theme-dark") ? "dark" : "light",
             panelWidth: panel.clientWidth, panelScrollWidth: panel.scrollWidth,
             reviewWidth: root.clientWidth, reviewScrollWidth: root.scrollWidth,
+            panelBounds: panel.getBoundingClientRect().toJSON(),
+            scrollBounds: scroll.getBoundingClientRect().toJSON(),
+            scroll: { top: scroll.scrollTop, clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight },
             dateLabel: root.querySelector("input[type=date]").getAttribute("aria-label"),
             metricLabels: [...root.querySelectorAll(".spiral-day-review__metrics dt")].map((element) => element.textContent),
             text: root.textContent, innerWidth, innerHeight, devicePixelRatio };
@@ -120,7 +161,16 @@ export async function runReviewReadOnly({ page, fixture, openExecution, check, s
           && observed.reviewScrollWidth <= observed.reviewWidth + 1, observed);
         const label = `review-${locale}-${theme}-${Math.round(zoom * 100)}`;
         await screenshot(label);
-        states.push({ locale, theme, zoom, observed });
+        check(`review-${locale}-${theme}-${zoom}-popover-inside-viewport`, observed.panelBounds.left >= -1
+          && observed.panelBounds.top >= -1 && observed.panelBounds.right <= observed.innerWidth + 1
+          && observed.panelBounds.bottom <= observed.innerHeight + 1, observed);
+        const controls = await reviewControlsAfterScroll(page);
+        await screenshot(`${label}-last-control`);
+        check(`review-${locale}-${theme}-${zoom}-controls-reachable-through-scroll`, controls.length > 0
+          && controls.every((control) => control.fullyVisible && control.centerExposed)
+          && (observed.scroll.scrollHeight <= observed.scroll.clientHeight + 1
+            || controls.some((control) => control.ancestors.some((ancestor) => ancestor.scrollTop > 0))), controls);
+        states.push({ locale, theme, zoom, observed, controls });
       }
     }
   }

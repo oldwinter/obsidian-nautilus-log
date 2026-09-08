@@ -40,6 +40,14 @@ native Settings dropdown, including a separate settings window when the host
 creates one. Theme changes use Obsidian's theme operation; zoom uses Electron's
 `webFrame` and records the returned factor. These checks do not emulate a
 different host, replace system fonts, or certify pixel parity.
+Each state checks the popover bounds against the actual viewport and scrolls to
+every Review button and date input. It checks the complete control bounds
+against clipping ancestors and tests whether the control's center is exposed.
+The initial and final scroll positions have separate screenshots. Captures use
+CDP's viewport screenshot operation with `captureBeyondViewport: false` and
+`fromSurface: true`. The report retains PNG pixel dimensions, native zoom, device
+pixel ratio, and CSS layout/visual viewport metrics so capture scaling can be
+distinguished from application clipping.
 
 The Review suite performs source navigation with Enter, checks date-button
 focus retention and a visible focus outline, and confirms Escape returns focus

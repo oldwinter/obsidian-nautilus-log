@@ -123,6 +123,7 @@ if (platform() === "darwin") {
 let child;
 let browser;
 let page;
+let cdp;
 let childExit;
 let exitPromise;
 let networkAttached = false;
@@ -136,8 +137,18 @@ const stdout = [];
 const stderr = [];
 async function screenshot(name) {
   const file = `${name}.png`;
-  await page.screenshot({ path: join(evidence, file), fullPage: true });
-  report.screenshots.push({ file, sha256: hash(await readFile(join(evidence, file))) });
+  const viewport = await page.evaluate(() => ({ innerWidth, innerHeight, devicePixelRatio,
+    zoom: require("electron").webFrame.getZoomFactor() }));
+  const layout = await cdp.send("Page.getLayoutMetrics");
+  const { data } = await cdp.send("Page.captureScreenshot", {
+    format: "png", captureBeyondViewport: false, fromSurface: true,
+  });
+  const bytes = Buffer.from(data, "base64");
+  assert(bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), "CDP screenshot must be PNG");
+  const pixels = { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+  await writeFile(join(evidence, file), bytes);
+  report.screenshots.push({ file, sha256: hash(bytes), method: "CDP Page.captureScreenshot viewport fromSurface",
+    pixels, viewport, cssLayoutViewport: layout.cssLayoutViewport, cssVisualViewport: layout.cssVisualViewport });
 }
 async function openPlanner() {
   await page.evaluate(async ({ type, logicalDate }) => {
@@ -192,7 +203,7 @@ try {
   page.setDefaultTimeout(15000);
   page.on("console", (message) => report.console.push({ type: message.type(), text: message.text(), location: message.location() }));
   page.on("pageerror", (error) => report.pageErrors.push({ message: error.message, stack: error.stack }));
-  const cdp = await page.context().newCDPSession(page);
+  cdp = await page.context().newCDPSession(page);
   await cdp.send("Network.enable");
   networkAttached = true;
   cdp.on("Network.requestWillBeSent", (event) => {
