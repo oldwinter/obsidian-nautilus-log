@@ -657,9 +657,9 @@ function surfaceState(root: HTMLElement): HarnessSurfaceState {
     overviewMetricLabels: Object.freeze(overviewMetricLabels.map((label) => label.textContent ?? "")),
     overviewOpen: overview?.open ?? false,
     renderedContrast: renderedContrast(root),
-    semanticTargetCount: root.querySelectorAll(
-      'svg.spiral-day-planner__spiral[role="group"] [data-planner-focus-key][aria-label][role]',
-    ).length,
+    semanticTargetCount: [...root.querySelectorAll(
+      'svg.spiral-day-planner__spiral[role="group"] [data-planner-focus-key][role]',
+    )].filter((target) => target.querySelector(":scope > title")?.textContent?.trim()).length,
     surfaceRole: root.querySelector("svg.spiral-day-planner__spiral")?.getAttribute("role") ?? null,
     playbackRunning: root.querySelector('[data-control="play"]')?.getAttribute("aria-disabled") === "true",
     scheduleOpen: root.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule")?.open ?? false,
@@ -1351,7 +1351,7 @@ window.issue24Harness = {
       return {
         current: id !== ""
           && tooltip?.classList.contains("spiral-day-planner__tooltip") === true
-          && tooltip.textContent === target?.getAttribute("aria-label"),
+          && tooltip.textContent === target?.querySelector(":scope > title")?.textContent,
         id,
         text: tooltip?.textContent ?? "",
       };

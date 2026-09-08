@@ -51,8 +51,10 @@ export interface PlannerResizeSubscription {
 
 export function plannerContainerWidth(element: HTMLElement): number {
   const style = element.ownerDocument.defaultView?.getComputedStyle(element);
-  const padding = Number.parseFloat(style?.paddingLeft ?? "0")
-    + Number.parseFloat(style?.paddingRight ?? "0");
+  const paddingLeft = Number.parseFloat(style?.paddingLeft ?? "");
+  const paddingRight = Number.parseFloat(style?.paddingRight ?? "");
+  const padding = (Number.isFinite(paddingLeft) ? paddingLeft : 0)
+    + (Number.isFinite(paddingRight) ? paddingRight : 0);
   return Math.max(0, element.clientWidth - padding);
 }
 

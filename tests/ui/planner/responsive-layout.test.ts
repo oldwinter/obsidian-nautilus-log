@@ -30,6 +30,20 @@ test("TC-OBS-VIS-001-002 DOM measurement removes container padding before applyi
   assert.equal(plannerLayoutForWidth(plannerContainerWidth(element)).mode, "compact");
 });
 
+test("TC-OBS-VIS-001-002 detached DOM measurement treats empty computed padding as zero", () => {
+  const element = {
+    clientWidth: 544,
+    isConnected: false,
+    ownerDocument: {
+      defaultView: {
+        getComputedStyle: () => ({ paddingLeft: "", paddingRight: "" }),
+      },
+    },
+  } as unknown as HTMLElement;
+  assert.equal(plannerContainerWidth(element), 544);
+  assert.equal(plannerLayoutForWidth(plannerContainerWidth(element)).mode, "wide");
+});
+
 test("TC-UP-CMP-01-001 compact replaces rails and hover with Overview and Schedule", () => {
   const compact = plannerLayoutForWidth(320);
   assert.equal(compact.showWideHeader, false);

@@ -144,6 +144,29 @@ async function collectBrowserNetworkAttempts(page, phase, output) {
   output.push(...attempts.map((attempt) => ({ ...attempt, phase })));
 }
 
+async function svgAccessibilityEvidence(page) {
+  const root = page.locator("#primary-planner");
+  const samples = [
+    ["surface", "group", root.locator("svg.spiral-day-planner__spiral")],
+    ["available", "img", root.locator(".spiral-day-planner__available[role='img']").first()],
+    ["label", "img", root.locator(".spiral-day-planner__external-label[role='img']").first()],
+    ["timeline", "button", root.locator(".spiral-day-planner__item[role='button']").first()],
+  ];
+  const evidence = {};
+  for (const [key, role, target] of samples) {
+    failUnless(await target.count() === 1, `Missing SVG accessibility target: ${key}`);
+    const name = (await target.locator(":scope > title").textContent())?.trim() ?? "";
+    failUnless(name !== "", `Missing SVG title accessibility name: ${key}`);
+    const roleMatches = await root.getByRole(role, { name, exact: true }).count();
+    failUnless(roleMatches > 0,
+      `SVG title did not expose its ${role} accessibility name: ${JSON.stringify({ key, name })}`);
+    evidence[key] = Object.freeze({ name, role, roleMatches });
+  }
+  const svgAriaLabels = await root.locator("svg[aria-label], svg [aria-label]").count();
+  failUnless(svgAriaLabels === 0, `SVG aria-label attributes reached the host tooltip path: ${svgAriaLabels}`);
+  return Object.freeze({ ...evidence, svgAriaLabels });
+}
+
 async function waitForHarness(server) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
@@ -386,6 +409,8 @@ try {
       && environment.clock?.performanceMilliseconds === profile.clock.performanceMilliseconds,
   `ENV-VIS browser mismatch: ${JSON.stringify(environment)}`);
 
+  const svgAccessibility = await svgAccessibilityEvidence(page);
+
   const adapterLifecycle = await page.evaluate(() => window.issue24Harness.assertAdapterLifecycle());
   failUnless(Object.values(adapterLifecycle).every(Boolean),
     `Production adapter lifecycle seam failed: ${JSON.stringify(adapterLifecycle)}`);
@@ -557,6 +582,7 @@ try {
   await writeFile(join(OUTPUT_DIRECTORY, "env-vis-result.json"), `${JSON.stringify({
     adapterLifecycle,
     adapterWrapperEvidence,
+    svgAccessibility,
     patternIsolation,
     patternReloadIsolation,
     patternRegistryHostility,
@@ -576,7 +602,7 @@ try {
     profileRevision: profile.revision,
     captures: profile.captures.length,
   }, null, 2)}\n`);
-  console.log(`ENV-VIS passed: adapter=true adapterWrapperPixels=${adapterWrapperEvidence.map(({ pixels }) => pixels).join("/")} patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${evaluatedInteractions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
+  console.log(`ENV-VIS passed: adapter=true accessibility=true adapterWrapperPixels=${adapterWrapperEvidence.map(({ pixels }) => pixels).join("/")} patterns=true patternPixels=${elapsedPatternPixels}/${progressPatternPixels} reloadPatternPixels=${reloadElapsedPatternPixels}/${reloadProgressPatternPixels} hostilePatternPixels=${hostileElapsedPatternPixels}/${hostileProgressPatternPixels} interactions=${evaluatedInteractions.length} matrix=168 captures=${profile.captures.length} pluginRequests=0`);
 } catch (error) {
   if (serverError.trim()) console.error(serverError.trim());
   throw error;
