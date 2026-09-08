@@ -324,8 +324,8 @@ test("live Review freezes blocked writes and requests refresh for timezone or ba
     if (initial.state !== "ready") throw new Error("Review did not become ready");
     const reads = access.reads;
     assert.equal(coordinator.advance({
-      nowEpochMilliseconds: noon + 60_000,
-      timeZone: "UTC",
+      nowEpochMilliseconds: noon - 60_000,
+      timeZone: "Asia/Shanghai",
       writeBlocked: true,
     }), "frozen");
     assert.strictEqual(coordinator.snapshot, initial);

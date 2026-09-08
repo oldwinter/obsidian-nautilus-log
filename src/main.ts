@@ -273,7 +273,7 @@ export default class SpiralDayPlugin extends Plugin {
         const sample = clock.sample();
         const local = zonedTimeParts(sample.wallEpochMs, sample.timeZone);
         const today = Object.freeze({ year: local.year, month: local.month, day: local.day });
-        if (!this.#reviewDate && coordinator.snapshot.state === "ready"
+        if (!execution.writeBlocked && !this.#reviewDate && coordinator.snapshot.state === "ready"
           && !sameDate(coordinator.snapshot.displayedDate, today)) {
           this.#requestReviewRefresh();
           return;
