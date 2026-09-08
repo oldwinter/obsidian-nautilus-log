@@ -907,6 +907,11 @@ async function runTests() {
     assert(existsSync(path.join(rootDir, runner)), `${suite} has tests but no default runner`);
     execFileSync(process.execPath, [runner], { cwd: rootDir, stdio: "inherit" });
   }
+  const moduleTests = await listFiles("tests", (file) =>
+    file.endsWith(".test.mjs") && !file.startsWith("tests/release/"));
+  if (moduleTests.length > 0) {
+    execFileSync(process.execPath, ["--test", ...moduleTests], { cwd: rootDir, stdio: "inherit" });
+  }
   console.log(
     "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle, all focused suites passed",
   );

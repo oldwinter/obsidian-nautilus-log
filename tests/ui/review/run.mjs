@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 const { values } = parseArgs({
   options: {
     "source-root": { type: "string", default: process.cwd() },
+    "ui-root": { type: "string" },
     report: { type: "string" },
     executable: { type: "string" },
     help: { type: "boolean" },
@@ -19,12 +20,13 @@ const { values } = parseArgs({
 });
 
 if (values.help) {
-  console.log("PLAYWRIGHT_MODULE=/path/to/playwright node tests/ui/review/run.mjs --report /new/report.json [--source-root /candidate/repo] [--executable /path/to/chrome]");
+  console.log("PLAYWRIGHT_MODULE=/path/to/playwright node tests/ui/review/run.mjs --report /new/report.json [--source-root /candidate/repo] [--ui-root /ui-overlay/repo] [--executable /path/to/chrome]");
   process.exit(0);
 }
 
 assert(values.report, "Review browser runner requires --report <new JSON path>");
 const sourceRoot = await realpath(path.resolve(values["source-root"]));
+const uiRoot = values["ui-root"] ? await realpath(path.resolve(values["ui-root"])) : sourceRoot;
 const sourceRequire = createRequire(path.join(sourceRoot, "package.json"));
 const { build } = sourceRequire("esbuild");
 const reportPath = path.resolve(values.report);
@@ -46,7 +48,12 @@ const productionPaths = [
   "src/i18n/locales/zh-CN/review.ts",
   "styles/review.css",
 ];
-for (const relative of productionPaths) await access(path.join(sourceRoot, relative));
+const uiPaths = new Set([
+  "src/ui/execution/review-row.ts",
+  "src/ui/execution/review-view.ts",
+]);
+const productionPath = (relative) => path.join(uiPaths.has(relative) ? uiRoot : sourceRoot, relative);
+for (const relative of productionPaths) await access(productionPath(relative));
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const fileEvidence = async (absolutePath) => {
@@ -64,6 +71,10 @@ const bundle = await build({
   plugins: [{
     name: "review-production-source",
     setup(esbuild) {
+      esbuild.onResolve({ filter: /(?:^|\/)review-(?:row|view)(?:\.ts)?$/ }, (args) => {
+        const name = path.basename(args.path).replace(/\.ts$/, "");
+        return { path: path.join(uiRoot, "src/ui/execution", `${name}.ts`) };
+      });
       esbuild.onResolve({ filter: /^@review-source\// }, (args) => ({
         path: path.join(sourceRoot, "src", args.path.slice("@review-source/".length)),
       }));
@@ -132,6 +143,7 @@ const report = {
   status: "running",
   startedAt: new Date().toISOString(),
   sourceRoot,
+  uiRoot,
   runner: {
     node: process.version,
     playwright: packageJson.version,
@@ -142,7 +154,7 @@ const report = {
   },
   production: Object.fromEntries(await Promise.all(productionPaths.map(async (relative) => [
     relative,
-    await fileEvidence(path.join(sourceRoot, relative)),
+    await fileEvidence(productionPath(relative)),
   ]))),
   browser: { executable: await realpath(executable) },
   assertions: [],
@@ -244,6 +256,29 @@ try {
     await capture(page, "states-wide-en");
   });
 
+  await scenario("empty-date-presentations", async () => {
+    const variants = [
+      ["empty", "No tasks to review on this date."],
+      ["missing-note", "No Daily Note exists for this date."],
+      ["missing-plan", "This Daily Note has no Primary Plan."],
+      ["invalid-plan", "The Primary Plan markers are invalid. Check the Daily Note."],
+    ];
+    for (const [mode, expectedStatus] of variants) {
+      await open(mode);
+      await page.getByText(expectedStatus, { exact: true }).waitFor();
+      const observed = {
+        status: (await page.locator(".spiral-day-review__status").textContent())?.trim(),
+        summaryHidden: await page.locator(".spiral-day-review__summary").evaluate((element) => element.hidden),
+        listHidden: await page.locator(".spiral-day-review__list").evaluate((element) => element.hidden),
+        rows: await page.locator(".spiral-day-review__row").count(),
+        actions: await visibleMutationCount(),
+      };
+      check(`review.${mode}-hides-empty-summary-and-list`, observed.status === expectedStatus
+        && observed.summaryHidden && observed.listHidden && observed.rows === 0 && observed.actions === 0, observed);
+      if (mode === "invalid-plan") await capture(page, "empty-invalid-plan");
+    }
+  });
+
   await scenario("stale-building-over-limit", async () => {
     await open("full");
     await page.evaluate(() => window.reviewHarness.setExecution("stale"));
@@ -297,6 +332,29 @@ try {
     check("review.dispatch-preserves-source-fingerprint", dispatched.target.sourceFingerprint === expectedTarget.sourceFingerprint, dispatched);
     await page.evaluate(() => window.reviewHarness.resolveDispatch("applied"));
     await page.waitForFunction(() => document.querySelector("#review-root")?.getAttribute("aria-busy") === "false");
+  });
+
+  await scenario("focus-recovery", async () => {
+    await open("target");
+    const complete = page.getByRole("button", { name: "Complete", exact: true });
+    await complete.focus();
+    await page.evaluate(() => window.reviewHarness.setReviewMode("completed-target"));
+    const completedSource = page.getByRole("button", { name: "Open source for Opaque target", exact: true });
+    check("review.completed-action-focuses-same-row-source", await completedSource.evaluate((element) => document.activeElement === element), await page.evaluate(() => document.activeElement?.getAttribute("aria-label")));
+    check("review.completed-row-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
+
+    await open("full");
+    await row("Live timer").locator(".spiral-day-review__title").focus();
+    await page.evaluate(() => window.reviewHarness.setExecution("stale"));
+    const refresh = page.getByRole("button", { name: "Refresh review", exact: true });
+    check("review.invalidated-list-focuses-refresh", await refresh.evaluate((element) => document.activeElement === element), await page.evaluate(() => document.activeElement?.textContent));
+
+    await open("full");
+    await row("Paused task").locator(".spiral-day-review__title").focus();
+    await page.evaluate(() => window.reviewHarness.setReviewMode("row-removed"));
+    const adjacentSource = row("No recorded time").locator(".spiral-day-review__title");
+    check("review.removed-row-focuses-adjacent-source", await adjacentSource.evaluate((element) => document.activeElement === element), await page.evaluate(() => document.activeElement?.textContent));
+    check("review.focused-row-was-removed", await row("Paused task").count() === 0, await page.locator(".spiral-day-review__title").allTextContents());
   });
 
   await scenario("rejected-and-uncertain", async () => {
@@ -366,28 +424,25 @@ try {
     const complete = page.getByRole("button", { name: "Complete", exact: true });
     const clockIn = page.getByRole("button", { name: "Clock in", exact: true });
     const date = page.getByLabel("Review date", { exact: true });
-    check("review.today-mutations-enabled", await complete.isEnabled() && await clockIn.isEnabled(), {
-      complete: await complete.isEnabled(), clockIn: await clockIn.isEnabled(),
+    check("review.today-mutations-visible-and-enabled", await visibleMutationCount() === 2 && await complete.isEnabled() && await clockIn.isEnabled(), {
+      visible: await visibleMutationCount(), complete: await complete.isEnabled(), clockIn: await clockIn.isEnabled(),
     });
 
     await page.getByRole("button", { name: "Previous day", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-28");
-    check("review.past-date-is-read-only", await complete.isDisabled() && await clockIn.isDisabled(), {
-      complete: await complete.isDisabled(), clockIn: await clockIn.isDisabled(),
-    });
+    check("review.past-date-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
     check("review.past-source-navigation-remains-enabled", await page.getByRole("button", { name: "Open source for Opaque target", exact: true }).isEnabled(), await page.getByRole("button", { name: "Open source for Opaque target", exact: true }).isEnabled());
+    await capture(page, "past-read-only");
 
     await page.getByRole("button", { name: "Next day", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-29");
-    check("review.current-date-restores-mutations", await complete.isEnabled() && await clockIn.isEnabled(), {
-      complete: await complete.isEnabled(), clockIn: await clockIn.isEnabled(),
+    check("review.current-date-restores-mutations", await visibleMutationCount() === 2 && await complete.isEnabled() && await clockIn.isEnabled(), {
+      visible: await visibleMutationCount(), complete: await complete.isEnabled(), clockIn: await clockIn.isEnabled(),
     });
 
     await page.getByRole("button", { name: "Next day", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-30");
-    check("review.future-date-is-read-only", await complete.isDisabled() && await clockIn.isDisabled(), {
-      complete: await complete.isDisabled(), clockIn: await clockIn.isDisabled(),
-    });
+    check("review.future-date-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
     await page.getByRole("button", { name: "Today", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-29");
     check("review.today-control-selects-current-date", await date.inputValue() === "2026-08-29", await date.inputValue());

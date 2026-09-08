@@ -48,6 +48,16 @@ jobs:
           node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
       - name: Review browser behavior
         run: node tests/ui/review/run.mjs --source-root . --report "$RUNNER_TEMP/review-browser-evidence/report.json"
+      - name: Prepare pinned visual evidence image
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          import { execFileSync } from "node:child_process";
+          const { image } = JSON.parse(readFileSync("tests/ui/planner-controls/env-vis-profile.json", "utf8"));
+          const reference = `${image.repository}@${image.digest}`;
+          execFileSync("docker", ["pull", reference], { stdio: "inherit" });
+          execFileSync("docker", ["tag", reference, `${image.repository}:${image.tag}`], { stdio: "inherit" });
+          NODE
       - name: Planner visual and interaction evidence
         run: node tests/ui/planner-controls/run-visual-evidence.mjs --output "$RUNNER_TEMP/planner-browser-evidence"
       - uses: actions/upload-artifact@v7.0.1

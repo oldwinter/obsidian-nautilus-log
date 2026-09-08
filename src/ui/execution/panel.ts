@@ -450,6 +450,7 @@ export function mountExecutionPanel(
       clearDeleteActivation(true);
       if (!opened) return;
       opened = false;
+      review?.render(reviewPanel, false);
       popover.hidden = true;
       if (timer !== undefined) {
         document.defaultView?.clearInterval(timer);

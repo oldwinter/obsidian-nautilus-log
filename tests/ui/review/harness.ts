@@ -6,7 +6,16 @@ import type { ReviewCoordinatorSnapshot, RuntimeReviewTask } from "@review-sourc
 
 type Locale = "en" | "zh-CN";
 type Outcome = "applied" | "already-applied" | "rejected" | "uncertain";
-type ReviewMode = "full" | "target" | "empty" | "building" | "over-limit" | "unavailable";
+type ReadyReviewMode =
+  | "full"
+  | "target"
+  | "completed-target"
+  | "row-removed"
+  | "empty"
+  | "missing-note"
+  | "missing-plan"
+  | "invalid-plan";
+type ReviewMode = ReadyReviewMode | "building" | "over-limit" | "unavailable";
 
 interface MutableStats {
   ticks: number;
@@ -110,6 +119,10 @@ const FULL_CLOCKS: readonly ReviewClock[] = Object.freeze([
 const TARGET_TASKS = Object.freeze([
   task("forged/key|Daily/Wrong.md|owner=wrong|999", "Opaque target", "open", 25, 17, OPAQUE_TARGET),
 ]);
+const COMPLETED_TARGET_TASKS: readonly RuntimeReviewTask[] = Object.freeze([
+  Object.freeze({ ...TARGET_TASKS[0]!, status: "done" }),
+]);
+const ROW_REMOVED_TASKS = Object.freeze(FULL_TASKS.filter((entry) => entry.key !== "row:paused"));
 
 function sameDate(left: LogicalDate, right: LogicalDate): boolean {
   return left.year === right.year && left.month === right.month && left.day === right.day;
@@ -189,14 +202,20 @@ function executionSnapshot(
   }) as ExecutionApplicationSnapshot;
 }
 
-function readySnapshot(reviewMode: Extract<ReviewMode, "full" | "target" | "empty">, date: LogicalDate): ReviewCoordinatorSnapshot {
-  const tasks = reviewMode === "full" ? FULL_TASKS : reviewMode === "target" ? TARGET_TASKS : [];
-  const clocks = reviewMode === "full" ? FULL_CLOCKS : [];
+function readySnapshot(reviewMode: ReadyReviewMode, date: LogicalDate): ReviewCoordinatorSnapshot {
+  const tasks = reviewMode === "full" ? FULL_TASKS
+    : reviewMode === "target" ? TARGET_TASKS
+    : reviewMode === "completed-target" ? COMPLETED_TARGET_TASKS
+    : reviewMode === "row-removed" ? ROW_REMOVED_TASKS : [];
+  const clocks = reviewMode === "full" || reviewMode === "row-removed" ? FULL_CLOCKS : [];
+  const availability = reviewMode === "missing-note" ? "missing-note"
+    : reviewMode === "missing-plan" ? "missing-plan"
+    : reviewMode === "invalid-plan" ? "invalid-plan" : "ready";
   return Object.freeze({
     state: "ready",
     generation: ++generation,
     displayedDate: Object.freeze({ ...date }),
-    availability: "ready",
+    availability,
     projectedAtEpochMilliseconds: now,
     historyGeneration: 11,
     historyDiagnostics: Object.freeze([]),
@@ -217,16 +236,16 @@ function readySnapshot(reviewMode: Extract<ReviewMode, "full" | "target" | "empt
 }
 
 function reviewSnapshot(reviewMode: ReviewMode, date: LogicalDate): ReviewCoordinatorSnapshot {
-  if (reviewMode === "full" || reviewMode === "target" || reviewMode === "empty") {
-    return readySnapshot(reviewMode, date);
-  }
   if (reviewMode === "building") return Object.freeze({ state: "building", generation: ++generation });
-  return Object.freeze({
-    state: "unavailable",
-    generation: ++generation,
-    reason: reviewMode === "over-limit" ? "history-over-limit" : "history-unavailable",
-    history: Object.freeze({ state: "unavailable", generation, reason: "read-failed" }),
-  }) as ReviewCoordinatorSnapshot;
+  if (reviewMode === "over-limit" || reviewMode === "unavailable") {
+    return Object.freeze({
+      state: "unavailable",
+      generation: ++generation,
+      reason: reviewMode === "over-limit" ? "history-over-limit" : "history-unavailable",
+      history: Object.freeze({ state: "unavailable", generation, reason: "read-failed" }),
+    }) as ReviewCoordinatorSnapshot;
+  }
+  return readySnapshot(reviewMode, date);
 }
 
 function publishReview(): void {
@@ -280,7 +299,7 @@ const port = createReviewEntryPort({
   async selectDate(date) {
     stats.selectedDates.push(date ? Object.freeze({ ...date }) : null);
     currentDate = date ? Object.freeze({ ...date }) : TODAY;
-    if (mode === "full" || mode === "target" || mode === "empty") {
+    if (mode !== "building" && mode !== "over-limit" && mode !== "unavailable") {
       review = readySnapshot(mode, currentDate);
       publishReview();
     }
@@ -291,7 +310,7 @@ const port = createReviewEntryPort({
   tick() {
     stats.ticks += 1;
     now += MINUTE;
-    if (review.state === "ready" && (mode === "full" || mode === "target" || mode === "empty")) {
+    if (review.state === "ready" && mode !== "building" && mode !== "over-limit" && mode !== "unavailable") {
       review = readySnapshot(mode, currentDate);
       publishReview();
     }
@@ -331,7 +350,7 @@ const api = Object.freeze({
   tickNow(): void {
     stats.ticks += 1;
     now += MINUTE;
-    if (mode === "full" || mode === "target" || mode === "empty") {
+    if (mode !== "building" && mode !== "over-limit" && mode !== "unavailable") {
       review = readySnapshot(mode, currentDate);
       publishReview();
     }

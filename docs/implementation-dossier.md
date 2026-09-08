@@ -130,15 +130,52 @@ this amendment. The reviewed host-assembly handoff assigns `src/main.ts`,
 retains the completed toolchain and policy foundation and contributes its
 exact-SHA evidence to those two requirements.
 
-The reviewed Review-composition seam assigns the future
-`src/adapters/review-entry.ts` to ticket #27 for its initial implementation.
-This narrow port accepts only execution commands, confirmed snapshots, source
-navigation, the i18n resolver, and a lifecycle disposer from #27's composition
-root and Execution surface; those modules must not import ticket #29's Review UI
-internals. After #27 is complete at one exact SHA and closed, but before #29
-starts, a second reviewed handoff must transfer only `review-entry.ts` from #27
-to #29. `src/main.ts`, `esbuild.config.mjs`, the Execution panel/entry, and
-source navigation remain owned by #27.
+The reviewed 2026-09-08 completion handoff transfers only
+`src/adapters/review-entry.ts` from #27 to #29. Ticket #29 owns this narrow port,
+the Review locale catalogs, canonical `src/ui/execution/review-row.ts` and
+`review-view.ts`, Review styles, and Review UI tests. `src/main.ts`,
+`esbuild.config.mjs`, the Execution panel/entry, and source navigation remain
+#27-owned. They supply typed dependencies and never import #29 UI or locale
+internals.
+
+Review implementation may proceed while #24 and #27 await external acceptance.
+This changes implementation chronology only. Ticket #29 retains #27 and #28 as
+native closure dependencies. Host, accessibility, exact-SHA, clean-push,
+release, and human acceptance requirements remain in force.
+
+The #27-owned public host adapter `src/adapters/editor-buffer.ts` selects a
+loaded Markdown editor for source access. It must preserve an already-loaded
+unsaved empty buffer and must not promote a still-loading editor to source
+authority.
+
+The same amendment permits bounded corrections by existing owners. Ticket #28
+publishes explicit task source targets, displayed date, date availability, and
+projection timestamp. A target contains exact path, source fingerprint, source
+order, and nullable owner ID only for a unique identified or anonymous task.
+Collisions expose no target; opaque Review keys are never decoded.
+`ReviewCoordinator.advance(now)` invokes core only for running owners and
+performs no vault I/O. Same-date refresh reuses a current history snapshot
+without clearing confirmed rows; source or settings changes invalidate it.
+
+Ticket #27 supplies host clock, date selection, visibility, and refresh wiring.
+The selected Review date stays independent of today's Plan. Missing Daily
+Notes, missing or invalid Primary Plans, and valid empty plans remain distinct.
+Scheduled intervals contribute only from a confirmed Plan for the same date.
+Ticket #29 renders core values, dispatches existing intents, and waits for
+authoritative outcomes and refresh. It does not read Markdown, reconstruct
+source references, calculate Actual, or infer success from promise completion.
+
+Issue #29 also requests Clock In and Complete actions that upstream Review did
+not expose. The implemented proposal limits them to today's tasks and places
+them below row metrics. Past and future dates remain read-only. This is recorded
+as proposed [DEV-001](deviations/DEV-001-review-actions.md), pending the required
+parity and product approval. It must not be reported as exact unmodified visual
+parity or an approved release deviation before those approvals exist.
+
+The completion run also permits #22-owned verification maintenance: deterministic
+fixture clocks, discovering all focused test suites, failing when a suite has no
+runner, and CI coverage for source changes plus browser evidence. No requirement,
+evidence-age rule, or release gate is relaxed by these corrections.
 
 The reviewed command-decision handoff assigns the new
 `src/core/execution.ts` module and `tests/core/execution/` to ticket #26. The
@@ -234,7 +271,8 @@ store, screen-owned domain logic, or per-view runtime.
 | Surface adapters | `ItemView`, commands, ribbon/actions, editor menu, settings, notices, focus/scroll/transient presentation | Markdown reads/writes, core calls, active-task state, success inference |
 | `ActiveTaskView` | One singleton `ItemView` leaf projecting current Active Task, read-only unavailable states, source navigation by authoritative block ID, keyboard/focus behavior, narrow-dock presentation | Canonical active state, Markdown writes, planner selection, stale source navigation |
 | Planner surface assembly | Production Planner adapter and view wiring owned by #24, consuming #23's render primitives and exposing typed localized actions and approved state/style hooks | Host/package registration, Markdown reads/writes, duplicated geometry or scheduler semantics |
-| Host composition and package styles | Public registrations, the narrow Review composition port, and deterministic root `styles.css` aggregation owned by #27 through `src/main.ts`, `src/adapters/review-entry.ts`, and `esbuild.config.mjs` | Network, telemetry, Markdown reads/writes, duplicated domain/surface behavior, or imports of #29 Review UI internals |
+| Host composition and package styles | Public registrations and deterministic root `styles.css` aggregation owned by #27 through `src/main.ts` and `esbuild.config.mjs` | Network, telemetry, Markdown reads/writes, duplicated domain/surface behavior, or imports of #29 Review UI internals |
+| Review composition port | The narrow #29-owned `src/adapters/review-entry.ts` consumes typed #27/#28 dependencies and mounts only #29 Review UI/catalogs | Markdown reads/writes, core calls, source reconstruction, UI time arithmetic, or ownership of #27 host modules |
 | i18n base/shared | Typed resolver, locale selection/fallback, and equal `shared` catalogs owned by #24 | Planner, Execution, or Review namespace content |
 | i18n feature namespaces | Equal `planner` catalogs owned by #24, `execution` catalogs owned by #27, and `review` catalogs owned by #29 | Domain decisions, source text, edits to another ticket's namespace |
 
@@ -549,9 +587,9 @@ Implementation root issue:
 | Planner UI | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24) | [Planner UI: build the dockable Spiral-first planner surface](https://github.com/oldwinter/obsidian-nautilus-log/issues/23); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Production Planner adapter/view assembly and `UP-INS-03`; controls, i18n resolver/shared/planner namespaces, a11y/theme styles |
 | Execution Layer | [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Workspace commit/mutations/conflicts plus vault-wide identity/CLOCK safety indexing |
 | Execution Layer | [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | [Scheduler: build the vault runtime read and projection lifecycle](https://github.com/oldwinter/obsidian-nautilus-log/issues/21); [Execution Layer: implement byte-preserving Markdown commits and write safety](https://github.com/oldwinter/obsidian-nautilus-log/issues/25) | Pure execution decisions, runtime commands, mutation queue, execution/recovery/POMO, paired wall/monotonic clock sampling, and time continuity |
-| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Execution application module, host composition/build aggregation, narrow Review composition port, commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView`, source navigation, and local-only evidence |
-| Review | [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Sole primary owner of `UP-HIS-01..05`; history index and Review core projection |
-| Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review UI/styles, review locale namespace, and Review host QA |
+| Execution Layer | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Execution application module, host composition/build aggregation, commands/settings/notices, execution namespace, execution panel/Timing/Plan, singleton `ActiveTaskView`, source navigation, Review clock/date/visibility wiring, and local-only evidence |
+| Review | [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | [Scheduler: implement deterministic scheduling, capacity, and day projections](https://github.com/oldwinter/obsidian-nautilus-log/issues/19); [Scheduler: implement Markdown reads, Daily Note resolution, and identity indexing](https://github.com/oldwinter/obsidian-nautilus-log/issues/20); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26) | Sole primary owner of `UP-HIS-01..05`; bounded history, explicit source/date projection, and no-I/O live advancement |
+| Review | [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29) | [Execution Layer: build entry points and the Timing and Plan surfaces](https://github.com/oldwinter/obsidian-nautilus-log/issues/27); [Review: implement the bounded history index and Review projection](https://github.com/oldwinter/obsidian-nautilus-log/issues/28) | Review composition port, UI/styles, review locale namespace, and Review host QA |
 | Hardening | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30) | [Planner UI: complete controls, responsive themes, accessibility, and bilingual UI](https://github.com/oldwinter/obsidian-nautilus-log/issues/24); [Execution Layer: implement the serialized CLOCK and POMO runtime](https://github.com/oldwinter/obsidian-nautilus-log/issues/26); [Review: build the Review surface and end-to-end Review evidence](https://github.com/oldwinter/obsidian-nautilus-log/issues/29); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | Last bounded fixes, clean push, G0-G6 evidence, and exact-SHA candidate freeze |
 | Release | [Release: produce the deterministic candidate and execute gates G0-G9](https://github.com/oldwinter/obsidian-nautilus-log/issues/31) | [Hardening: qualify compatibility, performance, lifecycle, privacy, and full parity](https://github.com/oldwinter/obsidian-nautilus-log/issues/30); [Quality: build parity traceability and the exact-SHA evidence harness](https://github.com/oldwinter/obsidian-nautilus-log/issues/22) | G7-G9 execution/sign-off on #30's exact SHA; owns no repository files and changes none |
 

@@ -15,6 +15,7 @@ import {
   openActiveTaskView,
 } from "./adapters/active-task-view";
 import { ExecutionCommandRegistry } from "./adapters/commands";
+import { createLoadedMarkdownEditorResolver } from "./adapters/editor-buffer";
 import { registerExecutionEditorMenu } from "./adapters/editor-menu";
 import { ExecutionEntryAdapter } from "./adapters/execution-entry";
 import { executionOutcomeNotice, showExecutionNotice } from "./adapters/notices";
@@ -187,6 +188,7 @@ export default class SpiralDayPlugin extends Plugin {
   #historyUnsubscribe: Unsubscribe | undefined;
   #reviewCoordinator: ReviewCoordinator | undefined;
   #reviewPort: ReviewEntryPort | undefined;
+  #reviewDate: LogicalDate | undefined;
   #messages: ExecutionMessages | undefined;
   #sourceNavigator: ObsidianSourceNavigator | undefined;
   #execution: ExecutionApplication | undefined;
@@ -204,6 +206,7 @@ export default class SpiralDayPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     this.#textAccess = new ObsidianVaultTextAccess(this);
+    const editorForPath = createLoadedMarkdownEditorResolver(this.app.workspace);
     this.#atomicAccess = new ObsidianAtomicTextAccess({
       text: this.#textAccess,
       vault: this.app.vault,
@@ -211,7 +214,7 @@ export default class SpiralDayPlugin extends Plugin {
         const file = this.app.vault.getAbstractFileByPath(path);
         return file instanceof TFile ? file : undefined;
       },
-      editorForPath: (path) => this.#editorForPath(path),
+      editorForPath,
     });
     this.#pluginData = new PluginDataStore({
       load: () => this.loadData(),
@@ -247,6 +250,23 @@ export default class SpiralDayPlugin extends Plugin {
       navigateTask: async (target, location) => {
         await this.#requireNavigator().openTask(target, location);
       },
+      today: () => logicalDateAt(this.#requireClock()),
+      selectDate: async (date) => {
+        this.#reviewDate = date ? Object.freeze({ ...date }) : undefined;
+        await this.#refreshReview();
+      },
+      refresh: () => this.#refreshReview(),
+      tick: () => {
+        const coordinator = this.#requireReview();
+        const clock = this.#requireClock();
+        if (!this.#reviewDate && coordinator.snapshot.state === "ready"
+          && !sameDate(coordinator.snapshot.displayedDate, logicalDateAt(clock))) {
+          this.#requestReviewRefresh();
+        } else {
+          coordinator.advance(clock.now());
+        }
+      },
+      intentId: () => this.#intentId("review"),
       messages: this.#messages,
       addDisposer: (dispose) => this.register(dispose),
     });
@@ -679,9 +699,8 @@ export default class SpiralDayPlugin extends Plugin {
     const snapshot = this.#planSnapshot;
     const clock = this.#clock;
     const pluginData = this.#pluginData;
-    if (!coordinator || !clock || !pluginData || snapshot?.state !== "confirmed") return;
-    const logicalDate = logicalDateAt(clock);
-    if (!sameDate(snapshot.projection.displayedDate, logicalDate)) return;
+    if (!coordinator || !clock || !pluginData) return;
+    const logicalDate = this.#reviewDate ?? logicalDateAt(clock);
     const timeZone = clock.timeZone();
     const day = calendarDayBounds(logicalDate, timeZone, (date, zone) => {
       const resolved = resolveLocalMinuteEpoch(date, 0, zone);
@@ -697,9 +716,12 @@ export default class SpiralDayPlugin extends Plugin {
         ? Object.freeze({ startEpochMilliseconds, endEpochMilliseconds })
         : undefined;
     };
+    const schedule = snapshot?.state === "confirmed"
+      && sameDate(snapshot.projection.displayedDate, logicalDate)
+      ? snapshot.projection.schedule : undefined;
     const scheduledIntervals = Object.freeze([
-      ...snapshot.projection.schedule.fixedEvents,
-      ...snapshot.projection.schedule.plannedSlots,
+      ...(schedule?.fixedEvents ?? []),
+      ...(schedule?.plannedSlots ?? []),
     ].flatMap((entry) => {
       const interval = toInterval(entry.startMinutes, entry.endMinutes);
       return interval ? [interval] : [];
@@ -763,13 +785,6 @@ export default class SpiralDayPlugin extends Plugin {
     if (code === "primary-plan-missing") return this.#requireMessages().t("execution", "error.noPrimary");
     if (code === "no-block-id") return this.#requireMessages().t("execution", "error.noBlockId");
     return this.#requireMessages().t("execution", "notice.sourceUnavailable");
-  }
-
-  #editorForPath(path: string): Pick<Editor, "getValue" | "transaction"> | undefined {
-    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
-      if (leaf.view instanceof MarkdownView && leaf.view.file?.path === path) return leaf.view.editor;
-    }
-    return undefined;
   }
 
   #intentId(prefix: string): string {
