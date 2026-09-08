@@ -12,7 +12,7 @@ import { ObsidianSourceNavigator } from "../../../src/adapters/source-navigation
 function markdownView(
   path: string,
   bufferText: string,
-  loadedText: string,
+  loadedText: string | null,
   persistedBytes: number,
 ): {
   readonly view: MarkdownView;
@@ -37,7 +37,7 @@ function markdownView(
 }
 
 test("restoring Markdown views become editor-authoritative only after their public buffer state is loaded", () => {
-  const loading = markdownView("Daily/today.md", "", "", 596);
+  const loading = markdownView("Daily/today.md", "", null, 596);
   let activeView: MarkdownView | null = loading.view;
   const workspace = {
     getActiveViewOfType() { return activeView; },
@@ -47,6 +47,9 @@ test("restoring Markdown views become editor-authoritative only after their publ
     },
   };
   const resolver = createLoadedMarkdownEditorResolver(workspace as never);
+  assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
+
+  loading.view.data = "";
   assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
 
   loading.view.data = "persisted source";

@@ -26,7 +26,9 @@ export function createLoadedMarkdownEditorResolver(
       if (!file || file.path !== path) continue;
       const editor = view.editor;
       if (loadedFiles.get(view) === file) return editor;
-      if (editor.getValue().length === 0 && view.data.length === 0 && file.stat.size > 0) continue;
+      const data = view.data;
+      if (typeof data !== "string") continue;
+      if (editor.getValue().length === 0 && data.length === 0 && file.stat.size > 0) continue;
       loadedFiles.set(view, file);
       return editor;
     }
