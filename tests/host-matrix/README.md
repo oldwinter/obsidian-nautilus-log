@@ -32,7 +32,7 @@ as minimum-version proof. Obtaining and verifying the official installer is a
 separate prerequisite.
 
 Add `--review` to run the Review suite against a package that includes Review.
-It checks past/current/future source targets, disabled past/future mutation
+It checks past/current/future source targets, hidden past/future mutation
 controls, and the prior-day recorded metrics. Its 12 rendering states cover
 English and Simplified Chinese, Default light and dark themes, and actual
 Electron zoom factors of 80%, 100%, and 200%. Language changes use the plugin's

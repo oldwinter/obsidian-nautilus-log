@@ -95,10 +95,17 @@ export async function runReviewReadOnly({ page, fixture, openExecution, check, s
     await selectDate(page, day);
     const rows = page.locator(".spiral-day-review__row");
     check(`review-${day.relation}-rows`, await rows.count() === 4, await rows.count());
-    const actions = page.locator(".spiral-day-review__actions button:not([hidden])");
-    const disabled = await actions.evaluateAll((elements) => elements.map((element) => element.disabled));
-    check(`review-${day.relation}-action-gate`, disabled.length === 6
-      && disabled.every((value) => value === (day.relation !== "today")), disabled);
+    const actions = await page.locator(".spiral-day-review__actions button").evaluateAll((elements) => elements.map((element) => ({
+      label: element.getAttribute("aria-label") || element.textContent, disabled: element.disabled,
+      hidden: element.hidden, hasClientRects: element.getClientRects().length > 0,
+      visibility: getComputedStyle(element).visibility,
+    })));
+    const visibleActions = actions.filter((action) => action.hasClientRects && action.visibility === "visible");
+    check(`review-${day.relation}-action-gate`, day.relation === "today"
+      ? visibleActions.length === 6 && visibleActions.every((action) => !action.disabled)
+      : visibleActions.length === 0, actions);
+    if (day.relation !== "today") check(`review-${day.relation}-mutation-controls-hidden`,
+      actions.every((action) => action.hidden || !action.hasClientRects), actions);
     if (day.relation === "past") {
       const metrics = await reviewRow(page, "Host fixture Complete").locator("dd[data-metric]").allTextContents();
       check("review-past-recorded-metrics", JSON.stringify(metrics) === JSON.stringify(["10m", "12m", "+2m"]), metrics);
