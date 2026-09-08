@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { RefreshCoordinator } from "../../../src/runtime/refresh.ts";
 import {
+  createZonedLocalTimeResolver,
   ManualSystemClock,
   RealSystemClock,
   zonedTimeParts,
@@ -32,6 +33,43 @@ test("UP-INS-04 resolves local dates and minutes across zones and DST boundaries
   );
   assert.throws(() => zonedTimeParts(0, "Not/AZone"), RangeError);
   assert.throws(() => zonedTimeParts(Number.NaN, "UTC"), RangeError);
+});
+
+test("offset-free local times resolve uniquely and reject DST folds and gaps", () => {
+  const shanghai = createZonedLocalTimeResolver("Asia/Shanghai");
+  assert.deepEqual(shanghai.resolve({
+    year: 2026,
+    month: 8,
+    day: 29,
+    hour: 8,
+    minute: 10,
+  }), {
+    kind: "unique",
+    epochMs: Date.UTC(2026, 7, 29, 0, 10),
+  });
+
+  const newYork = createZonedLocalTimeResolver("America/New_York");
+  assert.deepEqual(newYork.resolve({
+    year: 2026,
+    month: 11,
+    day: 1,
+    hour: 1,
+    minute: 30,
+  }), { kind: "ambiguous" });
+  assert.deepEqual(newYork.resolve({
+    year: 2026,
+    month: 3,
+    day: 8,
+    hour: 2,
+    minute: 30,
+  }), { kind: "nonexistent" });
+  assert.deepEqual(newYork.resolve({
+    year: 2026,
+    month: 2,
+    day: 30,
+    hour: 12,
+    minute: 0,
+  }), { kind: "invalid" });
 });
 
 test("UP-INS-04 manual clock changes zones and fires equal timers deterministically", () => {

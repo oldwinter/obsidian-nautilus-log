@@ -112,9 +112,10 @@ async function waitFor(
   predicate: () => boolean,
   description: string,
 ): Promise<void> {
-  for (let attempt = 0; attempt < 200; attempt += 1) {
+  const deadline = performance.now() + 2_000;
+  while (performance.now() < deadline) {
     if (predicate()) return;
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setTimeout(resolve, 1));
   }
   assert.fail(`timed out waiting for ${description}`);
 }

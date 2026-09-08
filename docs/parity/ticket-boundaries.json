@@ -194,9 +194,9 @@
         "src/adapters/active-task-view.ts",
         "src/adapters/commands.ts",
         "src/adapters/editor-menu.ts",
+        "src/adapters/editor-buffer.ts",
         "src/adapters/execution-entry.ts",
         "src/adapters/notices.ts",
-        "src/adapters/review-entry.ts",
         "src/adapters/settings.ts",
         "src/adapters/source-navigation.ts",
         "src/i18n/locales/en/execution.ts",
@@ -240,6 +240,7 @@
     {
       "ticket": 29,
       "allowed_module_boundaries": [
+        "src/adapters/review-entry.ts",
         "src/i18n/locales/en/review.ts",
         "src/i18n/locales/zh-CN/review.ts",
         "src/ui/execution/review-row.ts",

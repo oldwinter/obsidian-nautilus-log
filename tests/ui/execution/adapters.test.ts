@@ -3,7 +3,6 @@ import test from "node:test";
 
 import { ExecutionCommandRegistry } from "../../../src/adapters/commands";
 import { registerExecutionEditorMenu } from "../../../src/adapters/editor-menu";
-import { createReviewEntryPort } from "../../../src/adapters/review-entry";
 import { executionOutcomeNotice } from "../../../src/adapters/notices";
 
 test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and removes them", async () => {
@@ -92,36 +91,6 @@ test("TC-UP-CMD-02-001..003 editor menu stays absent when disabled and dispatche
   assert.deepEqual(dispatched, ["clock-in"]);
 });
 
-test("review handoff port owns a replaceable placeholder surface without importing Review UI", () => {
-  const children: unknown[] = [];
-  const root = {
-    ownerDocument: {
-      createElement() {
-        return { className: "", textContent: "" };
-      },
-    },
-    append(child: unknown) { children.push(child); },
-    replaceChildren() { children.length = 0; },
-  };
-  const port = createReviewEntryPort({
-    dispatch: async () => { throw new Error("not used"); },
-    executionSnapshot: () => { throw new Error("not used"); },
-    subscribeExecution: () => () => undefined,
-    reviewSnapshot: () => ({ state: "absent", generation: 0 }),
-    subscribeReview: () => () => undefined,
-    navigateTask: () => undefined,
-    messages: { t: () => "Review is being prepared." } as never,
-    addDisposer: () => undefined,
-  });
-  const surface = port.createSurface(root as never);
-  surface.render(root as never, false);
-  assert.equal(children.length, 0);
-  surface.render(root as never, true);
-  assert.equal(children.length, 1);
-  assert.equal((children[0] as { textContent: string }).textContent, "Review is being prepared.");
-  surface.destroy();
-  assert.equal(children.length, 0);
-});
 
 test("UP-ERR-05/06 maps runtime failures to specific localized feedback", () => {
   const messages = {

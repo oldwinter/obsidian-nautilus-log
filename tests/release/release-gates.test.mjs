@@ -47,6 +47,7 @@ async function loadEvidence(fixture) {
     candidateSha: fixture.candidateSha,
     bundleRoot: fixture.bundleRoot,
     candidateRequirements: fixture.candidateRequirements,
+    nowMs: fixture.validationNowMs,
   });
 }
 
@@ -66,6 +67,7 @@ test("G0 accepts the exact pushed candidate and complete resolved evidence", asy
     branch: "candidate",
     scopePath: path.join(fixture.inputRoot, "g8-scope.json"),
     bundleRoot: fixture.bundleRoot,
+    nowMs: fixture.validationNowMs,
   });
   assert.deepEqual(
     { result: result.result, requirements: result.requirement_count, upstream: result.upstream_count },
@@ -139,6 +141,7 @@ test("G0 binds canonical scope fields and hashes to exact candidate object bytes
     scopePath,
     bundleRoot: fixture.bundleRoot,
     checkPushedState: false,
+    nowMs: fixture.validationNowMs,
   });
 
   const legacy = { ...fixture.scope, release_kind: fixture.scope.release_scope };
@@ -223,6 +226,7 @@ test("actual G0 accepts private profile semantics without requiring public host 
     branch: "candidate",
     scopePath,
     bundleRoot: fixture.bundleRoot,
+    nowMs: fixture.validationNowMs,
   });
   assert.equal(result.release_scope, "private");
   assert.equal(result.included_requirement_ids.length, 126);
@@ -236,21 +240,15 @@ test("a genuinely reduced private candidate passes G0 through G8 with scoped gat
   const observedProfiles = new Set(fixture.indexValue.records.map((entry) => entry.evidence_id.split("-").slice(2, -2).join("-")));
   assert.ok([...observedProfiles].every((id) => ["ENV-PURE", "ENV-VIS", "ENV-HOST-PRIVATE"].includes(id)));
 
-  const originalNow = Date.now;
-  Date.now = () => Date.parse("2099-01-01T00:00:00.000Z");
-  try {
-    const g0 = await runGate({
-      gate: "G0",
-      candidate: fixture.candidateSha,
-      branch: "candidate",
-      bundle: fixture.bundleRoot,
-      "input-dir": fixture.inputRoot,
-      repository: fixture.repository,
-    }, { validationNowMs: fixture.validationNowMs });
-    assert.equal(g0.result, "PASS");
-  } finally {
-    Date.now = originalNow;
-  }
+  const g0 = await runGate({
+    gate: "G0",
+    candidate: fixture.candidateSha,
+    branch: "candidate",
+    bundle: fixture.bundleRoot,
+    "input-dir": fixture.inputRoot,
+    repository: fixture.repository,
+  }, { validationNowMs: fixture.validationNowMs });
+  assert.equal(g0.result, "PASS");
 
   for (let index = 1; index <= 8; index += 1) {
     const gate = `G${index}`;
@@ -291,6 +289,7 @@ test("actual G0 rejects extra manifest files and symlinked bundle content", asyn
       scopePath: path.join(fixture.inputRoot, "g8-scope.json"),
       bundleRoot: fixture.bundleRoot,
       checkPushedState: false,
+      nowMs: fixture.validationNowMs,
     }), /exhaustively list every bundle file/);
   });
 
@@ -308,6 +307,7 @@ test("actual G0 rejects extra manifest files and symlinked bundle content", asyn
       scopePath: path.join(fixture.inputRoot, "g8-scope.json"),
       bundleRoot: fixture.bundleRoot,
       checkPushedState: false,
+      nowMs: fixture.validationNowMs,
     }), /symbolic links are forbidden/);
   });
 });
@@ -389,16 +389,15 @@ test("release inputs reject missing, malformed, duplicate, skipped, and corrupt 
   await fixture.writeGateResultsThrough("G7");
   await writeFile(g7Path, "{malformed\n");
   await assert.rejects(
-    execFileAsync(process.execPath, [
-      path.join(sourceRoot, "scripts/release/run-gate.mjs"),
-      "--gate", "G7",
-      "--candidate", fixture.candidateSha,
-      "--branch", "candidate",
-      "--bundle", fixture.bundleRoot,
-      "--input-dir", fixture.inputRoot,
-      "--repository", fixture.repository,
-    ]),
-    (error) => error.stderr.includes("g7-package.json") && error.stderr.includes("JSON"),
+    runGate({
+      gate: "G7",
+      candidate: fixture.candidateSha,
+      branch: "candidate",
+      bundle: fixture.bundleRoot,
+      "input-dir": fixture.inputRoot,
+      repository: fixture.repository,
+    }, { validationNowMs: fixture.validationNowMs }),
+    (error) => error.message.includes("g7-package.json") && error.message.includes("JSON"),
   );
   await writeFile(g7Path, `${JSON.stringify(g7, null, 2)}\n`);
 

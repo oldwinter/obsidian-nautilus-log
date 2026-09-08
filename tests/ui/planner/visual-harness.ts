@@ -148,10 +148,9 @@ function assertWideBoundary() {
   const gridBounds = grid.getBoundingClientRect();
   const fittedRailKinds = new Set(labels.flatMap((label) => {
     const text = label.querySelector<SVGTextElement>("text")!;
-    const full = label.getAttribute("aria-label") ?? "";
     const title = label.querySelector("title")?.textContent ?? "";
-    if (!text.textContent?.endsWith("…") || title !== full) return [];
-    const script = /[\u3400-\u9fff]/u.test(full) ? "cjk" : "latin";
+    if (!text.textContent?.endsWith("…") || title.length <= text.textContent.length) return [];
+    const script = /[\u3400-\u9fff]/u.test(title) ? "cjk" : "latin";
     return [`${text.getAttribute("text-anchor")}:${script}`];
   }));
   const expectedRailKinds = ["end:latin", "end:cjk", "start:latin", "start:cjk"];

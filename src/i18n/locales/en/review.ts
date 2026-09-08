@@ -1,0 +1,71 @@
+import type { MessageFunction } from "../../types";
+
+export type ReviewCatalog = Readonly<{
+  "date.label": string;
+  "date.previous": string;
+  "date.next": string;
+  "date.today": string;
+  "summary.counts": MessageFunction<{ completed: number; total: number; compared: number }>;
+  "metric.planned": string;
+  "metric.actual": string;
+  "metric.variance": string;
+  "metric.noComparison": string;
+  "state.not-started": string;
+  "state.live": string;
+  "state.paused": string;
+  "state.not-tracked": string;
+  "state.compared": string;
+  "state.empty": string;
+  "state.loading": string;
+  "state.missingNote": string;
+  "state.missingPlan": string;
+  "state.invalidPlan": string;
+  "state.readOnlyDate": string;
+  "state.unavailable": string;
+  "state.overLimit": string;
+  "state.stale": string;
+  "state.working": string;
+  "state.malformed": string;
+  "state.noTarget": string;
+  "action.clockIn": string;
+  "action.complete": string;
+  "action.openSource": MessageFunction<{ title: string }>;
+  "action.refresh": string;
+  "action.failed": string;
+  "list.label": string;
+}>;
+
+export const enReview: ReviewCatalog = Object.freeze({
+  "date.label": "Review date",
+  "date.previous": "Previous day",
+  "date.next": "Next day",
+  "date.today": "Today",
+  "summary.counts": ({ completed, total, compared }) => `${completed}/${total} completed · ${compared} compared`,
+  "metric.planned": "Planned",
+  "metric.actual": "Actual",
+  "metric.variance": "Variance",
+  "metric.noComparison": "No completed tasks with recorded time to compare.",
+  "state.not-started": "Not started",
+  "state.live": "Live",
+  "state.paused": "Paused",
+  "state.not-tracked": "Not tracked",
+  "state.compared": "Compared",
+  "state.empty": "No tasks to review on this date.",
+  "state.loading": "Loading review…",
+  "state.missingNote": "No Daily Note exists for this date.",
+  "state.missingPlan": "This Daily Note has no Primary Plan.",
+  "state.invalidPlan": "The Primary Plan markers are invalid. Check the Daily Note.",
+  "state.readOnlyDate": "Past and future dates are read-only. Choose Today to change tasks.",
+  "state.unavailable": "Review history is unavailable. Refresh to try again.",
+  "state.overLimit": "History exceeds the supported limit. No partial totals are shown.",
+  "state.stale": "Waiting for confirmed timing data. Task actions are unavailable.",
+  "state.working": "Saving changes…",
+  "state.malformed": "Some timing records could not be read. Their time is excluded.",
+  "state.noTarget": "This task cannot be identified safely. Check its source before making changes.",
+  "action.clockIn": "Clock in",
+  "action.complete": "Complete",
+  "action.openSource": ({ title }) => `Open source for ${title}`,
+  "action.refresh": "Refresh review",
+  "action.failed": "The action could not be confirmed. Refresh and try again.",
+  "list.label": "Review tasks",
+});
