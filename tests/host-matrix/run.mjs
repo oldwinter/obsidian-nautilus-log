@@ -10,6 +10,7 @@ import { syntheticFixture } from "./fixture.mjs";
 import { PLANNER_TYPE, runLifecycleCycles, runClockReload } from "../lifecycle/real-host.mjs";
 import { runReviewReadOnly, runReviewWrites } from "./review.mjs";
 import { beginHostPrivacy, finishHostPrivacy } from "../privacy/host.mjs";
+import { finalizeOwnedHost } from "../lifecycle/cleanup.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
@@ -80,7 +81,7 @@ const report = {
   scenarios: ["planner", "execution", "lifecycle", "clock-reload", ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs", "privacy/host.mjs"]),
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
     persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
@@ -322,6 +323,7 @@ try {
   report.status = "passed";
 } catch (error) {
   report.status = "failed";
+  process.exitCode = 1;
   report.failure = { message: error.message, stack: error.stack };
   if (isolationVerified && page && !page.isClosed()) {
     report.failure.ui = await page.evaluate(() => ({
@@ -341,42 +343,45 @@ try {
         })),
       })),
     })).catch((captureError) => ({ captureError: captureError.message }));
-    report.sourceHashes = { ...report.sourceHashes, atFailure: await markdownHashes() };
-    await screenshot("failure").catch(() => {});
+    try { report.sourceHashes = { ...report.sourceHashes, atFailure: await markdownHashes() }; }
+    catch (captureError) { report.failure.sourceCaptureError = captureError.message; }
+    await screenshot("failure").catch((captureError) => { report.failure.screenshotCaptureError = captureError.message; });
   }
-  process.exitCode = 1;
 } finally {
-  if (privacy) {
-    try {
-      report.privacy = await finishHostPrivacy(privacy, { pluginDirectory: installedPlugin,
-        sentinels: ["Host fixture", "Outside-region sentinel. Preserve these bytes."] });
-      report.assertions.push(...report.privacy.assertions);
-      if (report.privacy.assertions.some((result) => !result.passed)) { report.status = "failed"; process.exitCode = 1; }
-    } catch (error) {
-      report.privacy = { status: "failed", captureError: error.message, records: privacy.records };
-      report.status = "failed";
-      process.exitCode = 1;
-    }
-    await json(join(evidence, "privacy.json"), report.privacy);
+  function finalizationFailed(phase, error) {
+    const failure = { phase, message: error.message, code: error.code, stack: error.stack };
+    (report.finalizationErrors ??= []).push(failure);
+    report.failure ??= failure;
+    report.status = "failed";
+    process.exitCode = 1;
+    console.error(`${phase}: ${error.message}`);
   }
-  if (browser) await Promise.race([browser.close().catch(() => {}),
-    new Promise((resolveWait) => setTimeout(resolveWait, 2000))]);
-  if (child && !childExit) {
-    child.kill("SIGTERM");
-    await Promise.race([exitPromise, new Promise((resolveWait) => setTimeout(resolveWait, 5000))]);
-    if (!childExit) {
-      child.kill("SIGKILL");
-      await exitPromise;
-    }
-  }
-  clearTimeout(deadline);
+  const cleanupErrors = await finalizeOwnedHost({ browser, child, childExited: () => Boolean(childExit), exitPromise, deadline,
+    beforeClose: async () => {
+      if (!privacy) return;
+      try {
+        report.privacy = await finishHostPrivacy(privacy, { pluginDirectory: installedPlugin,
+          sentinels: ["Host fixture", "Outside-region sentinel. Preserve these bytes."] });
+        report.assertions.push(...report.privacy.assertions);
+        if (report.privacy.assertions.some((result) => !result.passed)) { report.status = "failed"; process.exitCode = 1; }
+      } catch (error) {
+        report.privacy = { status: "failed", captureError: error.message, records: privacy.records };
+        finalizationFailed("privacy-capture", error);
+      }
+      await json(join(evidence, "privacy.json"), report.privacy);
+    },
+  });
+  for (const { phase, error } of cleanupErrors) finalizationFailed(phase, error);
   report.host.processExit = childExit;
   report.finishedAt = new Date().toISOString();
   report.networkCapture = { rendererAttachedBeforePluginEnable: networkAttached,
     electronNetlog: await stat(join(evidence, "electron-netlog.json")).then((info) => ({ file: "electron-netlog.json", bytes: info.size }), () => null) };
-  await writeFile(join(evidence, "stdout.log"), stdout.join(""));
-  await writeFile(join(evidence, "stderr.log"), stderr.join(""));
-  await json(join(evidence, "report.json"), report);
+  for (const [file, contents] of [["stdout.log", stdout.join("")], ["stderr.log", stderr.join("")]]) {
+    try { await writeFile(join(evidence, file), contents); }
+    catch (error) { finalizationFailed(`write-${file}`, error); }
+  }
+  try { await json(join(evidence, "report.json"), report); }
+  catch (error) { finalizationFailed("write-report.json", error); }
   console.log(`${report.status}: ${report.assertions.filter((result) => result.passed).length}/${report.assertions.length} assertions. ${join(evidence, "report.json")}`);
   if (report.failure) console.error(report.failure.message);
 }

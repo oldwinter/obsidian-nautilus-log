@@ -92,6 +92,11 @@ settings, changes the installed application, or controls an existing process.
 It terminates only the child process it launched. The automated deadline is
 180 seconds, or 300 seconds with `--review` to include the real minute of timing.
 Output remains available for inspection after exit.
+Evidence-write failures are recorded separately from the original scenario
+failure. Nested cleanup still closes the browser, terminates the owned child,
+and clears the deadline. Run `node --test tests/lifecycle/cleanup.test.mjs` to
+inject EACCES/ENOSPC and browser-close failures against a disposable child that
+ignores SIGTERM, then verify SIGKILL and deadline cancellation.
 
 The fixture contains three generated Daily Notes around the runner's local date,
 four tasks per note, and one closed 12-minute CLOCK in the prior-day note.
