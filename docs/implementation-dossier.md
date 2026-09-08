@@ -143,6 +143,10 @@ This changes implementation chronology only. Ticket #29 retains #27 and #28 as
 native closure dependencies. Host, accessibility, exact-SHA, clean-push,
 release, and human acceptance requirements remain in force.
 
+The #22 planning checker recognizes a proposed deviation document as a valid
+reference, while candidate release validation still requires actual approval.
+The CI trigger covers every pull request, including source-only changes.
+
 The #27-owned public host adapter `src/adapters/editor-buffer.ts` selects a
 loaded Markdown editor for source access. It must preserve an already-loaded
 unsaved empty buffer and must not promote a still-loading editor to source
