@@ -70,8 +70,14 @@ separately from plugin calls. `privacy.json` records which APIs were wrappable,
 their positive controls, attribution stacks, uncovered intervals, and descriptor
 restoration. Browser observers reinstall at document start after reload. Public
 Obsidian exports unavailable then are retried at DOM readiness; the intervening
-gap remains explicitly uncovered. Other windows, workers, cached references,
-Node networking, and IPC are outside this observer. CDP and NetLog remain
+gap remains explicitly uncovered. The observer also records Electron's
+`request-url` IPC channel. It calls the host's original `request` and `requestUrl`
+aliases with unique canary URLs and blocks only those exact URLs before IPC
+dispatch. It removes each canary's one-shot reply listener and reports both
+entry-point controls separately. Ordinary calls and other IPC channels pass
+through unchanged. This proves the observed host transport route, not that
+immutable plugin API exports were replaced. Other windows, workers, cached
+references, Node networking, and other IPC are outside this observer. CDP and NetLog remain
 independent captures. This is a partial privacy contribution, not full coverage.
 
 Persistence inspection reads only the disposable plugin directory and Spiral

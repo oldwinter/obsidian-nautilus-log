@@ -3,10 +3,11 @@ import { readdir, readFile, lstat } from "node:fs/promises";
 import { join } from "node:path";
 import { DEFAULT_PLUGIN_DATA, DEFAULT_PLUGIN_SETTINGS, validatePluginData } from "../../src/runtime/plugin-data.ts";
 
-function installObservers({ phase }) {
+async function installObservers({ phase }) {
   if (window !== top) return;
   const key = "__spiralDayHostPrivacy";
-  const state = globalThis[key] ??= { id: crypto.randomUUID(), covered: new Set(), restores: [], pending: [], deferred: [], keys: new Set() };
+  const state = globalThis[key] ??= { id: crypto.randomUUID(), covered: new Set(), restores: [], pending: [], deferred: [], keys: new Set(),
+    canaries: new Map(), officialProbed: new Set() };
   const deliver = (event) => {
     if (typeof globalThis.__spiralDayPrivacyRecord !== "function") state.deferred.push(event);
     else state.pending.push(globalThis.__spiralDayPrivacyRecord(event).catch(() => {}));
@@ -15,13 +16,17 @@ function installObservers({ phase }) {
   if (typeof globalThis.__spiralDayPrivacyRecord === "function") state.deferred.splice(0).forEach(deliver);
   let positiveControl = false;
   let obsidian;
+  let ipc;
   try { obsidian = require("obsidian"); } catch {}
+  try { ipc = require("electron").ipcRenderer; } catch {}
+  const ipcApi = "electron.ipcRenderer.send(request-url)";
   const targets = [
     [obsidian, "request", "obsidian.request"], [obsidian, "requestUrl", "obsidian.requestUrl"],
     [globalThis, "fetch", "fetch"], [XMLHttpRequest.prototype, "open", "XMLHttpRequest.open"],
     [XMLHttpRequest.prototype, "send", "XMLHttpRequest.send"], [globalThis, "WebSocket", "WebSocket"],
     [globalThis, "EventSource", "EventSource"], [navigator, "sendBeacon", "sendBeacon"],
     [Storage.prototype, "setItem", "Storage.setItem"],
+    [ipc, "send", ipcApi],
   ];
   for (const [owner, property, api] of targets) {
     if (state.covered.has(api)) continue;
@@ -30,14 +35,29 @@ function installObservers({ phase }) {
       if (typeof original !== "function") throw new Error("API not available at this observation phase");
       const descriptor = Object.getOwnPropertyDescriptor(owner, property);
       const observe = (receiver, args) => {
-        const stack = new Error().stack ?? "";
+        if (api === ipcApi && args[0] !== "request-url") return;
+        const requestUrl = api === ipcApi && args[2] && typeof args[2] === "object"
+          ? Object.getOwnPropertyDescriptor(args[2], "url")?.value : undefined;
+        const canary = state.canaries.get(requestUrl);
+        const isPositiveControl = api === ipcApi ? Boolean(canary) : positiveControl;
+        const previousStackLimit = Error.stackTraceLimit;
+        let stack;
+        try { Error.stackTraceLimit = 80; stack = new Error().stack ?? ""; }
+        finally { Error.stackTraceLimit = previousStackLimit; }
         const pluginAttributed = /plugin:spiral-day(?:[/:]|\b)|\/plugins\/spiral-day\//.test(stack);
-        const storage = api === "Storage.setItem" && pluginAttributed && !positiveControl
+        const storage = api === "Storage.setItem" && pluginAttributed && !isPositiveControl
           ? { area: receiver === localStorage ? "localStorage" : receiver === sessionStorage ? "sessionStorage" : "other",
             key: String(args[0]), value: String(args[1]) } : undefined;
         if (storage) state.keys.add(storage.key);
-        emit({ kind: "call", api, positiveControl, pluginAttributed, ...(pluginAttributed ? { stack } : {}), ...(storage ? { storage } : {}) });
-        if (positiveControl) throw new Error("Privacy positive control blocked before original API");
+        emit({ kind: "call", api, positiveControl: isPositiveControl, pluginAttributed,
+          ...(canary ? { entry: canary, canaryUrl: requestUrl } : {}), ...(pluginAttributed ? { stack } : {}), ...(storage ? { storage } : {}) });
+        if (canary) {
+          const listeners = ipc.rawListeners(args[1]);
+          if (listeners.length === 1) ipc.removeListener(args[1], listeners[0]);
+          emit({ kind: "positive-control-reply-cleanup", api, entry: canary,
+            removed: listeners.length === 1 && ipc.rawListeners(args[1]).length === 0 });
+        }
+        if (isPositiveControl) throw new Error("Privacy positive control blocked before original API");
       };
       const wrapped = new Proxy(original, {
         apply(target, receiver, args) { observe(receiver, args); return Reflect.apply(target, receiver, args); },
@@ -55,6 +75,7 @@ function installObservers({ phase }) {
         return { api, restored: owner[property] === original };
       });
       emit({ kind: "coverage", api, covered: true });
+      if (api === ipcApi) { state.ipcOwner = owner; state.ipcSend = wrapped; continue; }
       positiveControl = true;
       try {
         Function("invoke", "return invoke();\n//# sourceURL=plugin:spiral-day/privacy-positive-control")(() => {
@@ -67,6 +88,27 @@ function installObservers({ phase }) {
         emit({ kind: "positive-control", api, blocked: error.message === "Privacy positive control blocked before original API" });
       } finally { positiveControl = false; }
     } catch (error) { emit({ kind: "coverage", api, covered: false, reason: error.message }); }
+  }
+  if (state.covered.has(ipcApi)) for (const entry of ["request", "requestUrl"]) {
+    if (state.officialProbed.has(entry)) continue;
+    if (ipc !== state.ipcOwner || ipc.send !== state.ipcSend) {
+      emit({ kind: "gap", api: ipcApi, entry, reason: "IPC observer identity changed; official-entry probe was not called" });
+      continue;
+    }
+    if (typeof globalThis[entry] !== "function") {
+      emit({ kind: "gap", api: ipcApi, entry, reason: "Official host request alias is not available at this phase" });
+      continue;
+    }
+    state.officialProbed.add(entry);
+    const url = `https://spiral-day-privacy-probe.invalid/${crypto.randomUUID()}`;
+    state.canaries.set(url, entry);
+    try {
+      await Function("entry", "url", "return globalThis[entry]({url});\n//# sourceURL=plugin:spiral-day/privacy-positive-control")(entry, url);
+      emit({ kind: "positive-control", api: ipcApi, entry, blocked: false });
+    } catch (error) {
+      emit({ kind: "positive-control", api: ipcApi, entry,
+        blocked: error.message === "Privacy positive control blocked before original API" });
+    }
   }
   state.finish = async () => {
     const storage = {};
@@ -130,10 +172,16 @@ export async function finishHostPrivacy(handle, { pluginDirectory, sentinels }) 
   const covered = records.filter((event) => event.kind === "coverage" && event.covered);
   const calls = records.filter((event) => event.kind === "call" && !event.positiveControl);
   const positiveControls = records.filter((event) => event.positiveControl || event.kind === "positive-control");
+  const ipcCoverage = covered.filter((event) => event.api === "electron.ipcRenderer.send(request-url)");
   const assertions = [
     { id: "privacy-positive-controls-observe-and-block", passed: covered.length > 0 && covered.every((coverage) =>
       positiveControls.some((event) => event.documentId === coverage.documentId && event.api === coverage.api && event.blocked)
       && positiveControls.some((event) => event.documentId === coverage.documentId && event.api === coverage.api && event.pluginAttributed)), observed: positiveControls },
+    ...(ipcCoverage.length ? [{ id: "privacy-official-request-canaries-observed-blocked-and-cleaned", passed: ipcCoverage.every((coverage) =>
+      ["request", "requestUrl"].every((entry) => positiveControls.some((event) => event.documentId === coverage.documentId && event.entry === entry && event.blocked)
+        && positiveControls.some((event) => event.documentId === coverage.documentId && event.entry === entry && event.pluginAttributed)
+        && records.some((event) => event.documentId === coverage.documentId && event.entry === entry && event.kind === "positive-control-reply-cleanup" && event.removed))),
+      observed: { coveredDocuments: ipcCoverage.length, controls: records.filter((event) => event.api === "electron.ipcRenderer.send(request-url)") } }] : []),
     { id: "privacy-no-plugin-calls-through-observed-network-apis", passed: !calls.some((event) => event.api !== "Storage.setItem" && event.pluginAttributed), observed: calls.filter((event) => event.pluginAttributed) },
     { id: "privacy-plugin-data-valid-contract", passed: data?.schemaVersion === DEFAULT_PLUGIN_DATA.schemaVersion
       && validation.diagnostics.length === 0, observed: validation.diagnostics },
@@ -142,10 +190,13 @@ export async function finishHostPrivacy(handle, { pluginDirectory, sentinels }) 
     { id: "privacy-current-document-wrappers-restored", passed: current.restoration.length > 0 && current.restoration.every((item) => item.restored), observed: current.restoration },
   ];
   return { status: assertions.every((result) => result.passed) ? "observed-checks-passed" : "failed", assertions,
-    coverage: covered, uncovered, calls, positiveControls, persistence: { data, files, ...current,
+    coverage: covered, uncovered, calls, positiveControls,
+    hostMediatedRequestObservation: ipcCoverage.length ? "request-url transport observed; inspect official-entry controls" : "uncovered",
+    persistence: { data, files, ...current,
       allowedDataFields: Object.keys(DEFAULT_PLUGIN_DATA), allowedSettingsFields: Object.keys(DEFAULT_PLUGIN_SETTINGS) },
-    limitations: ["Primary renderer only. Workers, other windows, cached pre-observer references, IPC and Node networking remain outside these wrappers.",
+    limitations: ["Primary renderer only. Workers, other windows, cached pre-observer references, other IPC channels and Node networking remain outside these wrappers.",
       "Unavailable or nonwrappable public exports are uncovered. After reload, Obsidian calls before the public module becomes available are uncovered.",
+      "Official host request aliases exercise the request-url IPC route in these installed desktop runtimes. This observes that transport, not replacement of immutable plugin API exports.",
       "Only labeled positive controls are blocked. Real calls pass through. CDP and process NetLog remain independent evidence.",
       "Persistence inspection covers this disposable plugin directory and named or attributed Web Storage. It does not certify all host storage or the full fixture contract."],
   };
