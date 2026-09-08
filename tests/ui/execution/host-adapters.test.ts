@@ -38,36 +38,55 @@ function markdownView(
 
 test("restoring Markdown views become editor-authoritative only after their public buffer state is loaded", () => {
   const loading = markdownView("Daily/today.md", "", "", 596);
+  let activeView: MarkdownView | null = loading.view;
   const workspace = {
+    getActiveViewOfType() { return activeView; },
     getLeavesOfType(type: string) {
       assert.equal(type, "markdown");
       return [{ view: loading.view }];
     },
   };
-  const resolveEditor = createLoadedMarkdownEditorResolver(workspace as never);
-  assert.equal(resolveEditor("Daily/today.md"), undefined);
+  const resolver = createLoadedMarkdownEditorResolver(workspace as never);
+  assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
 
   loading.view.data = "persisted source";
   loading.setBufferText("persisted source");
-  assert.equal(resolveEditor("Daily/today.md"), loading.editor);
+  assert.equal(resolver.editorForPath("Daily/today.md"), loading.editor);
 
   loading.view.data = "";
   loading.setBufferText("");
-  assert.equal(resolveEditor("Daily/today.md"), loading.editor);
+  resolver.onFileOpen(loading.view.file);
+  assert.equal(resolver.editorForPath("Daily/today.md"), loading.editor);
 
+  const originalFile = loading.view.file;
   const switched = markdownView("Daily/other.md", "", "", 400);
   loading.view.file = switched.view.file;
-  assert.equal(resolveEditor("Daily/other.md"), undefined);
+  assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
+  loading.view.file = originalFile;
+  assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
+
+  loading.view.data = "persisted source";
+  loading.setBufferText("persisted source");
+  assert.equal(resolver.editorForPath("Daily/today.md"), loading.editor);
+  loading.view.data = "";
+  loading.setBufferText("");
+  loading.view.file = switched.view.file;
+  resolver.onFileOpen(switched.view.file);
+  loading.view.file = originalFile;
+  resolver.onFileOpen(originalFile);
+  assert.equal(resolver.editorForPath("Daily/today.md"), undefined);
 
   const empty = markdownView("Daily/today.md", "", "", 0);
+  activeView = empty.view;
   workspace.getLeavesOfType = () => [{ view: empty.view }];
-  const resolveEmpty = createLoadedMarkdownEditorResolver(workspace as never);
-  assert.equal(resolveEmpty("Daily/today.md"), empty.editor);
+  const emptyResolver = createLoadedMarkdownEditorResolver(workspace as never);
+  assert.equal(emptyResolver.editorForPath("Daily/today.md"), empty.editor);
 
   const populated = markdownView("Daily/today.md", "current source", "", 596);
+  activeView = populated.view;
   workspace.getLeavesOfType = () => [{ view: populated.view }];
-  const resolvePopulated = createLoadedMarkdownEditorResolver(workspace as never);
-  assert.equal(resolvePopulated("Daily/today.md"), populated.editor);
+  const populatedResolver = createLoadedMarkdownEditorResolver(workspace as never);
+  assert.equal(populatedResolver.editorForPath("Daily/today.md"), populated.editor);
 });
 
 test("TC-UP-CLK-10 singleton Active Task reuses the right leaf and removes duplicates", async () => {
