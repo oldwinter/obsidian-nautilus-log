@@ -77,7 +77,7 @@ direction and its feasibility proof:
 - Committed evidence only at that exact tree:
   [Issue 13 evidence index](https://github.com/oldwinter/obsidian-nautilus-log/blob/5a2db368df31f6ded948a983fbceae38c455b611/prototype/evidence/issue-13/index.md).
 - Public, non-draft evidence:
-  [Issue 13 prototype evidence Release](https://github.com/oldwinter/obsidian-nautilus-log/releases/tag/issue-13-prototype-evidence),
+  [Issue 13 prototype evidence Release](https://github.com/oldwinter/obsidian-nautilus-log/releases/tag/evidence-prototype),
   targeting that commit with five server-side SHA-256-identified assets.
 - Approved conclusion: dockable `ItemView` -> variant A parity surface -> guarded
   `Vault.process()` round trip. The stale write changed zero plugin-owned bytes;

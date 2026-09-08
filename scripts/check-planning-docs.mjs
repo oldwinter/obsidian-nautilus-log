@@ -1312,7 +1312,7 @@ report("offline", "prototype-object-isolation", () => {
     "dossier lacks exact prototype evidence index",
   );
   assert(
-    dossier.includes("releases/tag/issue-13-prototype-evidence"),
+    dossier.includes("releases/tag/evidence-prototype"),
     "dossier lacks approved prototype Release",
   );
   return targetTree.length + " target objects checked against prototype path/object/ancestry denylist";
