@@ -337,10 +337,26 @@ try {
   await scenario("focus-recovery", async () => {
     await open("target");
     const complete = page.getByRole("button", { name: "Complete", exact: true });
+    const date = page.getByLabel("Review date", { exact: true });
+    await page.evaluate(() => {
+      window.reviewHarness.deferNextDispatch();
+      window.reviewHarness.completeTargetOnNextRefresh();
+    });
     await complete.focus();
-    await page.evaluate(() => window.reviewHarness.setReviewMode("completed-target"));
-    const completedSource = page.getByRole("button", { name: "Open source for Opaque target", exact: true });
-    check("review.completed-action-focuses-same-row-source", await completedSource.evaluate((element) => document.activeElement === element), await page.evaluate(() => document.activeElement?.getAttribute("aria-label")));
+    await complete.click();
+    await page.waitForFunction(() => window.reviewHarness.stats().deferredDispatchPending === true);
+    check("review.pending-complete-focuses-date", await complete.isDisabled()
+      && await date.evaluate((element) => document.activeElement === element), await page.evaluate(() => ({
+        activeTag: document.activeElement?.tagName,
+        activeLabel: document.activeElement?.getAttribute("aria-label"),
+      })));
+    await page.evaluate(() => window.reviewHarness.resolveDispatch("applied"));
+    await page.waitForFunction(() => document.querySelector("#review-root")?.getAttribute("aria-busy") === "false"
+      && window.reviewHarness.stats().completeTargetOnRefresh === false);
+    check("review.completed-flow-keeps-visible-focus", await date.evaluate((element) => document.activeElement === element), await page.evaluate(() => ({
+      activeTag: document.activeElement?.tagName,
+      activeLabel: document.activeElement?.getAttribute("aria-label"),
+    })));
     check("review.completed-row-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
 
     await open("full");

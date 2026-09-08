@@ -100,7 +100,8 @@ export class ReviewRowView {
     this.#complete.textContent = messages.t("review", "action.complete");
     const done = task.status === "done";
     const hideMutations = done || !writableDate || !task.target;
-    if (mutationFocused && hideMutations && !this.#title.disabled) this.#title.focus({ preventScroll: true });
+    const mutationUnavailable = hideMutations || !enabled;
+    if (mutationFocused && mutationUnavailable && !this.#title.disabled) this.#title.focus({ preventScroll: true });
     this.#actions.hidden = hideMutations;
     this.#clockIn.hidden = hideMutations;
     this.#complete.hidden = hideMutations;
@@ -112,7 +113,7 @@ export class ReviewRowView {
         ? messages.t("review", "state.malformed")
         : "";
     this.#warning.hidden = this.#warning.textContent === "";
-    const focusedControlBecameUnavailable = (mutationFocused && hideMutations)
+    const focusedControlBecameUnavailable = (mutationFocused && mutationUnavailable)
       || (titleFocused && this.#title.disabled);
     return focusedControlBecameUnavailable && this.element.ownerDocument.activeElement !== this.#title;
   }

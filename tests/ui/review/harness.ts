@@ -151,6 +151,7 @@ let execution = executionSnapshot("ready");
 let review = reviewSnapshot(mode, currentDate);
 let nextOutcome: Outcome = "applied";
 let deferDispatch = false;
+let completeTargetOnRefresh = false;
 let resolveDeferred: ((outcome: Outcome) => void) | undefined;
 let intentSequence = 0;
 const reviewListeners = new Set<(snapshot: ReviewCoordinatorSnapshot) => void>();
@@ -306,6 +307,12 @@ const port = createReviewEntryPort({
   },
   async refresh() {
     stats.refreshes += 1;
+    if (completeTargetOnRefresh) {
+      completeTargetOnRefresh = false;
+      mode = "completed-target";
+      review = readySnapshot(mode, currentDate);
+      publishReview();
+    }
   },
   tick() {
     stats.ticks += 1;
@@ -361,6 +368,9 @@ const api = Object.freeze({
   deferNextDispatch(): void {
     deferDispatch = true;
   },
+  completeTargetOnNextRefresh(): void {
+    completeTargetOnRefresh = true;
+  },
   resolveDispatch(value: Outcome): void {
     if (!resolveDeferred) throw new Error("No deferred Review dispatch is pending");
     resolveDeferred(value);
@@ -378,6 +388,7 @@ const api = Object.freeze({
       },
       disposerCount: disposers.length,
       deferredDispatchPending: resolveDeferred !== undefined,
+      completeTargetOnRefresh,
       isToday: sameDate(currentDate, TODAY),
     });
   },
