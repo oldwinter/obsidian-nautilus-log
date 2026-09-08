@@ -249,6 +249,12 @@ try {
     await app.plugins.enablePluginAndSave(pluginId);
   }, manifest.id);
   await page.locator(".spiral-day-execution-trigger").waitFor();
+  const startupSettings = page.locator(".mod-settings");
+  if (await startupSettings.isVisible()) {
+    await page.keyboard.press("Escape");
+    await startupSettings.waitFor({ state: "hidden" });
+    check("host-startup-settings-dismissed", true, "Escape closed the community-plugin settings left open by this host");
+  }
   const beforeNavigation = await markdownHashes();
   report.sourceHashes = { beforeNavigation };
   check("activation-preserves-all-markdown", JSON.stringify(report.fixture.files) === JSON.stringify(beforeNavigation), beforeNavigation);
@@ -329,6 +335,7 @@ try {
   report.failure = { message: error.message, stack: error.stack };
   if (isolationVerified && page && !page.isClosed()) {
     report.failure.ui = await page.evaluate(() => ({
+      hostDialogs: [...document.querySelectorAll(".modal")].map((element) => element.textContent),
       activeTaskDiagnostics: [...document.querySelectorAll(".spiral-day-active-task__details p")]
         .map((element) => element.textContent),
       activeTaskStates: [...document.querySelectorAll(".spiral-day-active-task[data-state]")]

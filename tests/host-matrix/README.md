@@ -89,6 +89,8 @@ enabling the plugin or accepting the disposable vault's trust dialog, it checks
 the renderer's actual profile argument, actual vault path, and empty community
 plugin set. It never opens a configured user vault, reads global Obsidian
 settings, changes the installed application, or controls an existing process.
+If plugin enablement leaves the host's Community plugins settings open, the
+driver dismisses that visible modal with Escape before interacting with Planner.
 It terminates only the child process it launched. The automated deadline is
 180 seconds, or 300 seconds with `--review` to include the real minute of timing.
 Output remains available for inspection after exit.
