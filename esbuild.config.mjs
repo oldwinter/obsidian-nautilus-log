@@ -899,12 +899,16 @@ async function runTests() {
   const [firstStyles, secondStyles] = await Promise.all([createStylesBundle(), createStylesBundle()]);
   assert.deepEqual(Buffer.from(firstStyles), Buffer.from(secondStyles));
   scanBundle(onlyOutput(first));
-  execFileSync(process.execPath, ["tests/ui/execution/run.mjs"], {
-    cwd: rootDir,
-    stdio: "inherit",
-  });
+  const focusedTests = await listFiles("tests", (file) => file.endsWith(".test.ts"));
+  const focusedSuites = [...new Set(focusedTests.map((file) => path.posix.dirname(file)))];
+  assert(focusedSuites.length > 0, "No focused test suites found");
+  for (const suite of focusedSuites) {
+    const runner = `${suite}/run.mjs`;
+    assert(existsSync(path.join(rootDir, runner)), `${suite} has tests but no default runner`);
+    execFileSync(process.execPath, [runner], { cwd: rootDir, stdio: "inherit" });
+  }
   console.log(
-    "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle, execution-ui passed",
+    "tests: provenance-negative, unledgered-marked-test, runtime-import-policy, lifecycle-10x, no-write, local-only, deterministic-bundle, all focused suites passed",
   );
 }
 

@@ -2,21 +2,6 @@ name: Issue 22 release evidence
 
 on:
   pull_request:
-    paths:
-      - ".github/workflows/issue-22-release-evidence.yml"
-      - "docs/parity/**"
-      - "docs/planning-github-graph.json"
-      - "docs/planning-local-links.json"
-      - "docs/implementation-dossier.md"
-      - "docs/decisions/**"
-      - "docs/research/behavior-inventory.md"
-      - "scripts/release/**"
-      - "scripts/verify/**"
-      - "tests/fixtures/**"
-      - "tests/release/**"
-      - "scripts/check-planning-docs.mjs"
-      - "scripts/generate-planning-local-links.mjs"
-      - "scripts/generate-requirement-owners.mjs"
   push:
     branches:
       - "implement/issue-22-evidence"
@@ -42,3 +27,35 @@ jobs:
       - run: node scripts/check-planning-docs.mjs --sha HEAD
       - run: npm run verify
       - run: npm run validate:provenance
+
+  browser-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_MODULE: ${{ runner.temp }}/review-browser/node_modules/playwright
+      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/review-browsers
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 24.20.0
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Install pinned browser test runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/review-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
+      - name: Review browser behavior
+        run: node tests/ui/review/run.mjs --source-root . --report "$RUNNER_TEMP/review-browser-evidence/report.json"
+      - name: Planner visual and interaction evidence
+        run: node tests/ui/planner-controls/run-visual-evidence.mjs --output "$RUNNER_TEMP/planner-browser-evidence"
+      - uses: actions/upload-artifact@v7.0.1
+        if: always()
+        with:
+          name: browser-evidence-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/review-browser-evidence
+            ${{ runner.temp }}/planner-browser-evidence
+          if-no-files-found: error
+          retention-days: 30

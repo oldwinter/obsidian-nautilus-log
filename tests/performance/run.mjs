@@ -131,8 +131,11 @@ async function measuredHistory(production, fixture, cancelFromTimer = false) {
     async yield() {
       const durationMs = performance.now() - sliceStart;
       schedulerSlicesMs.push(durationMs);
-      if (durationMs > 50 && slowSchedulerSlices.length < 3) {
+      if (durationMs > 50 && (slowSchedulerSlices.length < 3
+        || durationMs > slowSchedulerSlices.at(-1).durationMs)) {
         slowSchedulerSlices.push({ durationMs, stack: new Error("History scheduler slice exceeded 50 ms").stack });
+        slowSchedulerSlices.sort((left, right) => right.durationMs - left.durationMs);
+        slowSchedulerSlices.length = Math.min(slowSchedulerSlices.length, 3);
       }
       await new Promise((resolve) => setTimeout(resolve, 0));
       sliceStart = performance.now();

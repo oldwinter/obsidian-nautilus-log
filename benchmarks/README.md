@@ -53,10 +53,9 @@ warm-up samples. It also retains the observed scheduler slices and 1 ms timer
 gaps through the whole history rebuild, including its identity-index pass. A
 scheduler slice ends when the production `HistoryIndexScheduler.yield()` is
 called. Its duration excludes the awaited timer. A timer gap records the delay
-between event-loop observations. Both maxima are checked against 50 ms. Up to
-three over-budget scheduler stacks per sample aid diagnosis. Stack capture
-happens only after a failed slice and may add instrumentation overhead to the
-corresponding timer gap.
+between event-loop observations. Both maxima are checked against 50 ms. The three longest over-budget scheduler slices retain stacks per sample.
+Stack capture happens only when a failed slice enters that retained set and
+may add instrumentation overhead to the corresponding timer gap.
 
 History cancellation runs with an actual timer and `AbortController`, after
 rebuild starts. The report records how long the abort timer waited and how long

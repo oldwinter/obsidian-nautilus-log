@@ -9,7 +9,14 @@ const PROFILE_PATH = resolve(ROOT, "tests/ui/planner-controls/env-vis-profile.js
 const GOLDEN_DIRECTORY = resolve(ROOT, "tests/ui/planner-controls/goldens");
 const CONTAINER_RUNNER = "tests/ui/planner-controls/run-visual-evidence-container.mjs";
 const update = process.argv.includes("--update");
-const unsupported = process.argv.slice(2).filter((argument) => argument !== "--update");
+const arguments_ = process.argv.slice(2);
+const outputIndex = arguments_.indexOf("--output");
+const requestedOutput = outputIndex < 0 ? undefined : arguments_[outputIndex + 1];
+if (outputIndex >= 0 && (!requestedOutput || requestedOutput.startsWith("--"))) {
+  throw new Error("--output requires a new evidence directory");
+}
+const unsupported = arguments_.filter((argument, index) => argument !== "--update"
+  && index !== outputIndex && (outputIndex < 0 || index !== outputIndex + 1));
 if (unsupported.length > 0) {
   throw new Error(`Unsupported visual evidence arguments: ${unsupported.join(", ")}`);
 }
@@ -31,7 +38,11 @@ if (!installedDigests.includes(imageReference)) {
 
 const suffix = `${process.pid}-${Date.now()}`;
 const dependencyVolume = `spiral-day-issue24-env-vis-${suffix}`;
-const outputDirectory = await mkdtemp(join(tmpdir(), "spiral-day-issue24-env-vis-"));
+const outputDirectory = requestedOutput
+  ? resolve(requestedOutput)
+  : await mkdtemp(join(tmpdir(), "spiral-day-issue24-env-vis-"));
+if (requestedOutput) await mkdir(outputDirectory);
+console.log(`ENV-VIS evidence: ${outputDirectory}`);
 
 function docker(arguments_) {
   execFileSync("docker", arguments_, {
@@ -89,6 +100,6 @@ try {
   try {
     docker(["volume", "rm", dependencyVolume]);
   } finally {
-    await rm(outputDirectory, { force: true, recursive: true });
+    if (!requestedOutput) await rm(outputDirectory, { force: true, recursive: true });
   }
 }
