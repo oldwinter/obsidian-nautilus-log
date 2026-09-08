@@ -56,7 +56,12 @@ import {
 } from "./runtime/projection-runtime";
 import { ReviewCoordinator } from "./runtime/review/coordinator";
 import type { RuntimeSnapshot } from "./runtime/snapshots";
-import { RealSystemClock, zonedTimeParts } from "./runtime/system-clock";
+import {
+  createZonedLocalTimeResolver,
+  RealSystemClock,
+  type ZonedLocalTimeResolver,
+  zonedTimeParts,
+} from "./runtime/system-clock";
 import { ObsidianAtomicTextAccess, type AtomicTextAccess } from "./workspace/commit";
 import { HistoryIndex, type HistoryIndexSnapshot } from "./workspace/history-index";
 import { WorkspaceIndex } from "./workspace/identity-index";
@@ -182,6 +187,7 @@ export default class SpiralDayPlugin extends Plugin {
   #atomicAccess: AtomicTextAccess | undefined;
   #pluginData: PluginDataStore | undefined;
   #clock: RealSystemClock | undefined;
+  #localTimeResolver: ZonedLocalTimeResolver | undefined;
   #workspaceIndex: WorkspaceIndex | undefined;
   #projectionRuntime: NautilusProjectionRuntime | undefined;
   #historyIndex: HistoryIndex | undefined;
@@ -206,7 +212,8 @@ export default class SpiralDayPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     this.#textAccess = new ObsidianVaultTextAccess(this);
-    const editorForPath = createLoadedMarkdownEditorResolver(this.app.workspace);
+    const editorResolver = createLoadedMarkdownEditorResolver(this.app.workspace);
+    this.registerEvent(this.app.workspace.on("file-open", editorResolver.onFileOpen));
     this.#atomicAccess = new ObsidianAtomicTextAccess({
       text: this.#textAccess,
       vault: this.app.vault,
@@ -214,14 +221,17 @@ export default class SpiralDayPlugin extends Plugin {
         const file = this.app.vault.getAbstractFileByPath(path);
         return file instanceof TFile ? file : undefined;
       },
-      editorForPath,
+      editorForPath: editorResolver.editorForPath,
     });
     this.#pluginData = new PluginDataStore({
       load: () => this.loadData(),
       save: (data) => this.saveData(data),
     });
     this.#clock = new RealSystemClock();
-    this.#workspaceIndex = new WorkspaceIndex(this.#atomicAccess);
+    this.#configureLocalTimeResolver(this.#clock.timeZone());
+    this.#workspaceIndex = new WorkspaceIndex(this.#atomicAccess, {
+      clockParsing: { resolveLocalTime: this.#requireLocalTimeResolver().resolve },
+    });
     this.#projectionRuntime = new NautilusProjectionRuntime({
       access: this.#atomicAccess,
       pluginData: this.#pluginData,
@@ -259,11 +269,25 @@ export default class SpiralDayPlugin extends Plugin {
       tick: () => {
         const coordinator = this.#requireReview();
         const clock = this.#requireClock();
+        const execution = this.#requireExecution().snapshot;
+        const sample = clock.sample();
+        const local = zonedTimeParts(sample.wallEpochMs, sample.timeZone);
+        const today = Object.freeze({ year: local.year, month: local.month, day: local.day });
         if (!this.#reviewDate && coordinator.snapshot.state === "ready"
-          && !sameDate(coordinator.snapshot.displayedDate, logicalDateAt(clock))) {
+          && !sameDate(coordinator.snapshot.displayedDate, today)) {
           this.#requestReviewRefresh();
-        } else {
-          coordinator.advance(clock.now());
+          return;
+        }
+        const outcome = coordinator.advance({
+          nowEpochMilliseconds: sample.wallEpochMs,
+          timeZone: sample.timeZone,
+          writeBlocked: execution.writeBlocked,
+        });
+        if (outcome === "refresh-required") {
+          this.#configureLocalTimeResolver(sample.timeZone);
+          void this.#requireExecution().refresh().catch((error: unknown) => {
+            console.error("Spiral Day Review clock refresh", error);
+          });
         }
       },
       intentId: () => this.#intentId("review"),
@@ -366,6 +390,9 @@ export default class SpiralDayPlugin extends Plugin {
       pluginData: this.#requirePluginData(),
       clock: this.#requireClock(),
       workspaceIndex: this.#requireWorkspaceIndex(),
+      logbook: {
+        resolveLocalTime: (parts) => this.#requireLocalTimeResolver().resolve(parts),
+      },
     });
     this.#suspendedExecution = undefined;
     this.#execution = application;
@@ -700,8 +727,17 @@ export default class SpiralDayPlugin extends Plugin {
     const clock = this.#clock;
     const pluginData = this.#pluginData;
     if (!coordinator || !clock || !pluginData) return;
-    const logicalDate = this.#reviewDate ?? logicalDateAt(clock);
-    const timeZone = clock.timeZone();
+    const sample = clock.sample();
+    const timeZone = sample.timeZone;
+    const local = zonedTimeParts(sample.wallEpochMs, timeZone);
+    const logicalDate = this.#reviewDate ?? Object.freeze({
+      year: local.year,
+      month: local.month,
+      day: local.day,
+    });
+    const changedTimeZone = this.#configureLocalTimeResolver(timeZone);
+    if (changedTimeZone && this.#execution) await this.#execution.refresh();
+    const localTimeResolver = this.#requireLocalTimeResolver();
     const day = calendarDayBounds(logicalDate, timeZone, (date, zone) => {
       const resolved = resolveLocalMinuteEpoch(date, 0, zone);
       if (resolved === undefined) throw new RangeError("Local midnight is unavailable");
@@ -748,8 +784,10 @@ export default class SpiralDayPlugin extends Plugin {
         defaultDurationMinutes: pluginData.data.settings.defaultDurationMinutes,
         urgentTrigger: pluginData.data.settings.urgentTrigger,
       },
+      clockParsing: { resolveLocalTime: localTimeResolver.resolve },
+      clockParsingKey: `iana:${localTimeResolver.timeZone}`,
       day,
-      nowEpochMilliseconds: clock.now(),
+      nowEpochMilliseconds: sample.wallEpochMs,
       resolveMinuteEpoch: resolveLocalMinuteEpoch,
       confirmedExecutionClocks,
       scheduledIntervals,
@@ -846,6 +884,19 @@ export default class SpiralDayPlugin extends Plugin {
   #requireClock(): RealSystemClock {
     if (!this.#clock) throw new Error("System clock is unavailable");
     return this.#clock;
+  }
+
+  #configureLocalTimeResolver(timeZone: string): boolean {
+    const next = createZonedLocalTimeResolver(timeZone);
+    if (this.#localTimeResolver?.timeZone === next.timeZone) return false;
+    this.#localTimeResolver = next;
+    this.#workspaceIndex?.setClockParsing({ resolveLocalTime: next.resolve });
+    return true;
+  }
+
+  #requireLocalTimeResolver(): ZonedLocalTimeResolver {
+    if (!this.#localTimeResolver) throw new Error("Local time resolver is unavailable");
+    return this.#localTimeResolver;
   }
 
   #requireWorkspaceIndex(): WorkspaceIndex {

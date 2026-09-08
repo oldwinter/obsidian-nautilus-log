@@ -563,6 +563,7 @@ export class WorkspaceIndex {
   readonly #limits: WorkspaceIndexLimits;
   readonly #readStructuredClocks: StructuredClockReader;
   readonly #unsubscribe: () => void;
+  #clockParsing: ParseClockOptions;
   #revision = 0;
   #rebuildAttempt = 0;
   #generation = 0;
@@ -575,6 +576,7 @@ export class WorkspaceIndex {
   constructor(access: WorkspaceIndexTextAccess, options: WorkspaceIndexOptions = {}) {
     this.#access = access;
     this.#limits = normalizeLimits(options.limits);
+    this.#clockParsing = Object.freeze({ ...(options.clockParsing ?? {}) });
     this.#readStructuredClocks = options.readStructuredClocks
       ?? ((path, text, identities, version, maximumClockRecords, context) =>
         defaultStructuredClockReader(
@@ -584,7 +586,7 @@ export class WorkspaceIndex {
           version,
           maximumClockRecords,
           context,
-          options.clockParsing ?? {},
+          this.#clockParsing,
         ));
     this.#unsubscribe = access.onChange((change: SourceChange) => this.invalidate(change));
   }
@@ -599,6 +601,12 @@ export class WorkspaceIndex {
 
   get safetySnapshot(): WorkspaceIndexSnapshot {
     return this.#safetySnapshot;
+  }
+
+  setClockParsing(clockParsing: ParseClockOptions): void {
+    if (this.#clockParsing.resolveLocalTime === clockParsing.resolveLocalTime) return;
+    this.#clockParsing = Object.freeze({ ...clockParsing });
+    this.clear();
   }
 
   invalidate(_change: SourceChange): void {

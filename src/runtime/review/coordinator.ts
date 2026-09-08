@@ -29,6 +29,7 @@ export interface ReviewCoordinatorRequest {
   readonly configuration: DailyNoteConfiguration;
   readonly grammarSettings?: GrammarV1Settings;
   readonly clockParsing?: ParseClockOptions;
+  readonly clockParsingKey?: string;
   readonly day: CalendarDayBounds;
   readonly nowEpochMilliseconds: number;
   readonly resolveMinuteEpoch: (
@@ -84,6 +85,19 @@ export type ReviewCoordinatorSnapshot =
   | PassiveReviewCoordinatorSnapshot;
 
 export type ReviewCoordinatorListener = (snapshot: ReviewCoordinatorSnapshot) => void;
+
+export interface ReviewAdvanceRequest {
+  readonly nowEpochMilliseconds: number;
+  readonly timeZone: string;
+  readonly writeBlocked: boolean;
+}
+
+export type ReviewAdvanceOutcome =
+  | "advanced"
+  | "frozen"
+  | "ignored"
+  | "refresh-required"
+  | "unchanged";
 
 function emptySnapshot(
   state: "absent" | "building",
@@ -190,6 +204,8 @@ export class ReviewCoordinator {
     readonly day: CalendarDayBounds;
     readonly tasks: readonly RuntimeReviewTask[];
     readonly clocks: readonly ReviewClock[];
+    readonly timeZone: string;
+    lastObservedEpochMilliseconds: number;
   } | undefined;
 
   constructor(history: HistoryIndex) {
@@ -222,6 +238,7 @@ export class ReviewCoordinator {
       configuration: request.configuration,
       ...(request.grammarSettings ? { grammarSettings: request.grammarSettings } : {}),
       ...(request.clockParsing ? { clockParsing: request.clockParsing } : {}),
+      ...(request.clockParsingKey !== undefined ? { clockParsingKey: request.clockParsingKey } : {}),
       ...(request.signal ? { signal: request.signal } : {}),
     };
     const cached = this.#history.currentFor(historyRequest);
@@ -295,6 +312,8 @@ export class ReviewCoordinator {
       day: request.day,
       tasks: tasks.filter((task) => task.status === "open" && task.ownerId !== undefined && runningOwners.has(task.ownerId)),
       clocks: clocks.filter((clock) => clock.ownerId !== undefined && runningOwners.has(clock.ownerId)),
+      timeZone: request.day.timeZone,
+      lastObservedEpochMilliseconds: request.nowEpochMilliseconds,
     };
     return this.#publish(Object.freeze({
       state: "ready",
@@ -310,27 +329,35 @@ export class ReviewCoordinator {
     }), attempt);
   }
 
-  advance(nowEpochMilliseconds: number): void {
+  advance(request: ReviewAdvanceRequest): ReviewAdvanceOutcome {
     const snapshot = this.#snapshot;
     const context = this.#liveContext;
     if (this.#disposed || snapshot.state !== "ready" || !context
-      || context.tasks.length === 0 || !Number.isFinite(nowEpochMilliseconds)) return;
-    const live = projectReview({ ...context, nowEpochMilliseconds });
+      || !Number.isFinite(request.nowEpochMilliseconds) || request.timeZone.length === 0) return "ignored";
+    if (request.writeBlocked) return "frozen";
+    if (request.timeZone !== context.timeZone
+      || request.nowEpochMilliseconds < context.lastObservedEpochMilliseconds) {
+      return "refresh-required";
+    }
+    context.lastObservedEpochMilliseconds = request.nowEpochMilliseconds;
+    if (context.tasks.length === 0) return "unchanged";
+    const live = projectReview({ ...context, nowEpochMilliseconds: request.nowEpochMilliseconds });
     const rows = new Map(live.rows.map((row) => [row.task.key, row]));
     const changed = snapshot.projection.rows.some((row) => {
       const next = rows.get(row.task.key);
       return next && (next.actualMinutes !== row.actualMinutes || next.state !== row.state);
     });
-    if (!changed) return;
+    if (!changed) return "unchanged";
     this.#publish(Object.freeze({
       ...snapshot,
       generation: this.#generation + 1,
-      projectedAtEpochMilliseconds: nowEpochMilliseconds,
+      projectedAtEpochMilliseconds: request.nowEpochMilliseconds,
       projection: Object.freeze({
         ...snapshot.projection,
         rows: Object.freeze(snapshot.projection.rows.map((row) => rows.get(row.task.key) ?? row)),
       }),
     }), this.#attempt);
+    return "advanced";
   }
 
   dispose(): void {
@@ -354,6 +381,7 @@ export class ReviewCoordinator {
 
   #onHistorySnapshot(history: HistoryIndexSnapshot): void {
     if (this.#disposed || this.#snapshot.state !== "ready" || history.state === "current") return;
+    this.#liveContext = undefined;
     const attempt = ++this.#attempt;
     this.#publish(Object.freeze({
       state: "unavailable",

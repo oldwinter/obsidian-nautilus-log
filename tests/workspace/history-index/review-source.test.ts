@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ReviewCoordinator } from "../../../src/runtime/review/coordinator";
+import { createZonedLocalTimeResolver } from "../../../src/runtime/system-clock";
 import { HistoryIndex } from "../../../src/workspace/history-index";
+import { WorkspaceIndex } from "../../../src/workspace/identity-index";
 import { createSourceVersion } from "../../../src/workspace/source-version";
 import { MemoryTextAccess } from "../../../src/workspace/text-access";
 
@@ -44,6 +46,75 @@ test("Review carries exact source authority for identified and anonymous actions
     assert.notEqual(refreshed.projection.rows[0]?.task.target?.sourceFingerprint, previousDigest);
   } finally {
     coordinator.dispose();
+  }
+});
+
+test("Review projects offset-free legacy CLOCK history with explicit timezone semantics", async () => {
+  const legacySource = `<!-- nautilus-log:plan/v1 -->
+- [ ] Legacy 30m ^${OWNER}
+  - LOGBOOK::
+    - CLOCK: [2026-08-29 Sat 08:10] -- [2026-08-29 Sat 08:40] => 0:30
+<!-- /nautilus-log:plan -->
+`;
+  const localTime = createZonedLocalTimeResolver("Asia/Shanghai");
+  const coordinator = new ReviewCoordinator(new HistoryIndex(new MemoryTextAccess({ [path]: legacySource })));
+  try {
+    const snapshot = await coordinator.refresh({
+      ...request,
+      day: {
+        date: request.logicalDate,
+        timeZone: localTime.timeZone,
+        startEpochMilliseconds: Date.UTC(2026, 7, 28, 16),
+        endEpochMilliseconds: Date.UTC(2026, 7, 29, 16),
+      },
+      nowEpochMilliseconds: Date.UTC(2026, 7, 29, 4),
+      clockParsing: { resolveLocalTime: localTime.resolve },
+      clockParsingKey: `iana:${localTime.timeZone}`,
+    });
+    if (snapshot.state !== "ready") throw new Error("Review did not become ready");
+    assert.equal(snapshot.projection.rows[0]?.actualMinutes, 30);
+    assert.equal(snapshot.projection.rows[0]?.malformedClockCount, 0);
+    assert.equal(snapshot.projection.rows[0]?.state, "paused");
+  } finally {
+    coordinator.dispose();
+  }
+});
+
+test("host workspace authority recognizes legacy running CLOCKs and reparses after a timezone change", async () => {
+  const legacyRunningSource = `<!-- nautilus-log:plan/v1 -->
+- [ ] Legacy running 30m ^${OWNER}
+  - LOGBOOK::
+    - CLOCK: [2026-08-29 Sat 08:10]
+<!-- /nautilus-log:plan -->
+`;
+  const access = new MemoryTextAccess({ [path]: legacyRunningSource });
+  const shanghai = createZonedLocalTimeResolver("Asia/Shanghai");
+  const index = new WorkspaceIndex(access, {
+    clockParsing: { resolveLocalTime: shanghai.resolve },
+  });
+  try {
+    const initial = await index.rebuild();
+    assert.equal(initial.complete, true);
+    assert.equal(initial.potentialRunning.length, 0);
+    assert.equal(initial.running.length, 1);
+    assert.equal(
+      initial.running[0]?.parsed.kind === "record"
+        ? initial.running[0].parsed.record.startEpochMs : undefined,
+      Date.UTC(2026, 7, 29, 0, 10),
+    );
+
+    const newYork = createZonedLocalTimeResolver("America/New_York");
+    index.setClockParsing({ resolveLocalTime: newYork.resolve });
+    assert.equal(index.dirty, true);
+    const reparsed = await index.rebuild();
+    assert.equal(reparsed.potentialRunning.length, 0);
+    assert.equal(
+      reparsed.running[0]?.parsed.kind === "record"
+        ? reparsed.running[0].parsed.record.startEpochMs : undefined,
+      Date.UTC(2026, 7, 29, 12, 10),
+    );
+  } finally {
+    index.dispose();
   }
 });
 
@@ -123,7 +194,11 @@ test("live Review floors accumulated time once without IO and preserves non-live
     assert.equal(initial.projection.rows[1]?.actualMinutes, null);
     assert.equal(initial.projection.rows[1]?.state, "not-started");
     const reads = access.reads;
-    coordinator.advance(noon + 1);
+    coordinator.advance({
+      nowEpochMilliseconds: noon + 1,
+      timeZone: "UTC",
+      writeBlocked: false,
+    });
     const updated = coordinator.snapshot;
     if (updated.state !== "ready") throw new Error("Review lost readiness");
     assert.equal(updated.projection.rows[1]?.actualMinutes, 1);
@@ -132,18 +207,30 @@ test("live Review floors accumulated time once without IO and preserves non-live
     assert.equal(updated.projectedAtEpochMilliseconds, noon + 1);
     assert.strictEqual(updated.projection.rows[0], initial.projection.rows[0]);
     assert.strictEqual(updated.projection.summary, initial.projection.summary);
-    coordinator.advance(noon + 1_000);
+    coordinator.advance({
+      nowEpochMilliseconds: noon + 1_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    });
     assert.strictEqual(coordinator.snapshot, updated, "sub-minute ticks do not publish unchanged UI");
     assert.equal(access.reads, reads);
     access.modify(path, source.replace("Identified", "Changed"));
     const invalidated = coordinator.snapshot;
-    coordinator.advance(noon + 120_000);
+    coordinator.advance({
+      nowEpochMilliseconds: noon + 120_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    });
     assert.strictEqual(coordinator.snapshot, invalidated, "dirty history cannot be revived by a clock tick");
   } finally {
     coordinator.dispose();
   }
   const disposed = coordinator.snapshot;
-  coordinator.advance(noon + 240_000);
+  coordinator.advance({
+    nowEpochMilliseconds: noon + 240_000,
+    timeZone: "UTC",
+    writeBlocked: false,
+  });
   assert.strictEqual(coordinator.snapshot, disposed);
 });
 
@@ -156,12 +243,20 @@ test("live Review clips at local calendar midnight even when the timer continues
       nowEpochMilliseconds: midnight - 40_000,
       confirmedExecutionClocks: [{ state: "running", ownerId: OWNER, startEpochMilliseconds: midnight - 90_000 }],
     });
-    coordinator.advance(midnight + 5 * 60_000);
+    coordinator.advance({
+      nowEpochMilliseconds: midnight + 5 * 60_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    });
     const snapshot = coordinator.snapshot;
     if (snapshot.state !== "ready") throw new Error("Review did not become ready");
     assert.equal(snapshot.projection.rows[1]?.actualMinutes, 1);
     assert.equal(snapshot.projection.rows[1]?.actualMilliseconds, 90_000);
-    coordinator.advance(midnight + 10 * 60_000);
+    coordinator.advance({
+      nowEpochMilliseconds: midnight + 10 * 60_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    });
     assert.strictEqual(coordinator.snapshot, snapshot);
   } finally {
     coordinator.dispose();
@@ -179,6 +274,27 @@ test("same-date confirmed refresh reuses history without building flicker, and s
     await coordinator.refresh({ ...request, nowEpochMilliseconds: request.nowEpochMilliseconds + 60_000 });
     assert.deepEqual(states, ["ready", "ready"]);
     assert.equal(access.reads, reads, "opening or refreshing a confirmed Review does not rescan the vault");
+    const utc = createZonedLocalTimeResolver("UTC");
+    await coordinator.refresh({
+      ...request,
+      clockParsing: { resolveLocalTime: utc.resolve },
+      clockParsingKey: `iana:${utc.timeZone}`,
+    });
+    const afterFirstResolver = access.reads;
+    const equivalentUtc = createZonedLocalTimeResolver("Etc/UTC");
+    await coordinator.refresh({
+      ...request,
+      clockParsing: { resolveLocalTime: equivalentUtc.resolve },
+      clockParsingKey: `iana:${equivalentUtc.timeZone}`,
+    });
+    assert.equal(access.reads, afterFirstResolver, "equivalent resolver instances reuse the semantic cache key");
+    const shanghai = createZonedLocalTimeResolver("Asia/Shanghai");
+    await coordinator.refresh({
+      ...request,
+      clockParsing: { resolveLocalTime: shanghai.resolve },
+      clockParsingKey: `iana:${shanghai.timeZone}`,
+    });
+    assert.ok(access.reads > afterFirstResolver, "timezone semantics invalidate parsed history");
     await coordinator.refresh({ ...request, grammarSettings: { defaultDurationMinutes: 20, urgentTrigger: "urgent" } });
     assert.ok(access.reads > reads);
     assert.ok(states.includes("building"));
@@ -187,6 +303,49 @@ test("same-date confirmed refresh reuses history without building flicker, and s
     await coordinator.refresh(request);
     assert.ok(access.reads > afterSettings);
     unsubscribe();
+  } finally {
+    coordinator.dispose();
+  }
+});
+
+test("live Review freezes blocked writes and requests refresh for timezone or backward-clock changes", async () => {
+  const access = new CountingAccess({ [path]: source });
+  const coordinator = new ReviewCoordinator(new HistoryIndex(access));
+  const noon = request.nowEpochMilliseconds;
+  try {
+    const initial = await coordinator.refresh({
+      ...request,
+      confirmedExecutionClocks: [{
+        state: "running",
+        ownerId: OWNER,
+        startEpochMilliseconds: noon - 120_000,
+      }],
+    });
+    if (initial.state !== "ready") throw new Error("Review did not become ready");
+    const reads = access.reads;
+    assert.equal(coordinator.advance({
+      nowEpochMilliseconds: noon + 60_000,
+      timeZone: "UTC",
+      writeBlocked: true,
+    }), "frozen");
+    assert.strictEqual(coordinator.snapshot, initial);
+    assert.equal(coordinator.advance({
+      nowEpochMilliseconds: noon + 30_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    }), "unchanged");
+    assert.equal(coordinator.advance({
+      nowEpochMilliseconds: noon + 20_000,
+      timeZone: "UTC",
+      writeBlocked: false,
+    }), "refresh-required");
+    assert.equal(coordinator.advance({
+      nowEpochMilliseconds: noon + 40_000,
+      timeZone: "Asia/Shanghai",
+      writeBlocked: false,
+    }), "refresh-required");
+    assert.strictEqual(coordinator.snapshot, initial);
+    assert.equal(access.reads, reads);
   } finally {
     coordinator.dispose();
   }

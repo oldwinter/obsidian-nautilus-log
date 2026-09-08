@@ -150,6 +150,7 @@ export interface HistoryIndexRequest {
   readonly configuration: DailyNoteConfiguration;
   readonly grammarSettings?: GrammarV1Settings;
   readonly clockParsing?: ParseClockOptions;
+  readonly clockParsingKey?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -202,6 +203,7 @@ function configurationKey(request: HistoryIndexRequest): string {
     request.configuration.format,
     request.grammarSettings?.defaultDurationMinutes ?? null,
     request.grammarSettings?.urgentTrigger ?? "",
+    request.clockParsingKey ?? null,
   ]);
 }
 
@@ -320,7 +322,8 @@ export class HistoryIndex {
     const snapshot = this.#snapshot;
     return !this.#disposed && !request.signal?.aborted && snapshot.state === "current"
       && snapshot.configurationKey === configurationKey(request)
-      && this.#clockResolver === request.clockParsing?.resolveLocalTime
+      && (request.clockParsingKey !== undefined
+        || this.#clockResolver === request.clockParsing?.resolveLocalTime)
       ? snapshot : undefined;
   }
 
