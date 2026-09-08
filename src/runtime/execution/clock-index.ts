@@ -110,10 +110,19 @@ export class ExecutionClockIndex {
 
   async scan(signal?: AbortSignal): Promise<ExecutionClockIndexState> {
     await this.#index.rebuild(signal);
-    return projectClockIndex(this.#index.safetySnapshot, this.#resolveOwner);
+    return this.#projectCurrentSnapshot();
   }
 
   current(): Promise<ExecutionClockIndexState> {
-    return projectClockIndex(this.#index.safetySnapshot, this.#resolveOwner);
+    return this.#projectCurrentSnapshot();
+  }
+
+  async #projectCurrentSnapshot(): Promise<ExecutionClockIndexState> {
+    const snapshot = this.#index.safetySnapshot;
+    const projected = await projectClockIndex(snapshot, this.#resolveOwner);
+    const current = this.#index.safetySnapshot;
+    return current === snapshot
+      ? projected
+      : degraded(current, "clock-index-unavailable", [], "source-changed");
   }
 }

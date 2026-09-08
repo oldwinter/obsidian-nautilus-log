@@ -49,6 +49,7 @@ function source(lines: readonly string[]): string {
 
 class StartupRaceAccess extends MemoryAtomicTextAccess {
   #remainingSourceChanges: number;
+  sourceChangesEmitted = 0;
 
   constructor(files: Record<string, string>, sourceChanges = 1) {
     super(files);
@@ -59,6 +60,7 @@ class StartupRaceAccess extends MemoryAtomicTextAccess {
     const text = await super.readText(path, signal);
     if (this.#remainingSourceChanges > 0) {
       this.#remainingSourceChanges -= 1;
+      this.sourceChangesEmitted += 1;
       this.notifyCacheChange(path);
     }
     return text;
@@ -71,6 +73,27 @@ class CountingAtomicTextAccess extends MemoryAtomicTextAccess {
   override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
     this.reads += 1;
     return super.readText(path, signal);
+  }
+}
+
+class SourceChangeOnReadAccess extends MemoryAtomicTextAccess {
+  #reads = 0;
+  readonly #sourceChangeRead: number;
+  sourceChangeEmitted = false;
+
+  constructor(files: Record<string, string>, sourceChangeRead: number) {
+    super(files);
+    this.#sourceChangeRead = sourceChangeRead;
+  }
+
+  override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    const text = await super.readText(path, signal);
+    this.#reads += 1;
+    if (this.#reads === this.#sourceChangeRead) {
+      this.sourceChangeEmitted = true;
+      this.notifyCacheChange(path);
+    }
+    return text;
   }
 }
 
@@ -99,14 +122,40 @@ test("startup re-scans once after a transient source change and restores the run
   await pluginData.stop();
 });
 
-test("refresh performs at most one extra read-only scan after consecutive host cache races", async () => {
+test("startup re-scans when the source changes during running CLOCK owner resolution", async () => {
   const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
   const initial = source([
     `- [ ] Alpha 30m ^${PLAN_A}`,
     "  - LOGBOOK::",
     `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
   ]);
-  const access = new StartupRaceAccess({ [PATH]: initial }, 2);
+  const access = new SourceChangeOnReadAccess({ [PATH]: initial }, 3);
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 6_000),
+  });
+
+  const started = await application.start();
+  assert.equal(started.status, "ready");
+  assert.equal(started.execution.kind, "active");
+  assert.equal(started.focused?.ownerId, PLAN_A);
+  assert.equal(access.sourceChangeEmitted, true);
+  assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("refresh drains consecutive host cache invalidations without publishing incomplete state", async () => {
+  const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
+  const initial = source([
+    `- [ ] Alpha 30m ^${PLAN_A}`,
+    "  - LOGBOOK::",
+    `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
+  ]);
+  const access = new StartupRaceAccess({ [PATH]: initial }, 3);
   const pluginData = enabledPluginData();
   const application = new ExecutionApplication({
     access,
@@ -118,6 +167,7 @@ test("refresh performs at most one extra read-only scan after consecutive host c
   assert.equal(started.status, "ready");
   assert.equal(started.execution.kind, "active");
   assert.equal(started.focused?.ownerId, PLAN_A);
+  assert.equal(access.sourceChangesEmitted, 3);
   assert.equal(access.transactionCounts.get(PATH), undefined);
 
   await application.stop();
