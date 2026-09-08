@@ -9,14 +9,16 @@ import { parseArgs } from "node:util";
 import { syntheticFixture } from "./fixture.mjs";
 import { PLANNER_TYPE, runLifecycleCycles, runClockReload } from "../lifecycle/real-host.mjs";
 import { runReviewReadOnly, runReviewWrites } from "./review.mjs";
+import { beginHostPrivacy, finishHostPrivacy } from "../privacy/host.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
   "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
+  privacy: { type: "boolean" },
   "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
@@ -75,10 +77,11 @@ const report = {
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
   expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
-  scenarios: values.review ? ["planner", "execution", "lifecycle", "clock-reload", "review"] : ["planner", "execution", "lifecycle", "clock-reload"],
+  scenarios: ["planner", "execution", "lifecycle", "clock-reload", ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs"]) },
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "lifecycle/real-host.mjs", "privacy/host.mjs"]),
+    persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
     pluginData: fixture.pluginData, files: await markdownHashes() },
@@ -124,6 +127,7 @@ let child;
 let browser;
 let page;
 let cdp;
+let privacy;
 let childExit;
 let exitPromise;
 let networkAttached = false;
@@ -233,6 +237,7 @@ try {
   isolationVerified = true;
   await json(join(evidence, "isolation.json"), { vault: runtime.vault, profile: actualProfile, pid: child.pid, runtime });
   console.log(`Isolated host verified. Obsidian ${runtime.title}; Electron ${runtime.versions.electron}.`);
+  if (values.privacy) privacy = await beginHostPrivacy(page);
   const trust = page.getByRole("button", { name: /Trust author and enable plugins|信任仓库作者并启用插件/i });
   if (await trust.isVisible()) {
     await trust.click();
@@ -341,6 +346,19 @@ try {
   }
   process.exitCode = 1;
 } finally {
+  if (privacy) {
+    try {
+      report.privacy = await finishHostPrivacy(privacy, { pluginDirectory: installedPlugin,
+        sentinels: ["Host fixture", "Outside-region sentinel. Preserve these bytes."] });
+      report.assertions.push(...report.privacy.assertions);
+      if (report.privacy.assertions.some((result) => !result.passed)) { report.status = "failed"; process.exitCode = 1; }
+    } catch (error) {
+      report.privacy = { status: "failed", captureError: error.message, records: privacy.records };
+      report.status = "failed";
+      process.exitCode = 1;
+    }
+    await json(join(evidence, "privacy.json"), report.privacy);
+  }
   if (browser) await Promise.race([browser.close().catch(() => {}),
     new Promise((resolveWait) => setTimeout(resolveWait, 2000))]);
   if (child && !childExit) {

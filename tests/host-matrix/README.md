@@ -62,6 +62,26 @@ resetting the in-memory Review date selection to Today. These results are
 written before the separate active-CLOCK reload scenario, so its failure cannot
 erase completed Review checks. `review-sources.json` retains the write snapshots.
 
+Add `--privacy` to observe public Obsidian `request`/`requestUrl`, browser
+fetch/XHR/WebSocket/EventSource/beacon, and plugin-attributed Web Storage writes
+before enablement. Reversible wrappers preserve ordinary calls. Labeled
+synthetic positive controls are blocked before the original API and reported
+separately from plugin calls. `privacy.json` records which APIs were wrappable,
+their positive controls, attribution stacks, uncovered intervals, and descriptor
+restoration. Browser observers reinstall at document start after reload. Public
+Obsidian exports unavailable then are retried at DOM readiness; the intervening
+gap remains explicitly uncovered. Other windows, workers, cached references,
+Node networking, and IPC are outside this observer. CDP and NetLog remain
+independent captures. This is a partial privacy contribution, not full coverage.
+
+Persistence inspection reads only the disposable plugin directory and Spiral
+Day-owned or attributed Web Storage. It validates `data.json` with the production
+plugin-data validator, records the allowed field names and contract hash, and
+checks for the synthetic note-content sentinels. It skips shipped plugin assets,
+does not follow symlinks, and caps inspection at 100 entries and 2 MB per file.
+Skipped entries are uncovered. Neither the wrappers nor the persistence checks
+certify all host storage, all fixtures, or release gates.
+
 The output directory must not exist. Each invocation creates a new `profile`,
 `vault`, and `evidence` directory. The runner passes its profile to the executable
 and discovers CDP only through that profile's `DevToolsActivePort` file. Before
