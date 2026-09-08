@@ -276,7 +276,11 @@ failUnless(pngjsVersion === profile.pngjs,
 failUnless(profile.pixelComparison.channelDelta === 16
     && profile.pixelComparison.maxDifferentPixelRatio === 0.002,
   `ENV-VIS pixel-comparison mismatch: ${JSON.stringify(profile.pixelComparison)}`);
-await access(profile.browser.executable, constants.X_OK);
+const browserExecutable = profile.browser.executables?.[process.arch];
+failUnless(typeof browserExecutable === "string",
+  `Unsupported ENV-VIS browser architecture ${process.arch}; expected ${Object.keys(profile.browser.executables ?? {}).join(", ")}`);
+await access(browserExecutable, constants.X_OK);
+console.log(`ENV-VIS browser: architecture=${process.arch} executable=${browserExecutable}`);
 const [resolvedFamily, resolvedFile] = execFileSync("fc-match", ["--format", "%{family}|%{file}", "Arial"], {
   encoding: "utf8",
 }).split("|");
@@ -294,7 +298,7 @@ let browser;
 try {
   await waitForHarness(server);
   browser = await chromium.launch({
-    executablePath: profile.browser.executable,
+    executablePath: browserExecutable,
     headless: true,
     args: ["--disable-lcd-text", "--no-sandbox"],
   });
@@ -563,6 +567,11 @@ try {
     matrixStates: matrix.length,
     pluginRequests: browserNetworkAttempts.length,
     blockedRequests: blockedRequests.length,
+    browser: {
+      architecture: process.arch,
+      executable: browserExecutable,
+      version: browser.version(),
+    },
     pixelComparisons,
     profileRevision: profile.revision,
     captures: profile.captures.length,
