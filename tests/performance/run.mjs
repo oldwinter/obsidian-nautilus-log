@@ -11,14 +11,15 @@ import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 
 import { historyFixture, schedulerFixture } from "../../benchmarks/fixtures.mjs";
+import { historyDiagnostics } from "./diagnostics.mjs";
 
 const runnerRoot = await realpath(path.resolve(import.meta.dirname, "../.."));
 const { values } = parseArgs({ options: {
   "source-root": { type: "string", default: runnerRoot }, output: { type: "string" },
-  "candidate-sha": { type: "string" }, help: { type: "boolean" },
+  "candidate-sha": { type: "string" }, diagnostics: { type: "boolean" }, help: { type: "boolean" },
 } });
 if (values.help) {
-  console.log("node tests/performance/run.mjs --output /new/evidence/directory [--source-root /source/checkout] [--candidate-sha <40 lowercase hex>]");
+  console.log("node tests/performance/run.mjs --output /new/evidence/directory [--source-root /source/checkout] [--candidate-sha <40 lowercase hex>] [--diagnostics]");
   process.exit(0);
 }
 assert.equal(process.versions.node, "24.20.0", "Use the pinned Node 24.20.0 runtime");
@@ -44,6 +45,9 @@ const report = {
     architecture: process.arch, osRelease: os.release(), cpu: os.cpus()[0]?.model ?? null,
     cpuCount: os.cpus().length, totalMemoryBytes: os.totalmem(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
   baseline: { result: "UNAVAILABLE", acceptedCandidateSha: null, regressionRuleEvaluated: false },
+  diagnostics: { enabled: Boolean(values.diagnostics),
+    method: "Over-50-ms History slices and timer gaps: main-thread and process CPU deltas, plus overlapping delivered GC entries.",
+    limitations: "CPU counters and GC observation add overhead. Wall minus thread CPU includes scheduling and waiting, not just OS preemption. Process CPU includes other threads; GC overlap is correlation, not exclusive cause. Yield stacks locate interval ends, not sampled execution." },
   limitations: [
     "Node timing with in-memory TextAccess is not Obsidian activation, disk I/O, DOM paint, write, CPU, or heap acceptance.",
     "History fixtures qualify CLOCK-count scaling only, not every reference or boundary vault dimension.",
@@ -107,7 +111,7 @@ async function compileSource() {
   }
   report.pluginAssetBinding = "Observed separately. The hashed ESM source probe is executed; these plugin package assets are not executed or claimed equivalent.";
   await writeFile(path.join(outputRoot, "fixture-generator.mjs"), await readFile(path.join(runnerRoot, "benchmarks/fixtures.mjs")));
-  report.runnerFiles = await Promise.all(["tests/performance/run.mjs", "benchmarks/fixtures.mjs"].map(async (file) => {
+  report.runnerFiles = await Promise.all(["tests/performance/run.mjs", "tests/performance/diagnostics.mjs", "benchmarks/fixtures.mjs"].map(async (file) => {
     const bytes = await readFile(path.join(runnerRoot, file));
     return { path: file, sha256: sha256(bytes) };
   }));
@@ -125,28 +129,44 @@ async function measuredHistory(production, fixture, cancelFromTimer = false) {
   const schedulerSlicesMs = [];
   const slowSchedulerSlices = [];
   const eventLoopGapsMs = [];
+  const diagnostics = values.diagnostics ? historyDiagnostics() : undefined;
   let sliceStart;
+  let sliceCpuStart;
   const scheduler = {
-    now() { const now = performance.now(); sliceStart ??= now; return now; },
+    now() {
+      const now = performance.now();
+      if (sliceStart === undefined) { sliceStart = now; sliceCpuStart = diagnostics?.mark(now); }
+      return now;
+    },
     async yield() {
-      const durationMs = performance.now() - sliceStart;
+      const ended = performance.now();
+      const durationMs = ended - sliceStart;
+      if (diagnostics) diagnostics.schedulerSlice(schedulerSlicesMs.length, sliceCpuStart, diagnostics.mark(ended));
       schedulerSlicesMs.push(durationMs);
       if (durationMs > 50 && (slowSchedulerSlices.length < 3
         || durationMs > slowSchedulerSlices.at(-1).durationMs)) {
-        slowSchedulerSlices.push({ durationMs, stack: new Error("History scheduler slice exceeded 50 ms").stack });
+        slowSchedulerSlices.push({ index: schedulerSlicesMs.length - 1, durationMs,
+          stack: new Error("History scheduler slice exceeded 50 ms").stack });
         slowSchedulerSlices.sort((left, right) => right.durationMs - left.durationMs);
         slowSchedulerSlices.length = Math.min(slowSchedulerSlices.length, 3);
       }
       await new Promise((resolve) => setTimeout(resolve, 0));
       sliceStart = performance.now();
+      sliceCpuStart = diagnostics?.mark(sliceStart);
     },
   };
   const index = new production.HistoryIndex(access, { scheduler });
   const publications = [];
   const unsubscribe = index.subscribe((snapshot) => publications.push(snapshot.state));
   let lastTurn = performance.now();
+  let lastTurnCpu = diagnostics?.mark(lastTurn);
   const timer = setInterval(() => {
     const now = performance.now();
+    if (diagnostics) {
+      const ended = diagnostics.mark(now);
+      diagnostics.eventLoopGap(eventLoopGapsMs.length, lastTurnCpu, ended);
+      lastTurnCpu = ended;
+    }
     eventLoopGapsMs.push(now - lastTurn);
     lastTurn = now;
   }, 1);
@@ -159,6 +179,7 @@ async function measuredHistory(production, fixture, cancelFromTimer = false) {
   try {
     const snapshot = await index.rebuild({ configuration: fixture.configuration, signal: controller.signal });
     const ended = performance.now();
+    if (diagnostics) diagnostics.eventLoopGap(eventLoopGapsMs.length, lastTurnCpu, diagnostics.mark(ended));
     eventLoopGapsMs.push(ended - lastTurn);
     clearInterval(timer);
     if (abortTimer !== undefined) clearTimeout(abortTimer);
@@ -175,8 +196,10 @@ async function measuredHistory(production, fixture, cancelFromTimer = false) {
     result.postDisposeReads = reads - settledReads;
     result.retainedSubscriptions = listeners.size;
     result.publications = publications;
+    if (diagnostics) result.diagnostics = await diagnostics.finish();
     return result;
   } finally {
+    diagnostics?.dispose();
     clearInterval(timer);
     if (abortTimer !== undefined) clearTimeout(abortTimer);
     unsubscribe();

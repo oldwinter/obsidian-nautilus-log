@@ -57,6 +57,25 @@ between event-loop observations. Both maxima are checked against 50 ms. The thre
 Stack capture happens only when a failed slice enters that retained set and
 may add instrumentation overhead to the corresponding timer gap.
 
+Add `--diagnostics` to record main-thread and whole-process CPU deltas for every
+history scheduler slice or timer gap exceeding 50 ms. Each diagnostic has the
+index of the unchanged raw duration array, its sample-relative start and end
+duration, and indexes of overlapping GC entries delivered by Node's
+`PerformanceObserver`. The three longest scheduler stacks retain those indexes.
+All recorded CPU counters use milliseconds; GC entries retain their numeric
+kind and flags. The observer is drained on the next event-loop turn after the
+measured rebuild, then disconnected even if the run fails.
+
+A large wall-time interval with little main-thread CPU shows that the interval
+was not spent mostly executing on that thread. Wall minus thread CPU includes
+waiting and scheduling, and cannot isolate OS preemption. Process CPU includes
+other threads and can exceed wall time. GC overlap alone does not establish that
+GC caused the delay; its duration is never subtracted from the budget. A yield
+stack identifies the interval's end, not a CPU sample inside a parser. The CPU
+counters and observer add measurement overhead, so diagnostics are opt-in and
+the report records whether they were enabled. Budgets and sample counts remain
+the same; failed samples are retained.
+
 History cancellation runs with an actual timer and `AbortController`, after
 rebuild starts. The report records how long the abort timer waited and how long
 settlement took after abort. The result must be unavailable with reason
