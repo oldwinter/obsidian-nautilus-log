@@ -41,6 +41,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
       let visible = false;
       let pending = false;
       let error = false;
+      let onlyOverruns = false;
       let timer: number | undefined;
       const messages = createMessages({
         locale: dependencies.messages.locale,
@@ -54,6 +55,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
           messages,
           pending,
           error,
+          onlyOverruns,
         });
       };
       const refresh = async (operation: () => Promise<void>): Promise<void> => {
@@ -100,6 +102,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
       };
       const view = new ReviewView(root, {
         today: dependencies.today,
+        setOnlyOverruns: (value) => { onlyOverruns = value; render(); },
         selectDate: (date) => { void refresh(() => dependencies.selectDate(date)); },
         refresh: () => { void refresh(dependencies.refresh); },
         activate: (key, action) => { void activate(key, action); },

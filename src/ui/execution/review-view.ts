@@ -7,6 +7,7 @@ export interface ReviewViewActions {
   readonly today: () => LogicalDate;
   readonly selectDate: (date: LogicalDate | null) => void;
   readonly refresh: () => void;
+  readonly setOnlyOverruns: (value: boolean) => void;
   readonly activate: (key: string, action: ReviewRowAction) => void;
 }
 
@@ -21,6 +22,9 @@ export class ReviewView {
   readonly #next: HTMLButtonElement;
   readonly #today: HTMLButtonElement;
   readonly #refresh: HTMLButtonElement;
+  readonly #onlyOverruns: HTMLInputElement;
+  readonly #filterLabel: HTMLElement;
+  readonly #filterStatus: HTMLElement;
   readonly #status: HTMLElement;
   readonly #summary: HTMLElement;
   readonly #counts: HTMLElement;
@@ -56,6 +60,18 @@ export class ReviewView {
       this.#selectDate({ year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate() });
     });
     toolbar.append(this.#previous, this.#date, this.#next, this.#today, this.#refresh);
+    const filter = document.createElement("label");
+    filter.className = "spiral-day-review__filter";
+    this.#onlyOverruns = document.createElement("input");
+    this.#onlyOverruns.type = "checkbox";
+    this.#onlyOverruns.addEventListener("change", () => actions.setOnlyOverruns(this.#onlyOverruns.checked));
+    this.#filterLabel = document.createElement("span");
+    filter.append(this.#onlyOverruns, this.#filterLabel);
+    this.#filterStatus = document.createElement("p");
+    this.#filterStatus.className = "spiral-day-review__filter-status";
+    this.#filterStatus.setAttribute("role", "status");
+    this.#filterStatus.setAttribute("aria-live", "polite");
+    this.#filterStatus.hidden = true;
     this.#status = document.createElement("p");
     this.#status.className = "spiral-day-review__status";
     this.#status.setAttribute("role", "status");
@@ -68,7 +84,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, this.#status, this.#summary, this.#list);
+    root.replaceChildren(toolbar, filter, this.#status, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -77,6 +93,7 @@ export class ReviewView {
     readonly messages: ReviewMessages;
     readonly pending: boolean;
     readonly error: boolean;
+    readonly onlyOverruns: boolean;
   }): void {
     const { review, execution, messages, pending } = input;
     this.#previous.textContent = "‹";
@@ -86,11 +103,14 @@ export class ReviewView {
     this.#date.setAttribute("aria-label", messages.t("review", "date.label"));
     this.#today.textContent = messages.t("review", "date.today");
     this.#refresh.textContent = messages.t("review", "action.refresh");
+    this.#filterLabel.textContent = messages.t("review", "filter.overruns");
+    this.#onlyOverruns.checked = input.onlyOverruns;
     this.#list.setAttribute("aria-label", messages.t("review", "list.label"));
     const reviewReady = review.state === "ready";
     const ready = reviewReady && (execution.status === "ready" || execution.status === "working");
     const hasRows = reviewReady && review.availability === "ready" && review.projection.rows.length > 0;
     const displayRows = ready && hasRows;
+    this.#filterStatus.hidden = !displayRows || !input.onlyOverruns;
     this.#root.setAttribute("aria-busy", String(pending || review.state === "building"));
     this.#refresh.disabled = pending || review.state === "building";
     if (!displayRows && this.#list.contains(this.#root.ownerDocument.activeElement)) this.#focusToolbar();
@@ -123,7 +143,11 @@ export class ReviewView {
       : !hasRows ? messages.t("review", emptyMessage)
       : !writableDate ? messages.t("review", "state.readOnlyDate") : "";
     this.#status.hidden = this.#status.textContent === "";
-    const projectedRows = hasRows ? review.projection.rows : [];
+    const projectedRows = hasRows ? review.projection.rows.filter((row) => !input.onlyOverruns
+      || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0)) : [];
+    const filterStatus = messages.t("review", "filter.result", { count: projectedRows.length });
+    if (this.#filterStatus.textContent !== filterStatus) this.#filterStatus.textContent = filterStatus;
+    this.#list.hidden = !displayRows || projectedRows.length === 0;
     const retained = new Set(projectedRows.map((row) => row.task.key));
     let fallbackIndex: number | undefined;
     for (const [key, row] of this.#rows) {
@@ -158,7 +182,8 @@ export class ReviewView {
   }
 
   #focusToolbar(): void {
-    const fallback = this.#refresh.disabled ? this.#date : this.#refresh;
+    const fallback = this.#onlyOverruns.checked ? this.#onlyOverruns
+      : this.#refresh.disabled ? this.#date : this.#refresh;
     fallback.focus({ preventScroll: true });
   }
 
