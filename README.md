@@ -15,6 +15,9 @@ Foundation version: `0.1.0`
 - Plan a day from a bounded Primary Plan in the Daily Note.
 - Place fixed events and flexible tasks on a deterministic spiral schedule.
 - Advance progress, complete tasks, hide completed items, and copy a plan summary.
+- See remaining and original planned duration on scheduled Plan tasks that
+  already have progress. The task currently being timed keeps its Current task
+  indicator.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
 - Compare planned and recorded time in Review, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review
@@ -67,7 +70,9 @@ when a surface is empty, stale, blocked, or unavailable.
   playback, and summary copy.
 - **Execution:** enable **Execution Layer** in settings, then use the timer
   ribbon entry. The panel contains **Timing**, **Plan**, and **Review** tabs.
-  Timing and Plan are the active task workflows. Review compares planned and
+  Timing and Plan are the active task workflows. Scheduled Plan tasks with
+  partial progress show remaining and original planned duration below the time
+  range. Review compares planned and
   recorded time; select **Only completed overruns** to focus on completed tasks
   whose recorded time exceeded their plan. The summary still covers the whole
   day.
