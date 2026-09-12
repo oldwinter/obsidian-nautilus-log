@@ -23,6 +23,7 @@ export const enPlanner = Object.freeze({
   "announcement.progressPending": ({ title }) => `${title} progress change requested.`,
   "announcement.progressRequested": ({ title, percent }) => `${title} progress requested at ${percent}%.`,
   "announcement.progressReopened": ({ title }) => `${title} reopen requested at 10%.`,
+  "announcement.refreshRequested": "Refreshing the plan.",
   "announcement.summaryCopied": "Plan summary copied.",
   "announcement.summaryCopyFailed": "The plan summary could not be copied.",
   "control.collapse": "Collapse planner",
@@ -33,6 +34,7 @@ export const enPlanner = Object.freeze({
   "control.hideCompleted": "Hide completed items",
   "control.play": "Play day",
   "control.playbackRunning": "Day playback running",
+  "control.refresh": "Refresh plan",
   "control.showCompleted": "Show completed items",
   "debug.geometry": ({ centerX, centerY, width, height, innerRadius, outerRadius, bandWidth, minute }) =>
     `center ${centerX},${centerY}; size ${width}x${height}; radii ${innerRadius}/${outerRadius}; band ${bandWidth}; minute ${minute}`,

@@ -82,7 +82,7 @@ export interface PlannerViewContext {
   readonly hostContext: PlannerHostContext;
 }
 
-export type PlannerIconName = "collapse" | "copy" | "debug" | "expand" | "hide-completed" | "show-completed" | "play";
+export type PlannerIconName = "collapse" | "copy" | "debug" | "expand" | "hide-completed" | "show-completed" | "play" | "refresh";
 export type PlannerIconRenderer = (element: HTMLElement, icon: PlannerIconName) => void;
 
 export interface PlannerSurfaceOptions {
@@ -254,6 +254,7 @@ function defaultIconRenderer(button: HTMLElement, icon: PlannerIconName): void {
     "hide-completed": "o",
     "show-completed": "x",
     play: ">",
+    refresh: "↻",
   }[icon];
   const glyph = element(button.ownerDocument, "span", "spiral-day-planner__fallback-icon");
   glyph.textContent = fallback;
@@ -1139,7 +1140,9 @@ class PlannerSurfaceController implements PlannerSurface {
           ? "control-debug"
           : icon === "copy"
             ? "control-copy"
-            : "control-play";
+            : icon === "refresh"
+              ? "control-refresh"
+              : "control-play";
     this.#renderIcon(button, icon);
     button.addEventListener("click", () => {
       if (button.getAttribute("aria-disabled") !== "true") action();
@@ -1185,6 +1188,10 @@ class PlannerSurfaceController implements PlannerSurface {
     const headerEnd = element(this.#root.ownerDocument, "div", "spiral-day-planner__header-end");
     const controls = element(this.#root.ownerDocument, "div", "spiral-day-planner__controls");
     controls.append(
+      this.#createIconButton("refresh", this.#messages.t("planner", "control.refresh"), () => {
+        this.probeRuntimeNow();
+        this.#live.announce(this.#messages.t("planner", "announcement.refreshRequested"));
+      }),
       this.#createIconButton("collapse", this.#messages.t("planner", "control.collapse"), () => {
         try {
           this.#playback.cancel("hidden");

@@ -23,6 +23,7 @@ export const zhCNPlanner = Object.freeze({
   "announcement.progressPending": ({ title }) => `已请求更改“${title}”的进度。`,
   "announcement.progressRequested": ({ title, percent }) => `已请求将“${title}”推进至${percent}%。`,
   "announcement.progressReopened": ({ title }) => `已请求重新打开“${title}”，进度为10%。`,
+  "announcement.refreshRequested": "正在刷新日程。",
   "announcement.summaryCopied": "已复制日程摘要。",
   "announcement.summaryCopyFailed": "无法复制日程摘要。",
   "control.collapse": "折叠规划器",
@@ -33,6 +34,7 @@ export const zhCNPlanner = Object.freeze({
   "control.hideCompleted": "隐藏完成项",
   "control.play": "回放一天",
   "control.playbackRunning": "正在回放一天",
+  "control.refresh": "刷新日程",
   "control.showCompleted": "显示完成项",
   "debug.geometry": ({ centerX, centerY, width, height, innerRadius, outerRadius, bandWidth, minute }) =>
     `中心 ${centerX},${centerY}；尺寸 ${width}x${height}；半径 ${innerRadius}/${outerRadius}；带宽 ${bandWidth}；分钟 ${minute}`,
