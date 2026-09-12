@@ -45,6 +45,13 @@ test("locale refresh updates static execution panel controls", async () => {
   assert.match(panel, /if \(opened\) place\(\)/);
 });
 
+test("execution panel remembers the last tab while preserving explicit opens", async () => {
+  const panel = await readFile("src/ui/execution/panel.ts", "utf8");
+  assert.match(panel, /let lastTab: ExecutionPanelTab = options\.initialTab \?\? "timing"/);
+  assert.match(panel, /onChange: \(name\) => \{\s*lastTab = name;\s*render\(\);\s*\}/);
+  assert.match(panel, /tabs\.select\(tab \?\? lastTab, false\)/);
+});
+
 test("non-button ribbon triggers expose keyboard activation and focus return", async () => {
   const panel = await readFile("src/ui/execution/panel.ts", "utf8");
   assert.match(panel, /trigger\.setAttribute\("role", "button"\)/);

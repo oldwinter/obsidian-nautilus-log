@@ -268,6 +268,12 @@ report("offline", "reference-closure", () => {
   const knownRequirements = new Set([...expectedUpstreamIds, ...expectedRequirementIds]);
   const knownFixtures = new Set(expectedFixtureIds);
   const knownDeviations = new Set(expectedDeviationIds);
+  for (const file of markdownFiles) {
+    const proposed = /^docs\/deviations\/(DEV-\d{3})-.+\.md$/.exec(file);
+    if (!proposed || knownDeviations.has(proposed[1])) continue;
+    assert(/^Status: proposed\./m.test(readObject(file)), file + " must remain proposed until approval is registered");
+    knownDeviations.add(proposed[1]);
+  }
   const concretePattern = /\b(?:UP-(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-\d{2}|(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-\d{2}|OBS-(?:TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-\d{3}|REL-\d{3}|FX-\d{2}|OFX-SAFE-\d{3}|DEV-\d{3})\b/g;
   const rangePattern = /\b((?:UP-)?(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-\d{2}|OBS-(?:TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-\d{3}|REL-\d{3}|FX-\d{2}|OFX-SAFE-\d{3}|DEV-\d{3})\s*(?:\.\.|to)\s*((?:(?:UP-)?(?:INS|SET|PAR|SCH|DAY|HIS|VIS|CTL|CMP|EXE|CLK|CMD|PER|ERR|ERX|DRF)-|OBS-(?:TRACE|HOST|VIS|A11Y|SAFE|LIFE|I18N|LOCAL)-|REL-|FX-|OFX-SAFE-|DEV-)?\d{2,3})\b/g;
   let concreteCount = 0;
@@ -959,11 +965,9 @@ report("offline", "release-input-inventory", () => {
   ]) {
     assert(workflow.includes(phrase), "issue #22 workflow is missing: " + phrase);
   }
-  assert(workflow.includes('"scripts/check-planning-docs.mjs"'), "workflow paths omit the planning checker");
-  for (const path of [
-    '"docs/planning-github-graph.json"', '"docs/planning-local-links.json"',
-    '"scripts/generate-planning-local-links.mjs"', '"scripts/generate-requirement-owners.mjs"',
-  ]) assert(workflow.includes(path), "workflow paths omit " + path);
+  const pullRequestTrigger = /^  pull_request:([^\n]*)\n([\s\S]*?)(?=^  [a-z_]+:|(?![\s\S]))/m.exec(workflow);
+  assert(pullRequestTrigger && pullRequestTrigger[1].trim() === "", "workflow must enable pull_request");
+  assert(!/^ +paths(?:-ignore)?:/m.test(pullRequestTrigger[2]), "workflow must verify every pull request without path exclusions");
   return candidateOwned.length + " immutable candidate inputs, five run inputs, exact G0-G9 commands, and fail-closed templates/workflow";
 });
 
@@ -1308,7 +1312,7 @@ report("offline", "prototype-object-isolation", () => {
     "dossier lacks exact prototype evidence index",
   );
   assert(
-    dossier.includes("releases/tag/issue-13-prototype-evidence"),
+    dossier.includes("releases/tag/evidence-prototype"),
     "dossier lacks approved prototype Release",
   );
   return targetTree.length + " target objects checked against prototype path/object/ancestry denylist";

@@ -1,0 +1,49 @@
+.spiral-day-review {
+  min-width: 0;
+  --review-overrun: var(--color-orange, #b95d00);
+}
+.spiral-day-review [hidden] { display: none !important; }
+.spiral-day-review__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.spiral-day-review__toolbar input[type="date"] { min-width: 0; max-width: 100%; flex: 1; }
+.spiral-day-review__toolbar button { min-height: 30px; white-space: normal; }
+.spiral-day-review__summary { margin-block: 12px; font-size: var(--font-ui-small); }
+.spiral-day-review__summary p { margin-block: 4px; overflow-wrap: anywhere; }
+.spiral-day-review__summary p:first-child { font-weight: var(--font-semibold); }
+.spiral-day-review__status, .spiral-day-review__warning {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  overflow-wrap: anywhere;
+}
+.spiral-day-review__list { list-style: none; margin: 0; padding: 0; }
+.spiral-day-review__row { padding-block: 12px; border-top: 1px solid var(--background-modifier-border); }
+.spiral-day-review__title {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  padding: 2px 0;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: var(--font-semibold);
+}
+.spiral-day-review__title:disabled { color: var(--text-normal); opacity: 1; }
+.spiral-day-review__state { display: block; margin-block: 4px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.spiral-day-review__metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-block: 8px; }
+.spiral-day-review__metrics dt { color: var(--text-muted); font-size: var(--font-ui-smaller); overflow-wrap: anywhere; }
+.spiral-day-review__metrics dd { margin: 3px 0 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.spiral-day-review__overrun { color: var(--review-overrun); }
+.spiral-day-review__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.spiral-day-review__actions button { min-height: 30px; }
+.spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+@media (forced-colors: active) {
+  .spiral-day-review__overrun { color: CanvasText; font-weight: bold; }
+  .spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible { outline-color: Highlight; }
+}

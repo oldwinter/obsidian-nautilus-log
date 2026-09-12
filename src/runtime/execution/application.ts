@@ -605,20 +605,17 @@ export class ExecutionApplication {
   }
 
   async #runRefresh(generation: number): Promise<ExecutionApplicationSnapshot> {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    while (true) {
       this.#refreshAgain = false;
       const clocks = await this.#clockReader.scan();
       if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
-      const sourceChanged = clocks.kind === "degraded"
-        && clocks.code === "clock-index-unavailable"
-        && clocks.reason === "source-changed";
-      if (attempt === 0 && (sourceChanged || this.#refreshAgain)) continue;
-      if (this.#refreshAgain) return this.#snapshot;
+      if (this.#refreshAgain) continue;
       const runtime = refreshedRuntime(this.#coordinator.snapshot, clocks);
       await this.#publishConfirmed(runtime);
+      if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
+      if (this.#refreshAgain) continue;
       return this.#snapshot;
     }
-    return this.#snapshot;
   }
 
   #subscribeToSourceChanges(): void {

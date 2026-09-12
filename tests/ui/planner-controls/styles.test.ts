@@ -11,7 +11,10 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
     "tests/ui/planner-controls/env-vis-profile.json",
     "utf8",
   )) as {
-    readonly browser: Readonly<{ executable: string; version: string }>;
+    readonly browser: Readonly<{
+      executables: Readonly<{ arm64: string; x64: string }>;
+      version: string;
+    }>;
     readonly captures: readonly Readonly<{
       readonly locale: string;
       readonly state: string;
@@ -77,7 +80,10 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.equal(profile.pngjs, "7.0.0");
   assert.deepEqual(profile.pixelComparison, { channelDelta: 16, maxDifferentPixelRatio: 0.002 });
   assert.deepEqual(profile.browser, {
-    executable: "/ms-playwright/chromium-1234/chrome-linux/chrome",
+    executables: {
+      arm64: "/ms-playwright/chromium-1234/chrome-linux/chrome",
+      x64: "/ms-playwright/chromium-1234/chrome-linux64/chrome",
+    },
     version: "151.0.7922.34",
   });
   assert.deepEqual(profile.viewport, { width: 1_440, height: 1_000 });
@@ -111,6 +117,8 @@ test("TC-OBS-VIS-002-001 theme layer supports light, dark, custom, high contrast
   assert.ok(profile.captures.length <= 12, "capture set must stay bounded");
   assert.match(runner, /--network[", ]+none/);
   assert.doesNotMatch(runner, /agent-browser|(?:^|["'])magick(?:["']|$)/m);
+  assert.match(containerRunner, /profile\.browser\.executables\?\.\[process\.arch\]/);
+  assert.match(containerRunner, /Unsupported ENV-VIS browser architecture/);
   assert.match(
     containerRunner,
     /assertAdapterLifecycle\(\)[\s\S]*runMatrix\(\)[\s\S]*assertAcceptance\(\)/,

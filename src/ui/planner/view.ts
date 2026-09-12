@@ -1462,8 +1462,10 @@ class PlannerSurfaceController implements PlannerSurface {
     const viewBox = spiralViewBox(model.geometry, model.labels);
     svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
     svg.setAttribute("role", "group");
-    svg.setAttribute("aria-label", this.#messages.t("planner", "surface.name"));
     svg.dataset.mode = model.mode;
+    const surfaceTitle = svgElement(document, "title");
+    surfaceTitle.textContent = this.#messages.t("planner", "surface.name");
+    svg.append(surfaceTitle);
 
     const defs = svgElement(document, "defs");
     const hatch = svgElement(document, "pattern");
@@ -1518,7 +1520,6 @@ class PlannerSurfaceController implements PlannerSurface {
       const group = svgElement(document, "g", "spiral-day-planner__target spiral-day-planner__available");
       const path = svgElement(document, "path");
       path.setAttribute("d", slot.path);
-      group.append(path);
       if (model.mode === "wide") {
         const availableName = this.#messages.t("planner", "item.availableName", {
           start: formatClockMinute(slot.startMinutes),
@@ -1526,15 +1527,18 @@ class PlannerSurfaceController implements PlannerSurface {
           duration: this.#messages.t("shared", "unit.duration", { minutes: slot.durationMinutes }),
           states: slot.availableNow ? this.#messages.t("shared", "state.current") : "",
         });
+        const title = svgElement(document, "title");
+        title.textContent = availableName;
+        group.append(title);
         group.setAttribute("role", "img");
         group.setAttribute("tabindex", "0");
         group.setAttribute("focusable", "true");
-        group.setAttribute("aria-label", availableName);
         group.dataset.plannerFocusKey = `available-${slot.id}`;
         this.#bindTooltip(group, availableName);
       } else {
         group.setAttribute("aria-hidden", "true");
       }
+      group.append(path);
       svg.append(group);
     }
     for (const item of model.items) svg.append(this.#renderTimelineTarget(item, model.mode, projection));
@@ -1552,7 +1556,6 @@ class PlannerSurfaceController implements PlannerSurface {
       group.setAttribute("role", "img");
       group.setAttribute("tabindex", "0");
       group.setAttribute("focusable", "true");
-      group.setAttribute("aria-label", accessibleName);
       group.dataset.plannerFocusKey = `label-${label.timelineItem.id}`;
       if (label.timelineItem.current) group.setAttribute("aria-current", "true");
       const text = svgElement(document, "text");
@@ -1650,7 +1653,6 @@ class PlannerSurfaceController implements PlannerSurface {
     group.append(title);
     if (mode === "wide") {
       group.setAttribute("focusable", "true");
-      group.setAttribute("aria-label", accessibleName);
       group.dataset.plannerFocusKey = `slice-${item.id}`;
       if (item.current) group.setAttribute("aria-current", "true");
       this.#bindProgressTarget(group, item, projection);

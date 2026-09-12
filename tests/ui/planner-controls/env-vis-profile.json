@@ -17,7 +17,10 @@
   "lucide": "1.35.0",
   "pngjs": "7.0.0",
   "browser": {
-    "executable": "/ms-playwright/chromium-1234/chrome-linux/chrome",
+    "executables": {
+      "arm64": "/ms-playwright/chromium-1234/chrome-linux/chrome",
+      "x64": "/ms-playwright/chromium-1234/chrome-linux64/chrome"
+    },
     "version": "151.0.7922.34"
   },
   "viewport": {

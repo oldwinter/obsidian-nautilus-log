@@ -149,7 +149,10 @@ export function mountExecutionPanel(
       { name: "plan", label: options.messages.t("execution", "tab.plan"), panel: planPanel },
       { name: "review", label: options.messages.t("execution", "tab.review"), panel: reviewPanel },
     ],
-    onChange: () => render(),
+    onChange: (name) => {
+      lastTab = name;
+      render();
+    },
   });
   const capacity = executionElement(document, "div", "spiral-day-execution__capacity");
   const feedback = executionElement(document, "div", "spiral-day-execution__feedback");
@@ -161,6 +164,7 @@ export function mountExecutionPanel(
   let execution: ExecutionApplicationSnapshot | undefined;
   let plan: RuntimeSnapshot<RuntimePlanProjection> | undefined;
   let recent: readonly ExecutionRecentTask[] = Object.freeze([]);
+  let lastTab: ExecutionPanelTab = options.initialTab ?? "timing";
   let opened = false;
   let destroyed = false;
   let timer: number | undefined;
@@ -431,7 +435,7 @@ export function mountExecutionPanel(
     },
     open(tab) {
       if (destroyed) return;
-      if (tab) tabs.select(tab, false);
+      tabs.select(tab ?? lastTab, false);
       opened = true;
       popover.hidden = false;
       place();
@@ -446,6 +450,7 @@ export function mountExecutionPanel(
       clearDeleteActivation(true);
       if (!opened) return;
       opened = false;
+      review?.render(reviewPanel, false);
       popover.hidden = true;
       if (timer !== undefined) {
         document.defaultView?.clearInterval(timer);

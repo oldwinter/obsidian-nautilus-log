@@ -82,6 +82,7 @@ export interface HistoryIndexDiagnostic {
 export interface IndexedHistoryTask {
   readonly key: string;
   readonly path: string;
+  readonly sourceFingerprint: string;
   readonly logicalDate: LogicalDate;
   readonly sourceOrder: number;
   readonly ownerId?: string;
@@ -106,10 +107,17 @@ export interface PassiveHistoryIndexSnapshot extends HistoryIndexSnapshotBase {
   readonly state: "absent" | "building" | "dirty";
 }
 
+export interface IndexedHistoryDay {
+  readonly path: string;
+  readonly logicalDate: LogicalDate;
+  readonly state: "ready" | "missing-plan" | "invalid-plan";
+}
+
 export interface CurrentHistoryIndexSnapshot extends HistoryIndexSnapshotBase {
   readonly state: "current";
   readonly configurationKey: string;
   readonly tasks: readonly IndexedHistoryTask[];
+  readonly days: readonly IndexedHistoryDay[];
   readonly diagnostics: readonly HistoryIndexDiagnostic[];
 }
 
@@ -142,6 +150,7 @@ export interface HistoryIndexRequest {
   readonly configuration: DailyNoteConfiguration;
   readonly grammarSettings?: GrammarV1Settings;
   readonly clockParsing?: ParseClockOptions;
+  readonly clockParsingKey?: string;
   readonly signal?: AbortSignal;
 }
 
@@ -163,11 +172,6 @@ const EMPTY_COUNTS: HistoryIndexCounts = Object.freeze({
   dailyNotes: 0,
   clockRecords: 0,
   tasks: 0,
-});
-
-const defaultScheduler: HistoryIndexScheduler = Object.freeze({
-  now: () => globalThis.performance.now(),
-  yield: () => new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0)),
 });
 
 function frozenCounts(counts: HistoryIndexCounts): HistoryIndexCounts {
@@ -199,6 +203,7 @@ function configurationKey(request: HistoryIndexRequest): string {
     request.configuration.format,
     request.grammarSettings?.defaultDurationMinutes ?? null,
     request.grammarSettings?.urgentTrigger ?? "",
+    request.clockParsingKey ?? null,
   ]);
 }
 
@@ -275,16 +280,29 @@ export class HistoryIndex {
   readonly #maximumContinuousMilliseconds: number;
   readonly #unsubscribe: () => void;
   readonly #listeners = new Set<HistoryIndexListener>();
+  readonly #pendingYields = new Set<() => void>();
   #sourceRevision = 0;
   #generation = 0;
   #attempt = 0;
   #disposed = false;
+  #clockResolver: ParseClockOptions["resolveLocalTime"] | undefined;
   #snapshot: HistoryIndexSnapshot = passiveSnapshot("absent", 0, 0);
 
   constructor(access: TextAccess, options: HistoryIndexOptions = {}) {
     this.#access = access;
     this.#limits = normalizeLimits(options.limits);
-    this.#scheduler = options.scheduler ?? defaultScheduler;
+    this.#scheduler = options.scheduler ?? {
+      now: () => globalThis.performance.now(),
+      yield: () => new Promise<void>((resolve) => {
+        const finish = (): void => {
+          globalThis.clearTimeout(timer);
+          this.#pendingYields.delete(finish);
+          resolve();
+        };
+        const timer = globalThis.setTimeout(finish, 0);
+        this.#pendingYields.add(finish);
+      }),
+    };
     this.#identityIndex = options.identityIndex ?? new WorkspaceIndex(access);
     this.#ownsIdentityIndex = options.identityIndex === undefined;
     this.#maximumContinuousMilliseconds = options.maximumContinuousMilliseconds ?? 40;
@@ -298,6 +316,15 @@ export class HistoryIndex {
 
   get snapshot(): HistoryIndexSnapshot {
     return this.#snapshot;
+  }
+
+  currentFor(request: HistoryIndexRequest): CurrentHistoryIndexSnapshot | undefined {
+    const snapshot = this.#snapshot;
+    return !this.#disposed && !request.signal?.aborted && snapshot.state === "current"
+      && snapshot.configurationKey === configurationKey(request)
+      && (request.clockParsingKey !== undefined
+        || this.#clockResolver === request.clockParsing?.resolveLocalTime)
+      ? snapshot : undefined;
   }
 
   subscribe(listener: HistoryIndexListener): () => void {
@@ -328,6 +355,7 @@ export class HistoryIndex {
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
+    for (const finish of this.#pendingYields) finish();
     this.#attempt += 1;
     this.#unsubscribe();
     if (this.#ownsIdentityIndex) this.#identityIndex.dispose();
@@ -389,11 +417,11 @@ export class HistoryIndex {
     }
 
     let lastYieldAt = this.#scheduler.now();
-    const checkpoint = async (): Promise<boolean> => {
+    const checkpoint = async (forceYield = false): Promise<boolean> => {
       if (request.signal?.aborted || this.#disposed) return false;
       if (attempt !== this.#attempt || sourceRevision !== this.#sourceRevision) return false;
       const now = this.#scheduler.now();
-      if (now - lastYieldAt >= this.#maximumContinuousMilliseconds) {
+      if (forceYield || now - lastYieldAt >= this.#maximumContinuousMilliseconds) {
         await this.#scheduler.yield();
         lastYieldAt = this.#scheduler.now();
       }
@@ -409,10 +437,11 @@ export class HistoryIndex {
       request.signal?.aborted || this.#disposed ? "cancelled" : "source-changed";
 
     const tasks: IndexedHistoryTask[] = [];
+    const days: IndexedHistoryDay[] = [];
     const diagnostics: HistoryIndexDiagnostic[] = [];
     for (const path of markdownPaths) {
       if (!await checkpoint()) {
-        return this.#publishUnavailable(generation, sourceRevision, counts, "source-changed", attempt);
+        return this.#publishUnavailable(generation, sourceRevision, counts, staleReason(), attempt);
       }
       let source: string | undefined;
       try {
@@ -489,8 +518,8 @@ export class HistoryIndex {
           attempt,
         );
       }
-      if (!await checkpoint()) {
-        return this.#publishUnavailable(generation, sourceRevision, counts, "source-changed", attempt);
+      if (!await checkpoint(true)) {
+        return this.#publishUnavailable(generation, sourceRevision, counts, staleReason(), attempt);
       }
       const primary = resolvePrimaryPlan(version, source, {
         maxPlanRegionBytes: this.#limits.maxPlanRegionBytes,
@@ -511,12 +540,20 @@ export class HistoryIndex {
           attempt,
         );
       }
+      days.push(Object.freeze({
+        path,
+        logicalDate: immutableDate(resolvedDate.logicalDate),
+        state: primary.region ? "ready" : primary.diagnostics.length > 0 ? "invalid-plan" : "missing-plan",
+      }));
       for (const diagnostic of primary.diagnostics) {
         diagnostics.push(Object.freeze({
           code: "plan-diagnostic",
           path,
           detail: diagnostic.code,
         }));
+      }
+      if (!await checkpoint(true)) {
+        return this.#publishUnavailable(generation, sourceRevision, counts, staleReason(), attempt);
       }
       const parsed = parseGrammar({
         version: primary.region?.version ?? "unsupported",
@@ -533,7 +570,7 @@ export class HistoryIndex {
       }
       for (const item of parsed.items) {
         if (!await checkpoint()) {
-          return this.#publishUnavailable(generation, sourceRevision, counts, "source-changed", attempt);
+          return this.#publishUnavailable(generation, sourceRevision, counts, staleReason(), attempt);
         }
         const ownerId = item.source.blockId;
         const logbook = readLogbook(source, {
@@ -592,8 +629,9 @@ export class HistoryIndex {
           ? Object.freeze([])
           : Object.freeze(logbook.clocks.map((clock) => reviewClock(ownerId, clock)));
         const common = {
-          key: `${path}\0${ownerId ?? `anonymous-${String(item.sourceOrder)}`}`,
+          key: `${path}\0${ownerId ?? "anonymous"}\0${String(item.sourceOrder)}`,
           path,
+          sourceFingerprint: version.contentDigest,
           logicalDate: immutableDate(resolvedDate.logicalDate),
           sourceOrder: item.sourceOrder,
           ...(ownerId ? { ownerId } : {}),
@@ -616,6 +654,9 @@ export class HistoryIndex {
       }
     }
 
+    if (!await checkpoint(true)) {
+      return this.#publishUnavailable(generation, sourceRevision, counts, staleReason(), attempt);
+    }
     let identitySnapshot = this.#identityIndex.safetySnapshot;
     if (this.#identityIndex.dirty) {
       try {
@@ -677,6 +718,7 @@ export class HistoryIndex {
         }));
       }
     }
+    this.#clockResolver = request.clockParsing?.resolveLocalTime;
     const current: CurrentHistoryIndexSnapshot = Object.freeze({
       state: "current",
       generation,
@@ -684,6 +726,7 @@ export class HistoryIndex {
       counts: frozenCounts(counts),
       configurationKey: requestKey,
       tasks: Object.freeze(tasks),
+      days: Object.freeze(days),
       diagnostics: Object.freeze(diagnostics),
     });
     return this.#publish(current, attempt);

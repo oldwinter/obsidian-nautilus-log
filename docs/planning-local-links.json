@@ -10,6 +10,18 @@
     },
     {
       "source": "README.md",
+      "href": "tests/host-matrix/README.md",
+      "target": "tests/host-matrix/README.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "benchmarks/README.md",
+      "target": "benchmarks/README.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
       "href": "docs/decisions/community-compliant-product-naming-and-attribution.md",
       "target": "docs/decisions/community-compliant-product-naming-and-attribution.md",
       "occurrence": 1
@@ -30,6 +42,12 @@
       "source": "README.md",
       "href": "docs/parity/ticket-boundaries.json",
       "target": "docs/parity/ticket-boundaries.json",
+      "occurrence": 1
+    },
+    {
+      "source": "benchmarks/README.md",
+      "href": "../docs/decisions/desktop-compatibility-and-performance-envelope.md#measurement-protocol",
+      "target": "docs/decisions/desktop-compatibility-and-performance-envelope.md",
       "occurrence": 1
     },
     {
@@ -84,6 +102,12 @@
       "source": "docs/decisions/timing-write-safety-conflict-handling-and-recovery.md",
       "href": "community-compliant-product-naming-and-attribution.md",
       "target": "docs/decisions/community-compliant-product-naming-and-attribution.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/deviations/DEV-001-review-actions.md",
+      "href": "../research/execution-layer.md#review-state-machine",
+      "target": "docs/research/execution-layer.md",
       "occurrence": 1
     },
     {
@@ -192,6 +216,12 @@
       "source": "docs/implementation-dossier.md",
       "href": "parity/ticket-boundaries.schema.json",
       "target": "docs/parity/ticket-boundaries.schema.json",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/implementation-dossier.md",
+      "href": "deviations/DEV-001-review-actions.md",
+      "target": "docs/deviations/DEV-001-review-actions.md",
       "occurrence": 1
     },
     {

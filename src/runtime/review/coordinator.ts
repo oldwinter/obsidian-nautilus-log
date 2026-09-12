@@ -12,11 +12,13 @@ import {
 import type { EpochInterval } from "../../core/history";
 import type { ParseClockOptions } from "../../workspace/clock-parser";
 import type { DailyNoteConfiguration } from "../../workspace/daily-notes";
+import type { ExecutionTargetReference } from "../execution/application";
 import {
   type CurrentHistoryIndexSnapshot,
   type HistoryIndexDiagnostic,
   type HistoryIndex,
   type HistoryIndexSnapshot,
+  type HistoryIndexRequest,
   type IndexedHistoryTask,
 } from "../../workspace/history-index";
 
@@ -27,6 +29,7 @@ export interface ReviewCoordinatorRequest {
   readonly configuration: DailyNoteConfiguration;
   readonly grammarSettings?: GrammarV1Settings;
   readonly clockParsing?: ParseClockOptions;
+  readonly clockParsingKey?: string;
   readonly day: CalendarDayBounds;
   readonly nowEpochMilliseconds: number;
   readonly resolveMinuteEpoch: (
@@ -50,11 +53,18 @@ export interface PassiveReviewCoordinatorSnapshot extends ReviewCoordinatorSnaps
 
 export interface ReadyReviewCoordinatorSnapshot extends ReviewCoordinatorSnapshotBase {
   readonly state: "ready";
+  readonly displayedDate: LogicalDate;
+  readonly availability: "ready" | "missing-note" | "missing-plan" | "invalid-plan";
+  readonly projectedAtEpochMilliseconds: number;
   readonly historyGeneration: number;
   readonly historyDiagnostics: readonly HistoryIndexDiagnostic[];
-  readonly projection: ReviewProjection;
+  readonly projection: ReviewProjection<RuntimeReviewTask>;
   readonly completedHistory: readonly CompletedHistorySlice[];
   readonly pastUnplanned: readonly EpochInterval[];
+}
+
+export interface RuntimeReviewTask extends ReviewTask {
+  readonly target?: ExecutionTargetReference;
 }
 
 export interface UnavailableReviewCoordinatorSnapshot extends ReviewCoordinatorSnapshotBase {
@@ -75,6 +85,19 @@ export type ReviewCoordinatorSnapshot =
   | PassiveReviewCoordinatorSnapshot;
 
 export type ReviewCoordinatorListener = (snapshot: ReviewCoordinatorSnapshot) => void;
+
+export interface ReviewAdvanceRequest {
+  readonly nowEpochMilliseconds: number;
+  readonly timeZone: string;
+  readonly writeBlocked: boolean;
+}
+
+export type ReviewAdvanceOutcome =
+  | "advanced"
+  | "frozen"
+  | "ignored"
+  | "refresh-required"
+  | "unchanged";
 
 function emptySnapshot(
   state: "absent" | "building",
@@ -117,7 +140,7 @@ function reviewTask(
   indexed: IndexedHistoryTask,
   request: ReviewCoordinatorRequest,
   ownerCollides: boolean,
-): ReviewTask {
+): RuntimeReviewTask {
   const completionAnchorEpochMilliseconds = indexed.completionAnchorMinutes === undefined
     ? undefined
     : request.resolveMinuteEpoch(
@@ -138,6 +161,12 @@ function reviewTask(
     : undefined;
   return Object.freeze({
     key: indexed.key,
+    ...(!ownerCollides ? { target: Object.freeze({
+      path: indexed.path,
+      ownerId: indexed.ownerId ?? null,
+      sourceOrder: indexed.sourceOrder,
+      sourceFingerprint: indexed.sourceFingerprint,
+    }) } : {}),
     ...(!ownerCollides && indexed.ownerId ? { ownerId: indexed.ownerId } : {}),
     sourceOrder: indexed.sourceOrder,
     direct: true,
@@ -171,6 +200,13 @@ export class ReviewCoordinator {
   #attempt = 0;
   #disposed = false;
   #snapshot: ReviewCoordinatorSnapshot = emptySnapshot("absent", 0);
+  #liveContext: {
+    readonly day: CalendarDayBounds;
+    readonly tasks: readonly RuntimeReviewTask[];
+    readonly clocks: readonly ReviewClock[];
+    readonly timeZone: string;
+    lastObservedEpochMilliseconds: number;
+  } | undefined;
 
   constructor(history: HistoryIndex) {
     this.#history = history;
@@ -196,14 +232,20 @@ export class ReviewCoordinator {
   async refresh(request: ReviewCoordinatorRequest): Promise<ReviewCoordinatorSnapshot> {
     if (this.#disposed) return this.#snapshot;
     const attempt = ++this.#attempt;
+    this.#liveContext = undefined;
     const generation = this.#generation + 1;
-    this.#publish(emptySnapshot("building", generation), attempt);
-    const history = await this.#history.rebuild({
+    const historyRequest: HistoryIndexRequest = {
       configuration: request.configuration,
       ...(request.grammarSettings ? { grammarSettings: request.grammarSettings } : {}),
       ...(request.clockParsing ? { clockParsing: request.clockParsing } : {}),
+      ...(request.clockParsingKey !== undefined ? { clockParsingKey: request.clockParsingKey } : {}),
       ...(request.signal ? { signal: request.signal } : {}),
-    });
+    };
+    const cached = this.#history.currentFor(historyRequest);
+    if (!cached || this.#snapshot.state !== "ready" || !sameDate(this.#snapshot.displayedDate, request.logicalDate)) {
+      this.#publish(emptySnapshot("building", generation), attempt);
+    }
+    const history = cached ?? await this.#history.rebuild(historyRequest);
     if (this.#disposed || attempt !== this.#attempt) {
       return Object.freeze({
         state: "unavailable",
@@ -265,9 +307,20 @@ export class ReviewCoordinator {
         ? { hourBoundariesEpochMilliseconds: request.hourBoundariesEpochMilliseconds }
         : {}),
     });
+    const runningOwners = new Set(clocks.flatMap((clock) => clock.state === "running" ? [clock.ownerId] : []));
+    this.#liveContext = {
+      day: request.day,
+      tasks: tasks.filter((task) => task.status === "open" && task.ownerId !== undefined && runningOwners.has(task.ownerId)),
+      clocks: clocks.filter((clock) => clock.ownerId !== undefined && runningOwners.has(clock.ownerId)),
+      timeZone: request.day.timeZone,
+      lastObservedEpochMilliseconds: request.nowEpochMilliseconds,
+    };
     return this.#publish(Object.freeze({
       state: "ready",
       generation,
+      displayedDate: Object.freeze({ ...request.logicalDate }),
+      availability: history.days.find((entry) => sameDate(entry.logicalDate, request.logicalDate))?.state ?? "missing-note",
+      projectedAtEpochMilliseconds: request.nowEpochMilliseconds,
       historyGeneration: history.generation,
       historyDiagnostics: history.diagnostics,
       projection,
@@ -276,9 +329,41 @@ export class ReviewCoordinator {
     }), attempt);
   }
 
+  advance(request: ReviewAdvanceRequest): ReviewAdvanceOutcome {
+    const snapshot = this.#snapshot;
+    const context = this.#liveContext;
+    if (this.#disposed || snapshot.state !== "ready" || !context
+      || !Number.isFinite(request.nowEpochMilliseconds) || request.timeZone.length === 0) return "ignored";
+    if (request.writeBlocked) return "frozen";
+    if (request.timeZone !== context.timeZone
+      || request.nowEpochMilliseconds < context.lastObservedEpochMilliseconds) {
+      return "refresh-required";
+    }
+    context.lastObservedEpochMilliseconds = request.nowEpochMilliseconds;
+    if (context.tasks.length === 0) return "unchanged";
+    const live = projectReview({ ...context, nowEpochMilliseconds: request.nowEpochMilliseconds });
+    const rows = new Map(live.rows.map((row) => [row.task.key, row]));
+    const changed = snapshot.projection.rows.some((row) => {
+      const next = rows.get(row.task.key);
+      return next && (next.actualMinutes !== row.actualMinutes || next.state !== row.state);
+    });
+    if (!changed) return "unchanged";
+    this.#publish(Object.freeze({
+      ...snapshot,
+      generation: this.#generation + 1,
+      projectedAtEpochMilliseconds: request.nowEpochMilliseconds,
+      projection: Object.freeze({
+        ...snapshot.projection,
+        rows: Object.freeze(snapshot.projection.rows.map((row) => rows.get(row.task.key) ?? row)),
+      }),
+    }), this.#attempt);
+    return "advanced";
+  }
+
   dispose(): void {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.#liveContext = undefined;
     this.#attempt += 1;
     this.#unsubscribeHistory();
     this.#listeners.clear();
@@ -296,6 +381,7 @@ export class ReviewCoordinator {
 
   #onHistorySnapshot(history: HistoryIndexSnapshot): void {
     if (this.#disposed || this.#snapshot.state !== "ready" || history.state === "current") return;
+    this.#liveContext = undefined;
     const attempt = ++this.#attempt;
     this.#publish(Object.freeze({
       state: "unavailable",

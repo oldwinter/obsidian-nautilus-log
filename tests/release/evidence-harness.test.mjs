@@ -15,6 +15,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+import { FIXTURE_VALIDATION_NOW_MS } from "../fixtures/release/create-dry-run-fixture.mjs";
 import { validateEvidenceBundle } from "../../scripts/verify/evidence-bundle.mjs";
 import { validateEvidenceRecord } from "../../scripts/verify/evidence-schema.mjs";
 import {
@@ -316,6 +317,7 @@ function validate(root, context, requiredRequirementIds) {
     candidateRequirementsBlobOid: context.blobOid,
     candidateRequirementsSourcePath: "docs/parity/requirements.json",
     requiredRequirementIds,
+    nowMs: FIXTURE_VALIDATION_NOW_MS,
   });
 }
 
@@ -506,7 +508,7 @@ test("validates every accepted environment profile with exact matrix values", ()
       requirement_ids: ["OBS-TRACE-001"],
       test_ids: ["EVD-ENV-001"],
       artifacts: [{ path: "artifacts/environment.txt", sha256: "f".repeat(64) }],
-    }, profileId));
+    }, profileId, { nowMs: FIXTURE_VALIDATION_NOW_MS }));
   }
   const mismatched = {
     schema_version: 1,
@@ -523,7 +525,10 @@ test("validates every accepted environment profile with exact matrix values", ()
     test_ids: ["EVD-ENV-002"],
     artifacts: [{ path: "artifacts/environment.txt", sha256: "f".repeat(64) }],
   };
-  assert.throws(() => validateEvidenceRecord(mismatched, "mismatched"), /screenshot evidence cannot use ENV-PURE/);
+  assert.throws(
+    () => validateEvidenceRecord(mismatched, "mismatched", { nowMs: FIXTURE_VALIDATION_NOW_MS }),
+    /screenshot evidence cannot use ENV-PURE/,
+  );
 });
 
 test("binds Evidence ID kind to the committed test catalog", () => {
@@ -555,17 +560,26 @@ test("rejects nonsense numeric versions for known private-host tools", () => {
     artifacts: [{ path: "artifacts/environment.txt", sha256: "f".repeat(64) }],
   };
   record.environment.tool_versions.obsidian = "definitely-version-ish";
-  assert.throws(() => validateEvidenceRecord(record, "private-host"), /numeric dotted version/);
+  assert.throws(
+    () => validateEvidenceRecord(record, "private-host", { nowMs: FIXTURE_VALIDATION_NOW_MS }),
+    /numeric dotted version/,
+  );
 });
 
-test("freshness accepts exact boundaries and rejects stale or future-skewed evidence", () => {
+test("freshness uses real time by default and honors explicit age and skew boundaries", () => {
   const root = mkdtempSync(resolve(tmpdir(), "spiral-evidence-clock-"));
   try {
     createBundle(root);
     const record = readJson(resolve(root, "records/001.json"));
     const ended = Date.parse(record.ended_at);
+    assert.doesNotThrow(() => validateEvidenceRecord(record, "fixture", { nowMs: FIXTURE_VALIDATION_NOW_MS }));
     assert.doesNotThrow(() => validateEvidenceRecord(record, "boundary", { nowMs: ended + 7 * 24 * 60 * 60 * 1000 }));
     assert.throws(() => validateEvidenceRecord(record, "stale", { nowMs: ended + 7 * 24 * 60 * 60 * 1000 + 1 }), /evidence is stale/);
+    const defaultStale = structuredClone(record);
+    const defaultStaleEndedAt = Date.now() - 7 * 24 * 60 * 60 * 1000 - 1;
+    defaultStale.started_at = new Date(defaultStaleEndedAt - 1).toISOString();
+    defaultStale.ended_at = new Date(defaultStaleEndedAt).toISOString();
+    assert.throws(() => validateEvidenceRecord(defaultStale, "default-real-time"), /evidence is stale/);
     const future = structuredClone(record);
     future.started_at = new Date(ended + 5 * 60 * 1000 + 1).toISOString();
     future.ended_at = future.started_at;
@@ -666,7 +680,7 @@ test("CLI reads requirements from the exact candidate object, not dirty worktree
       "--candidate-sha", candidateSha,
       "--package-sha256", context.packageSha256,
       "--repo", repo,
-    ]);
+    ], { nowMs: FIXTURE_VALIDATION_NOW_MS });
     assert.equal(result.candidateSha, candidateSha);
     assert.equal(result.resolvedRequirements.requirements.length, definitions.length);
   } finally {

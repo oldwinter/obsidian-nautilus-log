@@ -28,6 +28,25 @@ export interface ZonedTimeParts {
   readonly dateKey: string;
 }
 
+export interface LocalDateTimeParts {
+  readonly year: number;
+  readonly month: number;
+  readonly day: number;
+  readonly hour: number;
+  readonly minute: number;
+}
+
+export type ZonedLocalTimeResolution =
+  | { readonly kind: "unique"; readonly epochMs: number }
+  | { readonly kind: "ambiguous" }
+  | { readonly kind: "nonexistent" }
+  | { readonly kind: "invalid" };
+
+export interface ZonedLocalTimeResolver {
+  readonly timeZone: string;
+  readonly resolve: (parts: LocalDateTimeParts) => ZonedLocalTimeResolution;
+}
+
 interface ManualTimer {
   readonly handle: TimerHandle;
   readonly monotonicDeadline: number;
@@ -45,17 +64,11 @@ function twoDigits(value: number): string {
   return String(value).padStart(2, "0");
 }
 
-export function zonedTimeParts(
-  epochMilliseconds: number,
-  timeZone: string,
-): ZonedTimeParts {
-  if (!Number.isFinite(epochMilliseconds)) {
-    throw new RangeError("Epoch milliseconds must be finite");
-  }
-  const formatter = new Intl.DateTimeFormat("en-CA", {
+function zonedFormatter(timeZone: string): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat("en-CA", {
     calendar: "gregory",
     numberingSystem: "latn",
-    timeZone: canonicalTimeZone(timeZone),
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -63,6 +76,16 @@ export function zonedTimeParts(
     minute: "2-digit",
     hourCycle: "h23",
   });
+}
+
+function partsFromFormatter(
+  epochMilliseconds: number,
+  formatter: Intl.DateTimeFormat,
+  resolvedTimeZone: string,
+): ZonedTimeParts {
+  if (!Number.isFinite(epochMilliseconds)) {
+    throw new RangeError("Epoch milliseconds must be finite");
+  }
   const values = new Map<string, number>();
   for (const part of formatter.formatToParts(new Date(epochMilliseconds))) {
     if (["year", "month", "day", "hour", "minute"].includes(part.type)) {
@@ -96,7 +119,6 @@ export function zonedTimeParts(
     throw new RangeError("Unable to resolve local date and minute");
   }
 
-  const resolvedTimeZone = formatter.resolvedOptions().timeZone;
   return Object.freeze({
     timeZone: resolvedTimeZone,
     year,
@@ -106,6 +128,113 @@ export function zonedTimeParts(
     minute,
     minuteOfDay: hour * 60 + minute,
     dateKey: `${String(year).padStart(4, "0")}-${twoDigits(month)}-${twoDigits(day)}`,
+  });
+}
+
+function localWallEpoch(parts: LocalDateTimeParts): number | undefined {
+  if (!Number.isInteger(parts.year)
+    || !Number.isInteger(parts.month)
+    || !Number.isInteger(parts.day)
+    || !Number.isInteger(parts.hour)
+    || !Number.isInteger(parts.minute)
+    || parts.month < 1
+    || parts.month > 12
+    || parts.day < 1
+    || parts.day > 31
+    || parts.hour < 0
+    || parts.hour > 23
+    || parts.minute < 0
+    || parts.minute > 59) {
+    return undefined;
+  }
+  const date = new Date(0);
+  date.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  date.setUTCHours(parts.hour, parts.minute, 0, 0);
+  return date.getUTCFullYear() === parts.year
+    && date.getUTCMonth() === parts.month - 1
+    && date.getUTCDate() === parts.day
+    && date.getUTCHours() === parts.hour
+    && date.getUTCMinutes() === parts.minute
+    ? date.getTime()
+    : undefined;
+}
+
+function sameLocalTime(left: ZonedTimeParts, right: LocalDateTimeParts): boolean {
+  return left.year === right.year
+    && left.month === right.month
+    && left.day === right.day
+    && left.hour === right.hour
+    && left.minute === right.minute;
+}
+
+function cacheBounded<K, V>(cache: Map<K, V>, key: K, value: V, maximumSize: number): void {
+  if (!cache.has(key) && cache.size >= maximumSize) {
+    const oldest = cache.keys().next().value as K | undefined;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, value);
+}
+
+export function zonedTimeParts(
+  epochMilliseconds: number,
+  timeZone: string,
+): ZonedTimeParts {
+  const resolvedTimeZone = canonicalTimeZone(timeZone);
+  return partsFromFormatter(
+    epochMilliseconds,
+    zonedFormatter(resolvedTimeZone),
+    resolvedTimeZone,
+  );
+}
+
+export function createZonedLocalTimeResolver(timeZone: string): ZonedLocalTimeResolver {
+  const resolvedTimeZone = canonicalTimeZone(timeZone);
+  const formatter = zonedFormatter(resolvedTimeZone);
+  const offsetsByDate = new Map<string, readonly number[]>();
+  const resolutions = new Map<string, ZonedLocalTimeResolution>();
+  const invalid = Object.freeze({ kind: "invalid" as const });
+  const ambiguous = Object.freeze({ kind: "ambiguous" as const });
+  const nonexistent = Object.freeze({ kind: "nonexistent" as const });
+  const twoDaysMilliseconds = 2 * 24 * 60 * 60 * 1_000;
+  const maximumCachedDates = 3_650;
+  const maximumCachedResolutions = 2 * 25_000;
+
+  return Object.freeze({
+    timeZone: resolvedTimeZone,
+    resolve: (parts: LocalDateTimeParts): ZonedLocalTimeResolution => {
+      const targetWallEpoch = localWallEpoch(parts);
+      if (targetWallEpoch === undefined) return invalid;
+      const resolutionKey = `${String(parts.year).padStart(4, "0")}-${twoDigits(parts.month)}-${twoDigits(parts.day)}T${twoDigits(parts.hour)}:${twoDigits(parts.minute)}`;
+      const cached = resolutions.get(resolutionKey);
+      if (cached) return cached;
+
+      const dateKey = resolutionKey.slice(0, 10);
+      let offsets = offsetsByDate.get(dateKey);
+      if (!offsets) {
+        const found = new Set<number>();
+        for (const delta of [-twoDaysMilliseconds, 0, twoDaysMilliseconds]) {
+          const sampleEpoch = targetWallEpoch + delta;
+          const observed = partsFromFormatter(sampleEpoch, formatter, resolvedTimeZone);
+          const observedWallEpoch = localWallEpoch(observed);
+          if (observedWallEpoch !== undefined) found.add(observedWallEpoch - sampleEpoch);
+        }
+        offsets = Object.freeze([...found]);
+        cacheBounded(offsetsByDate, dateKey, offsets, maximumCachedDates);
+      }
+
+      const matches = new Set<number>();
+      for (const offset of offsets) {
+        const candidate = targetWallEpoch - offset;
+        if (sameLocalTime(partsFromFormatter(candidate, formatter, resolvedTimeZone), parts)) {
+          matches.add(candidate);
+        }
+      }
+      const resolution = matches.size === 1
+        ? Object.freeze({ kind: "unique" as const, epochMs: [...matches][0]! })
+        : matches.size > 1 ? ambiguous : nonexistent;
+      cacheBounded(resolutions, resolutionKey, resolution, maximumCachedResolutions);
+      return resolution;
+    },
   });
 }
 
