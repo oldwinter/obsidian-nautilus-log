@@ -49,13 +49,19 @@ function source(lines: readonly string[]): string {
 
 class StartupRaceAccess extends MemoryAtomicTextAccess {
   #remainingSourceChanges: number;
+  reads = 0;
 
   constructor(files: Record<string, string>, sourceChanges = 1) {
     super(files);
     this.#remainingSourceChanges = sourceChanges;
   }
 
+  armSourceChanges(count: number): void {
+    this.#remainingSourceChanges = count;
+  }
+
   override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    this.reads += 1;
     const text = await super.readText(path, signal);
     if (this.#remainingSourceChanges > 0) {
       this.#remainingSourceChanges -= 1;
@@ -119,6 +125,45 @@ test("refresh performs at most one extra read-only scan after consecutive host c
   assert.equal(started.execution.kind, "active");
   assert.equal(started.focused?.ownerId, PLAN_A);
   assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("refresh follows a source change that arrives during the final coalesced scan", async () => {
+  const initial = source([`- [ ] Alpha 30m ^${PLAN_A}`]);
+  const access = new StartupRaceAccess({ [PATH]: initial }, 0);
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 7_000),
+  });
+  await application.start();
+
+  const readsBeforeRefresh = access.reads;
+  access.armSourceChanges(2);
+  const alpha = await reference(initial, PLAN_A, 0);
+  const refreshing = application.refresh();
+  const dispatching = application.dispatch({
+    type: "clock-in",
+    intentId: "clock-in-after-dirty-follow-up",
+    target: alpha,
+  });
+  await refreshing;
+  const outcome = await dispatching;
+  for (
+    let attempt = 0;
+    attempt < 10 && (access.reads < readsBeforeRefresh + 3 || application.snapshot.status !== "ready");
+    attempt += 1
+  ) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+
+  assert.ok(access.reads >= readsBeforeRefresh + 3);
+  assert.equal(outcome.outcome, "applied", JSON.stringify(outcome));
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  assert.equal(application.snapshot.status, "ready");
 
   await application.stop();
   await pluginData.stop();

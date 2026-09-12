@@ -22,7 +22,7 @@ export const zhCNShared = Object.freeze({
   "status.missing": "没有主计划",
   "status.overLimit": "规划器输入已达上限",
   "status.stale": "规划器快照已过期",
-  "status.unavailable": "扩展未安装。要使用 Nautilus Log，请从 Roam Depot 安装。",
+  "status.unavailable": "Spiral Day 在当前工作区不可用。请启用插件并重新载入视图。",
   "unit.duration": ({ minutes }) => formatDuration(minutes),
   "unit.itemCount": ({ count }) => `${count}项`,
 } satisfies SharedCatalog);

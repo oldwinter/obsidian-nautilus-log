@@ -22,7 +22,7 @@ export const enShared = Object.freeze({
   "status.missing": "No Primary Plan",
   "status.overLimit": "Planner input limit reached",
   "status.stale": "Planner snapshot is stale",
-  "status.unavailable": "Extension not installed. To use Nautilus Log, install it from Roam Depot.",
+  "status.unavailable": "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.",
   "unit.duration": ({ minutes }) => formatDuration(minutes),
   "unit.itemCount": ({ count }) => `${count} ${count === 1 ? "item" : "items"}`,
 } satisfies SharedCatalog);

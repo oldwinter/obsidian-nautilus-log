@@ -23,11 +23,11 @@ test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals",
   assert.equal(messages.t("shared", "status.loading"), "Loading Nautilus Log...");
   assert.equal(
     enShared["status.unavailable"],
-    "Extension not installed. To use Nautilus Log, install it from Roam Depot.",
+    "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.",
   );
   assert.equal(
     messages.t("shared", "status.unavailable"),
-    "Extension not installed. To use Nautilus Log, install it from Roam Depot.",
+    "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.",
   );
 });
 
