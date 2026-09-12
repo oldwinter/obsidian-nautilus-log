@@ -4,6 +4,13 @@ This glossary is the canonical language for the Obsidian parity port. It keeps
 upstream scheduling and execution concepts distinct from Obsidian storage and UI
 mechanisms.
 
+User-facing documentation starts with the [user guide](docs/user-guide.md).
+Use the [Markdown grammar reference](docs/reference/markdown-grammar-v1.md) for
+plan syntax, the [settings reference](docs/reference/settings.md) for defaults
+and Daily Note paths, and the [troubleshooting guide](docs/troubleshooting.md)
+for blocked or unavailable states. The files in `docs/decisions/` explain the
+design constraints that maintainers must preserve.
+
 Normative implementation precedence belongs to the
 [canonical implementation dossier](docs/implementation-dossier.md). This file
 defines terms and must be updated with the dossier when a contract changes.

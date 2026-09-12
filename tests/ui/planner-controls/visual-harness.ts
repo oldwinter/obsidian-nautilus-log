@@ -1611,9 +1611,9 @@ window.issue24Harness = {
     }, { instanceId: "issue24-connect-failure", messages: englishMessages, renderIcon });
     const status = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
     const passed = status?.querySelector(".spiral-day-planner__status-heading")?.textContent
-        === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+        === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view."
       && status.querySelector(".spiral-day-planner__status-message")?.textContent === ""
-      && status.textContent === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
+      && status.textContent === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.";
     surface.destroy();
     root.remove();
     return passed;
@@ -1756,7 +1756,7 @@ window.issue24Harness = {
     const unavailable = root.querySelector<HTMLElement>(".spiral-day-planner__status");
     const rollbackFailureDisconnected = disconnectCalls === 3
       && unavailable?.dataset.state === "unavailable"
-      && unavailable.textContent === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
+      && unavailable.textContent === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.";
 
     surface.probeRuntimeNow();
     await nextFrame();
@@ -2089,10 +2089,10 @@ window.issue24Harness = {
       probeCallback?.();
       const unavailable = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
       const exactUnavailable = unavailable?.querySelector(".spiral-day-planner__status-heading")?.textContent
-          === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+          === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view."
         && unavailable.querySelector(".spiral-day-planner__status-message")?.textContent === ""
         && unavailable.textContent
-          === "Extension not installed. To use Nautilus Log, install it from Roam Depot.";
+          === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.";
       runtimeState = "ready";
       probeCallback?.();
       const firstReady = root.querySelector("svg.spiral-day-planner__spiral") !== null
@@ -2105,7 +2105,7 @@ window.issue24Harness = {
       probeCallback?.();
       const stopping = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');
       const exactStopping = stopping?.textContent
-          === "Extension not installed. To use Nautilus Log, install it from Roam Depot."
+          === "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view."
         && root.querySelector("svg.spiral-day-planner__spiral") === null
         && connectCount === 1
         && disconnectCount === 1;

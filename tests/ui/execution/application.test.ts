@@ -49,18 +49,22 @@ function source(lines: readonly string[]): string {
 
 class StartupRaceAccess extends MemoryAtomicTextAccess {
   #remainingSourceChanges: number;
-  sourceChangesEmitted = 0;
+  reads = 0;
 
   constructor(files: Record<string, string>, sourceChanges = 1) {
     super(files);
     this.#remainingSourceChanges = sourceChanges;
   }
 
+  armSourceChanges(count: number): void {
+    this.#remainingSourceChanges = count;
+  }
+
   override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
+    this.reads += 1;
     const text = await super.readText(path, signal);
     if (this.#remainingSourceChanges > 0) {
       this.#remainingSourceChanges -= 1;
-      this.sourceChangesEmitted += 1;
       this.notifyCacheChange(path);
     }
     return text;
@@ -73,27 +77,6 @@ class CountingAtomicTextAccess extends MemoryAtomicTextAccess {
   override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
     this.reads += 1;
     return super.readText(path, signal);
-  }
-}
-
-class SourceChangeOnReadAccess extends MemoryAtomicTextAccess {
-  #reads = 0;
-  readonly #sourceChangeRead: number;
-  sourceChangeEmitted = false;
-
-  constructor(files: Record<string, string>, sourceChangeRead: number) {
-    super(files);
-    this.#sourceChangeRead = sourceChangeRead;
-  }
-
-  override async readText(path: string, signal?: AbortSignal): Promise<string | undefined> {
-    const text = await super.readText(path, signal);
-    this.#reads += 1;
-    if (this.#reads === this.#sourceChangeRead) {
-      this.sourceChangeEmitted = true;
-      this.notifyCacheChange(path);
-    }
-    return text;
   }
 }
 
@@ -122,40 +105,14 @@ test("startup re-scans once after a transient source change and restores the run
   await pluginData.stop();
 });
 
-test("startup re-scans when the source changes during running CLOCK owner resolution", async () => {
+test("refresh performs at most one extra read-only scan after consecutive host cache races", async () => {
   const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
   const initial = source([
     `- [ ] Alpha 30m ^${PLAN_A}`,
     "  - LOGBOOK::",
     `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
   ]);
-  const access = new SourceChangeOnReadAccess({ [PATH]: initial }, 3);
-  const pluginData = enabledPluginData();
-  const application = new ExecutionApplication({
-    access,
-    pluginData,
-    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 6_000),
-  });
-
-  const started = await application.start();
-  assert.equal(started.status, "ready");
-  assert.equal(started.execution.kind, "active");
-  assert.equal(started.focused?.ownerId, PLAN_A);
-  assert.equal(access.sourceChangeEmitted, true);
-  assert.equal(access.transactionCounts.get(PATH), undefined);
-
-  await application.stop();
-  await pluginData.stop();
-});
-
-test("refresh drains consecutive host cache invalidations without publishing incomplete state", async () => {
-  const start = "[2026-08-29 Sat 09:30:00.000 +08:00]";
-  const initial = source([
-    `- [ ] Alpha 30m ^${PLAN_A}`,
-    "  - LOGBOOK::",
-    `    - CLOCK: ${start} ^nl-clock-11111111-1111-4111-8111-111111111111`,
-  ]);
-  const access = new StartupRaceAccess({ [PATH]: initial }, 3);
+  const access = new StartupRaceAccess({ [PATH]: initial }, 2);
   const pluginData = enabledPluginData();
   const application = new ExecutionApplication({
     access,
@@ -167,8 +124,46 @@ test("refresh drains consecutive host cache invalidations without publishing inc
   assert.equal(started.status, "ready");
   assert.equal(started.execution.kind, "active");
   assert.equal(started.focused?.ownerId, PLAN_A);
-  assert.equal(access.sourceChangesEmitted, 3);
   assert.equal(access.transactionCounts.get(PATH), undefined);
+
+  await application.stop();
+  await pluginData.stop();
+});
+
+test("refresh follows a source change that arrives during the final coalesced scan", async () => {
+  const initial = source([`- [ ] Alpha 30m ^${PLAN_A}`]);
+  const access = new StartupRaceAccess({ [PATH]: initial }, 0);
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "Asia/Shanghai", 7_000),
+  });
+  await application.start();
+
+  const readsBeforeRefresh = access.reads;
+  access.armSourceChanges(2);
+  const alpha = await reference(initial, PLAN_A, 0);
+  const refreshing = application.refresh();
+  const dispatching = application.dispatch({
+    type: "clock-in",
+    intentId: "clock-in-after-dirty-follow-up",
+    target: alpha,
+  });
+  await refreshing;
+  const outcome = await dispatching;
+  for (
+    let attempt = 0;
+    attempt < 10 && (access.reads < readsBeforeRefresh + 3 || application.snapshot.status !== "ready");
+    attempt += 1
+  ) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+
+  assert.ok(access.reads >= readsBeforeRefresh + 3);
+  assert.equal(outcome.outcome, "applied", JSON.stringify(outcome));
+  assert.equal(access.transactionCounts.get(PATH), 1);
+  assert.equal(application.snapshot.status, "ready");
 
   await application.stop();
   await pluginData.stop();

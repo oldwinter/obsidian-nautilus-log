@@ -333,6 +333,9 @@ export class ExecutionApplication {
   #refreshAgain = false;
   #refreshPromise: Promise<ExecutionApplicationSnapshot> | undefined;
   #refreshPromiseGeneration: number | undefined;
+  #refreshFollowUpPromise: Promise<ExecutionApplicationSnapshot> | undefined;
+  #resolveRefreshFollowUp: ((snapshot: ExecutionApplicationSnapshot) => void) | undefined;
+  #rejectRefreshFollowUp: ((error: unknown) => void) | undefined;
   #dispatchDepth = 0;
   #sourceRefreshPending = false;
   #snapshot: ExecutionApplicationSnapshot;
@@ -474,14 +477,41 @@ export class ExecutionApplication {
       if (this.#refreshPromise === pending) {
         this.#refreshPromise = undefined;
         this.#refreshPromiseGeneration = undefined;
+        if (this.#refreshAgain && !this.#stopped) {
+          this.#refreshAgain = false;
+          const queuedGeneration = this.#refreshGeneration;
+          const followUp = new Promise<ExecutionApplicationSnapshot>((resolve, reject) => {
+            this.#resolveRefreshFollowUp = resolve;
+            this.#rejectRefreshFollowUp = reject;
+          });
+          this.#refreshFollowUpPromise = followUp;
+          queueMicrotask(() => {
+            if (!this.#stopped && this.#refreshGeneration === queuedGeneration) {
+              void this.refresh().then(
+                (snapshot) => this.#resolveRefreshFollowUp?.(snapshot),
+                (error: unknown) => this.#rejectRefreshFollowUp?.(error),
+              ).finally(() => {
+                if (this.#refreshFollowUpPromise === followUp) {
+                  this.#refreshFollowUpPromise = undefined;
+                  this.#resolveRefreshFollowUp = undefined;
+                  this.#rejectRefreshFollowUp = undefined;
+                }
+              });
+              return;
+            }
+            this.#resolveRefreshFollowUp?.(this.#snapshot);
+            this.#refreshFollowUpPromise = undefined;
+            this.#resolveRefreshFollowUp = undefined;
+            this.#rejectRefreshFollowUp = undefined;
+          });
+        }
       }
     }
   }
 
   async dispatch(intent: ExecutionApplicationIntent): Promise<ExecutionCommandOutcome> {
     safeIntentId(intent.intentId);
-    const refresh = this.#refreshPromise;
-    if (refresh) await refresh;
+    await this.#waitForRefreshSettled();
     this.#dispatchDepth += 1;
     try {
       return await this.#dispatchIntent(intent);
@@ -491,6 +521,22 @@ export class ExecutionApplication {
         this.#sourceRefreshPending = false;
         void this.refresh();
       }
+    }
+  }
+
+  async #waitForRefreshSettled(): Promise<void> {
+    for (;;) {
+      const refresh = this.#refreshPromise;
+      if (refresh) {
+        await refresh;
+        continue;
+      }
+      const followUp = this.#refreshFollowUpPromise;
+      if (followUp) {
+        await followUp;
+        continue;
+      }
+      return;
     }
   }
 

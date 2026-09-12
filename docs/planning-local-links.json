@@ -4,20 +4,74 @@
   "links": [
     {
       "source": "CONTEXT.md",
+      "href": "docs/user-guide.md",
+      "target": "docs/user-guide.md",
+      "occurrence": 1
+    },
+    {
+      "source": "CONTEXT.md",
+      "href": "docs/reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
+      "occurrence": 1
+    },
+    {
+      "source": "CONTEXT.md",
+      "href": "docs/reference/settings.md",
+      "target": "docs/reference/settings.md",
+      "occurrence": 1
+    },
+    {
+      "source": "CONTEXT.md",
+      "href": "docs/troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 1
+    },
+    {
+      "source": "CONTEXT.md",
       "href": "docs/implementation-dossier.md",
       "target": "docs/implementation-dossier.md",
       "occurrence": 1
     },
     {
       "source": "README.md",
-      "href": "tests/host-matrix/README.md",
-      "target": "tests/host-matrix/README.md",
+      "href": "docs/reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
       "occurrence": 1
     },
     {
       "source": "README.md",
-      "href": "benchmarks/README.md",
-      "target": "benchmarks/README.md",
+      "href": "docs/user-guide.md",
+      "target": "docs/user-guide.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/reference/settings.md",
+      "target": "docs/reference/settings.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/implementation-dossier.md",
+      "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/decisions/",
+      "target": "docs/decisions/",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "CONTEXT.md",
+      "target": "CONTEXT.md",
       "occurrence": 1
     },
     {
@@ -30,7 +84,7 @@
       "source": "README.md",
       "href": "docs/implementation-dossier.md",
       "target": "docs/implementation-dossier.md",
-      "occurrence": 1
+      "occurrence": 2
     },
     {
       "source": "README.md",
@@ -255,6 +309,12 @@
       "occurrence": 2
     },
     {
+      "source": "docs/reference/markdown-grammar-v1.md",
+      "href": "../decisions/markdown-grammar-and-plan-item-identity.md",
+      "target": "docs/decisions/markdown-grammar-and-plan-item-identity.md",
+      "occurrence": 1
+    },
+    {
       "source": "docs/research/behavior-inventory.md",
       "href": "../implementation-dossier.md",
       "target": "docs/implementation-dossier.md",
@@ -288,6 +348,12 @@
       "source": "docs/research/visual-interaction.md",
       "href": "../implementation-dossier.md",
       "target": "docs/implementation-dossier.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "reference/settings.md",
+      "target": "docs/reference/settings.md",
       "occurrence": 1
     }
   ]
