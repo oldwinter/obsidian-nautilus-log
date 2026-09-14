@@ -495,7 +495,7 @@
 .spiral-day-planner__status[data-state="error"] .spiral-day-planner__status-heading,
 .spiral-day-planner__status[data-state="unavailable"] .spiral-day-planner__status-heading,
 .spiral-day-planner__status[data-state="over-limit"] .spiral-day-planner__status-heading { color: var(--spiral-day-urgent); }
-.spiral-day-planner__status-message { color: var(--spiral-day-muted); }
+.spiral-day-planner__status-message { color: var(--spiral-day-muted); white-space: pre-wrap; }
 
 .spiral-day-planner__status .spiral-day-onboarding__intro,
 .spiral-day-planner__status .spiral-day-onboarding__next {
