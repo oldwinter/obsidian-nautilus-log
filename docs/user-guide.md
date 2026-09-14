@@ -56,12 +56,12 @@ schedule when it finishes.
 Open **Settings → Spiral Day** and enable **Execution Layer**. This adds the
 Timing, Plan, and Review surfaces and registers these command-palette commands:
 
-- `Nautilus Log: 1. Focus current block`
-- `Nautilus Log: 2. Clock out Timing Line`
-- `Nautilus Log: 3. Locate Primary Plan`
+- `Spiral Day: 1. Focus current block`
+- `Spiral Day: 2. Clock out Timing Line`
+- `Spiral Day: 3. Locate Primary Plan`
 
 When the caret is inside an eligible open flexible task, the editor context menu
-also offers **Nautilus Log: Clock in**. When the caret is inside the currently
+also offers **Spiral Day: Clock in**. When the caret is inside the currently
 timed task, it offers **Clock out**. The Timing panel can start or stop a
 standalone POMO when no task is running.
 

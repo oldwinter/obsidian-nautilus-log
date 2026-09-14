@@ -29,9 +29,9 @@ test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and remov
   registry.start();
   assert.equal(registry.active, true);
   assert.deepEqual(registered.map((command) => command.name), [
-    "Nautilus Log: 1. Focus current block",
-    "Nautilus Log: 2. Clock out Timing Line",
-    "Nautilus Log: 3. Locate Primary Plan",
+    "Spiral Day: 1. Focus current block",
+    "Spiral Day: 2. Clock out Timing Line",
+    "Spiral Day: 3. Locate Primary Plan",
   ]);
   assert.deepEqual(registered.map((command) => command.id), ["execution-1", "execution-2", "execution-3"]);
   assert.equal(registered.some((command) => Object.hasOwn(command, "hotkeys")), false);
@@ -85,7 +85,7 @@ test("TC-UP-CMD-02-001..003 editor menu stays absent when disabled and dispatche
   assert.equal(items.length, 0);
   enabled = true;
   editorMenu!(menu, {}, {});
-  assert.deepEqual(items.map((item) => [item.title, item.icon]), [["Nautilus Log: Clock in", "timer"]]);
+  assert.deepEqual(items.map((item) => [item.title, item.icon]), [["Spiral Day: Clock in", "timer"]]);
   items[0]!.activate?.();
   await Promise.resolve();
   assert.deepEqual(dispatched, ["clock-in"]);

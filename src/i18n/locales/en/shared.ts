@@ -18,7 +18,7 @@ export const enShared = Object.freeze({
   "state.urgent": "urgent",
   "status.error": "Planner could not load",
   "status.hidden": "Planner refresh paused",
-  "status.loading": "Loading Nautilus Log...",
+  "status.loading": "Loading Spiral Day...",
   "status.missing": "No Primary Plan",
   "status.overLimit": "Planner input limit reached",
   "status.stale": "Planner snapshot is stale",

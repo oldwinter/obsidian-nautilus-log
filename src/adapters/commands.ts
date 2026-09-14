@@ -24,17 +24,17 @@ export class ExecutionCommandRegistry {
     if (this.active) return;
     const commands: readonly Omit<Command, "id">[] = [
       {
-        name: "Nautilus Log: 1. Focus current block",
+        name: "Spiral Day: 1. Focus current block",
         icon: "timer",
         callback: () => this.#run(this.#dependencies.focusCurrent),
       },
       {
-        name: "Nautilus Log: 2. Clock out Timing Line",
+        name: "Spiral Day: 2. Clock out Timing Line",
         icon: "square",
         callback: () => this.#run(this.#dependencies.clockOut),
       },
       {
-        name: "Nautilus Log: 3. Locate Primary Plan",
+        name: "Spiral Day: 3. Locate Primary Plan",
         icon: "locate-fixed",
         callback: () => this.#run(this.#dependencies.locatePrimary),
       },
