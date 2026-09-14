@@ -11,10 +11,12 @@
 }
 .spiral-day-review__toolbar input[type="date"] { min-width: 0; max-width: 100%; flex: 1; }
 .spiral-day-review__toolbar button { min-height: 30px; white-space: normal; }
+.spiral-day-review__filter { display: flex; align-items: center; gap: 6px; margin-top: 10px; min-height: 30px; font-size: var(--font-ui-small); overflow-wrap: anywhere; }
+.spiral-day-review__filter input { flex: none; }
 .spiral-day-review__summary { margin-block: 12px; font-size: var(--font-ui-small); }
 .spiral-day-review__summary p { margin-block: 4px; overflow-wrap: anywhere; }
 .spiral-day-review__summary p:first-child { font-weight: var(--font-semibold); }
-.spiral-day-review__status, .spiral-day-review__warning {
+.spiral-day-review__status, .spiral-day-review__filter-status, .spiral-day-review__warning {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   overflow-wrap: anywhere;

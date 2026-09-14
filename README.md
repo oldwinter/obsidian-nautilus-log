@@ -16,8 +16,9 @@ Foundation version: `0.1.0`
 - Place fixed events and flexible tasks on a deterministic spiral schedule.
 - Advance progress, complete tasks, hide completed items, and copy a plan summary.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
-- See the Execution Review tab's current preparation state and recover from
-  stale, conflicting, or unavailable timing data.
+- Compare planned and recorded time in Review, filter to completed overruns, and
+  recover from stale, conflicting, or unavailable timing data. The Review
+  summary still covers the whole day.
 - Open the Planner and Active Task surfaces from Obsidian's workspace and sidebar.
 
 Spiral Day never writes a Markdown file during a read-only refresh. It writes
@@ -66,8 +67,10 @@ when a surface is empty, stale, blocked, or unavailable.
   playback, and summary copy.
 - **Execution:** enable **Execution Layer** in settings, then use the timer
   ribbon entry. The panel contains **Timing**, **Plan**, and **Review** tabs.
-  Timing and Plan are the active task workflows. Review currently reports that
-  its preparation is in progress; recent timing remains visible in Timing.
+  Timing and Plan are the active task workflows. Review compares planned and
+  recorded time; select **Only completed overruns** to focus on completed tasks
+  whose recorded time exceeded their plan. The summary still covers the whole
+  day.
 - **Active Task:** the singleton view in the right sidebar. It follows the
   current task, opens its source line, copies an Obsidian block link, and offers
   Clock Out when a valid CLOCK is running.

@@ -5,6 +5,10 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "date.previous": "前一天",
   "date.next": "后一天",
   "date.today": "今天",
+  "filter.overruns": "仅看已完成的超时任务",
+  "filter.result": ({ count }) => count === 0
+    ? "没有已完成的任务超出计划用时。汇总仍显示全天数据。"
+    : `正在显示 ${count} 项已完成的超时任务。汇总仍显示全天数据。`,
   "summary.counts": ({ completed, total, compared }) => `已完成 ${completed}/${total} 项 · 已比较 ${compared} 项`,
   "metric.planned": "计划用时",
   "metric.actual": "实际用时",

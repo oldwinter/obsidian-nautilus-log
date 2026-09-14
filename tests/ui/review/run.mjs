@@ -256,6 +256,90 @@ try {
     await capture(page, "states-wide-en");
   });
 
+  await scenario("completed-overrun-filter", async () => {
+    await open("full");
+    const filter = page.getByRole("checkbox", { name: "Only completed overruns", exact: true });
+    const summary = await page.locator(".spiral-day-review__summary").textContent();
+    check("review.filter-defaults-to-all", !await filter.isChecked()
+      && await page.locator(".spiral-day-review__row").count() === 7, await filter.isChecked());
+    await filter.check();
+    check("review.filter-selects-positive-completed-only", await page.locator(".spiral-day-review__title").allTextContents()
+      .then((titles) => JSON.stringify(titles) === JSON.stringify(["Positive variance"])),
+    await page.locator(".spiral-day-review__title").allTextContents());
+    check("review.filter-preserves-day-summary", await page.locator(".spiral-day-review__summary").textContent() === summary, summary);
+    check("review.filter-announces-result-and-summary-scope", await page.getByText("Showing 1 completed overrun. The summary covers the whole day.", { exact: true }).isVisible(),
+      await page.locator(".spiral-day-review__filter-status").textContent());
+    await page.getByRole("button", { name: "Open source for Positive variance", exact: true }).click();
+    const afterNavigation = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.filtered-source-target", afterNavigation.navigations.length === 1
+      && afterNavigation.navigations[0].target.path === "Daily/Review Fixture 4.md", afterNavigation.navigations);
+    await filter.focus();
+    await filter.press("Space");
+    check("review.filter-keyboard-restores-all-and-focus", !await filter.isChecked()
+      && await page.locator(".spiral-day-review__row").count() === 7
+      && await filter.evaluate((element) => element === document.activeElement), await filter.isChecked());
+    await filter.press("Space");
+    const statusMutations = await page.locator(".spiral-day-review__filter-status").evaluate((element) => {
+      const observer = new MutationObserver(() => undefined);
+      observer.observe(element, { childList: true, subtree: true, characterData: true });
+      window.reviewHarness.tickNow();
+      const mutations = observer.takeRecords().length;
+      observer.disconnect();
+      return mutations;
+    });
+    check("review.filter-does-not-repeat-live-announcement-on-tick", statusMutations === 0, statusMutations);
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await page.evaluate(() => { window.reviewHarness.hide(); window.reviewHarness.show(); });
+    check("review.filter-survives-tick-date-and-reopen", await filter.isChecked()
+      && await page.locator(".spiral-day-review__row").count() === 1, await filter.isChecked());
+    const stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.filter-does-not-dispatch-or-mutate-plan", stats.dispatches.length === 0 && stats.planMutations === 0, stats);
+    await capture(page, "overruns-wide-en");
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    const translated = page.getByRole("checkbox", { name: "仅看已完成的超时任务", exact: true });
+    check("review.filter-localizes-with-state-retained", await translated.isChecked()
+      && await page.getByText("正在显示 1 项已完成的超时任务。汇总仍显示全天数据。", { exact: true }).isVisible(), await translated.isChecked());
+    const layout = await page.locator("#review-root").evaluate((element) => ({
+      width: element.clientWidth, scrollWidth: element.scrollWidth,
+      documentWidth: document.documentElement.clientWidth, documentScrollWidth: document.documentElement.scrollWidth,
+    }));
+    check("review.filter-fits-320px", layout.width > 0 && layout.scrollWidth <= layout.width + 1
+      && layout.documentScrollWidth <= layout.documentWidth + 1, layout);
+    await capture(page, "overruns-narrow-zh");
+    await translated.uncheck();
+    check("review.filter-restores-original-order", JSON.stringify(await page.locator(".spiral-day-review__title").allTextContents())
+      === JSON.stringify(["Not started", "Live timer", "Paused task", "No recorded time", "Positive variance", "Negative variance", "Zero variance"]),
+    await page.locator(".spiral-day-review__title").allTextContents());
+  });
+
+  await scenario("overrun-filter-empty-and-unavailable", async () => {
+    await open("target");
+    const filter = page.getByRole("checkbox", { name: "Only completed overruns", exact: true });
+    await filter.check();
+    check("review.filter-no-matches-distinct-from-empty-day", await page.getByText("No completed tasks exceeded their plan. The summary covers the whole day.", { exact: true }).isVisible()
+      && await page.locator(".spiral-day-review__summary").isVisible()
+      && !await page.locator(".spiral-day-review__list").isVisible(), await page.locator(".spiral-day-review__filter-status").textContent());
+    await capture(page, "overruns-no-matches");
+    for (const mode of ["empty", "missing-note", "missing-plan", "invalid-plan", "building", "over-limit", "unavailable"]) {
+      await page.evaluate((value) => window.reviewHarness.setReviewMode(value), mode);
+      check(`review.filter-does-not-mask-${mode}`, !await page.locator(".spiral-day-review__filter-status").isVisible()
+        && await page.locator(".spiral-day-review__status").isVisible(), await page.locator(".spiral-day-review__status").textContent());
+    }
+    await page.evaluate(() => window.reviewHarness.setReviewMode("full"));
+    await page.getByRole("button", { name: "Open source for Positive variance", exact: true }).focus();
+    await page.evaluate(() => window.reviewHarness.setReviewMode("target"));
+    check("review.filter-removal-recovers-focus", await filter
+      .evaluate((element) => element === document.activeElement), await page.evaluate(() => document.activeElement?.textContent));
+    await page.evaluate(() => window.reviewHarness.setExecution("stale"));
+    check("review.filter-does-not-mask-stale", !await page.locator(".spiral-day-review__filter-status").isVisible()
+      && await page.getByText("Waiting for confirmed timing data. Task actions are unavailable.", { exact: true }).isVisible(), await filter.isChecked());
+    await filter.uncheck();
+    await page.evaluate(() => window.reviewHarness.setExecution("ready"));
+    check("review.filter-clear-recovers-list", await page.locator(".spiral-day-review__row").count() === 1
+      && await page.getByRole("button", { name: "Complete", exact: true }).isEnabled(), await filter.isChecked());
+  });
+
   await scenario("empty-date-presentations", async () => {
     const variants = [
       ["empty", "No tasks to review on this date."],
