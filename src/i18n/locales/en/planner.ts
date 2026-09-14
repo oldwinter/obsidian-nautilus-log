@@ -60,7 +60,7 @@ export const enPlanner = Object.freeze({
   "status.errorDetail": "The confirmed plan could not be read. Refresh after checking the source note.",
   "status.hiddenDetail": "This leaf is hidden; the projection will refresh when revealed.",
   "status.loadingDetail": "Reading the confirmed plan snapshot.",
-  "status.missingDetail": "No supported Plan Region was found for this day.",
+  "status.missingDetail": "No supported Plan Region was found for this day. Put these markers on their own lines in today's daily note, then refresh:\n<!-- nautilus-log:plan/v1 -->\n<!-- /nautilus-log:plan -->",
   "status.overLimitDetail": ({ actual, kind, limit }) => `${actual} ${LIMIT_LABELS[kind]}; limit ${limit}.`,
   "status.overLimitUnknownDetail": ({ actual, limit }) => `${actual} units; limit ${limit}.`,
   "status.staleDetail": "Refreshing after a source change. No stale projection is shown.",

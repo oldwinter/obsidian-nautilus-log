@@ -97,6 +97,23 @@ test("TC-OBS-I18N-001-001 every over-limit kind is localized without leaking int
   }
 });
 
+test("TC-UP-ERR-09-001 missing-plan copy names the HTML markers and refresh step", () => {
+  const open = "<!-- nautilus-log:plan/v1 -->";
+  const close = "<!-- /nautilus-log:plan -->";
+  const messages = createMessages({ locale: "en" });
+  const english = messages.t("planner", "status.missingDetail");
+  assert.match(english, /today's daily note/);
+  assert.match(english, /then refresh/);
+  assert.equal(english.includes(open), true);
+  assert.equal(english.includes(close), true);
+  messages.setLocale("zh-CN");
+  const chinese = messages.t("planner", "status.missingDetail");
+  assert.match(chinese, /今日日记/);
+  assert.match(chinese, /刷新/);
+  assert.equal(chinese.includes(open), true);
+  assert.equal(chinese.includes(close), true);
+});
+
 test("TC-OBS-I18N-001-001 later equal execution/review namespaces register without changing base catalogs", () => {
   const execution = defineLocaleNamespace(
     "execution",
