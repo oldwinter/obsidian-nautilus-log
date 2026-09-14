@@ -19,8 +19,12 @@ test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
   const messages = createMessages({ locale: "en" });
-  assert.equal(enShared["status.loading"], "Loading Nautilus Log...");
-  assert.equal(messages.t("shared", "status.loading"), "Loading Nautilus Log...");
+  assert.equal(enShared["status.loading"], "Loading Spiral Day...");
+  assert.equal(messages.t("shared", "status.loading"), "Loading Spiral Day...");
+  messages.setLocale("zh-CN");
+  assert.equal(zhCNShared["status.loading"], "正在载入 Spiral Day...");
+  assert.equal(messages.t("shared", "status.loading"), "正在载入 Spiral Day...");
+  messages.setLocale("en");
   assert.equal(
     enShared["status.unavailable"],
     "Spiral Day is unavailable in this workspace. Enable the plugin and reload the view.",

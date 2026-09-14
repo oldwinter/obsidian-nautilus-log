@@ -106,7 +106,7 @@ export type ExecutionCatalog = Readonly<{
 
 export const enExecution: ExecutionCatalog = Object.freeze({
   "surface.name": "Execution",
-  "surface.identity": "unresolve · Nautilus",
+  "surface.identity": "Spiral Day",
   "tab.timing": "Timing",
   "tab.plan": "Plan",
   "tab.review": "Review",
@@ -133,7 +133,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.pending": "Confirming change",
   "plan.scheduled": "Scheduled",
   "plan.unscheduled": "Unscheduled today",
-  "plan.noPrimary": "No Primary Nautilus Log was found today.",
+  "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noTasks": "No unfinished direct tasks are available.",
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
@@ -197,8 +197,8 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.completeUnconfirmed": "Task completion could not be confirmed.",
   "error.focusTodo": "Focus an unfinished TODO block before starting timing.",
   "error.commandsUnavailable": "Obsidian command-palette actions are unavailable.",
-  "error.generic": "Nautilus Log could not complete that action.",
-  "error.noPrimary": "No Primary Nautilus Log was found today.",
+  "error.generic": "Spiral Day could not complete that action.",
+  "error.noPrimary": "No Primary Plan was found today.",
   "error.navigationUnavailable": "Obsidian navigation is unavailable.",
   "error.noBlockId": "This task has no block UID.",
   "error.sidebarUnavailable": "The Obsidian sidebar is unavailable.",

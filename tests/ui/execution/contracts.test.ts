@@ -28,8 +28,16 @@ test("execution locale catalogs have exact keys and switch without fallback", ()
     namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
   });
   assert.equal(messages.t("execution", "tab.timing"), "Timing");
+  assert.equal(messages.t("execution", "surface.identity"), "Spiral Day");
+  assert.equal(messages.t("execution", "error.generic"), "Spiral Day could not complete that action.");
+  assert.equal(messages.t("execution", "error.noPrimary"), "No Primary Plan was found today.");
+  assert.equal(messages.t("execution", "plan.noPrimary"), "No Primary Plan was found today.");
   assert.equal(messages.setLocale("zh"), true);
   assert.equal(messages.t("execution", "tab.timing"), "计时");
+  assert.equal(messages.t("execution", "surface.identity"), "Spiral Day");
+  assert.equal(messages.t("execution", "error.generic"), "Spiral Day 无法完成该操作。");
+  assert.equal(messages.t("execution", "error.noPrimary"), "今天没有找到主计划。");
+  assert.equal(messages.t("execution", "plan.noPrimary"), "今天没有找到主计划。");
   assert.equal(messages.t("execution", "error.focusTodo").length > 0, true);
 });
 

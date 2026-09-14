@@ -2,7 +2,7 @@ import type { ExecutionCatalog } from "../en/execution";
 
 export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "surface.name": "执行",
-  "surface.identity": "unresolve · Nautilus",
+  "surface.identity": "Spiral Day",
   "tab.timing": "计时",
   "tab.plan": "计划",
   "tab.review": "回顾",
@@ -29,7 +29,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "timing.pending": "正在确认更改",
   "plan.scheduled": "已排程",
   "plan.unscheduled": "今日未排程",
-  "plan.noPrimary": "今天没有找到主 Nautilus Log。",
+  "plan.noPrimary": "今天没有找到主计划。",
   "plan.noTasks": "没有未完成的直接任务。",
   "plan.loading": "正在刷新今日计划。",
   "plan.unavailable": "今日计划不可用。",
@@ -93,8 +93,8 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.completeUnconfirmed": "无法确认任务完成。",
   "error.focusTodo": "开始计时前，请聚焦一个未完成的待办任务。",
   "error.commandsUnavailable": "Obsidian 命令面板操作不可用。",
-  "error.generic": "Nautilus Log 无法完成该操作。",
-  "error.noPrimary": "今天没有找到主 Nautilus Log。",
+  "error.generic": "Spiral Day 无法完成该操作。",
+  "error.noPrimary": "今天没有找到主计划。",
   "error.navigationUnavailable": "Obsidian 导航不可用。",
   "error.noBlockId": "该任务没有区块 UID。",
   "error.sidebarUnavailable": "Obsidian 侧栏不可用。",

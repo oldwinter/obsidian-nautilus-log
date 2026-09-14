@@ -2082,9 +2082,9 @@ window.issue24Harness = {
       });
       const loading = root.querySelector<HTMLElement>('[data-state="loading"][role="status"]');
       const exactLoading = loading?.querySelector(".spiral-day-planner__status-heading")?.textContent
-          === "Loading Nautilus Log..."
+          === "Loading Spiral Day..."
         && loading.querySelector(".spiral-day-planner__status-message")?.textContent === ""
-        && loading.textContent === "Loading Nautilus Log...";
+        && loading.textContent === "Loading Spiral Day...";
       runtimeState = "unloaded";
       probeCallback?.();
       const unavailable = root.querySelector<HTMLElement>('[data-state="unavailable"][role="alert"]');

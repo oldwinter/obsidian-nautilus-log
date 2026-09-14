@@ -71,7 +71,7 @@ when a surface is empty, stale, blocked, or unavailable.
 - **Active Task:** the singleton view in the right sidebar. It follows the
   current task, opens its source line, copies an Obsidian block link, and offers
   Clock Out when a valid CLOCK is running.
-- **Command palette:** the three commands begin with `Nautilus Log:` and focus
+- **Command palette:** the three commands begin with `Spiral Day:` and focus
   the current block, Clock Out the Timing Line, or locate the Primary Plan.
 - **Editor menu:** with Execution enabled, right-click an eligible plan item to
   Clock In or Clock Out. Use the Planner or the Plan tab for progress and

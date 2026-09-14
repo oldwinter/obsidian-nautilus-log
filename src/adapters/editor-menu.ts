@@ -25,7 +25,7 @@ export function registerExecutionEditorMenu(dependencies: ExecutionEditorMenuDep
       const action = dependencies.resolveAction(editor, info);
       if (!action) return;
       menu.addItem((item) => item
-        .setTitle(action.kind === "clock-in" ? "Nautilus Log: Clock in" : "Nautilus Log: Clock out")
+        .setTitle(action.kind === "clock-in" ? "Spiral Day: Clock in" : "Spiral Day: Clock out")
         .setIcon(action.kind === "clock-in" ? "timer" : "square")
         .onClick(() => {
           void Promise.resolve(dependencies.dispatch(action, editor, info)).catch(dependencies.onError);
