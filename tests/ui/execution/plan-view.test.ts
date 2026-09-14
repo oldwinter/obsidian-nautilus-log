@@ -6,6 +6,7 @@ import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
 import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolver";
 import type { RuntimePlanItemSource } from "../../../src/runtime/projection-runtime";
+import { PRIMARY_PLAN_MARKERS } from "../../../src/ui/onboarding/first-run";
 import { renderPlanView, type PlanViewOptions } from "../../../src/ui/execution/plan-view";
 
 class ElementStub {
@@ -17,7 +18,13 @@ class ElementStub {
   constructor(readonly ownerDocument: DocumentStub) {}
   append(...children: ElementStub[]): void { this.children.push(...children); }
   replaceChildren(...children: ElementStub[]): void { this.children.splice(0, this.children.length, ...children); }
-  querySelector(): null { return null; }
+  querySelector(selector: string): ElementStub | null {
+    if (selector.startsWith(".")) {
+      const className = selector.slice(1);
+      return this.children.find((child) => child.className === className) ?? null;
+    }
+    return null;
+  }
   setAttribute(): void {}
   addEventListener(): void {}
 }
@@ -104,4 +111,31 @@ test("Plan preserves current-task and unscheduled partial-task metadata", () => 
 
 test("Plan displays the projected remaining duration without deriving it from the schedule", () => {
   assert.deepEqual(metadata({ ...partialTask, progressPercent: 33, remainingDurationMinutes: 40 }), ["10:00–10:45", "40m remaining · 1h planned"]);
+});
+
+function collectText(element: ElementStub): string[] {
+  return [element.textContent, ...element.children.flatMap(collectText)].filter((value) => value !== "");
+}
+
+test("Plan missing state shows the Primary Plan markers and next actions", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: { state: "missing" } as PlanViewOptions["snapshot"],
+  });
+  const text = collectText(root).join("\n");
+  assert.match(text, /No Primary Plan was found today/);
+  assert.match(text, /nautilus-log:plan\/v1/);
+  assert.equal(text.includes(PRIMARY_PLAN_MARKERS), true);
 });

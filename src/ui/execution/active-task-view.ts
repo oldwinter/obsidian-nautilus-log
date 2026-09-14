@@ -81,7 +81,9 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     title.textContent = options.messages.t("execution", mode === "pomo" ? "timing.pomo" : "timing.idle");
     const detail = executionElement(root.ownerDocument, "p");
     detail.textContent = options.messages.t("execution", "timing.noActive");
-    state.append(title, detail);
+    const next = executionElement(root.ownerDocument, "p", "spiral-day-onboarding__next");
+    next.textContent = options.messages.t("execution", "timing.nextAction");
+    state.append(title, detail, next);
     if (mode === "pomo") {
       const timing = executionElement(root.ownerDocument, "div", "spiral-day-active-task__timing");
       const timingLabel = executionElement(root.ownerDocument, "span");

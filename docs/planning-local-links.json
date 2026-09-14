@@ -10,6 +10,12 @@
     },
     {
       "source": "CONTEXT.md",
+      "href": "docs/user-guide.zh.md",
+      "target": "docs/user-guide.zh.md",
+      "occurrence": 1
+    },
+    {
+      "source": "CONTEXT.md",
       "href": "docs/reference/markdown-grammar-v1.md",
       "target": "docs/reference/markdown-grammar-v1.md",
       "occurrence": 1
@@ -34,14 +40,20 @@
     },
     {
       "source": "README.md",
-      "href": "docs/reference/markdown-grammar-v1.md",
-      "target": "docs/reference/markdown-grammar-v1.md",
+      "href": "docs/user-guide.md",
+      "target": "docs/user-guide.md",
       "occurrence": 1
     },
     {
       "source": "README.md",
-      "href": "docs/user-guide.md",
-      "target": "docs/user-guide.md",
+      "href": "docs/user-guide.zh.md",
+      "target": "docs/user-guide.zh.md",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
       "occurrence": 1
     },
     {
@@ -352,8 +364,242 @@
     },
     {
       "source": "docs/user-guide.md",
+      "href": "user-guide.zh.md",
+      "target": "docs/user-guide.zh.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/01-enable-plugin.png",
+      "target": "docs/user-guide/images/01-enable-plugin.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/02-settings-first-run.png",
+      "target": "docs/user-guide/images/02-settings-first-run.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/03-open-planner-ribbon.png",
+      "target": "docs/user-guide/images/03-open-planner-ribbon.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/04-daily-note-markers.png",
+      "target": "docs/user-guide/images/04-daily-note-markers.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/05-planner-empty-guidance.png",
+      "target": "docs/user-guide/images/05-planner-empty-guidance.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/06-planner-scheduled-day.png",
+      "target": "docs/user-guide/images/06-planner-scheduled-day.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
       "href": "reference/settings.md",
       "target": "docs/reference/settings.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/07-enable-execution.png",
+      "target": "docs/user-guide/images/07-enable-execution.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/08-timing-idle.png",
+      "target": "docs/user-guide/images/08-timing-idle.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/09-plan-tab.png",
+      "target": "docs/user-guide/images/09-plan-tab.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/10-review-tab.png",
+      "target": "docs/user-guide/images/10-review-tab.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/11-active-task.png",
+      "target": "docs/user-guide/images/11-active-task.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "user-guide/images/12-daily-loop.png",
+      "target": "docs/user-guide/images/12-daily-loop.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "reference/settings.md",
+      "target": "docs/reference/settings.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.md",
+      "href": "../CONTEXT.md",
+      "target": "CONTEXT.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide.md",
+      "target": "docs/user-guide.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/01-enable-plugin.png",
+      "target": "docs/user-guide/images/01-enable-plugin.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/02-settings-first-run.png",
+      "target": "docs/user-guide/images/02-settings-first-run.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/03-open-planner-ribbon.png",
+      "target": "docs/user-guide/images/03-open-planner-ribbon.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/04-daily-note-markers.png",
+      "target": "docs/user-guide/images/04-daily-note-markers.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/05-planner-empty-guidance.png",
+      "target": "docs/user-guide/images/05-planner-empty-guidance.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/06-planner-scheduled-day.png",
+      "target": "docs/user-guide/images/06-planner-scheduled-day.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "reference/settings.md",
+      "target": "docs/reference/settings.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/07-enable-execution.png",
+      "target": "docs/user-guide/images/07-enable-execution.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/08-timing-idle.png",
+      "target": "docs/user-guide/images/08-timing-idle.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/09-plan-tab.png",
+      "target": "docs/user-guide/images/09-plan-tab.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/10-review-tab.png",
+      "target": "docs/user-guide/images/10-review-tab.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/11-active-task.png",
+      "target": "docs/user-guide/images/11-active-task.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "user-guide/images/12-daily-loop.png",
+      "target": "docs/user-guide/images/12-daily-loop.png",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 1
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "reference/settings.md",
+      "target": "docs/reference/settings.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "reference/markdown-grammar-v1.md",
+      "target": "docs/reference/markdown-grammar-v1.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "troubleshooting.md",
+      "target": "docs/troubleshooting.md",
+      "occurrence": 2
+    },
+    {
+      "source": "docs/user-guide.zh.md",
+      "href": "../CONTEXT.md",
+      "target": "CONTEXT.md",
       "occurrence": 1
     }
   ]

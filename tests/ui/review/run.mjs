@@ -343,8 +343,8 @@ try {
   await scenario("empty-date-presentations", async () => {
     const variants = [
       ["empty", "No tasks to review on this date."],
-      ["missing-note", "No Daily Note exists for this date."],
-      ["missing-plan", "This Daily Note has no Primary Plan."],
+      ["missing-note", "No Daily Note exists for this date. Create the note that matches Settings → Daily Note folder and date format."],
+      ["missing-plan", "This Daily Note has no Primary Plan. Add `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero, then save."],
       ["invalid-plan", "The Primary Plan markers are invalid. Check the Daily Note."],
     ];
     for (const [mode, expectedStatus] of variants) {

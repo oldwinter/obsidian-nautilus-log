@@ -2,6 +2,9 @@
 
 ## The planner says “No supported Plan Region was found”
 
+The Planner and Settings first-run checklist now show the exact next step,
+including the two HTML markers. The plugin does not rewrite your note.
+
 Check the Daily Note path first:
 
 1. In **Settings → Spiral Day**, verify **Daily Note folder** and

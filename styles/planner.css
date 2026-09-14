@@ -497,6 +497,66 @@
 .spiral-day-planner__status[data-state="over-limit"] .spiral-day-planner__status-heading { color: var(--spiral-day-urgent); }
 .spiral-day-planner__status-message { color: var(--spiral-day-muted); white-space: pre-wrap; }
 
+.spiral-day-planner__status .spiral-day-onboarding__intro,
+.spiral-day-planner__status .spiral-day-onboarding__next {
+  color: var(--spiral-day-muted);
+  margin: 0;
+}
+
+.spiral-day-planner__status .spiral-day-onboarding__steps {
+  color: var(--spiral-day-text);
+  margin: 2px 0 0;
+  padding-inline-start: 1.2em;
+}
+
+.spiral-day-planner__status .spiral-day-onboarding__markers {
+  background: var(--spiral-day-surface-subtle);
+  border: 1px solid var(--spiral-day-border);
+  border-radius: 4px;
+  font: 12px/1.45 var(--font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  margin: 4px 0 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  white-space: pre;
+}
+
+.spiral-day-onboarding__copy,
+.spiral-day-planner__status .spiral-day-onboarding__copy {
+  background: var(--interactive-normal, var(--background-secondary, #f2f3f5));
+  border: 1px solid var(--background-modifier-border, #d7dbe1);
+  border-radius: 4px;
+  color: var(--text-normal, inherit);
+  cursor: pointer;
+  font: inherit;
+  justify-self: start;
+  margin-top: 6px;
+  padding: 4px 10px;
+}
+
+.spiral-day-settings-onboarding {
+  background: color-mix(in srgb, var(--background-secondary, #f5f6f8) 88%, transparent);
+  border: 1px solid var(--background-modifier-border, #d7dbe1);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+}
+
+.spiral-day-settings-onboarding h3 {
+  margin: 0;
+}
+
+.spiral-day-settings-onboarding ol {
+  margin: 0;
+  padding-inline-start: 1.2em;
+}
+
+.spiral-day-settings-onboarding p {
+  color: var(--text-muted, #68707d);
+  margin: 0;
+}
+
 .spiral-day-planner__tooltip {
   background: var(--background-primary, #fff);
   border: 1px solid var(--spiral-day-border, var(--background-modifier-border, #d7dbe1));

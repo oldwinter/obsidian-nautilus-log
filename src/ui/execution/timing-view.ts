@@ -97,7 +97,9 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     heading.textContent = messages.t("execution", "timing.idle");
     const detail = executionElement(root.ownerDocument, "p");
     detail.textContent = messages.t("execution", "timing.noActive");
-    empty.append(heading, detail);
+    const next = executionElement(root.ownerDocument, "p", "spiral-day-onboarding__next");
+    next.textContent = messages.t("execution", "timing.nextAction");
+    empty.append(heading, detail, next);
     if (snapshot.standalonePomoStartEpochMs === null) {
       const pomo = executionIconButton({
         document: root.ownerDocument,

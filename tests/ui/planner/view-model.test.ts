@@ -66,6 +66,13 @@ test("TC-UP-VIS-01-002 confirmed hierarchy remains flat and Spiral-first", () =>
   ]);
 });
 
+test("missing plan state tells the user to add the HTML markers", () => {
+  const model = plannerSurfaceStateModel(missingSnapshot(revision(2)), plannerLayoutForWidth(900));
+  assert.match(model.message, /nautilus-log:plan\/v1/);
+  assert.match(model.message, /\/nautilus-log:plan/);
+  assert.equal(model.mutationEnabled, false);
+});
+
 test("UP-INS-03 runtime-unavailable model embeds no recovery mutation", () => {
   const model = plannerSurfaceStateModel(undefined, plannerLayoutForWidth(900));
   assert.equal(model.state, "runtime-unavailable");

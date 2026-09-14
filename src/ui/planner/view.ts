@@ -63,6 +63,7 @@ import {
   formatPlannerSummary,
   type PlannerSummaryCopyOutcome,
 } from "./summary";
+import { renderPlanMissingGuidance } from "../onboarding/first-run";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const RUNTIME_PROBE_MILLISECONDS = 5_000;
@@ -1116,9 +1117,14 @@ class PlannerSurfaceController implements PlannerSurface {
     status.setAttribute("aria-live", state === "loading" ? "polite" : "assertive");
     const heading = element(this.#root.ownerDocument, "strong", "spiral-day-planner__status-heading");
     heading.textContent = headingText;
-    const message = element(this.#root.ownerDocument, "span", "spiral-day-planner__status-message");
-    message.textContent = messageText;
-    status.append(heading, message);
+    status.append(heading);
+    if (state === "missing") {
+      renderPlanMissingGuidance(status, this.#messages);
+    } else {
+      const message = element(this.#root.ownerDocument, "span", "spiral-day-planner__status-message");
+      message.textContent = messageText;
+      status.append(message);
+    }
     this.#content.append(status);
   }
 

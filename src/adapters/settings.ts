@@ -5,6 +5,7 @@ import {
   type Plugin,
   type SettingDefinitionItem,
 } from "obsidian";
+import { PRIMARY_PLAN_MARKERS } from "../ui/onboarding/first-run";
 import type { PluginSettings } from "../runtime/plugin-data";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
@@ -58,6 +59,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     const heading = containerEl.ownerDocument.createElement("h2");
     heading.textContent = this.#dependencies.messages.t("execution", "settings.title");
     containerEl.append(heading);
+    this.#appendOnboarding(containerEl);
     const current = this.#dependencies.settings();
 
     new Setting(containerEl)
@@ -123,6 +125,33 @@ export class SpiralDaySettingTab extends PluginSettingTab {
   override hide(): void {
     this.#displayGeneration += 1;
     super.hide();
+  }
+
+  #appendOnboarding(container: HTMLElement): void {
+    const card = container.ownerDocument.createElement("section");
+    card.className = "spiral-day-settings-onboarding";
+    const title = container.ownerDocument.createElement("h3");
+    title.textContent = this.#dependencies.messages.t("execution", "settings.onboardingTitle");
+    const steps = container.ownerDocument.createElement("ol");
+    for (const key of [
+      "status.missingStepNote",
+      "status.missingStepMarkers",
+      "status.missingStepItems",
+      "status.missingStepRefresh",
+    ] as const) {
+      const item = container.ownerDocument.createElement("li");
+      item.textContent = this.#dependencies.messages.t("planner", key);
+      steps.append(item);
+    }
+    const markers = container.ownerDocument.createElement("pre");
+    markers.className = "spiral-day-onboarding__markers";
+    const code = container.ownerDocument.createElement("code");
+    code.textContent = PRIMARY_PLAN_MARKERS;
+    markers.append(code);
+    const execution = container.ownerDocument.createElement("p");
+    execution.textContent = this.#dependencies.messages.t("execution", "settings.onboardingExecution");
+    card.append(title, steps, markers, execution);
+    container.append(card);
   }
 
   #select<Key extends keyof PluginSettings, Value extends PluginSettings[Key] & number>(

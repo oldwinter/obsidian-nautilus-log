@@ -17,6 +17,13 @@ test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal
   assert.deepEqual(Object.keys(enPlanner).sort(), Object.keys(zhCNPlanner).sort());
 });
 
+test("missing-plan copy names the required HTML markers in both locales", () => {
+  assert.match(enPlanner["status.missingDetail"], /<!-- nautilus-log:plan\/v1 -->/);
+  assert.match(enPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
+  assert.match(zhCNPlanner["status.missingDetail"], /<!-- nautilus-log:plan\/v1 -->/);
+  assert.match(zhCNPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
+});
+
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
   const messages = createMessages({ locale: "en" });
   assert.equal(enShared["status.loading"], "Loading Spiral Day...");
@@ -102,14 +109,16 @@ test("TC-UP-ERR-09-001 missing-plan copy names the HTML markers and refresh step
   const close = "<!-- /nautilus-log:plan -->";
   const messages = createMessages({ locale: "en" });
   const english = messages.t("planner", "status.missingDetail");
-  assert.match(english, /today's daily note/);
-  assert.match(english, /then refresh/);
+  const englishRefresh = messages.t("planner", "status.missingStepRefresh");
+  assert.match(english, /today's Daily Note/);
+  assert.match(englishRefresh, /Refresh plan/);
   assert.equal(english.includes(open), true);
   assert.equal(english.includes(close), true);
   messages.setLocale("zh-CN");
   const chinese = messages.t("planner", "status.missingDetail");
+  const chineseRefresh = messages.t("planner", "status.missingStepRefresh");
   assert.match(chinese, /今日日记/);
-  assert.match(chinese, /刷新/);
+  assert.match(chineseRefresh, /刷新/);
   assert.equal(chinese.includes(open), true);
   assert.equal(chinese.includes(close), true);
 });
