@@ -410,11 +410,13 @@ function applyIntent(intent: PlannerProgressIntent): void {
 
 const obsidianIconNames: Readonly<Record<PlannerIconName, string>> = Object.freeze({
   collapse: "chevron-up",
+  copy: "copy",
   debug: "bug",
   expand: "chevron-down",
   "hide-completed": "eye-off",
   "show-completed": "eye",
   play: "play",
+  refresh: "refresh-cw",
 });
 
 let primary: PlannerSurface;
