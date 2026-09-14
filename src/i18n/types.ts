@@ -45,6 +45,7 @@ export type PlannerCatalog = Readonly<{
   "announcement.progressPending": MessageFunction<{ title: string }>;
   "announcement.progressRequested": MessageFunction<{ title: string; percent: number }>;
   "announcement.progressReopened": MessageFunction<{ title: string }>;
+  "announcement.refreshRequested": string;
   "announcement.summaryCopied": string;
   "announcement.summaryCopyFailed": string;
   "control.collapse": string;
@@ -55,6 +56,7 @@ export type PlannerCatalog = Readonly<{
   "control.hideCompleted": string;
   "control.play": string;
   "control.playbackRunning": string;
+  "control.refresh": string;
   "control.showCompleted": string;
   "debug.geometry": MessageFunction<{
     centerX: number;

@@ -54,6 +54,7 @@ const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
   "hide-completed": "eye-off",
   "show-completed": "eye",
   play: "play",
+  refresh: "refresh-cw",
 });
 
 const COLLAPSE_STORAGE_PREFIX = "spiral-day:planner-collapsed:";

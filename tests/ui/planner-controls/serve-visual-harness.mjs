@@ -15,7 +15,7 @@ const obsidianBrowserStub = {
     build.onLoad({ filter: /.*/, namespace: "issue24-browser-obsidian" }, () => ({
       contents: `
         import {
-          Bug, ChevronDown, ChevronUp, Eye, EyeOff, Play,
+          Bug, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Play, RefreshCw,
           createElement as createLucideElement,
         } from "lucide";
 
@@ -33,7 +33,9 @@ const obsidianBrowserStub = {
             "bug": Bug,
             "eye": Eye,
             "eye-off": EyeOff,
+            "copy": Copy,
             "play": Play,
+            "refresh-cw": RefreshCw,
           })[icon];
           if (!iconNode) throw new Error("Unknown Obsidian icon: " + icon);
           const svg = createLucideElement(iconNode, {
