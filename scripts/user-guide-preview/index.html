@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spiral Day user-guide preview</title>
+  <link rel="stylesheet" href="/preview.css">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      --background-primary: #ffffff;
+      --background-secondary: #f4f5f7;
+      --background-modifier-border: #d9dde3;
+      --background-modifier-hover: #e9edf2;
+      --text-normal: #2e333b;
+      --text-muted: #68717e;
+      --text-faint: #959da8;
+      --interactive-accent: #356ec9;
+      --interactive-normal: #f2f3f5;
+      background: #1f2430;
+      color: var(--text-normal);
+      font: 14px/1.45 system-ui, "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .obsidian {
+      background: #20242c;
+      display: grid;
+      grid-template-columns: 48px 220px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    .ribbon {
+      background: #1a1d24;
+      border-right: 1px solid #111318;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 8px;
+    }
+    .ribbon button {
+      aspect-ratio: 1;
+      background: #2a303b;
+      border: 0;
+      border-radius: 8px;
+      color: #d7dbe3;
+      cursor: default;
+      font-size: 18px;
+    }
+    .ribbon button.active {
+      box-shadow: inset 0 0 0 2px #7aa2ff;
+    }
+    .sidebar, .workspace {
+      background: var(--background-primary);
+      min-width: 0;
+    }
+    .sidebar {
+      background: #252a33;
+      color: #d5dae3;
+      padding: 14px 12px;
+    }
+    .sidebar h2, .workspace-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+    }
+    .file {
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
+    .file.active { background: #35405a; }
+    .workspace { display: flex; flex-direction: column; }
+    .workspace-title {
+      align-items: center;
+      background: #f4f5f7;
+      border-bottom: 1px solid var(--background-modifier-border);
+      color: var(--text-muted);
+      display: flex;
+      min-height: 40px;
+      padding: 0 16px;
+    }
+    .workspace-body { min-height: 0; padding: 16px 18px 24px; }
+    .note {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+    .settings-card, .surface-card {
+      background: #fff;
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .setting-row {
+      align-items: center;
+      border-top: 1px solid var(--background-modifier-border);
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    .toggle {
+      background: #3d7def;
+      border-radius: 999px;
+      height: 22px;
+      position: relative;
+      width: 40px;
+    }
+    .toggle.off { background: #c5cad3; }
+    .toggle::after {
+      background: #fff;
+      border-radius: 50%;
+      content: "";
+      height: 18px;
+      position: absolute;
+      right: 2px;
+      top: 2px;
+      width: 18px;
+    }
+    .toggle.off::after { left: 2px; right: auto; }
+    .caption {
+      color: #c9d0dc;
+      font-size: 12px;
+      padding: 8px 12px 14px;
+    }
+    .loop {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 1fr;
+    }
+    .loop article {
+      background: #fff;
+      border: 1px solid var(--background-modifier-border);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .loop h3 { margin: 0 0 6px; }
+    .picker {
+      background: #111318;
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 12px;
+    }
+    .picker a { color: #9ec0ff; }
+    body.capture .picker { display: none; }
+    #planner-root, #execution-root, #active-root, #review-root { min-height: 280px; }
+    .spiral-day-execution { position: static !important; max-height: none !important; box-shadow: none !important; }
+  </style>
+</head>
+<body>
+  <nav class="picker" id="picker"></nav>
+  <div id="root"></div>
+  <script type="module" src="/preview.js"></script>
+</body>
+</html>

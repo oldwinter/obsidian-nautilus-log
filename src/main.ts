@@ -334,7 +334,13 @@ export default class SpiralDayPlugin extends Plugin {
       onError: (error) => this.#reportError(error),
     }));
     this.addRibbonIcon("shell", "Open Spiral Day", () => {
-      void openPlannerView(this.app, logicalDateAt(this.#requireClock())).catch((error) => this.#reportError(error));
+      void openPlannerView(this.app, logicalDateAt(this.#requireClock()))
+        .then(() => {
+          if (this.#planSnapshot?.state === "missing") {
+            new Notice(this.#requireMessages().t("execution", "notice.firstRun"), 8_000);
+          }
+        })
+        .catch((error) => this.#reportError(error));
     });
     this.addSettingTab(new SpiralDaySettingTab({
       app: this.app,

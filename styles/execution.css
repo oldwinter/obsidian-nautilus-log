@@ -197,6 +197,34 @@
   margin-top: 3px;
 }
 
+.spiral-day-execution__empty .spiral-day-onboarding__steps {
+  font-size: 12px;
+  margin: 6px 0 0;
+  padding-inline-start: 1.2em;
+  text-align: start;
+}
+
+.spiral-day-execution__empty .spiral-day-onboarding__markers {
+  background: var(--spiral-day-execution-surface-subtle);
+  border: 1px solid var(--spiral-day-execution-border);
+  border-radius: 4px;
+  font: 12px/1.45 var(--font-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  margin: 8px 0 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  text-align: start;
+  white-space: pre;
+}
+
+.spiral-day-execution__empty .spiral-day-onboarding__copy {
+  margin-top: 8px;
+}
+
+.spiral-day-execution__empty .spiral-day-onboarding__next {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
 .spiral-day-execution__empty > .spiral-day-execution__secondary-action {
   margin-top: 8px;
 }

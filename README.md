@@ -47,21 +47,40 @@ folder.
 
 ## Start your first day
 
-1. Open **Settings → Community plugins → Spiral Day** and leave the default
-   settings in place for the first run.
-2. Create a Daily Note whose date matches `YYYY-MM-DD`, or set a different
-   folder and format in the plugin settings.
-3. Add a Primary Plan using the markers and direct list items shown in the
-   [Markdown grammar reference](docs/reference/markdown-grammar-v1.md).
-4. Click the **Open Spiral Day** ribbon icon to open the Planner for today's
-   configured Daily Note.
-5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan, and
-   Review surfaces.
+After you enable the plugin, the only new control is the shell ribbon icon
+**Open Spiral Day**. Timing, Plan, Review, and commands stay hidden until you
+turn on **Execution Layer**. A Daily Note without the markers below opens an
+empty Planner that now lists the next action.
 
-The [user guide](docs/user-guide.md) explains the complete daily loop. Use the
-[settings reference](docs/reference/settings.md) when you need a non-default
-Daily Note path or timing policy. Use [troubleshooting](docs/troubleshooting.md)
-when a surface is empty, stale, blocked, or unavailable.
+1. Open **Settings → Spiral Day**. Leave the defaults for the first run, or set
+   **Daily Note folder** and **Daily Note date format** to match your journal.
+2. Create today's Daily Note. The default path is `YYYY-MM-DD.md` at the vault
+   root.
+3. Paste these two markers at column zero, each on its own line, then put
+   direct list items between them:
+
+   ```markdown
+   <!-- nautilus-log:plan/v1 -->
+   - [ ] 09:00-09:30 Stand-up
+   - [ ] Write the release note 45m
+   <!-- /nautilus-log:plan -->
+   ```
+
+4. Click the **Open Spiral Day** ribbon icon. The Planner reads that Primary
+   Plan. If the markers are missing, it shows them again and offers **Copy
+   markers**.
+5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan, Review,
+   the Active Task sidebar, and `Spiral Day:` command-palette actions.
+
+Complete manuals:
+
+- English: [User guide](docs/user-guide.md)
+- 简体中文：[使用手册](docs/user-guide.zh.md)
+
+Use the [Markdown grammar reference](docs/reference/markdown-grammar-v1.md) for
+every token, the [settings reference](docs/reference/settings.md) for Daily Note
+paths and timing policy, and [troubleshooting](docs/troubleshooting.md) when a
+surface is empty, stale, blocked, or unavailable.
 
 ## Entry points
 

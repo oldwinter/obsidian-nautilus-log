@@ -1,35 +1,77 @@
 # Spiral Day user guide
 
-Spiral Day is an Obsidian desktop plugin for planning a day from Markdown and,
-when enabled, tracking actual time against open flexible tasks. It reads the
-Daily Note configured in the plugin settings. Planning is read-only; execution
-actions write only after the current source has been re-read and confirmed.
+Spiral Day is an Obsidian desktop plugin for planning one day from Markdown
+and, when you enable Execution Layer, tracking actual time against open
+flexible tasks. It is bilingual (English and Simplified Chinese).
 
-## Requirements and installation
+Planning is read-only. Timing writes happen only after an explicit action such
+as Clock In, Clock Out, progress, or Complete. The plugin never rewrites a
+Daily Note just because you opened Planner.
 
-- Obsidian desktop 1.7.7 or later.
-- A vault with Markdown Daily Notes.
-- A local build containing `manifest.json`, `main.js`, and `styles.css`, copied to
-  `<vault>/.obsidian/plugins/spiral-day/`.
+**中文手册：** [使用手册](user-guide.zh.md)
 
-Copy all three build artifacts into the plugin folder, then enable
-**Spiral Day** in **Settings → Community plugins**. Mobile is not
-supported. The plugin ID and folder are `spiral-day`.
+## What you need
 
-## Create a plan
+- Obsidian desktop 1.7.7 or later. Mobile loading is disabled.
+- A vault where you keep Daily Notes as Markdown files.
+- A local plugin folder at `<vault>/.obsidian/plugins/spiral-day/` containing
+  `manifest.json`, `main.js`, and `styles.css`.
 
-1. Open today's configured Daily Note.
-2. Add the exact opening and closing markers on their own lines:
+The plugin ID is permanently `spiral-day`. It does not read or overwrite an
+older `nautilus-log` folder.
 
-   ```markdown
-   <!-- nautilus-log:plan/v1 -->
-   <!-- /nautilus-log:plan -->
-   ```
+## Install
 
-3. Put direct unordered list items between the markers. Use `-`, `+`, or `*`.
-   The first physical line of each item is its planning input.
+1. Run `npm ci && npm run build` in a clean checkout, or install a published
+   build that already contains the three package files.
+2. Create `<vault>/.obsidian/plugins/spiral-day/`.
+3. Copy `manifest.json`, `main.js`, and `styles.css` into that folder.
+4. In Obsidian, turn off **Restricted mode** if it is on, then enable
+   **Spiral Day** under **Settings → Community plugins**.
 
-Example:
+![Enable Spiral Day in Community plugins](user-guide/images/01-enable-plugin.png)
+
+After enablement you should see a shell icon in the left ribbon named
+**Open Spiral Day**. That is the Planner. Timing, Plan, Review, and
+command-palette actions are **not** registered yet.
+
+## First use: why the plugin looks empty
+
+The first-run path is easy to miss:
+
+1. Execution Layer is **off** by default, so there is no Timing / Plan /
+   Review panel and no `Spiral Day:` commands.
+2. Planner only reads today's configured Daily Note.
+3. Ordinary checkboxes anywhere else in the vault are ignored.
+4. The Daily Note must contain this exact Plan Region pair at column zero:
+
+```markdown
+<!-- nautilus-log:plan/v1 -->
+<!-- /nautilus-log:plan -->
+```
+
+If those markers are missing, Planner shows **No Primary Plan** plus the next
+steps, and the ribbon click also shows a short notice. The plugin does not
+insert the markers for you.
+
+![Settings first-run checklist](user-guide/images/02-settings-first-run.png)
+
+### First-run checklist
+
+1. Open **Settings → Spiral Day**. Leave defaults for the first day, or set
+   **Daily Note folder** and **Daily Note date format** so they resolve the
+   note you already use.
+2. Create today's Daily Note. Default: `YYYY-MM-DD.md` at the vault root.
+3. Paste the two markers, then add direct list items between them.
+4. Click the **Open Spiral Day** ribbon icon.
+5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan,
+   Review, Active Task, and commands.
+
+![Open Planner from the ribbon](user-guide/images/03-open-planner-ribbon.png)
+
+## Create today's plan
+
+Open today's Daily Note and add a Primary Plan:
 
 ```markdown
 <!-- nautilus-log:plan/v1 -->
@@ -40,78 +82,204 @@ Example:
 <!-- /nautilus-log:plan -->
 ```
 
-An item without a checkbox is still visible in the planner, but it cannot be
-clocked in or completed. Only an open (`[ ]`) flexible task has execution
-actions. A completed item uses `[x]` or `[X]`.
+![Daily Note with Primary Plan markers](user-guide/images/04-daily-note-markers.png)
 
-Open the planner with the **Open Spiral Day** ribbon icon. It opens today's
-configured Daily Note. The planner shows
-fixed events, scheduled flexible tasks, unscheduled open tasks, capacity, and
-warnings. Use **Hide completed items**, **Copy plan summary**, or **Play day**
-from the planner controls. Playback is a temporary view; it restores the live
-schedule when it finishes.
+Rules that matter on day one:
 
-## Use the Execution Layer
+- Both markers sit at column zero, outside code fences.
+- Only **direct** unordered items (`-`, `+`, or `*`) become Plan Items.
+- Nested lists, ordered lists, and tasks outside the markers are ignored.
+- `[ ]` is an open task. `[x]` / `[X]` is completed. No checkbox means the
+  item is visible but cannot be clocked in.
+- A time range such as `09:00-09:30` makes a **Fixed Event**.
+- A duration such as `45m` (or the default duration in settings) makes a
+  **Flexible Task** that the scheduler places into free time.
+- Tokens are read only from the first physical line of each item.
 
-Open **Settings → Spiral Day** and enable **Execution Layer**. This adds the
-Timing, Plan, and Review surfaces and registers these command-palette commands:
+If Planner is still empty, it now shows the markers, a **Copy markers**
+button, and where to open Timing / Plan / Review after you enable Execution.
 
-- `Spiral Day: 1. Focus current block`
+![Planner empty-state guidance](user-guide/images/05-planner-empty-guidance.png)
+
+Save the note. If Planner is already open, use **Refresh plan**.
+
+## Daily loop
+
+A typical day:
+
+1. Write the Primary Plan in today's Daily Note.
+2. Open **Planner** from the shell ribbon and check capacity, fixed events,
+   scheduled tasks, and overflow.
+3. Enable **Execution Layer** once. Open the timer ribbon to reach
+   **Timing**, **Plan**, and **Review**.
+4. Clock in an open `- [ ]` flexible task from the Plan tab, the editor
+   context menu, or `Spiral Day: 1. Focus current block`.
+5. Work. Clock out when you stop. Advance progress or Complete from Plan or
+   Planner.
+6. Use **Review** to compare planned and recorded time. Filter **Only
+   completed overruns** when you only want finished tasks that ran long.
+
+![Planner with a scheduled day](user-guide/images/06-planner-scheduled-day.png)
+
+## Surfaces
+
+### Settings
+
+**Settings → Spiral Day** is bilingual (`English` / `简体中文`). The first-run
+checklist stays at the top.
+
+Important fields for getting started:
+
+| Setting | Default | Why it matters |
+| --- | --- | --- |
+| Language | English | Relabels Planner and Execution immediately. |
+| Daily Note folder | empty (vault root) | Must match the folder of the note you edit. |
+| Daily Note date format | `YYYY-MM-DD` | Must contain year, month, and day tokens. |
+| Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
+| Execution Layer | off | Turns on Timing, Plan, Review, commands, and Active Task. |
+
+See [Settings reference](reference/settings.md) for every accepted value.
+
+![Enable Execution Layer](user-guide/images/07-enable-execution.png)
+
+### Planner
+
+Open it from the shell ribbon **Open Spiral Day**. It always targets today's
+configured Daily Note.
+
+You can:
+
+- Read capacity (fixed, flexible, scheduled, available).
+- See the spiral schedule, overflow, and warnings.
+- Hide or show completed items.
+- Copy a plan summary.
+- Play the day as a temporary playback, then return to the live schedule.
+- Refresh after you edit the Daily Note.
+- Advance or reopen progress on a row when Execution Layer is on.
+
+Planner never inserts block IDs. An explicit identity-requiring action may
+add a generated `^nl-<uuid>` ID in the same write as that action.
+
+### Timing
+
+Enable Execution Layer, then click the timer ribbon. The panel opens on
+**Timing**.
+
+![Timing idle guidance](user-guide/images/08-timing-idle.png)
+
+- Idle: no CLOCK. The empty state tells you to Clock In from Plan or the
+  editor. You can start a standalone POMO.
+- Active: shows the current task, elapsed time, Clock Out, and optional
+  forgotten-timer warning.
+- Recent: closed CLOCKs kept for the configured retention window.
+
+A POMO threshold only changes warning styling. It does not stop the timer.
+Forgotten is a warning, not an automatic Clock Out.
+
+### Plan
+
+The Plan tab lists scheduled and unscheduled open tasks from today's Primary
+Plan.
+
+![Plan tab with open tasks](user-guide/images/09-plan-tab.png)
+
+- Click a title to open the source line. Shift-click opens it in the right
+  sidebar.
+- **Clock in** starts the only Active Task.
+- **Complete** advances progress by 10 percentage points and completes the
+  task at 100%.
+- Scheduled rows with partial progress also show remaining vs planned
+  duration.
+- Reopen a completed task from Planner, not from this tab.
+
+If the tab says **No Primary Plan was found today**, the same marker
+checklist appears here.
+
+### Review
+
+Review compares planned and recorded time for a chosen date.
+
+![Review surface](user-guide/images/10-review-tab.png)
+
+- **Today** is writable. Past and future dates are read-only.
+- **Only completed overruns** hides everything except completed tasks whose
+  recorded time exceeded the plan. The day summary still covers the whole
+  day.
+- Missing Daily Note and missing Primary Plan states now say how to create
+  the note and add the markers.
+
+### Active Task
+
+This singleton view lives in the right sidebar. It follows the current CLOCK,
+opens the source line, copies an Obsidian block link, and offers Clock Out.
+
+If **Keep Timing Line first in the right sidebar** is on, a successful Clock
+In opens this view.
+
+![Active Task empty state](user-guide/images/11-active-task.png)
+
+### Commands and editor menu
+
+These exist only while Execution Layer is enabled:
+
+- `Spiral Day: 1. Focus current block` — Clock In the unfinished task under
+  the caret.
 - `Spiral Day: 2. Clock out Timing Line`
 - `Spiral Day: 3. Locate Primary Plan`
 
-When the caret is inside an eligible open flexible task, the editor context menu
-also offers **Spiral Day: Clock in**. When the caret is inside the currently
-timed task, it offers **Clock out**. The Timing panel can start or stop a
-standalone POMO when no task is running.
+Right-click an eligible open flexible task for **Spiral Day: Clock in**.
+Right-click the timed task for **Clock out**.
 
-In the Plan tab, an open flexible task can be clocked in or advanced through
-progress. The task title opens its source; Shift-click opens it in the right
-sidebar. **Complete** advances progress by 10 percentage points and completes
-the task at 100%. Reopen a completed task from its Planner progress control.
-The Plan tab does not reopen completed tasks. Every write is guarded by the
-source snapshot; if the note changed, refresh and repeat the action.
+## Daily loop at a glance
 
-The Timing panel shows the current task, elapsed time, recent tasks, and a
-forgotten-timer warning when configured. A POMO threshold changes warning
-styling; it does not stop the timer. Clock records are written to Markdown
-LOGBOOK content owned by the plugin's execution writer. The Review tab is
-currently a preparation notice. Use Timing for current and recent timing
-details until the Review surface is connected to its coordinator.
+![Daily loop across Planner and Execution](user-guide/images/12-daily-loop.png)
 
-## Stable task links and edits
+## Grammar you will use every day
 
-An item may carry a terminal block ID, for example `^stand-up`. Existing
-vault-unique IDs are retained. If an explicit action needs an anonymous item's
-durable identity, Spiral Day inserts a generated `^nl-<uuid>` ID in the same
-atomic edit as that action. Opening or refreshing the planner never inserts an
-ID.
+Full syntax: [Markdown grammar v1](reference/markdown-grammar-v1.md).
 
-Keep the terminal ID when renaming, reordering, or moving an item. Do not copy
-the same ID to two items: duplicate IDs disable identity-dependent actions until
-the collision is repaired. The parser preserves links, tags, Dataview fields,
-nested children, and other unowned Markdown text.
+| You write | Planner reads |
+| --- | --- |
+| `<!-- nautilus-log:plan/v1 -->` … `<!-- /nautilus-log:plan -->` | The only Primary Plan |
+| `- [ ] Write docs 45m` | Open flexible task, 45 minutes |
+| `- [ ] 14:00-15:00 Review` | Fixed event |
+| `- Lunch 12:00-13:00` | Visible fixed event, no Clock In |
+| `- [x] Done item 30m` | Completed; Planner may offer Reopen |
+| `` `- [ ] example 30m` `` | Display only; not scheduled |
+| `^stand-up` at the end of the line | Durable Plan Item ID |
 
-## Change language and Daily Note location
+Keep a unique terminal ID if you rename or move a task. Duplicate IDs disable
+identity-dependent actions until you repair them.
 
-The settings tab supports English (`en`) and Simplified Chinese (`zh`). Changes
-apply to mounted surfaces immediately.
+## Safe editing
 
-Set **Daily Note folder** to a vault-relative folder (leave it empty for the
-vault root). Set **Daily Note date format** so it contains `YYYY`, `MM` or `M`,
-and `DD` or `D`; literals may be wrapped in square brackets. The default is
-`YYYY-MM-DD`, which resolves today's note to `YYYY-MM-DD.md`.
+- Do not put markers inside a code fence or indent them.
+- Do not duplicate the same `^id` on two items.
+- If a write says the source changed, save, refresh, and retry. Do not
+  duplicate the line while retrying.
+- Only one CLOCK writer may be enabled. Disable another CLOCK extension
+  before turning on Execution Layer.
+- Spiral Day writes CLOCK / LOGBOOK records in Markdown. Settings and POMO
+  start times stay in plugin data.
 
-See [Settings reference](reference/settings.md) for every field and accepted
-value.
+## Troubleshooting
 
-## Safe editing rules
+Start with the in-plugin empty states, then see
+[troubleshooting](troubleshooting.md).
 
-- Keep both plan markers at column zero and outside code fences.
-- Keep a plan item on its first line when adding scheduling tokens.
-- Use inline code to display token-like text without scheduling it, for example
-  `` `30m` ``.
-- Keep a unique terminal block ID if the item must remain addressable after
-  edits.
-- If the planner reports a stale, conflict, or unavailable state, stop editing
-  through the action, update the source note, and refresh before retrying.
+| Symptom | Fix |
+| --- | --- |
+| Planner says No Primary Plan | Create today's note, paste the two markers at column zero, add list items, save, refresh. |
+| Ribbon is the only new control | Expected until Execution Layer is on. |
+| A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
+| Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |
+| Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. |
+| Review is empty | There is no reviewable task on that date, or the note / plan is missing. |
+| Write is stale or unavailable | Save the note, refresh, retry from the current row. |
+
+## Related documents
+
+- [Settings reference](reference/settings.md)
+- [Markdown grammar v1](reference/markdown-grammar-v1.md)
+- [Troubleshooting](troubleshooting.md)
+- [Context glossary](../CONTEXT.md)

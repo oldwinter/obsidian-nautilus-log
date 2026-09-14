@@ -9,6 +9,7 @@ import type {
   ExecutionApplicationSnapshot,
   ExecutionTargetReference,
 } from "../../runtime/execution/application";
+import { renderPlanMissingGuidance } from "../onboarding/first-run";
 import {
   executionElement,
   executionIconButton,
@@ -177,7 +178,13 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     return;
   }
   if (snapshot.state === "missing") {
-    appendState(root, options.messages.t("execution", "plan.noPrimary"), "");
+    appendState(
+      root,
+      options.messages.t("execution", "plan.noPrimary"),
+      options.messages.t("execution", "plan.noPrimaryDetail"),
+    );
+    const empty = root.querySelector<HTMLElement>(".spiral-day-execution__empty");
+    if (empty) renderPlanMissingGuidance(empty, options.messages);
     return;
   }
   if (snapshot.state !== "confirmed") {

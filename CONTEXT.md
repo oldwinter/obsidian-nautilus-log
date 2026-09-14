@@ -4,7 +4,8 @@ This glossary is the canonical language for the Obsidian parity port. It keeps
 upstream scheduling and execution concepts distinct from Obsidian storage and UI
 mechanisms.
 
-User-facing documentation starts with the [user guide](docs/user-guide.md).
+User-facing documentation starts with the [user guide](docs/user-guide.md)
+and the [Chinese user guide](docs/user-guide.zh.md).
 Use the [Markdown grammar reference](docs/reference/markdown-grammar-v1.md) for
 plan syntax, the [settings reference](docs/reference/settings.md) for defaults
 and Daily Note paths, and the [troubleshooting guide](docs/troubleshooting.md)

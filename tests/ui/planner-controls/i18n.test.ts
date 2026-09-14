@@ -17,6 +17,13 @@ test("TC-OBS-I18N-001-001 en and zh-CN shared/planner key sets are exactly equal
   assert.deepEqual(Object.keys(enPlanner).sort(), Object.keys(zhCNPlanner).sort());
 });
 
+test("missing-plan copy names the required HTML markers in both locales", () => {
+  assert.match(enPlanner["status.missingDetail"], /<!-- nautilus-log:plan\/v1 -->/);
+  assert.match(enPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
+  assert.match(zhCNPlanner["status.missingDetail"], /<!-- nautilus-log:plan\/v1 -->/);
+  assert.match(zhCNPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
+});
+
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
   const messages = createMessages({ locale: "en" });
   assert.equal(enShared["status.loading"], "Loading Spiral Day...");

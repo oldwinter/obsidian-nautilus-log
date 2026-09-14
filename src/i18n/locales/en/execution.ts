@@ -20,6 +20,7 @@ export type ExecutionCatalog = Readonly<{
   "action.hideDetails": string;
   "timing.idle": string;
   "timing.noActive": string;
+  "timing.nextAction": string;
   "timing.active": string;
   "timing.forgotten": string;
   "timing.pomo": string;
@@ -30,6 +31,7 @@ export type ExecutionCatalog = Readonly<{
   "plan.scheduled": string;
   "plan.unscheduled": string;
   "plan.noPrimary": string;
+  "plan.noPrimaryDetail": string;
   "plan.noTasks": string;
   "plan.loading": string;
   "plan.unavailable": string;
@@ -64,6 +66,9 @@ export type ExecutionCatalog = Readonly<{
   "settings.forgottenWarning": string;
   "settings.dailyNoteFolder": string;
   "settings.dailyNoteFormat": string;
+  "settings.onboardingTitle": string;
+  "settings.onboardingExecution": string;
+  "notice.firstRun": string;
   "notice.applied": string;
   "notice.alreadyApplied": string;
   "notice.refreshed": string;
@@ -124,6 +129,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "action.hideDetails": "Hide details",
   "timing.idle": "Idle",
   "timing.noActive": "No task is being timed.",
+  "timing.nextAction": "Clock in from the Plan tab on an open `- [ ]` flexible task, or right-click that task in the Daily Note. Standalone POMO can run when no CLOCK is active.",
   "timing.active": "Current task",
   "timing.forgotten": "This CLOCK may have been left running.",
   "timing.pomo": "POMO",
@@ -134,6 +140,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.scheduled": "Scheduled",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
+  "plan.noPrimaryDetail": "Add the Primary Plan markers to today's Daily Note, then save. The next steps are listed below.",
   "plan.noTasks": "No unfinished direct tasks are available.",
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
@@ -168,6 +175,9 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.forgottenWarning": "Forgotten timer minutes",
   "settings.dailyNoteFolder": "Daily Note folder",
   "settings.dailyNoteFormat": "Daily Note date format",
+  "settings.onboardingTitle": "First-run checklist",
+  "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
+  "notice.firstRun": "No Primary Plan yet. Add the nautilus-log:plan/v1 markers to today's Daily Note, then save. The Planner lists the exact next step.",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
   "notice.refreshed": "Timing data refreshed.",
