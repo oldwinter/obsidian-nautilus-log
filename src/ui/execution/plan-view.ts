@@ -106,6 +106,14 @@ function appendTaskRow(
     metadata.textContent = formatMinutes(options.messages, item.durationMinutes);
   }
   body.append(metadata);
+  if (range && !current && item.kind === "flexible-task" && item.status === "open" && item.progressPercent > 0) {
+    const remaining = executionElement(parent.ownerDocument, "span", "spiral-day-execution__row-meta");
+    remaining.textContent = options.messages.t("execution", "plan.remaining", {
+      remaining: formatMinutes(options.messages, item.remainingDurationMinutes),
+      planned: formatMinutes(options.messages, item.durationMinutes),
+    });
+    body.append(remaining);
+  }
 
   const actions = executionElement(parent.ownerDocument, "div", "spiral-day-execution__row-actions");
   if (item.kind === "flexible-task" && item.status === "open" && item.executionEligible) {
