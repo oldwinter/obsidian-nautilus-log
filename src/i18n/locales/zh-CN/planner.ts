@@ -60,7 +60,7 @@ export const zhCNPlanner = Object.freeze({
   "status.errorDetail": "无法读取已确认的计划。请检查源笔记后刷新。",
   "status.hiddenDetail": "此视图当前隐藏；再次显示时会刷新投影。",
   "status.loadingDetail": "正在读取已确认的计划快照。",
-  "status.missingDetail": "当天没有找到受支持的计划区域。",
+  "status.missingDetail": "当天没有找到受支持的计划区域。请把这两个标记单独成行写进今日日记，然后刷新：\n<!-- nautilus-log:plan/v1 -->\n<!-- /nautilus-log:plan -->",
   "status.overLimitDetail": ({ actual, kind, limit }) => `${LIMIT_LABELS[kind]}为${actual}；上限为${limit}。`,
   "status.overLimitUnknownDetail": ({ actual, limit }) => `当前用量为${actual}；上限为${limit}。`,
   "status.staleDetail": "源文件变更后正在刷新，不会显示过期投影。",
