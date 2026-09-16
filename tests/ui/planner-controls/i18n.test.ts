@@ -126,6 +126,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(enExecution["notice.clockInFocused"], /Clock Out from the Plan tab/);
   assert.match(zhCNExecution["notice.clockInFocused"], /已经在计时中/);
   assert.match(zhCNExecution["notice.clockInFocused"], /「计划」标签点「结束计时」/);
+  assert.match(enExecution["error.unconfirmed"], /note change/);
+  assert.equal(enExecution["error.unconfirmed"].includes("graph"), false);
+  assert.match(zhCNExecution["error.unconfirmed"], /笔记更改/);
+  assert.equal(zhCNExecution["error.unconfirmed"].includes("图谱"), false);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {

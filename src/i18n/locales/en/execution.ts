@@ -219,7 +219,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "notice.sourceUnavailable": "Source navigation is unavailable.",
   "error.refresh": "Timing data could not be refreshed.",
   "error.copyTaskLink": "The active task link could not be copied.",
-  "error.unconfirmed": "The graph change could not be confirmed.",
+  "error.unconfirmed": "The note change could not be confirmed. Save, refresh, and try again.",
   "error.executionInactive": "Actual Time Tracking is no longer active.",
   "error.overlap": "Legacy overlapping CLOCK records could not be reconciled.",
   "error.taskOwner": "Only an open `- [ ]` flexible task can be clocked in. Use an eligible line, or Clock In from the Plan tab.",

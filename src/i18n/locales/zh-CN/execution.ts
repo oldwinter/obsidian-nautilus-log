@@ -91,7 +91,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.sourceUnavailable": "来源导航不可用。",
   "error.refresh": "无法刷新计时数据。",
   "error.copyTaskLink": "无法复制当前任务链接。",
-  "error.unconfirmed": "无法确认图谱更改。",
+  "error.unconfirmed": "无法确认笔记更改。请保存、刷新后再试。",
   "error.executionInactive": "实际时间追踪已停用。",
   "error.overlap": "无法协调旧版重叠 CLOCK 记录。",
   "error.taskOwner": "只有未完成的 `- [ ]` 弹性任务可以开始计时。请选中符合条件的行，或在「计划」标签点「开始计时」。",

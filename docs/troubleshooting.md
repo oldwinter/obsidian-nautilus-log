@@ -129,7 +129,9 @@ setting disables that warning.
 
 If timing is unavailable, refresh the Timing panel. A degraded state means the
 current CLOCK records could not be confirmed safely; do not edit those records
-manually while a repair or confirmation is pending.
+manually while a repair or confirmation is pending. A failed Clock In, Clock
+Out, or Complete notice now says the **note** change could not be confirmed
+and points to save and refresh. It does not say graph.
 
 ## The Daily Note cannot be resolved
 
