@@ -82,7 +82,7 @@ caret on an open `- [ ]` flexible task. Otherwise the notice points to that
 line or **Clock In** on the Plan tab. It does not use Roam TODO wording. If
 that task is already being timed, the notice says so and points to **Clock
 Out** on the Plan tab. It does not say Already up to date.
-`Spiral Day: 2. Clock out Timing Line` with no running CLOCK says nothing is
+`Spiral Day: 2. Clock out current task` with no running CLOCK says nothing is
 being timed and points to **Clock In** on the Plan tab. It does not say
 Already up to date.
 

@@ -122,7 +122,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.sidebarAfterStart": "任务已开始，但 Obsidian 无法把它显示在侧栏顶部。",
   "error.writerConflict": "启用 Spiral Day 实际时间追踪前，请停用其他 CLOCK 写入器。只能有一个扩展写入 CLOCK 记录。",
   "command.focusCurrent": "Spiral Day: 1. 开始计时当前任务",
-  "command.clockOut": "Spiral Day: 2. 结束计时线",
+  "command.clockOut": "Spiral Day: 2. 结束计时当前任务",
   "command.locatePrimary": "Spiral Day: 3. 定位主计划",
   "menu.clockIn": "Spiral Day: 开始计时",
   "menu.clockOut": "Spiral Day: 结束计时",
