@@ -116,7 +116,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.noPrimary": "今天没有找到主计划。请点「写入今日日记」，或检查 设置 → Spiral Day 中的日记文件夹和日期格式。",
   "error.missingDailyNote": "今日日记还不存在。请在规划器、设置、「计划」标签或回顾（今天）里点「写入今日日记」。",
   "error.navigationUnavailable": "Obsidian 导航不可用。",
-  "error.noBlockId": "该任务没有区块 UID。",
+  "error.noBlockId": "该任务还没有区块 ID。请在「计划」标签点「开始计时」以写入 ID，或用「定位主计划」打开今日日记。",
   "error.sidebarUnavailable": "Obsidian 侧栏不可用。",
   "error.sidebarOrder": "Obsidian 无法将计时线视图移到顶部。",
   "error.sidebarOpen": "无法在右侧栏打开该任务。",

@@ -17,6 +17,10 @@ test("Locate Primary notices distinguish a missing note from a missing plan", ()
   assert.equal(primaryNavigationMessageKey("primary-source-missing"), "error.missingDailyNote");
   assert.equal(primaryNavigationMessageKey("source-file-missing"), "notice.sourceUnavailable");
   assert.equal(primaryNavigationMessageKey("no-block-id"), "error.noBlockId");
+  assert.match(enExecution["error.noBlockId"], /Clock In from the Plan tab/);
+  assert.equal(enExecution["error.noBlockId"].includes("UID"), false);
+  assert.match(zhCNExecution["error.noBlockId"], /「计划」标签点「开始计时」/);
+  assert.equal(zhCNExecution["error.noBlockId"].includes("UID"), false);
   assert.match(enExecution["error.noPrimary"], /Insert into today's Daily Note/);
   assert.match(enExecution["error.missingDailyNote"], /does not exist yet/);
   assert.match(enExecution["error.missingDailyNote"], /the Plan tab/);
