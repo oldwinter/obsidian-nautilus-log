@@ -138,7 +138,9 @@ setting disables that warning.
 
 If timing is unavailable, refresh the Timing panel. The notice and the
 degraded empty state now name **Try again** on the Timing tab after you save
-the note. A degraded state means the
+the note. The Active Task unavailable state names that same Timing retry,
+and **Locate Primary Plan** if today's Daily Note or the running CLOCK needs
+a repair. It does not say only that source navigation is disabled. A degraded state means the
 current CLOCK records could not be confirmed safely; do not edit those records
 manually while a repair or confirmation is pending. A failed Clock In, Clock
 Out, or Complete notice now says the **note** change could not be confirmed

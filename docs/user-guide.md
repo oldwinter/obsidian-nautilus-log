@@ -246,7 +246,9 @@ This singleton view lives in the right sidebar. It follows the current CLOCK,
 opens the source line, copies an Obsidian block link, and offers Clock Out.
 
 If **Keep Active Task first in the right sidebar** is on, a successful Clock
-In opens this view.
+In opens this view. If the view says Active Task is unavailable, save the
+note, then use **Try again** on the Timing tab. Use **Locate Primary Plan**
+if today's Daily Note or the running CLOCK needs a repair.
 
 ![Active Task empty state](user-guide/images/11-active-task.png)
 
@@ -318,7 +320,7 @@ Start with the in-plugin empty states, then see
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
-| Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. |
+| Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. The Active Task unavailable state names the same next step, plus **Locate Primary Plan** if the note or running CLOCK needs a repair. |
 | Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
 | Insert or enable Execution fails | Read the one specific notice. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |

@@ -45,7 +45,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "review.empty": "今天没有可回顾的任务。",
   "active.title": "当前任务",
   "active.unavailable": "当前任务不可用",
-  "active.unavailableDetail": "无法确认当前任务，来源导航已禁用。",
+  "active.unavailableDetail": "无法确认当前任务。请保存笔记，然后在「计时」标签点「重试」。如果今日日记或正在计时的 CLOCK 需要修理，请用「定位主计划」。",
   "active.elapsed": "已用时间",
   "active.keyboardHint": "按 Enter 打开来源任务。",
   "status.ready": "就绪",
