@@ -136,6 +136,12 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNExecution["error.executionInactive"], /执行层/);
   assert.match(zhCNExecution["error.executionInactive"], /设置 → Spiral Day/);
   assert.equal(zhCNExecution["error.executionInactive"].includes("实际时间追踪"), false);
+  assert.match(enExecution["error.overlap"], /Locate Primary Plan/);
+  assert.match(enExecution["error.overlap"], /Clock Out/);
+  assert.equal(enExecution["error.overlap"].includes("Legacy"), false);
+  assert.match(zhCNExecution["error.overlap"], /定位主计划/);
+  assert.match(zhCNExecution["error.overlap"], /结束计时/);
+  assert.equal(zhCNExecution["error.overlap"].includes("旧版"), false);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {

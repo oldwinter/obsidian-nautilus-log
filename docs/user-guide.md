@@ -315,6 +315,7 @@ Start with the in-plugin empty states, then see
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
+| Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
 ## Related documents
 

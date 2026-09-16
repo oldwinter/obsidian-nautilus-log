@@ -133,7 +133,10 @@ If timing is unavailable, refresh the Timing panel. A degraded state means the
 current CLOCK records could not be confirmed safely; do not edit those records
 manually while a repair or confirmation is pending. A failed Clock In, Clock
 Out, or Complete notice now says the **note** change could not be confirmed
-and points to save and refresh. It does not say graph.
+and points to save and refresh. It does not say graph. If the notice says
+CLOCK records are overlapping or ambiguous, use **Locate Primary Plan**, then
+**Clock Out** or repair the open CLOCK lines so only one is running. It does
+not say legacy.
 
 ## The Daily Note cannot be resolved
 
