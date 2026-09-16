@@ -4,7 +4,8 @@
 
 The Planner and Plan tab show the next step, including the two HTML markers.
 The Settings first-run checklist is instructional and stays visible after a
-plan exists. Opening a surface does not rewrite your note.
+plan exists, but Insert hides once today's Primary Plan is confirmed. Opening
+a surface does not rewrite your note.
 **Locate Primary Plan** opens today's configured Daily Note even when the
 region is missing; if that file does not exist, the notice points to Insert.
 **Insert into today's Daily Note** writes only after you click it. It creates

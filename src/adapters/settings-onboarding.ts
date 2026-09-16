@@ -1,0 +1,11 @@
+import type { RuntimePlanProjection } from "../runtime/projection-runtime";
+import type { RuntimeSnapshot } from "../runtime/snapshots";
+
+export type SettingsOnboardingKind = "missing" | "empty" | "ready";
+
+export function settingsOnboardingKind(
+  snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined,
+): SettingsOnboardingKind {
+  if (snapshot?.state !== "confirmed") return "missing";
+  return snapshot.projection.items.length === 0 ? "empty" : "ready";
+}
