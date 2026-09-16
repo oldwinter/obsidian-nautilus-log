@@ -22,7 +22,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "timing.noActive": "当前没有计时任务。",
   "timing.nextAction": "如果还没有主计划，请先在「计划」标签点「写入今日日记」。如果列表是空的或任务都做完了，请在「计划」标签点「复制示例任务」。否则在「计划」标签里对未完成的 `- [ ]` 弹性任务开始计时，或在日记中右键该任务。没有 CLOCK 时也可以启动独立番茄钟。",
   "timing.active": "当前任务",
-  "timing.forgotten": "这个 CLOCK 可能忘记停止了。",
+  "timing.forgotten": "这个 CLOCK 可能忘记停止了。这只是提醒，不会自动结束。停下时请点「结束计时」。",
   "timing.pomo": "番茄钟",
   "timing.recent": "最近",
   "timing.noRecent": "最近没有计时任务。",

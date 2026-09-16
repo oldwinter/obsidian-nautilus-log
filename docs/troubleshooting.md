@@ -140,7 +140,8 @@ block ID is missing.
 ## A timer is marked forgotten or timing is unavailable
 
 Forgotten is a warning state, not an automatic stop. Use **Clock out** from the
-Timing panel or command palette when the task is finished. A `0` Forgotten timer
+Timing panel or command palette when the task is finished. The Timing warning
+now says that and names Clock out. A `0` Forgotten timer
 setting disables that warning.
 
 If timing is unavailable, refresh the Timing panel. The notice and the
