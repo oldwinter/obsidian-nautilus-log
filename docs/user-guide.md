@@ -320,6 +320,7 @@ Start with the in-plugin empty states, then see
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. |
 | Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
+| Insert or enable Execution fails | Read the one specific notice. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
 ## Related documents

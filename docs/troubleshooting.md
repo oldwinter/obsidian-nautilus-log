@@ -12,7 +12,9 @@ on Planner, Settings, the Plan tab, or Review (today).
 **Insert into today's Daily Note** writes only after you click it. It creates
 today's configured Daily Note when needed and refuses to insert when a valid or
 malformed Plan Region is already present. If the region is already there and
-the list looks empty, the notice points to **Copy sample task**.
+the list looks empty, the notice points to **Copy sample task**. A failed
+Insert shows that Copy-the-starter notice once. It does not add a second
+**Spiral Day could not complete that action** toast.
 
 Check the Daily Note path first:
 
@@ -71,6 +73,8 @@ Open the planner's warning/details area. Common causes are:
 Enable **Execution Layer** in the settings tab. If activation fails, the plugin
 rolls the setting back off and leaves execution surfaces disabled. Check the
 notice, correct the reported source or timing problem, then enable it again.
+A rejected enable shows that one notice. It does not add a second generic
+toast.
 Clicking a Planner task to advance progress while Execution is off names
 **Execution Layer** and Settings. It does not say Actual Time Tracking.
 

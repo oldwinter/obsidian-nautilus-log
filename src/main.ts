@@ -190,6 +190,10 @@ function hostContextFor(leaf: WorkspaceLeaf, rightSplit: WorkspaceItem): "main" 
   return "main";
 }
 
+class ExecutionActivationRejected extends Error {
+  override readonly name = "ExecutionActivationRejected";
+}
+
 export default class SpiralDayPlugin extends Plugin {
   #textAccess: ObsidianVaultTextAccess | undefined;
   #atomicAccess: AtomicTextAccess | undefined;
@@ -449,7 +453,7 @@ export default class SpiralDayPlugin extends Plugin {
         });
         if (outcome.outcome !== "applied" && outcome.outcome !== "already-applied") {
           showExecutionNotice(executionOutcomeNotice(outcome, this.#requireMessages()));
-          throw new Error(outcome.code ?? "Execution activation was rejected");
+          throw new ExecutionActivationRejected(outcome.code ?? "Execution activation was rejected");
         }
       }
       this.#executionUnsubscribe = application.subscribe(() => {
@@ -533,7 +537,8 @@ export default class SpiralDayPlugin extends Plugin {
       } else {
         this.#execution = application;
       }
-      this.#reportError(error);
+      if (error instanceof ExecutionActivationRejected) console.error("Spiral Day", error);
+      else this.#reportError(error);
       return false;
     }
   }
@@ -906,8 +911,8 @@ export default class SpiralDayPlugin extends Plugin {
       });
       new Notice(messages.t("planner", insertPrimaryPlanNoticeKey(outcome)), 6_000);
     } catch (error) {
+      console.error("Spiral Day", error);
       new Notice(messages.t("planner", "status.missingInsertFailed"), 6_000);
-      this.#reportError(error);
     }
   }
 
