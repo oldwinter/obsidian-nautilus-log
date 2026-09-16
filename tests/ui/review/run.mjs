@@ -342,7 +342,7 @@ try {
 
   await scenario("empty-date-presentations", async () => {
     const variants = [
-      ["empty", "This Primary Plan has no list items. Add a direct `- [ ] Write the release note 45m` line between the markers, then save and refresh."],
+      ["empty", "This Primary Plan has no list items. Use Copy sample task and paste that line between the markers, then save and refresh."],
       ["missing-note", "No Daily Note exists for this date. If this is today, use Insert into today's Daily Note. Or create the note that matches Settings → Daily Note folder and date format."],
       ["missing-plan", "This Daily Note has no Primary Plan. If this is today, use Insert into today's Daily Note. Or add `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero, then save."],
       ["invalid-plan", "The Primary Plan markers are invalid. Check the Daily Note."],
@@ -531,7 +531,7 @@ try {
     check("review.hidden-stops-timer", hiddenEnd.ticks === hiddenStart.ticks, { before: hiddenStart.ticks, after: hiddenEnd.ticks });
     check("review.hidden-stops-render", retainedRows === 7 && await page.locator(".spiral-day-review__row").count() === 7, await page.locator(".spiral-day-review__row").count());
     await page.evaluate(() => window.reviewHarness.show());
-    await page.getByText("This Primary Plan has no list items. Add a direct `- [ ] Write the release note 45m` line between the markers, then save and refresh.", { exact: true }).waitFor();
+    await page.getByText("This Primary Plan has no list items. Use Copy sample task and paste that line between the markers, then save and refresh.", { exact: true }).waitFor();
     const reopened = await page.evaluate(() => window.reviewHarness.stats());
     check("review.reopen-refreshes", reopened.refreshes === hiddenEnd.refreshes + 1, { before: hiddenEnd.refreshes, after: reopened.refreshes });
     check("review.reopen-renders-current-snapshot", await page.locator(".spiral-day-review__row").count() === 0, await page.locator(".spiral-day-review__row").count());

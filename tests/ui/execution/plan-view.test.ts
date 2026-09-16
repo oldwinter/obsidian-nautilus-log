@@ -204,12 +204,12 @@ test("Plan scheduled-empty with existing items offers Copy sample task", () => {
   });
   const text = collectText(root).join("\n");
   assert.match(text, /No unfinished direct tasks are available/);
-  assert.match(text, /Add a direct `- \[ \]` flexible task/);
+  assert.match(text, /Use Copy sample task/);
   assert.match(text, /Copy sample task/);
   assert.match(text, /- \[ \] Write the release note 45m/);
 });
 
-test("Plan confirmed empty region tells the user to add a list item", () => {
+test("Plan confirmed empty region names Copy sample task", () => {
   const document = new DocumentStub();
   const root = document.createElement();
   const messages = createMessages({
