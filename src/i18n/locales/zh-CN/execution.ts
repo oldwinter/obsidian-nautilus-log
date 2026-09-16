@@ -37,6 +37,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "plan.emptyReady": "主计划里还没有列表项。请用「复制示例任务」把一行 `- [ ]` 任务贴进标记之间，然后保存。",
   "plan.loading": "正在刷新今日计划。",
   "plan.unavailable": "今日计划不可用。",
+  "plan.unavailableDetail": "请保存日记并刷新。如果还是这样，请检查 设置 → Spiral Day 中的日记文件夹和日期格式，或从功能区打开规划器。",
   "plan.capacity": "容量",
   "plan.range": ({ start, end }) => `${start}–${end}`,
   "plan.unscheduledSummary": ({ count, duration }) => `${count} 项 · ${duration}`,

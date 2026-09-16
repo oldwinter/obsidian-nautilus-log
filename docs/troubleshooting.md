@@ -17,6 +17,10 @@ Insert shows that Copy-the-starter notice once. If locking first-run settings
 fails before the write, Insert still continues and shows only the Insert
 result. It does not add a **Spiral Day could not complete that action** toast.
 
+If the Plan tab says today's plan is unavailable, save the Daily Note and
+refresh. Check Daily Note folder and date format in Settings → Spiral Day,
+or open Planner from the ribbon. That empty state used to have no next step.
+
 Check the Daily Note path first:
 
 1. In **Settings → Spiral Day**, verify **Daily Note folder** and

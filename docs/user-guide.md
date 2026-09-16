@@ -217,7 +217,10 @@ Plan.
 - Reopen a completed task from Planner, not from this tab.
 
 If the tab says **No Primary Plan was found today**, use **Insert into today's
-Daily Note** or the same marker checklist. An empty **Unscheduled today**
+Daily Note** or the same marker checklist. If it says today's plan is
+unavailable, save the Daily Note and refresh, then check Daily Note folder
+and date format in Settings → Spiral Day, or open Planner from the ribbon.
+An empty **Unscheduled today**
 list means every open flexible task is already on the schedule, not that
 there are no unfinished tasks. If scheduled is empty because every item is
 done or not clockable, it offers **Copy sample task** so you can add another
@@ -330,6 +333,7 @@ Start with the in-plugin empty states, then see
 | Insert or enable Execution fails | Read the one specific notice. A first-run settings persist failure before Insert is logged only. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 | Clock In says plugin settings could not be saved | Retry Clock In, Clock Out, or the setting you just changed. Check that the vault is writable. This is not a note-change failure. |
+| Plan tab says today's plan is unavailable | Save the Daily Note and refresh. Check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon. |
 
 ## Related documents
 

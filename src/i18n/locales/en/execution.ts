@@ -37,6 +37,7 @@ export type ExecutionCatalog = Readonly<{
   "plan.emptyReady": string;
   "plan.loading": string;
   "plan.unavailable": string;
+  "plan.unavailableDetail": string;
   "plan.capacity": string;
   "plan.range": MessageFunction<{ start: string; end: string }>;
   "plan.unscheduledSummary": MessageFunction<{ count: number; duration: string }>;
@@ -166,6 +167,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.emptyReady": "The Primary Plan has no list items yet. Use Copy sample task and paste a `- [ ]` task between the markers, then save.",
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
+  "plan.unavailableDetail": "Save the Daily Note and refresh. If this keeps happening, check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon.",
   "plan.capacity": "Capacity",
   "plan.range": ({ start, end }) => `${start}–${end}`,
   "plan.unscheduledSummary": ({ count, duration }) => `${count} · ${duration}`,
