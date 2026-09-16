@@ -130,6 +130,7 @@ function mountPlanner(target: HTMLElement, snapshot: RuntimeSnapshot<RuntimePlan
   };
   mountPlannerSurface(target, runtime, plannerContext(), {
     locale: "en",
+    onInsertPrimaryPlan: () => undefined,
     renderIcon(button, icon) {
       button.textContent = ({
         collapse: "⌃",
@@ -232,10 +233,12 @@ switch (scene) {
       ribbon: "planner",
       caption: "Ribbon shell icon Open Spiral Day opens today's Planner.",
     });
-    const surface = el("div", "surface-card");
-    surface.id = "planner-root";
-    body.append(surface);
-    mountPlanner(surface, missingPlanSnapshot());
+    const hint = el("div", "settings-card");
+    hint.append(
+      el("h3", undefined, "Open Spiral Day"),
+      el("p", undefined, "The highlighted shell-ribbon icon opens today's Planner. Execution Layer stays off until you enable it in Settings."),
+    );
+    body.append(hint);
     break;
   }
   case "daily-note-markers": {
