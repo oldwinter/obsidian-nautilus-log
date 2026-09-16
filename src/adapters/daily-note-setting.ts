@@ -1,4 +1,8 @@
-import { acceptedDailyNoteFolder, acceptedDailyNoteFormat } from "../runtime/plugin-data";
+import {
+  acceptedDailyNoteFolder,
+  acceptedDailyNoteFormat,
+  type HostDailyNoteSeed,
+} from "../runtime/plugin-data";
 
 export type DailyNoteSettingField = "folder" | "format";
 
@@ -23,4 +27,9 @@ export function interpretDailyNoteSetting(
   return value === undefined
     ? { kind: "reject", notice: "settings.dailyNoteFormatRejected" }
     : { kind: "accept", value };
+}
+
+export function ignoredHostDailyNoteFormat(host: HostDailyNoteSeed | undefined): string | undefined {
+  if (typeof host?.format !== "string" || host.format.length === 0) return undefined;
+  return acceptedDailyNoteFormat(host.format) === undefined ? host.format : undefined;
 }

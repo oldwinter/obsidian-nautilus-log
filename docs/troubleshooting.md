@@ -119,6 +119,10 @@ If Settings rejects a folder or format, the field snaps back to the last
 accepted value and a notice explains why. The plugin does not silently keep
 showing a discarded `YYYY-MM-DD dddd` while Planner reads `YYYY-MM-DD`.
 
+If core Daily Notes already uses weekday tokens, first enable does not copy
+that format. Settings shows the ignored host string so Insert is not mistaken
+for writing the Obsidian Daily Notes filename.
+
 After correcting the setting, reopen the planner for the target date. If the
 resolved Markdown path does not exist, create that Daily Note or change the
 folder/format to match the note you use.

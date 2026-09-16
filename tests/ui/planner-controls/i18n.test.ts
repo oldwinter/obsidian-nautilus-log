@@ -73,6 +73,14 @@ test("Daily Note settings describe the Insert path in both locales", () => {
   assert.match(zhCNExecution["settings.dailyNoteFolderDesc"], /上次可用的值/);
   assert.match(enExecution["settings.dailyNoteFormatDesc"], /dddd are rejected/);
   assert.match(zhCNExecution["settings.dailyNoteFormatDesc"], /dddd/);
+  assert.match(
+    enExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /was not copied/,
+  );
+  assert.match(
+    zhCNExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /没有复制/,
+  );
   assert.match(enExecution["settings.componentPrefixDesc"], /does not change Markdown grammar/);
   assert.match(zhCNExecution["settings.componentPrefixDesc"], /不会改变 Markdown 语法/);
 });

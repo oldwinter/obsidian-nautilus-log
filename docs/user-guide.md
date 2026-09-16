@@ -144,7 +144,7 @@ Important fields for getting started:
 | --- | --- | --- |
 | Language | Copied from Obsidian on first enable (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. Insert or a Settings change saves it; a later Settings choice wins. |
 | Daily Note folder | Copied from core Daily Notes on first enable, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. Insert or a Settings change locks it so later core-plugin edits do not move it. Invalid folders snap back to the last accepted value. |
-| Daily Note date format | Copied from core Daily Notes on first enable, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens (`YYYY`, `MM`/`M`, `DD`/`D`). Insert or a Settings change locks it. Tokens such as `dddd` are rejected and the field returns to the last accepted format. |
+| Daily Note date format | Copied from core Daily Notes on first enable, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens (`YYYY`, `MM`/`M`, `DD`/`D`). Insert or a Settings change locks it. Tokens such as `dddd` are rejected and the field returns to the last accepted format. If Obsidian Daily Notes already uses those tokens, Settings says the host format was not copied. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
 | Execution Layer | off | Turns on Timing, Plan, Review, commands, and Active Task. |
 
