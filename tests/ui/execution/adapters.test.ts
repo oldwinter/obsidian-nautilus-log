@@ -154,7 +154,7 @@ test("UP-ERR-05/06 maps runtime failures to specific localized feedback", () => 
     code,
     pluginDataWarning: false,
   });
-  assert.equal(executionOutcomeNotice(outcome("plugin-data-failed"), messages).message, "error.unconfirmed");
+  assert.equal(executionOutcomeNotice(outcome("plugin-data-failed"), messages).message, "error.pluginData");
   assert.equal(executionOutcomeNotice(outcome("source-over-limit"), messages).message, "error.refresh");
   assert.equal(executionOutcomeNotice(outcome("multiple-running-clocks"), messages).message, "error.overlap");
 });

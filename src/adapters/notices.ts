@@ -22,7 +22,7 @@ const CODE_TO_MESSAGE: Readonly<Partial<Record<
   "nonexistent-local-time": "error.unconfirmed",
   "partial-switch": "error.unconfirmed",
   "plan-item-not-found": "error.taskOwner",
-  "plugin-data-failed": "error.unconfirmed",
+  "plugin-data-failed": "error.pluginData",
   "potential-running-clock": "error.overlap",
   "repair-confirmation-required": "error.unconfirmed",
   "runtime-not-started": "error.executionInactive",
