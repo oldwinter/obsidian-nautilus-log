@@ -8,7 +8,7 @@ to defaults; unknown fields are ignored.
 
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| Language | `en` or `zh` | Obsidian language on first run, otherwise `en` | Changes labels on mounted planner and execution surfaces, plus command palette names, editor-menu titles, and the Planner ribbon. A saved value is kept. |
+| Language | `en` or `zh` | Obsidian language on first enable, otherwise `en` | Changes labels on mounted planner and execution surfaces, plus command palette names, editor-menu titles, and the Planner ribbon. Insert or a Settings change saves the first-run snapshot; a later Settings value is kept. |
 | Chart start | `5`, `6`, `7`, `8` | `5` | First chart hour. |
 | Chart end | `18`, `19`, `20`, `21`, `22`, `23`, `24` | `21` | Last chart hour; it must be later than the start. |
 | Component prefix | any string | `[[Nautilus Log]]` | Stored compatibility setting; it does not change grammar v1 parsing. |
@@ -41,8 +41,8 @@ retention and 120 for Forgotten timer.
 
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| Daily Note folder | vault-relative folder; empty means vault root | Core Daily Notes `folder` on first run, otherwise empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. |
-| Daily Note date format | a format containing year, month, and day tokens | Core Daily Notes `format` on first run, otherwise `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. |
+| Daily Note folder | vault-relative folder; empty means vault root | Core Daily Notes `folder` on first enable, otherwise empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. Insert or a Settings change locks the first-run value so later core-plugin edits do not overwrite it. |
+| Daily Note date format | a format containing year, month, and day tokens | Core Daily Notes `format` on first enable, otherwise `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. Insert or a Settings change locks the first-run value. |
 
 Supported date tokens:
 

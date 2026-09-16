@@ -110,6 +110,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function isAbsentPluginData(value: unknown): boolean {
+  return value === undefined || value === null;
+}
+
 function diagnostic(
   code: PluginDataDiagnosticCode,
   path: string,
@@ -523,6 +527,7 @@ export class PluginDataStore {
   readonly #hostSeed: HostPluginSeed | undefined;
   #snapshot = snapshot(0, freezeValidation(DEFAULT_PLUGIN_DATA, []));
   #loaded = false;
+  #seedUnpersisted = false;
   #loading: Promise<PluginDataSnapshot> | undefined;
   #tail: Promise<void> = Promise.resolve();
   #stopped = false;
@@ -551,7 +556,9 @@ export class PluginDataStore {
     if (this.#loading) return this.#loading;
 
     const operation = this.#tail.then(async () => {
-      const validation = validatePluginData(await this.#port.load(), this.#hostSeed);
+      const stored = await this.#port.load();
+      const validation = validatePluginData(stored, this.#hostSeed);
+      if (isAbsentPluginData(stored)) this.#seedUnpersisted = true;
       if (this.#stopped) throw new PluginDataStoppedError();
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       this.#loaded = true;
@@ -576,12 +583,9 @@ export class PluginDataStore {
 
     const operation = this.#tail.then(async () => {
       const validation = validatePluginData(updater(this.#snapshot.data));
-      await this.#port.save(validation.data);
-      const confirmed = validatePluginData(await this.#port.load());
-      if (!sameData(validation.data, confirmed.data) || confirmed.diagnostics.length > 0) {
-        throw new PluginDataReadbackError();
-      }
+      await this.#writeConfirmed(validation);
       if (this.#stopped) throw new PluginDataStoppedError();
+      this.#seedUnpersisted = false;
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       return this.#snapshot;
     });
@@ -590,6 +594,45 @@ export class PluginDataStore {
       () => undefined,
     );
     return operation;
+  }
+
+  persistSeededIfNeeded(): Promise<PluginDataSnapshot> {
+    if (this.#stopped) return Promise.reject(new PluginDataStoppedError());
+    if (!this.#loaded) {
+      return Promise.reject(new Error("Plugin data must be loaded before it is updated"));
+    }
+    if (!this.#seedUnpersisted) return Promise.resolve(this.#snapshot);
+
+    const operation = this.#tail.then(async () => {
+      if (!this.#seedUnpersisted) return this.#snapshot;
+      const validation = Object.freeze({
+        data: this.#snapshot.data,
+        diagnostics: this.#snapshot.diagnostics,
+      });
+      await this.#writeConfirmed(validation);
+      if (this.#stopped) throw new PluginDataStoppedError();
+      this.#seedUnpersisted = false;
+      this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
+      return this.#snapshot;
+    });
+    this.#tail = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    return operation;
+  }
+
+  async #writeConfirmed(validation: PluginDataValidation): Promise<void> {
+    await this.#port.save(validation.data);
+    const stored = await this.#port.load();
+    const confirmed = validatePluginData(stored);
+    if (
+      isAbsentPluginData(stored)
+      || !sameData(validation.data, confirmed.data)
+      || confirmed.diagnostics.length > 0
+    ) {
+      throw new PluginDataReadbackError();
+    }
   }
 
   stop(): Promise<void> {

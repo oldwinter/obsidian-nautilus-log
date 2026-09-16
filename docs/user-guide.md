@@ -60,10 +60,11 @@ write the markers plus a sample task.
 
 ### First-run checklist
 
-1. Open **Settings → Spiral Day**. On first run, Language follows Obsidian,
-   and Daily Note folder/format copy the core Daily Notes plugin when that
-   file exists. Otherwise leave defaults, or set them so they resolve the
-   note you already use.
+1. Open **Settings → Spiral Day**. On first enable, Language and Daily Note
+   folder/format are copied from Obsidian when present. **Insert into today's
+   Daily Note** or any Settings change saves that snapshot; later host
+   changes do not overwrite it. Otherwise leave defaults, or set them so they
+   resolve the note you already use.
 2. Click **Insert into today's Daily Note**. It creates today's note if needed
    (default `YYYY-MM-DD.md` at the vault root) and writes the markers plus a
    sample task. Or create the note yourself and paste the two markers.
@@ -137,9 +138,9 @@ Important fields for getting started:
 
 | Setting | Default | Why it matters |
 | --- | --- | --- |
-| Language | Follows Obsidian on first run (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. A saved choice wins after that. |
-| Daily Note folder | Core Daily Notes folder on first run, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. |
-| Daily Note date format | Core Daily Notes format on first run, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens. |
+| Language | Copied from Obsidian on first enable (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. Insert or a Settings change saves it; a later Settings choice wins. |
+| Daily Note folder | Copied from core Daily Notes on first enable, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. Insert or a Settings change locks it so later core-plugin edits do not move it. |
+| Daily Note date format | Copied from core Daily Notes on first enable, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens. Insert or a Settings change locks it. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
 | Execution Layer | off | Turns on Timing, Plan, Review, commands, and Active Task. |
 

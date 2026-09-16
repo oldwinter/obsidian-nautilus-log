@@ -52,10 +52,11 @@ After you enable the plugin, the only new control is the shell ribbon icon
 turn on **Execution Layer**. A Daily Note without the markers below opens an
 empty Planner that now lists the next action.
 
-1. Open **Settings → Spiral Day**. First run follows Obsidian's language and
-   copies the core Daily Notes folder/format when present. Otherwise leave the
-   defaults, or set **Daily Note folder** and **Daily Note date format** to
-   match your journal.
+1. Open **Settings → Spiral Day**. First enable copies Obsidian's language and
+   the core Daily Notes folder/format when present. **Insert into today's Daily
+   Note** or any Settings change saves that snapshot so later host changes do
+   not overwrite those fields. Otherwise leave the defaults, or set **Daily
+   Note folder** and **Daily Note date format** to match your journal.
 2. Click **Insert into today's Daily Note** in Planner, Settings, or Review
    (today). That creates today's note if needed (default `YYYY-MM-DD.md` at the
    vault root) and writes the markers plus one sample task. Opening Planner

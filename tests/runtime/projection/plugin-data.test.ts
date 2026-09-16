@@ -84,6 +84,81 @@ test("fresh plugin data copies a valid host Daily Note folder and format", async
   assert.equal(loaded.data.settings.dailyNoteFormat, "YYYY年MM月DD日");
 });
 
+test("empty load stays unpersisted until Insert or a settings save locks the seed", async () => {
+  const seededPort = new InMemoryPluginDataPort();
+  const seeded = new PluginDataStore(seededPort, {
+    hostLanguage: "zh-CN",
+    hostDailyNote: { folder: "Journal", format: "YYYY/MM/DD" },
+  });
+  const seededLoad = await seeded.load();
+  assert.equal(seededLoad.data.settings.language, "zh");
+  assert.equal(seededLoad.data.settings.dailyNoteFolder, "Journal");
+  assert.equal(seededPort.saveCount, 0);
+
+  const unlocked = new PluginDataStore(seededPort, {
+    hostLanguage: "en",
+    hostDailyNote: { folder: "Notes", format: "YYYY-MM-DD" },
+  });
+  const unlockedLoad = await unlocked.load();
+  assert.equal(unlockedLoad.data.settings.language, "en");
+  assert.equal(unlockedLoad.data.settings.dailyNoteFolder, "Notes");
+  assert.equal(seededPort.saveCount, 0);
+
+  const persist = await seeded.persistSeededIfNeeded();
+  assert.equal(persist.data.settings.dailyNoteFolder, "Journal");
+  assert.equal(seededPort.saveCount, 1);
+  const again = await seeded.persistSeededIfNeeded();
+  assert.strictEqual(again, persist);
+  assert.equal(seededPort.saveCount, 1);
+
+  const locked = new PluginDataStore(seededPort, {
+    hostLanguage: "en",
+    hostDailyNote: { folder: "Notes", format: "YYYY-MM-DD" },
+  });
+  const lockedLoad = await locked.load();
+  assert.equal(lockedLoad.data.settings.language, "zh");
+  assert.equal(lockedLoad.data.settings.dailyNoteFolder, "Journal");
+  assert.equal(lockedLoad.data.settings.dailyNoteFormat, "YYYY/MM/DD");
+  assert.equal(seededPort.saveCount, 1);
+  assert.strictEqual(await locked.persistSeededIfNeeded(), lockedLoad);
+
+  const defaultPort = new InMemoryPluginDataPort();
+  const defaults = new PluginDataStore(defaultPort);
+  await defaults.load();
+  assert.strictEqual(defaults.data, DEFAULT_PLUGIN_DATA);
+  assert.equal(defaultPort.saveCount, 0);
+  await defaults.persistSeededIfNeeded();
+  assert.equal(defaultPort.saveCount, 1);
+  const laterHost = new PluginDataStore(defaultPort, { hostLanguage: "zh" });
+  const laterLoad = await laterHost.load();
+  assert.equal(laterLoad.data.settings.language, "en");
+  assert.equal(defaultPort.saveCount, 1);
+
+  const savedPort = new InMemoryPluginDataPort(pluginData({ language: "en" }));
+  const saved = new PluginDataStore(savedPort, { hostLanguage: "zh" });
+  const savedLoad = await saved.load();
+  assert.equal(savedLoad.data.settings.language, "en");
+  assert.strictEqual(await saved.persistSeededIfNeeded(), savedLoad);
+  assert.equal(savedPort.saveCount, 0);
+});
+
+test("locking an unpersisted seed rejects a non-durable write and keeps the in-memory seed", async () => {
+  class AbsentAfterSavePort implements PluginDataPort {
+    async load(): Promise<unknown> {
+      return undefined;
+    }
+
+    async save(_data: PluginDataDocument): Promise<void> {}
+  }
+
+  const store = new PluginDataStore(new AbsentAfterSavePort(), { hostLanguage: "zh" });
+  const loaded = await store.load();
+  assert.equal(loaded.data.settings.language, "zh");
+  await assert.rejects(store.persistSeededIfNeeded(), PluginDataReadbackError);
+  assert.strictEqual(store.snapshot, loaded);
+  assert.equal(store.data.settings.language, "zh");
+});
+
 test("issue 21 validation repairs fields independently and ignores unowned data", () => {
   const result = validatePluginData({
     schemaVersion: 1,
