@@ -106,6 +106,7 @@ export type ExecutionCatalog = Readonly<{
   "error.commandsUnavailable": string;
   "error.generic": string;
   "error.noPrimary": string;
+  "error.missingDailyNote": string;
   "error.navigationUnavailable": string;
   "error.noBlockId": string;
   "error.sidebarUnavailable": string;
@@ -225,7 +226,8 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.focusTodo": "Focus an unfinished TODO block before starting timing.",
   "error.commandsUnavailable": "Obsidian command-palette actions are unavailable.",
   "error.generic": "Spiral Day could not complete that action.",
-  "error.noPrimary": "No Primary Plan was found today.",
+  "error.noPrimary": "No Primary Plan was found today. Use Insert into today's Daily Note, or check Daily Note folder and date format in Settings → Spiral Day.",
+  "error.missingDailyNote": "Today's Daily Note does not exist yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today).",
   "error.navigationUnavailable": "Obsidian navigation is unavailable.",
   "error.noBlockId": "This task has no block UID.",
   "error.sidebarUnavailable": "The Obsidian sidebar is unavailable.",

@@ -86,7 +86,7 @@ export class ObsidianSourceNavigator {
   async openPrimary(path: string | null): Promise<SourceNavigationResult> {
     if (!path) return this.#unavailable("primary-plan-missing");
     const file = markdownFile(this.#dependencies.app, path);
-    if (!file) return this.#unavailable("source-file-missing");
+    if (!file) return this.#unavailable("primary-source-missing");
     const leaf = await openLeaf(this.#dependencies.app, file, "main");
     if (!leaf) return this.#unavailable("workspace-unavailable");
     if (leaf.view instanceof MarkdownView) {

@@ -4,6 +4,8 @@
 
 The Planner, Plan tab, and Settings first-run checklist show the next step,
 including the two HTML markers. Opening a surface does not rewrite your note.
+**Locate Primary Plan** opens today's configured Daily Note even when the
+region is missing; if that file does not exist, the notice points to Insert.
 **Insert into today's Daily Note** writes only after you click it. It creates
 today's configured Daily Note when needed and refuses to insert when a valid or
 malformed Plan Region is already present.
