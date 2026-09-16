@@ -2,6 +2,13 @@ export const PLUGIN_DATA_SCHEMA_VERSION = 1 as const;
 
 export type PluginLanguage = "en" | "zh";
 
+export function pluginLanguageFromHost(locale: string): PluginLanguage {
+  const normalized = locale.trim().replaceAll("_", "-").toLowerCase();
+  return normalized === "zh" || normalized.startsWith("zh-cn") || normalized.startsWith("zh-hans")
+    ? "zh"
+    : "en";
+}
+
 export interface PluginSettings {
   readonly language: PluginLanguage;
   readonly chartStartHour: 5 | 6 | 7 | 8;
@@ -377,9 +384,18 @@ function freezeValidation(
   return Object.freeze({ data, diagnostics: Object.freeze(diagnostics) });
 }
 
-export function validatePluginData(value: unknown): PluginDataValidation {
+export function validatePluginData(
+  value: unknown,
+  options?: { readonly hostLanguage?: string },
+): PluginDataValidation {
   if (value === undefined || value === null) {
-    return freezeValidation(DEFAULT_PLUGIN_DATA, []);
+    const language = options?.hostLanguage === undefined
+      ? DEFAULT_PLUGIN_SETTINGS.language
+      : pluginLanguageFromHost(options.hostLanguage);
+    if (language === DEFAULT_PLUGIN_SETTINGS.language) {
+      return freezeValidation(DEFAULT_PLUGIN_DATA, []);
+    }
+    return freezeValidation(freezeData({ ...DEFAULT_PLUGIN_SETTINGS, language }, null, null), []);
   }
   if (!isRecord(value)) {
     return freezeValidation(
@@ -469,6 +485,7 @@ export class PluginDataReadbackError extends Error {
 
 export class PluginDataStore {
   readonly #port: PluginDataPort;
+  readonly #hostLanguage: string | undefined;
   #snapshot = snapshot(0, freezeValidation(DEFAULT_PLUGIN_DATA, []));
   #loaded = false;
   #loading: Promise<PluginDataSnapshot> | undefined;
@@ -476,8 +493,9 @@ export class PluginDataStore {
   #stopped = false;
   #stopPromise: Promise<void> | undefined;
 
-  constructor(port: PluginDataPort) {
+  constructor(port: PluginDataPort, options?: { readonly hostLanguage?: string }) {
     this.#port = port;
+    this.#hostLanguage = options?.hostLanguage;
   }
 
   get snapshot(): PluginDataSnapshot {
@@ -498,7 +516,10 @@ export class PluginDataStore {
     if (this.#loading) return this.#loading;
 
     const operation = this.#tail.then(async () => {
-      const validation = validatePluginData(await this.#port.load());
+      const validation = validatePluginData(
+        await this.#port.load(),
+        this.#hostLanguage === undefined ? undefined : { hostLanguage: this.#hostLanguage },
+      );
       if (this.#stopped) throw new PluginDataStoppedError();
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       this.#loaded = true;
