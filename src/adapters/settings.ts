@@ -11,8 +11,11 @@ import {
   interpretDailyNoteSetting,
   type DailyNoteSettingField,
 } from "./daily-note-setting";
-import { renderPlanMissingGuidance } from "../ui/onboarding/first-run";
+import { renderEmptyPlanGuidance, renderPlanMissingGuidance } from "../ui/onboarding/first-run";
 import type { HostDailyNoteSeed, PluginSettings } from "../runtime/plugin-data";
+import type { RuntimePlanProjection } from "../runtime/projection-runtime";
+import type { RuntimeSnapshot } from "../runtime/snapshots";
+import { settingsOnboardingKind } from "./settings-onboarding";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
 
@@ -26,6 +29,7 @@ export interface ExecutionSettingsDependencies {
   readonly onLocaleChanged: () => void;
   readonly onExecutionChanged: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
+  readonly planSnapshot?: () => RuntimeSnapshot<RuntimePlanProjection> | undefined;
   readonly hostDailyNote?: () => HostDailyNoteSeed | undefined;
   readonly onError?: (error: unknown) => void;
 }
@@ -150,12 +154,27 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     const title = container.ownerDocument.createElement("h3");
     title.textContent = this.#dependencies.messages.t("execution", "settings.onboardingTitle");
     card.append(title);
-    renderPlanMissingGuidance(card, this.#dependencies.messages, {
-      intro: this.#dependencies.messages.t("execution", "settings.onboardingDetail"),
-      ...(this.#dependencies.insertPrimaryPlan
-        ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
-        : {}),
-    });
+    const kind = settingsOnboardingKind(this.#dependencies.planSnapshot?.());
+    const intro = this.#dependencies.messages.t("execution", "settings.onboardingDetail");
+    if (kind === "ready") {
+      const detail = container.ownerDocument.createElement("p");
+      detail.className = "spiral-day-onboarding__intro";
+      detail.textContent = intro;
+      card.append(detail);
+    } else if (kind === "empty") {
+      const detail = container.ownerDocument.createElement("p");
+      detail.className = "spiral-day-onboarding__intro";
+      detail.textContent = intro;
+      card.append(detail);
+      renderEmptyPlanGuidance(card, this.#dependencies.messages);
+    } else {
+      renderPlanMissingGuidance(card, this.#dependencies.messages, {
+        intro,
+        ...(this.#dependencies.insertPrimaryPlan
+          ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
+          : {}),
+      });
+    }
     const execution = container.ownerDocument.createElement("p");
     execution.textContent = this.#dependencies.messages.t("execution", "settings.onboardingExecution");
     card.append(execution);

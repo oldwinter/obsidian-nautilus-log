@@ -3,7 +3,8 @@
 Open **Settings → Spiral Day**. Settings are stored in the plugin data document
 (schema version 1). Missing, invalid, or unsupported saved values are repaired
 to defaults; unknown fields are ignored. The first-run checklist at the top is
-instructional and stays visible after a plan exists.
+instructional and stays visible after a plan exists. Insert hides once today's
+Primary Plan is confirmed; an empty ready plan offers Copy sample task.
 
 ## General settings
 

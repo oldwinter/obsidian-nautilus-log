@@ -64,8 +64,8 @@ note and write the markers plus a sample task.
 
 ### First-run checklist
 
-The Settings card keeps this checklist after a plan exists. It is not a live
-**No Primary Plan** diagnosis.
+The Settings card keeps an explanation after a plan exists. It is not a live
+**No Primary Plan** diagnosis, and Insert hides once the plan is confirmed.
 
 1. Open **Settings → Spiral Day**. On first enable, Language and Daily Note
    folder/format are copied from Obsidian when present. **Insert into today's
@@ -141,9 +141,10 @@ A typical day:
 ### Settings
 
 **Settings → Spiral Day** is bilingual (`English` / `简体中文`). The first-run
-checklist stays at the top. It is instructional, not a live Planner diagnosis:
-after Insert succeeds it still stays visible and does not mean **No Primary
-Plan** is still true.
+checklist stays at the top. It is instructional, not a live Planner diagnosis.
+After a Primary Plan exists, Settings keeps the explanation but hides
+**Insert into today's Daily Note**. An empty ready plan offers **Copy sample
+task** instead.
 
 Important fields for getting started:
 

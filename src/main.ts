@@ -383,6 +383,7 @@ export default class SpiralDayPlugin extends Plugin {
       onLocaleChanged: () => this.#onLocaleChanged(),
       onExecutionChanged: () => undefined,
       insertPrimaryPlan: () => this.#insertPrimaryPlan(),
+      planSnapshot: () => this.#planSnapshot,
       hostDailyNote: () => this.#hostDailyNote,
       onError: (error) => this.#reportError(error),
     }));
