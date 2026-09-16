@@ -325,7 +325,7 @@ Start with the in-plugin empty states, then see
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. The Active Task unavailable state names the same next step, plus **Locate Primary Plan** if the note or running CLOCK needs a repair. |
 | Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
 | Copy task link fails | Use **Locate Primary Plan** and copy the wikilink from the task line. If the block ID is missing, Clock In from the Plan tab first. |
-| Insert or enable Execution fails | Read the one specific notice. There is no second generic toast. |
+| Insert or enable Execution fails | Read the one specific notice. A first-run settings persist failure before Insert is logged only. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
 ## Related documents

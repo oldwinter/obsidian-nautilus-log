@@ -13,8 +13,9 @@ on Planner, Settings, the Plan tab, or Review (today).
 today's configured Daily Note when needed and refuses to insert when a valid or
 malformed Plan Region is already present. If the region is already there and
 the list looks empty, the notice points to **Copy sample task**. A failed
-Insert shows that Copy-the-starter notice once. It does not add a second
-**Spiral Day could not complete that action** toast.
+Insert shows that Copy-the-starter notice once. If locking first-run settings
+fails before the write, Insert still continues and shows only the Insert
+result. It does not add a **Spiral Day could not complete that action** toast.
 
 Check the Daily Note path first:
 
