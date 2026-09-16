@@ -90,7 +90,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.failed": "更改未应用。",
   "notice.sourceUnavailable": "无法打开该任务。请用「定位主计划」打开今日日记。如果区块 ID 缺失或重复，请只保留在一项上，然后保存并刷新。",
   "error.refresh": "无法刷新计时数据。请保存笔记，然后在「计时」标签点「重试」。",
-  "error.copyTaskLink": "无法复制当前任务链接。",
+  "error.copyTaskLink": "无法复制当前任务链接。请用「定位主计划」打开今日日记，从任务行复制双向链接。如果还没有区块 ID，请先在「计划」标签开始计时。",
   "error.unconfirmed": "无法确认笔记更改。请保存、刷新后再试。",
   "error.executionInactive": "执行层已关闭。请在 设置 → Spiral Day 启用执行层后，再推进进度、开始计时或完成任务。",
   "error.overlap": "CLOCK 记录重叠或无法判定。请用「定位主计划」打开笔记，然后结束计时，或修好未结束的 CLOCK，只保留一条在计时。",
