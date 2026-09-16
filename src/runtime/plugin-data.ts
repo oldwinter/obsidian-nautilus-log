@@ -2,6 +2,16 @@ export const PLUGIN_DATA_SCHEMA_VERSION = 1 as const;
 
 export type PluginLanguage = "en" | "zh";
 
+export interface HostDailyNoteSeed {
+  readonly folder?: string;
+  readonly format?: string;
+}
+
+export interface HostPluginSeed {
+  readonly hostLanguage?: string;
+  readonly hostDailyNote?: HostDailyNoteSeed;
+}
+
 export function pluginLanguageFromHost(locale: string): PluginLanguage {
   const normalized = locale.trim().replaceAll("_", "-").toLowerCase();
   return normalized === "zh" || normalized.startsWith("zh-cn") || normalized.startsWith("zh-hans")
@@ -384,18 +394,43 @@ function freezeValidation(
   return Object.freeze({ data, diagnostics: Object.freeze(diagnostics) });
 }
 
+function freshPluginData(options?: HostPluginSeed): PluginDataDocument {
+  const language = options?.hostLanguage === undefined
+    ? DEFAULT_PLUGIN_SETTINGS.language
+    : pluginLanguageFromHost(options.hostLanguage);
+  let dailyNoteFolder = DEFAULT_PLUGIN_SETTINGS.dailyNoteFolder;
+  let dailyNoteFormat = DEFAULT_PLUGIN_SETTINGS.dailyNoteFormat;
+  const hostDailyNote = options?.hostDailyNote;
+  if (hostDailyNote) {
+    if (typeof hostDailyNote.folder === "string") {
+      const normalized = normalizeFolder(hostDailyNote.folder);
+      if (normalized !== undefined) dailyNoteFolder = normalized;
+    }
+    if (typeof hostDailyNote.format === "string" && validDailyNoteFormat(hostDailyNote.format)) {
+      dailyNoteFormat = hostDailyNote.format;
+    }
+  }
+  if (
+    language === DEFAULT_PLUGIN_SETTINGS.language
+    && dailyNoteFolder === DEFAULT_PLUGIN_SETTINGS.dailyNoteFolder
+    && dailyNoteFormat === DEFAULT_PLUGIN_SETTINGS.dailyNoteFormat
+  ) {
+    return DEFAULT_PLUGIN_DATA;
+  }
+  return freezeData({
+    ...DEFAULT_PLUGIN_SETTINGS,
+    language,
+    dailyNoteFolder,
+    dailyNoteFormat,
+  }, null, null);
+}
+
 export function validatePluginData(
   value: unknown,
-  options?: { readonly hostLanguage?: string },
+  options?: HostPluginSeed,
 ): PluginDataValidation {
   if (value === undefined || value === null) {
-    const language = options?.hostLanguage === undefined
-      ? DEFAULT_PLUGIN_SETTINGS.language
-      : pluginLanguageFromHost(options.hostLanguage);
-    if (language === DEFAULT_PLUGIN_SETTINGS.language) {
-      return freezeValidation(DEFAULT_PLUGIN_DATA, []);
-    }
-    return freezeValidation(freezeData({ ...DEFAULT_PLUGIN_SETTINGS, language }, null, null), []);
+    return freezeValidation(freshPluginData(options), []);
   }
   if (!isRecord(value)) {
     return freezeValidation(
@@ -485,7 +520,7 @@ export class PluginDataReadbackError extends Error {
 
 export class PluginDataStore {
   readonly #port: PluginDataPort;
-  readonly #hostLanguage: string | undefined;
+  readonly #hostSeed: HostPluginSeed | undefined;
   #snapshot = snapshot(0, freezeValidation(DEFAULT_PLUGIN_DATA, []));
   #loaded = false;
   #loading: Promise<PluginDataSnapshot> | undefined;
@@ -493,9 +528,9 @@ export class PluginDataStore {
   #stopped = false;
   #stopPromise: Promise<void> | undefined;
 
-  constructor(port: PluginDataPort, options?: { readonly hostLanguage?: string }) {
+  constructor(port: PluginDataPort, options?: HostPluginSeed) {
     this.#port = port;
-    this.#hostLanguage = options?.hostLanguage;
+    this.#hostSeed = options;
   }
 
   get snapshot(): PluginDataSnapshot {
@@ -516,10 +551,7 @@ export class PluginDataStore {
     if (this.#loading) return this.#loading;
 
     const operation = this.#tail.then(async () => {
-      const validation = validatePluginData(
-        await this.#port.load(),
-        this.#hostLanguage === undefined ? undefined : { hostLanguage: this.#hostLanguage },
-      );
+      const validation = validatePluginData(await this.#port.load(), this.#hostSeed);
       if (this.#stopped) throw new PluginDataStoppedError();
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       this.#loaded = true;

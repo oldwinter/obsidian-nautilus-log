@@ -41,8 +41,8 @@ retention and 120 for Forgotten timer.
 
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| Daily Note folder | vault-relative folder; empty means vault root | empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. |
-| Daily Note date format | a format containing year, month, and day tokens | `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. |
+| Daily Note folder | vault-relative folder; empty means vault root | Core Daily Notes `folder` on first run, otherwise empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. |
+| Daily Note date format | a format containing year, month, and day tokens | Core Daily Notes `format` on first run, otherwise `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. |
 
 Supported date tokens:
 

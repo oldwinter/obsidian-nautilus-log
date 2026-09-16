@@ -55,6 +55,7 @@ export type ExecutionCatalog = Readonly<{
   "settings.chartStart": string;
   "settings.chartEnd": string;
   "settings.componentPrefix": string;
+  "settings.componentPrefixDesc": string;
   "settings.legendLength": string;
   "settings.defaultDuration": string;
   "settings.urgentTrigger": string;
@@ -65,7 +66,9 @@ export type ExecutionCatalog = Readonly<{
   "settings.recentRetention": string;
   "settings.forgottenWarning": string;
   "settings.dailyNoteFolder": string;
+  "settings.dailyNoteFolderDesc": string;
   "settings.dailyNoteFormat": string;
+  "settings.dailyNoteFormatDesc": string;
   "settings.onboardingTitle": string;
   "settings.onboardingExecution": string;
   "notice.firstRun": string;
@@ -169,6 +172,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.chartStart": "Chart start",
   "settings.chartEnd": "Chart end",
   "settings.componentPrefix": "Component prefix",
+  "settings.componentPrefixDesc": "Stored compatibility value. It does not change Markdown grammar or Insert.",
   "settings.legendLength": "Legend maximum length",
   "settings.defaultDuration": "Default task duration",
   "settings.urgentTrigger": "Urgent trigger word",
@@ -179,7 +183,9 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.recentRetention": "Recent retention minutes",
   "settings.forgottenWarning": "Forgotten timer minutes",
   "settings.dailyNoteFolder": "Daily Note folder",
+  "settings.dailyNoteFolderDesc": "Vault-relative folder for today's Daily Note. Leave empty for the vault root. Must match the note Insert creates and Planner reads.",
   "settings.dailyNoteFormat": "Daily Note date format",
+  "settings.dailyNoteFormatDesc": "Date format for the Daily Note filename. Must include year, month, and day tokens. The plugin adds .md.",
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
   "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today), or paste the nautilus-log:plan/v1 markers yourself.",
