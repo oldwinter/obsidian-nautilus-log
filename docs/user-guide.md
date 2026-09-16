@@ -251,7 +251,7 @@ These exist only while Execution Layer is enabled:
   `- [ ]` flexible task, the notice points to today's Daily Note or **Clock
   In** on the Plan tab. If that task is already being timed, the notice says
   so and points to **Clock Out** on the Plan tab.
-- `Spiral Day: 2. Clock out Timing Line` — if nothing is being timed, the
+- `Spiral Day: 2. Clock out current task` — if nothing is being timed, the
   notice says so and points to **Clock In** on the Plan tab.
 - `Spiral Day: 3. Locate Primary Plan` — opens today's Daily Note even when
   the Primary Plan is missing. If the note does not exist, a notice points to
