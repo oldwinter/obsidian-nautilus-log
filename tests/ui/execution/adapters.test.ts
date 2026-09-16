@@ -4,6 +4,20 @@ import test from "node:test";
 import { ExecutionCommandRegistry } from "../../../src/adapters/commands";
 import { registerExecutionEditorMenu } from "../../../src/adapters/editor-menu";
 import { executionOutcomeNotice } from "../../../src/adapters/notices";
+import { enExecution } from "../../../src/i18n/locales/en/execution";
+import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
+
+const englishTitles = {
+  focusCurrent: enExecution["command.focusCurrent"],
+  clockOut: enExecution["command.clockOut"],
+  locatePrimary: enExecution["command.locatePrimary"],
+};
+
+const chineseTitles = {
+  focusCurrent: zhCNExecution["command.focusCurrent"],
+  clockOut: zhCNExecution["command.clockOut"],
+  locatePrimary: zhCNExecution["command.locatePrimary"],
+};
 
 test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and removes them", async () => {
   const registered: Array<Record<string, unknown>> = [];
@@ -20,6 +34,7 @@ test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and remov
   };
   const registry = new ExecutionCommandRegistry({
     plugin: plugin as never,
+    titles: () => englishTitles,
     focusCurrent: () => { calls.push("focus"); },
     clockOut: () => { calls.push("out"); },
     locatePrimary: () => { calls.push("locate"); },
@@ -45,6 +60,36 @@ test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and remov
   assert.deepEqual(removed, ["execution-1", "execution-2", "execution-3"]);
 });
 
+test("command palette titles refresh when the locale catalog changes", () => {
+  const registered: Array<Record<string, unknown>> = [];
+  const plugin = {
+    addCommand(command: Record<string, unknown>) {
+      registered.push(command);
+      return command;
+    },
+    removeCommand() {},
+  };
+  let titles = englishTitles;
+  const registry = new ExecutionCommandRegistry({
+    plugin: plugin as never,
+    titles: () => titles,
+    focusCurrent: () => {},
+    clockOut: () => {},
+    locatePrimary: () => {},
+  });
+
+  registry.start();
+  titles = chineseTitles;
+  registry.refresh();
+  assert.deepEqual(registered.slice(-3).map((command) => command.name), [
+    "Spiral Day: 1. 聚焦当前任务",
+    "Spiral Day: 2. 结束计时线",
+    "Spiral Day: 3. 定位主计划",
+  ]);
+  registry.refresh();
+  assert.equal(registered.length, 9);
+});
+
 test("TC-UP-CMD-02-001..003 editor menu stays absent when disabled and dispatches only the resolved action", async () => {
   let enabled = false;
   let editorMenu: ((menu: unknown, editor: unknown, info: unknown) => void) | undefined;
@@ -60,9 +105,11 @@ test("TC-UP-CMD-02-001..003 editor menu stays absent when disabled and dispatche
     },
     registerEvent() {},
   };
+  let clockInTitle = enExecution["menu.clockIn"];
   registerExecutionEditorMenu({
     plugin: plugin as never,
     enabled: () => enabled,
+    titleFor: (kind) => kind === "clock-in" ? clockInTitle : enExecution["menu.clockOut"],
     resolveAction: () => ({ kind: "clock-in" }),
     dispatch: (action) => { dispatched.push(action.kind); },
   });
@@ -86,6 +133,10 @@ test("TC-UP-CMD-02-001..003 editor menu stays absent when disabled and dispatche
   enabled = true;
   editorMenu!(menu, {}, {});
   assert.deepEqual(items.map((item) => [item.title, item.icon]), [["Spiral Day: Clock in", "timer"]]);
+  clockInTitle = zhCNExecution["menu.clockIn"];
+  items.length = 0;
+  editorMenu!(menu, {}, {});
+  assert.deepEqual(items.map((item) => item.title), ["Spiral Day: 开始计时"]);
   items[0]!.activate?.();
   await Promise.resolve();
   assert.deepEqual(dispatched, ["clock-in"]);

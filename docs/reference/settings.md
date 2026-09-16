@@ -8,7 +8,7 @@ to defaults; unknown fields are ignored.
 
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| Language | `en` or `zh` | `en` | Changes labels on mounted planner and execution surfaces. |
+| Language | `en` or `zh` | `en` | Changes labels on mounted planner and execution surfaces, plus command palette names, editor-menu titles, and the Planner ribbon. |
 | Chart start | `5`, `6`, `7`, `8` | `5` | First chart hour. |
 | Chart end | `18`, `19`, `20`, `21`, `22`, `23`, `24` | `21` | Last chart hour; it must be later than the start. |
 | Component prefix | any string | `[[Nautilus Log]]` | Stored compatibility setting; it does not change grammar v1 parsing. |

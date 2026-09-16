@@ -107,6 +107,11 @@ export type ExecutionCatalog = Readonly<{
   "error.sidebarOpen": string;
   "error.sidebarAfterStart": string;
   "error.writerConflict": string;
+  "command.focusCurrent": string;
+  "command.clockOut": string;
+  "command.locatePrimary": string;
+  "menu.clockIn": string;
+  "menu.clockOut": string;
 }>;
 
 export const enExecution: ExecutionCatalog = Object.freeze({
@@ -140,7 +145,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.scheduled": "Scheduled",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
-  "plan.noPrimaryDetail": "Add the Primary Plan markers to today's Daily Note, then save. The next steps are listed below.",
+  "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",
   "plan.noTasks": "No unfinished direct tasks are available.",
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
@@ -177,7 +182,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "Daily Note date format",
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
-  "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner or Settings, or paste the nautilus-log:plan/v1 markers yourself.",
+  "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today), or paste the nautilus-log:plan/v1 markers yourself.",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
   "notice.refreshed": "Timing data refreshed.",
@@ -216,4 +221,9 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.sidebarOpen": "Could not open this task in the right sidebar.",
   "error.sidebarAfterStart": "The task started, but Obsidian could not show it at the top of the sidebar.",
   "error.writerConflict": "Disable another CLOCK writer before enabling Spiral Day Actual Time Tracking. Only one extension may write CLOCK records.",
+  "command.focusCurrent": "Spiral Day: 1. Focus current block",
+  "command.clockOut": "Spiral Day: 2. Clock out Timing Line",
+  "command.locatePrimary": "Spiral Day: 3. Locate Primary Plan",
+  "menu.clockIn": "Spiral Day: Clock in",
+  "menu.clockOut": "Spiral Day: Clock out",
 });

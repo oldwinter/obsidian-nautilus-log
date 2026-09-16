@@ -205,6 +205,7 @@ export default class SpiralDayPlugin extends Plugin {
   #suspendedExecution: ExecutionApplication | undefined;
   #executionEntry: ExecutionEntryAdapter | undefined;
   #commands: ExecutionCommandRegistry | undefined;
+  #plannerRibbon: HTMLElement | undefined;
   #executionUnsubscribe: Unsubscribe | undefined;
   #editorForPath: ((path: string) => { getValue(): string; setValue?(value: string): void } | undefined) | undefined;
   #planConnection: ReturnType<NautilusProjectionRuntime["connect"]> | undefined;
@@ -341,15 +342,19 @@ export default class SpiralDayPlugin extends Plugin {
       },
       onError: (error) => this.#reportError(error),
     }));
-    this.addRibbonIcon("shell", "Open Spiral Day", () => {
-      void openPlannerView(this.app, logicalDateAt(this.#requireClock()))
-        .then(() => {
-          if (this.#planSnapshot?.state === "missing") {
-            new Notice(this.#requireMessages().t("execution", "notice.firstRun"), 8_000);
-          }
-        })
-        .catch((error) => this.#reportError(error));
-    });
+    this.#plannerRibbon = this.addRibbonIcon(
+      "shell",
+      this.#requireMessages().t("planner", "ribbon.openPlanner"),
+      () => {
+        void openPlannerView(this.app, logicalDateAt(this.#requireClock()))
+          .then(() => {
+            if (this.#planSnapshot?.state === "missing") {
+              new Notice(this.#requireMessages().t("execution", "notice.firstRun"), 8_000);
+            }
+          })
+          .catch((error) => this.#reportError(error));
+      },
+    );
     this.addSettingTab(new SpiralDaySettingTab({
       app: this.app,
       plugin: this,
@@ -367,6 +372,10 @@ export default class SpiralDayPlugin extends Plugin {
     registerExecutionEditorMenu({
       plugin: this,
       enabled: () => this.#executionEntry?.active === true,
+      titleFor: (kind) => this.#requireMessages().t(
+        "execution",
+        kind === "clock-in" ? "menu.clockIn" : "menu.clockOut",
+      ),
       resolveAction: (editor, info) => {
         const file = info.file;
         if (!file || !this.#execution) return undefined;
@@ -461,6 +470,7 @@ export default class SpiralDayPlugin extends Plugin {
       });
       this.#commands = new ExecutionCommandRegistry({
         plugin: this,
+        titles: () => this.#commandTitles(),
         focusCurrent: () => this.#focusCurrent(),
         clockOut: async () => {
           await this.#dispatchExecution({
@@ -631,7 +641,28 @@ export default class SpiralDayPlugin extends Plugin {
 
   #onLocaleChanged(): void {
     this.#executionEntry?.setLocale();
+    this.#syncHostChrome();
     void this.#execution?.refresh();
+  }
+
+  #commandTitles(): {
+    readonly focusCurrent: string;
+    readonly clockOut: string;
+    readonly locatePrimary: string;
+  } {
+    const messages = this.#requireMessages();
+    return {
+      focusCurrent: messages.t("execution", "command.focusCurrent"),
+      clockOut: messages.t("execution", "command.clockOut"),
+      locatePrimary: messages.t("execution", "command.locatePrimary"),
+    };
+  }
+
+  #syncHostChrome(): void {
+    const title = this.#requireMessages().t("planner", "ribbon.openPlanner");
+    this.#plannerRibbon?.setAttribute("aria-label", title);
+    this.#plannerRibbon?.setAttribute("title", title);
+    this.#commands?.refresh();
   }
 
   #connectTodayPlan(): void {
