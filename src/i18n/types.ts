@@ -116,6 +116,9 @@ export type PlannerCatalog = Readonly<{
   "status.missingInvalidPath": string;
   "status.missingNextSurfaces": string;
   "status.emptyPlan": string;
+  "status.emptyCopySample": string;
+  "status.emptyCopied": string;
+  "status.emptyCopyFailed": string;
   "ribbon.openPlanner": string;
   "status.overLimitDetail": MessageFunction<{ actual: number; kind: PlannerLimitKind; limit: number }>;
   "status.overLimitUnknownDetail": MessageFunction<{ actual: number; limit: number }>;

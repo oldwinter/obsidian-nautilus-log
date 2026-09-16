@@ -63,7 +63,7 @@ import {
   formatPlannerSummary,
   type PlannerSummaryCopyOutcome,
 } from "./summary";
-import { renderPlanMissingGuidance } from "../onboarding/first-run";
+import { renderEmptyPlanGuidance, renderPlanMissingGuidance } from "../onboarding/first-run";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const RUNTIME_PROBE_MILLISECONDS = 5_000;
@@ -1294,8 +1294,8 @@ class PlannerSurfaceController implements PlannerSurface {
     header.append(headerEnd);
     this.#content.append(header);
     if (projection.items.length === 0) {
-      const empty = element(this.#root.ownerDocument, "p", "spiral-day-planner__status-message");
-      empty.textContent = this.#messages.t("planner", "status.emptyPlan");
+      const empty = element(this.#root.ownerDocument, "div", "spiral-day-planner__empty-plan");
+      renderEmptyPlanGuidance(empty, this.#messages);
       this.#content.append(empty);
     }
 

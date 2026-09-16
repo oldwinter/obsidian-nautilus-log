@@ -160,5 +160,8 @@ test("Plan confirmed empty region tells the user to add a list item", () => {
       projection: { items: [], schedule: { fixedEvents: [], plannedSlots: [] } },
     } as PlanViewOptions["snapshot"],
   });
-  assert.match(collectText(root).join("\n"), /The Primary Plan has no list items yet/);
+  const text = collectText(root).join("\n");
+  assert.match(text, /This Primary Plan has no list items/);
+  assert.match(text, /Copy sample task/);
+  assert.match(text, /- \[ \] Write the release note 45m/);
 });

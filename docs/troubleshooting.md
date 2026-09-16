@@ -77,7 +77,7 @@ choose **Review**. It compares planned and recorded time for a chosen date.
 2. If the note has no Primary Plan, use **Insert into today's Daily Note** when
    the selected date is today, or paste the plan starter (markers plus a
    sample task), then refresh Review. If the note already has markers but no
-   list items, add a direct `- [ ]` task between them.
+   list items, use **Copy sample task** and paste that line between them.
 3. **Only completed overruns** hides other rows. The day summary still covers
    the whole day.
 

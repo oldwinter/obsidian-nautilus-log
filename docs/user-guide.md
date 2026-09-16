@@ -104,9 +104,10 @@ Rules that matter on day one:
   **Flexible Task** that the scheduler places into free time.
 - Tokens are read only from the first physical line of each item.
 
-If Planner is still empty, it now shows the markers plus a sample task,
-**Copy plan starter**, **Insert into today's Daily Note**, and where to open
-Timing / Plan / Review after you enable Execution.
+If the markers are missing, Planner shows the plan starter, **Copy plan
+starter**, **Insert into today's Daily Note**, and where to open Timing / Plan
+/ Review after you enable Execution. If the markers are there but the list is
+empty, it shows **Copy sample task** instead of Insert.
 
 ![Planner empty-state guidance](user-guide/images/05-planner-empty-guidance.png)
 
@@ -280,7 +281,7 @@ Start with the in-plugin empty states, then see
 | Symptom | Fix |
 | --- | --- |
 | Planner says No Primary Plan | Click **Insert into today's Daily Note**, or paste the plan starter at column zero, save, refresh. |
-| Planner or Review looks empty after paste | The note has markers but no list items. Add a direct `- [ ]` task between them, save, refresh. |
+| Planner or Review looks empty after paste | The note has markers but no list items. Use **Copy sample task**, paste that line between the markers, save, refresh. |
 | Ribbon is the only new control | Expected until Execution Layer is on. |
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |

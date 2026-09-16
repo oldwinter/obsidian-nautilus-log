@@ -1,6 +1,7 @@
 import type { LogicalDate } from "../../core/day";
 import type { ReviewCoordinatorSnapshot } from "../../runtime/review/coordinator";
 import type { ExecutionApplicationSnapshot } from "../../runtime/execution/application";
+import { appendCopySampleAction } from "../onboarding/first-run";
 import { ReviewRowView, reviewDuration, reviewVariance, type ReviewMessages, type ReviewRowAction } from "./review-row";
 
 export interface ReviewViewActions {
@@ -128,7 +129,7 @@ export class ReviewView {
         ? review.reason === "history-over-limit" ? "state.overLimit" : "state.unavailable"
         : review.state === "ready" ? "state.stale" : "state.loading");
       this.#status.hidden = false;
-      this.#setInsertGuidance(false, "", messages, pending);
+      this.#setInsertGuidance(false, false, "", messages, pending);
       return;
     }
     this.#selectedDate = review.displayedDate;
@@ -151,13 +152,19 @@ export class ReviewView {
       : !hasRows ? messages.t("review", emptyMessage)
       : !writableDate ? messages.t("review", "state.readOnlyDate") : "";
     this.#status.hidden = this.#status.textContent === "";
+    const showInsert = Boolean(this.#actions.insertPrimaryPlan)
+      && writableDate
+      && !hasRows
+      && !input.error
+      && (review.availability === "missing-plan" || review.availability === "missing-note");
+    const showCopySample = writableDate
+      && !hasRows
+      && !input.error
+      && review.availability === "ready";
     this.#setInsertGuidance(
-      Boolean(this.#actions.insertPrimaryPlan)
-        && writableDate
-        && !hasRows
-        && !input.error
-        && (review.availability === "missing-plan" || review.availability === "missing-note"),
-      `${review.availability}:${messages.locale}`,
+      showInsert,
+      showCopySample,
+      `${review.availability}:${messages.locale}:${showInsert ? "insert" : showCopySample ? "sample" : ""}`,
       messages,
       pending,
     );
@@ -192,16 +199,18 @@ export class ReviewView {
   }
 
   #setInsertGuidance(
-    visible: boolean,
+    insertVisible: boolean,
+    copySampleVisible: boolean,
     key: string,
     messages: ReviewMessages,
     pending: boolean,
   ): void {
+    const visible = insertVisible || copySampleVisible;
     const guidanceKey = visible ? key : "";
     if (this.#guidanceKey !== guidanceKey) {
       this.#guidanceKey = guidanceKey;
       this.#guidance.replaceChildren();
-      if (visible) {
+      if (insertVisible) {
         const insert = this.#root.ownerDocument.createElement("button");
         insert.type = "button";
         insert.className = "spiral-day-review__insert-plan";
@@ -211,11 +220,13 @@ export class ReviewView {
           void this.#actions.insertPrimaryPlan?.();
         });
         this.#guidance.append(insert);
+      } else if (copySampleVisible) {
+        appendCopySampleAction(this.#guidance, messages);
       }
     }
     this.#guidance.hidden = !visible;
-    const insert = this.#guidance.querySelector("button");
-    if (insert) insert.disabled = pending;
+    const insert = this.#guidance.querySelector(".spiral-day-review__insert-plan");
+    if (insert instanceof HTMLButtonElement) insert.disabled = pending;
   }
 
   #focusRow(rows: readonly ReviewRowView[], preferredIndex: number): boolean {

@@ -9,7 +9,7 @@ import type {
   ExecutionApplicationSnapshot,
   ExecutionTargetReference,
 } from "../../runtime/execution/application";
-import { renderPlanMissingGuidance } from "../onboarding/first-run";
+import { renderEmptyPlanGuidance, renderPlanMissingGuidance } from "../onboarding/first-run";
 import {
   executionElement,
   executionIconButton,
@@ -220,12 +220,15 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);
   }
   if (intervals.length === 0) {
-    const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
-    empty.textContent = options.messages.t(
-      "execution",
-      projection.items.length === 0 ? "plan.emptyReady" : "plan.noTasks",
-    );
-    scheduled.append(empty);
+    if (projection.items.length === 0) {
+      const empty = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty-plan");
+      renderEmptyPlanGuidance(empty, options.messages);
+      scheduled.append(empty);
+    } else {
+      const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
+      empty.textContent = options.messages.t("execution", "plan.noTasks");
+      scheduled.append(empty);
+    }
   } else scheduled.append(list);
 
   const unscheduledItems = projection.items.filter((item) =>
