@@ -246,7 +246,9 @@ In opens this view.
 These exist only while Execution Layer is enabled:
 
 - `Spiral Day: 1. Focus current block` — Clock In the unfinished task under
-  the caret.
+  the caret. If no Markdown note is focused, or the caret is not on an open
+  `- [ ]` flexible task, the notice points to today's Daily Note or **Clock
+  In** on the Plan tab.
 - `Spiral Day: 2. Clock out Timing Line`
 - `Spiral Day: 3. Locate Primary Plan` — opens today's Daily Note even when
   the Primary Plan is missing. If the note does not exist, a notice points to
