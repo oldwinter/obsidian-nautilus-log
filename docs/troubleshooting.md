@@ -115,7 +115,10 @@ time for a chosen date.
    sample task), then refresh Review. If the note already has markers but no
    reviewable `- [ ]` or `- [x]` task — including a day of only fixed events —
    use **Copy sample task**. The notice does not say the plan has no list items.
-3. **Only completed overruns** hides other rows. The day summary still covers
+3. If the Primary Plan markers are invalid, Review does not offer Insert.
+   Use **Locate Primary Plan** when the date is today, then repair the
+   existing markers. Do not insert another pair.
+4. **Only completed overruns** hides other rows. The day summary still covers
    the whole day.
 
 ## A write says the source changed, is stale, or is unavailable

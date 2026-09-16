@@ -24,7 +24,7 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "state.loading": "正在加载回顾…",
   "state.missingNote": "这一天还没有日记。如果是今天，请点「写入今日日记」。或按 设置 → 日记文件夹和日期格式 创建对应笔记。",
   "state.missingPlan": "这篇日记中没有主计划。如果是今天，请点「写入今日日记」。或在行首加上 `<!-- nautilus-log:plan/v1 -->` 和 `<!-- /nautilus-log:plan -->`，然后保存。",
-  "state.invalidPlan": "主计划标记无效，请检查日记内容。",
+  "state.invalidPlan": "主计划标记无效。如果是今天，请用「定位主计划」打开日记。请先修好现有标记，不要再插入一对。",
   "state.readOnlyDate": "过去和未来的日期仅供查看，请选择今天来操作任务。",
   "state.unavailable": "暂时无法读取历史记录，请刷新重试。",
   "state.overLimit": "历史记录超出支持的上限，未显示不完整的统计。",
