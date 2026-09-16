@@ -209,9 +209,13 @@ test("Daily Note settings describe the Insert path in both locales", () => {
   assert.equal(zhCNExecution["settings.onboardingDetail"].includes("这份清单仍会留在这里"), false);
   assert.match(enExecution["settings.onboardingExecution"], /Enable Execution Layer below/);
   assert.match(enExecution["settings.onboardingExecutionOn"], /Execution Layer is on/);
+  assert.match(enExecution["settings.onboardingExecutionOn"], /left ribbon button Execution/);
+  assert.equal(enExecution["settings.onboardingExecutionOn"].includes("timer ribbon"), false);
   assert.equal(enExecution["settings.onboardingExecutionOn"].includes("Enable Execution Layer below"), false);
   assert.match(zhCNExecution["settings.onboardingExecution"], /在下方启用执行层/);
   assert.match(zhCNExecution["settings.onboardingExecutionOn"], /执行层已启用/);
+  assert.match(zhCNExecution["settings.onboardingExecutionOn"], /「执行」/);
+  assert.equal(zhCNExecution["settings.onboardingExecutionOn"].includes("计时功能区"), false);
   assert.equal(zhCNExecution["settings.onboardingExecutionOn"].includes("在下方启用执行层"), false);
 });
 

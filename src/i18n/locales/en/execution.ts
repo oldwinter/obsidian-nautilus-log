@@ -209,7 +209,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingDetail": "Planner reads only today's configured Daily Note and the nautilus-log:plan/v1 region. If you see No Primary Plan, click Insert into today's Daily Note. After a plan exists, this explanation stays and Insert hides.",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
-  "settings.onboardingExecutionOn": "Execution Layer is on. Use the timer ribbon for Timing, Plan, and Review, and the right sidebar for the Active Task.",
+  "settings.onboardingExecutionOn": "Execution Layer is on. Use the left ribbon button Execution for Timing, Plan, and Review, and the right sidebar for the Active Task.",
   "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner or Settings, or paste the plan starter (markers plus a sample task).",
   "notice.firstRunExecution": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, the Plan tab, or Review (today), or paste the plan starter (markers plus a sample task).",
   "notice.applied": "Change confirmed.",
