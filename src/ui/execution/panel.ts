@@ -45,6 +45,7 @@ export interface ExecutionPanelPort {
   ) => void | Promise<void>;
   readonly subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => () => void;
   readonly createReviewSurface?: (root: HTMLElement) => ExecutionReviewSurface;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
 export interface ExecutionPanelOptions {
@@ -364,6 +365,9 @@ export function mountExecutionPanel(
       renderIcon: options.renderIcon,
       dispatch,
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
+      ...(port.insertPrimaryPlan
+        ? { insertPrimaryPlan: () => void Promise.resolve(port.insertPrimaryPlan?.()).catch(options.onError) }
+        : {}),
     });
     if (review) review.render(reviewPanel, opened && tabs.active === "review");
     else {

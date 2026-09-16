@@ -191,7 +191,10 @@ function settingsScene(executionOn: boolean) {
   }
   const markers = el("pre", "spiral-day-onboarding__markers");
   markers.append(el("code", undefined, PRIMARY_PLAN_MARKERS));
-  card.append(steps, markers, el("p", undefined, messages.t("execution", "settings.onboardingExecution")));
+  const actions = el("div", "spiral-day-onboarding__actions");
+  actions.append(el("button", "spiral-day-onboarding__copy", messages.t("planner", "status.missingCopyMarkers")));
+  actions.append(el("button", "spiral-day-onboarding__insert", messages.t("planner", "status.missingInsert")));
+  card.append(steps, markers, actions, el("p", undefined, messages.t("execution", "settings.onboardingExecution")));
   const rows = el("div", "settings-card");
   rows.append(card);
   const row = el("div", "setting-row");

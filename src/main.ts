@@ -18,6 +18,10 @@ import { ExecutionCommandRegistry } from "./adapters/commands";
 import { createLoadedMarkdownEditorResolver } from "./adapters/editor-buffer";
 import { registerExecutionEditorMenu } from "./adapters/editor-menu";
 import { ExecutionEntryAdapter } from "./adapters/execution-entry";
+import {
+  insertPrimaryPlan,
+  insertPrimaryPlanNoticeKey,
+} from "./adapters/insert-primary-plan";
 import { executionOutcomeNotice, showExecutionNotice } from "./adapters/notices";
 import { copyPlannerSummary } from "./adapters/plan-summary";
 import {
@@ -202,6 +206,7 @@ export default class SpiralDayPlugin extends Plugin {
   #executionEntry: ExecutionEntryAdapter | undefined;
   #commands: ExecutionCommandRegistry | undefined;
   #executionUnsubscribe: Unsubscribe | undefined;
+  #editorForPath: ((path: string) => { getValue(): string; setValue?(value: string): void } | undefined) | undefined;
   #planConnection: ReturnType<NautilusProjectionRuntime["connect"]> | undefined;
   #planSnapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined;
   readonly #planListeners = new Set<(snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void>();
@@ -213,6 +218,7 @@ export default class SpiralDayPlugin extends Plugin {
   override async onload(): Promise<void> {
     this.#textAccess = new ObsidianVaultTextAccess(this);
     const editorResolver = createLoadedMarkdownEditorResolver(this.app.workspace);
+    this.#editorForPath = editorResolver.editorForPath;
     this.registerEvent(this.app.workspace.on("file-open", editorResolver.onFileOpen));
     this.#atomicAccess = new ObsidianAtomicTextAccess({
       text: this.#textAccess,
@@ -299,6 +305,7 @@ export default class SpiralDayPlugin extends Plugin {
       runtime: this.#projectionRuntime,
       defaultLogicalDate: () => logicalDateAt(this.#requireClock()),
       copySummary: (summary) => copyPlannerSummary({ summary }),
+      insertPrimaryPlan: () => this.#insertPrimaryPlan(),
       dispatchPlannerProgress: (intent) => this.#dispatchPlannerProgress(intent),
       locale: () => this.#requireMessages().locale,
       subscribeLocale: (listener) => this.#requireMessages().subscribe(listener),
@@ -353,6 +360,7 @@ export default class SpiralDayPlugin extends Plugin {
         : this.#deactivateExecution(),
       onLocaleChanged: () => this.#onLocaleChanged(),
       onExecutionChanged: () => undefined,
+      insertPrimaryPlan: () => this.#insertPrimaryPlan(),
       onError: (error) => this.#reportError(error),
     }));
     registerExecutionEditorMenu({
@@ -439,6 +447,7 @@ export default class SpiralDayPlugin extends Plugin {
         },
         subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => this.#subscribeRecent(listener),
         createReviewSurface: (root: HTMLElement) => this.#requireReviewPort().createSurface(root),
+        insertPrimaryPlan: () => this.#insertPrimaryPlan(),
       } as const;
       this.#executionEntry = new ExecutionEntryAdapter({
         plugin: this,
@@ -817,6 +826,29 @@ export default class SpiralDayPlugin extends Plugin {
           ? "source-task-missing"
           : identity.reason,
     });
+  }
+
+  async #insertPrimaryPlan(): Promise<void> {
+    const pluginData = this.#pluginData;
+    const clock = this.#clock;
+    const messages = this.#messages;
+    if (!pluginData || !clock || !messages) return;
+    try {
+      const outcome = await insertPrimaryPlan({
+        app: this.app,
+        locale: () => messages.locale,
+        today: () => logicalDateAt(clock),
+        configuration: () => ({
+          folder: pluginData.data.settings.dailyNoteFolder,
+          format: pluginData.data.settings.dailyNoteFormat,
+        }),
+        editorForPath: (path) => this.#editorForPath?.(path),
+      });
+      new Notice(messages.t("planner", insertPrimaryPlanNoticeKey(outcome)), 6_000);
+    } catch (error) {
+      new Notice(messages.t("planner", "status.missingInsertFailed"), 6_000);
+      this.#reportError(error);
+    }
   }
 
   #primaryPath(): string | null {

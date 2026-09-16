@@ -1,9 +1,12 @@
 # Troubleshooting
 
-## The planner says “No supported Plan Region was found”
+## The planner says “No Primary Plan”
 
-The Planner and Settings first-run checklist now show the exact next step,
-including the two HTML markers. The plugin does not rewrite your note.
+The Planner, Plan tab, and Settings first-run checklist show the next step,
+including the two HTML markers. Opening a surface does not rewrite your note.
+**Insert into today's Daily Note** writes only after you click it. It creates
+today's configured Daily Note when needed and refuses to insert when a valid or
+malformed Plan Region is already present.
 
 Check the Daily Note path first:
 
@@ -63,11 +66,18 @@ Enable **Execution Layer** in the settings tab. If activation fails, the plugin
 rolls the setting back off and leaves execution surfaces disabled. Check the
 notice, correct the reported source or timing problem, then enable it again.
 
-## Review shows a preparation notice
+## Review is empty or missing a Daily Note
 
-The Review tab is present as an integration placeholder while its coordinator
-is being connected to the rendered surface. Use the Timing tab for current and
-recent timing details. Planner and Plan actions remain available.
+Review is a live surface. Enable **Execution Layer**, open the timer ribbon, and
+choose **Review**. It compares planned and recorded time for a chosen date.
+
+1. If the date has no Daily Note, create the note that matches **Settings →
+   Daily Note folder** and date format, or use **Insert into today's Daily
+   Note** when the date is today.
+2. If the note has no Primary Plan, insert or paste the two HTML markers, then
+   refresh Review.
+3. **Only completed overruns** hides other rows. The day summary still covers
+   the whole day.
 
 ## A write says the source changed, is stale, or is unavailable
 

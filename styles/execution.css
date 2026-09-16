@@ -216,8 +216,13 @@
   white-space: pre;
 }
 
-.spiral-day-execution__empty .spiral-day-onboarding__copy {
+.spiral-day-execution__empty .spiral-day-onboarding__actions {
   margin-top: 8px;
+}
+
+.spiral-day-execution__empty .spiral-day-onboarding__copy,
+.spiral-day-execution__empty .spiral-day-onboarding__insert {
+  margin-top: 0;
 }
 
 .spiral-day-execution__empty .spiral-day-onboarding__next {

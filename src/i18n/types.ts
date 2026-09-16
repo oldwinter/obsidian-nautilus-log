@@ -107,6 +107,13 @@ export type PlannerCatalog = Readonly<{
   "status.missingStepRefresh": string;
   "status.missingCopyMarkers": string;
   "status.missingCopied": string;
+  "status.missingCopyFailed": string;
+  "status.missingInsert": string;
+  "status.missingInserted": string;
+  "status.missingInsertFailed": string;
+  "status.missingAlreadyPresent": string;
+  "status.missingInsertBlocked": string;
+  "status.missingInvalidPath": string;
   "status.missingNextSurfaces": string;
   "status.overLimitDetail": MessageFunction<{ actual: number; kind: PlannerLimitKind; limit: number }>;
   "status.overLimitUnknownDetail": MessageFunction<{ actual: number; limit: number }>;

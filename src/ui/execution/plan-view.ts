@@ -33,6 +33,7 @@ export interface PlanViewOptions {
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
   ) => void;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
 function clockMinute(minutes: number): string {
@@ -184,7 +185,11 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       options.messages.t("execution", "plan.noPrimaryDetail"),
     );
     const empty = root.querySelector<HTMLElement>(".spiral-day-execution__empty");
-    if (empty) renderPlanMissingGuidance(empty, options.messages);
+    if (empty) {
+      renderPlanMissingGuidance(empty, options.messages, {
+        ...(options.insertPrimaryPlan ? { onInsertPrimaryPlan: options.insertPrimaryPlan } : {}),
+      });
+    }
     return;
   }
   if (snapshot.state !== "confirmed") {
