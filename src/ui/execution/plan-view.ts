@@ -9,7 +9,11 @@ import type {
   ExecutionApplicationSnapshot,
   ExecutionTargetReference,
 } from "../../runtime/execution/application";
-import { renderEmptyPlanGuidance, renderPlanMissingGuidance } from "../onboarding/first-run";
+import {
+  appendCopySampleAction,
+  renderEmptyPlanGuidance,
+  renderPlanMissingGuidance,
+} from "../onboarding/first-run";
 import {
   executionElement,
   executionIconButton,
@@ -225,8 +229,11 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       renderEmptyPlanGuidance(empty, options.messages);
       scheduled.append(empty);
     } else {
-      const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
-      empty.textContent = options.messages.t("execution", "plan.noTasks");
+      const empty = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty-plan");
+      const detail = executionElement(root.ownerDocument, "p");
+      detail.textContent = options.messages.t("execution", "plan.noTasks");
+      empty.append(detail);
+      appendCopySampleAction(empty, options.messages);
       scheduled.append(empty);
     }
   } else scheduled.append(list);

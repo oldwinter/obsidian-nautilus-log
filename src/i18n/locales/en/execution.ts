@@ -156,7 +156,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",
-  "plan.noTasks": "No unfinished direct tasks are available.",
+  "plan.noTasks": "No unfinished direct tasks are available. Add a direct `- [ ]` flexible task between the markers, then save.",
   "plan.noUnscheduled": "Every open flexible task is already on the schedule.",
   "plan.emptyReady": "The Primary Plan has no list items yet. Add a direct `- [ ]` task between the markers, then save.",
   "plan.loading": "Refreshing today's plan.",

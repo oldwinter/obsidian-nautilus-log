@@ -211,7 +211,9 @@ Plan.
 If the tab says **No Primary Plan was found today**, use **Insert into today's
 Daily Note** or the same marker checklist. An empty **Unscheduled today**
 list means every open flexible task is already on the schedule, not that
-there are no unfinished tasks.
+there are no unfinished tasks. If scheduled is empty because every item is
+done or not clockable, it offers **Copy sample task** so you can add another
+open `- [ ]` line.
 
 ### Review
 
