@@ -114,6 +114,7 @@ export type PlannerCatalog = Readonly<{
   "status.missingAlreadyPresent": string;
   "status.missingInsertBlocked": string;
   "status.missingInvalidPath": string;
+  "status.missingFolderConflict": string;
   "status.missingNextSurfaces": string;
   "status.emptyPlan": string;
   "status.emptyCopySample": string;
