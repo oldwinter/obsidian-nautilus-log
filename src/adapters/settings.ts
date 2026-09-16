@@ -17,6 +17,7 @@ import type { RuntimePlanProjection } from "../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../runtime/snapshots";
 import {
   settingsOnboardingChanged,
+  settingsOnboardingExecutionKey,
   settingsOnboardingKind,
   type SettingsOnboardingKind,
 } from "./settings-onboarding";
@@ -189,7 +190,10 @@ export class SpiralDaySettingTab extends PluginSettingTab {
       });
     }
     const execution = container.ownerDocument.createElement("p");
-    execution.textContent = this.#dependencies.messages.t("execution", "settings.onboardingExecution");
+    execution.textContent = this.#dependencies.messages.t(
+      "execution",
+      settingsOnboardingExecutionKey(this.#dependencies.settings().executionEnabled),
+    );
     card.append(execution);
     container.append(card);
   }

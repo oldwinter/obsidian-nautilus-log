@@ -144,7 +144,8 @@ A typical day:
 explanation stays at the top. It is instructional, not a live Planner diagnosis.
 After a Primary Plan exists, Settings keeps the explanation but hides
 **Insert into today's Daily Note**. An empty ready plan offers **Copy sample
-task** instead.
+task** instead. After Execution Layer is on, the card says it is on and
+points to the timer ribbon instead of asking you to enable it.
 
 Important fields for getting started:
 
