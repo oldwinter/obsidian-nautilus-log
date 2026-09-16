@@ -345,7 +345,7 @@ try {
       ["empty", "No reviewable `- [ ]` or `- [x]` tasks today. Use Copy sample task and paste an open `- [ ]` flexible task between the markers, then save and refresh."],
       ["missing-note", "No Daily Note exists for this date. If this is today, use Insert into today's Daily Note. Or create the note that matches Settings → Daily Note folder and date format."],
       ["missing-plan", "This Daily Note has no Primary Plan. If this is today, use Insert into today's Daily Note. Or add `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero, then save."],
-      ["invalid-plan", "The Primary Plan markers are invalid. Check the Daily Note."],
+      ["invalid-plan", "The Primary Plan markers are invalid. If this is today, use Locate Primary Plan to open the note. Repair the existing markers instead of inserting another pair."],
     ];
     for (const [mode, expectedStatus] of variants) {
       await open(mode);

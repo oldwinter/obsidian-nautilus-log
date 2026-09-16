@@ -70,6 +70,12 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNReview["state.emptyPlan"], /可回顾/);
   assert.match(zhCNReview["state.emptyPlan"], /复制示例任务/);
   assert.equal(zhCNReview["state.emptyPlan"].includes("还没有列表项"), false);
+  assert.match(enReview["state.invalidPlan"], /Locate Primary Plan/);
+  assert.match(enReview["state.invalidPlan"], /Repair the existing markers/);
+  assert.equal(enReview["state.invalidPlan"].includes("Check the Daily Note"), false);
+  assert.match(zhCNReview["state.invalidPlan"], /定位主计划/);
+  assert.match(zhCNReview["state.invalidPlan"], /修好现有标记/);
+  assert.equal(zhCNReview["state.invalidPlan"].includes("请检查日记内容"), false);
   assert.match(enExecution["plan.emptyReady"], /no list items/);
   assert.match(enExecution["plan.emptyReady"], /Copy sample task/);
   assert.match(zhCNExecution["plan.emptyReady"], /还没有列表项/);

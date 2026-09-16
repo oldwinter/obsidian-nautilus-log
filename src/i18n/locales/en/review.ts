@@ -62,7 +62,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "state.loading": "Loading review…",
   "state.missingNote": "No Daily Note exists for this date. If this is today, use Insert into today's Daily Note. Or create the note that matches Settings → Daily Note folder and date format.",
   "state.missingPlan": "This Daily Note has no Primary Plan. If this is today, use Insert into today's Daily Note. Or add `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero, then save.",
-  "state.invalidPlan": "The Primary Plan markers are invalid. Check the Daily Note.",
+  "state.invalidPlan": "The Primary Plan markers are invalid. If this is today, use Locate Primary Plan to open the note. Repair the existing markers instead of inserting another pair.",
   "state.readOnlyDate": "Past and future dates are read-only. Choose Today to change tasks.",
   "state.unavailable": "Review history is unavailable. Refresh to try again.",
   "state.overLimit": "History exceeds the supported limit. No partial totals are shown.",
