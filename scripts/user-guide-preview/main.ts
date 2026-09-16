@@ -331,6 +331,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
       refresh() {},
       setOnlyOverruns() {},
       activate() {},
+      insertPrimaryPlan: () => undefined,
     });
     const review = {
       state: "ready",

@@ -305,6 +305,9 @@ const port = createReviewEntryPort({
       publishReview();
     }
   },
+  async insertPrimaryPlan() {
+    stats.planMutations += 1;
+  },
   async refresh() {
     stats.refreshes += 1;
     if (completeTargetOnRefresh) {

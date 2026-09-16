@@ -16,6 +16,8 @@
 .spiral-day-review__summary { margin-block: 12px; font-size: var(--font-ui-small); }
 .spiral-day-review__summary p { margin-block: 4px; overflow-wrap: anywhere; }
 .spiral-day-review__summary p:first-child { font-weight: var(--font-semibold); }
+.spiral-day-review__guidance { margin-block: 8px 0; }
+.spiral-day-review__insert-plan { min-height: 30px; }
 .spiral-day-review__status, .spiral-day-review__filter-status, .spiral-day-review__warning {
   color: var(--text-muted);
   font-size: var(--font-ui-small);

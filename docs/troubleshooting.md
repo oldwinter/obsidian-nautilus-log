@@ -74,8 +74,9 @@ choose **Review**. It compares planned and recorded time for a chosen date.
 1. If the date has no Daily Note, create the note that matches **Settings →
    Daily Note folder** and date format, or use **Insert into today's Daily
    Note** when the date is today.
-2. If the note has no Primary Plan, insert or paste the two HTML markers, then
-   refresh Review.
+2. If the note has no Primary Plan, use **Insert into today's Daily Note** when
+   the selected date is today, or paste the two HTML markers, then refresh
+   Review.
 3. **Only completed overruns** hides other rows. The day summary still covers
    the whole day.
 
