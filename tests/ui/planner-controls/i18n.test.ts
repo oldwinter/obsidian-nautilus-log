@@ -133,7 +133,11 @@ test("TC-OBS-I18N-001-001 every over-limit kind is localized without leaking int
 test("missing-plan copy offers an explicit insert without rewriting on open", () => {
   assert.match(enPlanner["status.missingInsert"], /Insert into today's Daily Note/);
   assert.match(enPlanner["status.missingDetail"], /Opening Planner does not rewrite/);
+  assert.match(enPlanner["status.missingStepNote"], /^Click Insert into today's Daily Note/);
+  assert.match(enPlanner["status.missingStepMarkers"], /^Or paste these two markers/);
   assert.match(zhCNPlanner["status.missingInsert"], /写入今日日记/);
+  assert.match(zhCNPlanner["status.missingStepNote"], /^点「写入今日日记」/);
+  assert.match(zhCNPlanner["status.missingStepMarkers"], /^或者把下面两个标记/);
   assert.match(zhCNPlanner["status.missingStepRefresh"], /刷新日程/);
 });
 

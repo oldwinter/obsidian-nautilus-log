@@ -77,6 +77,8 @@ test("missing-plan guidance copies markers and inserts only after an explicit cl
   });
   const text = collect(root).join("\n");
   assert.match(text, /Insert into today's Daily Note/);
+  assert.match(text, /creates today's note if needed/);
+  assert.match(text, /Or paste these two markers/);
   assert.equal(text.includes(PRIMARY_PLAN_MARKERS), true);
   assert.equal(inserted, 0);
 

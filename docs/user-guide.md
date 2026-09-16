@@ -63,11 +63,11 @@ write the markers plus a sample task.
 1. Open **Settings → Spiral Day**. Leave defaults for the first day, or set
    **Daily Note folder** and **Daily Note date format** so they resolve the
    note you already use.
-2. Create today's Daily Note. Default: `YYYY-MM-DD.md` at the vault root.
-3. Click **Insert into today's Daily Note**, or paste the two markers and add
-   direct list items between them.
-4. Click the **Open Spiral Day** ribbon icon.
-5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan,
+2. Click **Insert into today's Daily Note**. It creates today's note if needed
+   (default `YYYY-MM-DD.md` at the vault root) and writes the markers plus a
+   sample task. Or create the note yourself and paste the two markers.
+3. Click the **Open Spiral Day** ribbon icon.
+4. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan,
    Review, Active Task, and commands.
 
 ![Open Planner from the ribbon](user-guide/images/03-open-planner-ribbon.png)
