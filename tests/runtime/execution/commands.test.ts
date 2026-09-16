@@ -292,6 +292,19 @@ test("an idle Clock Out no-op keeps already-applied and names already-idle", asy
   assert.equal(runtime.committer.attempts.length, 0);
 });
 
+test("an already-focused Clock In no-op keeps already-applied and names already-focused", async () => {
+  const runtime = harness({ states: [active(), active(undefined, undefined, undefined, 2)] });
+  await runtime.coordinator.start();
+  const outcome = await runtime.coordinator.dispatchMutation({
+    intentId: "already-focused",
+    action: "clock-in",
+    prepare: () => ({ kind: "confirmed-no-op", reason: "already-focused" }),
+  });
+  assert.equal(outcome.outcome, "already-applied");
+  assert.equal(outcome.code, "already-focused");
+  assert.equal(runtime.committer.attempts.length, 0);
+});
+
 test("a confirmed no-op stays inside the FIFO and never enters the committer", async () => {
   const runtime = harness({ states: [active(), active(undefined, undefined, undefined, 2)] });
   await runtime.coordinator.start();

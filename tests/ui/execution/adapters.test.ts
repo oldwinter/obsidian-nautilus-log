@@ -173,3 +173,18 @@ test("idle Clock Out already-applied names Clock In on the Plan tab", () => {
   assert.equal(notice.message, "notice.clockOutIdle");
   assert.equal(notice.level, "warning");
 });
+
+test("already-focused Clock In already-applied names Clock Out on the Plan tab", () => {
+  const messages = {
+    t(_namespace: string, key: string) { return key; },
+  } as never;
+  const notice = executionOutcomeNotice({
+    intentId: "clock-in-focused",
+    outcome: "already-applied",
+    snapshot: {} as never,
+    code: "already-focused",
+    pluginDataWarning: false,
+  }, messages);
+  assert.equal(notice.message, "notice.clockInFocused");
+  assert.equal(notice.level, "info");
+});
