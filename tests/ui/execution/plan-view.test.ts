@@ -139,3 +139,26 @@ test("Plan missing state shows the Primary Plan markers and next actions", () =>
   assert.match(text, /nautilus-log:plan\/v1/);
   assert.equal(text.includes(primaryPlanSeed("en")), true);
 });
+
+test("Plan confirmed empty region tells the user to add a list item", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: { items: [], schedule: { fixedEvents: [], plannedSlots: [] } },
+    } as PlanViewOptions["snapshot"],
+  });
+  assert.match(collectText(root).join("\n"), /The Primary Plan has no list items yet/);
+});

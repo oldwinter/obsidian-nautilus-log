@@ -20,6 +20,7 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "state.not-tracked": "未记录用时",
   "state.compared": "已比较",
   "state.empty": "这一天没有可回顾的任务。",
+  "state.emptyPlan": "主计划里还没有列表项。请在标记之间写入一行 `- [ ] 写发布说明 45m`，然后保存并刷新。",
   "state.loading": "正在加载回顾…",
   "state.missingNote": "这一天还没有日记。如果是今天，请点「写入今日日记」。或按 设置 → 日记文件夹和日期格式 创建对应笔记。",
   "state.missingPlan": "这篇日记中没有主计划。如果是今天，请点「写入今日日记」。或在行首加上 `<!-- nautilus-log:plan/v1 -->` 和 `<!-- /nautilus-log:plan -->`，然后保存。",

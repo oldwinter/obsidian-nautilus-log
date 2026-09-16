@@ -143,7 +143,8 @@ export class ReviewView {
     const writableDate = dateValue(review.displayedDate) === dateValue(this.#actions.today());
     const emptyMessage = review.availability === "missing-note" ? "state.missingNote"
       : review.availability === "missing-plan" ? "state.missingPlan"
-      : review.availability === "invalid-plan" ? "state.invalidPlan" : "state.empty";
+      : review.availability === "invalid-plan" ? "state.invalidPlan"
+      : writableDate ? "state.emptyPlan" : "state.empty";
     this.#status.textContent = input.error ? messages.t("review", "action.failed")
       : pending || execution.status === "working" ? messages.t("review", "state.working")
       : !enabled ? messages.t("review", "state.stale")

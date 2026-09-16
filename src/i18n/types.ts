@@ -115,6 +115,7 @@ export type PlannerCatalog = Readonly<{
   "status.missingInsertBlocked": string;
   "status.missingInvalidPath": string;
   "status.missingNextSurfaces": string;
+  "status.emptyPlan": string;
   "ribbon.openPlanner": string;
   "status.overLimitDetail": MessageFunction<{ actual: number; kind: PlannerLimitKind; limit: number }>;
   "status.overLimitUnknownDetail": MessageFunction<{ actual: number; limit: number }>;
