@@ -28,7 +28,8 @@ export type ExecutionRuntimeCode =
   | "repair-confirmation-required"
   | "runtime-not-started"
   | "runtime-stopping"
-  | "time-review-required";
+  | "time-review-required"
+  | "already-idle";
 
 export type ExecutionRuntimeStatus =
   | "starting"
@@ -69,7 +70,7 @@ export interface ExecutionCommandContext {
 
 export type ExecutionMutationPreparation =
   | { readonly kind: "prepared"; readonly mutation: PreparedExecutionMutation }
-  | { readonly kind: "confirmed-no-op" }
+  | { readonly kind: "confirmed-no-op"; readonly reason?: "already-focused" | "already-idle" }
   | { readonly kind: "rejected"; readonly code: WriteResultCode };
 
 export interface ExecutionMutationIntent {
@@ -547,6 +548,8 @@ export class ExecutionCoordinator {
         intent.intentId,
         "already-applied",
         this.#setSnapshot("ready", confirmed),
+        undefined,
+        prepared.reason === "already-idle" ? "already-idle" : undefined,
       );
     }
     const { plan, expectation } = prepared.mutation;

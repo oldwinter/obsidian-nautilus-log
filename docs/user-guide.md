@@ -249,7 +249,8 @@ These exist only while Execution Layer is enabled:
   the caret. If no Markdown note is focused, or the caret is not on an open
   `- [ ]` flexible task, the notice points to today's Daily Note or **Clock
   In** on the Plan tab.
-- `Spiral Day: 2. Clock out Timing Line`
+- `Spiral Day: 2. Clock out Timing Line` — if nothing is being timed, the
+  notice says so and points to **Clock In** on the Plan tab.
 - `Spiral Day: 3. Locate Primary Plan` — opens today's Daily Note even when
   the Primary Plan is missing. If the note does not exist, a notice points to
   **Insert into today's Daily Note**.

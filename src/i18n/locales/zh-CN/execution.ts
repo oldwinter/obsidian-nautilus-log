@@ -82,6 +82,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.firstRunExecution": "还没有主计划。可在规划器、设置、「计划」标签或回顾（今天）里点「写入今日日记」，或自行粘贴计划模板（标记加示例任务）。",
   "notice.applied": "更改已确认。",
   "notice.alreadyApplied": "已经是最新状态。",
+  "notice.clockOutIdle": "当前没有计时任务。请在「计划」标签点「开始计时」。",
   "notice.refreshed": "计时数据已刷新。",
   "notice.taskLinkCopied": "当前任务链接已复制。",
   "notice.failed": "更改未应用。",

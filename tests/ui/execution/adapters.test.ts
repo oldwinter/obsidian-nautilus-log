@@ -158,3 +158,18 @@ test("UP-ERR-05/06 maps runtime failures to specific localized feedback", () => 
   assert.equal(executionOutcomeNotice(outcome("source-over-limit"), messages).message, "error.refresh");
   assert.equal(executionOutcomeNotice(outcome("multiple-running-clocks"), messages).message, "error.overlap");
 });
+
+test("idle Clock Out already-applied names Clock In on the Plan tab", () => {
+  const messages = {
+    t(_namespace: string, key: string) { return key; },
+  } as never;
+  const notice = executionOutcomeNotice({
+    intentId: "clock-out-idle",
+    outcome: "already-applied",
+    snapshot: {} as never,
+    code: "already-idle",
+    pluginDataWarning: false,
+  }, messages);
+  assert.equal(notice.message, "notice.clockOutIdle");
+  assert.equal(notice.level, "warning");
+});
