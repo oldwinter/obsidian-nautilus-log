@@ -195,7 +195,8 @@ Enable Execution Layer, then click the timer ribbon. The panel opens on
 - Recent: closed CLOCKs kept for the configured retention window.
 
 A POMO threshold only changes warning styling. It does not stop the timer.
-Forgotten is a warning, not an automatic Clock Out. If Timing is unavailable,
+Forgotten is a warning, not an automatic Clock Out. The Timing warning now
+names **Clock out**. If Timing is unavailable,
 save the note and use **Try again** on this tab.
 
 ### Plan
@@ -336,6 +337,7 @@ Start with the in-plugin empty states, then see
 | Clock In says plugin settings could not be saved | Retry Clock In, Clock Out, or the setting you just changed. Check that the vault is writable. This is not a note-change failure. |
 | Plan tab says today's plan is unavailable | Save the Daily Note and refresh. Check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon. |
 | Clock In starts but the sidebar does not open | Use **Open active task** on the Timing tab. The CLOCK is already running. |
+| Timing says the CLOCK may have been left running | Forgotten is a warning only. Use **Clock out** when you stop. It does not auto-stop. |
 
 ## Related documents
 
