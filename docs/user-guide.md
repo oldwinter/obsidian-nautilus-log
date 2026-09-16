@@ -125,8 +125,8 @@ A typical day:
 1. Write the Primary Plan in today's Daily Note.
 2. Open **Planner** from the shell ribbon and check capacity, fixed events,
    scheduled tasks, and overflow.
-3. Enable **Execution Layer** once. Open the timer ribbon to reach
-   **Timing**, **Plan**, and **Review**.
+3. Enable **Execution Layer** once. Open the left ribbon button **Execution**
+   to reach **Timing**, **Plan**, and **Review**.
 4. Clock in an open `- [ ]` flexible task from the Plan tab, the editor
    context menu, or `Spiral Day: 1. Clock in current task`.
 5. Work. Clock out when you stop. Advance progress or Complete from Plan or
@@ -145,7 +145,7 @@ explanation stays at the top. It is instructional, not a live Planner diagnosis.
 After a Primary Plan exists, Settings keeps the explanation but hides
 **Insert into today's Daily Note**. An empty ready plan offers **Copy sample
 task** instead. After Execution Layer is on, the card says it is on and
-points to the timer ribbon instead of asking you to enable it.
+points to the left ribbon button **Execution** instead of asking you to enable it.
 
 Important fields for getting started:
 
@@ -181,8 +181,8 @@ add a generated `^nl-<uuid>` ID in the same write as that action.
 
 ### Timing
 
-Enable Execution Layer, then click the timer ribbon. The panel opens on
-**Timing**.
+Enable Execution Layer, then click the left ribbon button **Execution**. The
+panel opens on **Timing**.
 
 ![Timing idle guidance](user-guide/images/08-timing-idle.png)
 

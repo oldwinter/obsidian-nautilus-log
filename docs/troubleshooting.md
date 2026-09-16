@@ -83,7 +83,7 @@ toast.
 Clicking a Planner task to advance progress while Execution is off names
 **Execution Layer** and Settings. It does not say Actual Time Tracking.
 
-The timer ribbon opens on **Timing**. If there is no Primary Plan yet, that
+The left ribbon button **Execution** opens on **Timing**. If there is no Primary Plan yet, that
 idle state points to **Insert into today's Daily Note** on the Plan tab. If
 the list is empty or every task is done, it points to **Copy sample task** on
 the Plan tab instead of only Clock In. An empty **Unscheduled today** list on
@@ -103,8 +103,9 @@ Already up to date.
 
 ## Review is empty or missing a Daily Note
 
-Review is a live surface. Enable **Execution Layer**, open the timer ribbon, and
-choose **Review**. It compares planned and recorded time for a chosen date.
+Review is a live surface. Enable **Execution Layer**, open the left ribbon
+button **Execution**, and choose **Review**. It compares planned and recorded
+time for a chosen date.
 
 1. If the date has no Daily Note, create the note that matches **Settings →
    Daily Note folder** and date format, or use **Insert into today's Daily
