@@ -234,8 +234,9 @@ Review compares planned and recorded time for a chosen date.
 - Missing Daily Note and missing Primary Plan states now say how to create
   the note and add the markers. When the selected date is today,
   **Insert into today's Daily Note** writes the markers for you. If the
-  markers are already there but the list is empty, it offers **Copy sample
-  task**.
+  markers are already there but there is no reviewable `- [ ]` or `- [x]`
+  task — including a day of only fixed events — it offers **Copy sample
+  task**. It does not say the plan has no list items.
 
 ### Active Task
 
@@ -313,7 +314,7 @@ Start with the in-plugin empty states, then see
 | Planner progress click does nothing useful | Enable **Execution Layer** in Settings → Spiral Day. The notice names that setting. |
 | Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. Settings rejects `dddd` and snaps back to the last accepted value. |
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
-| Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |
+| Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
