@@ -297,7 +297,7 @@ try {
     await capture(page, "overruns-wide-en");
     await page.setViewportSize({ width: 320, height: 740 });
     await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
-    const translated = page.getByRole("checkbox", { name: "仅看已完成的超时任务", exact: true });
+    const translated = page.getByRole("checkbox", { name: "只看已完成的超时任务", exact: true });
     check("review.filter-localizes-with-state-retained", await translated.isChecked()
       && await page.getByText("正在显示 1 项已完成的超时任务。汇总仍显示全天数据。", { exact: true }).isVisible(), await translated.isChecked());
     const layout = await page.locator("#review-root").evaluate((element) => ({

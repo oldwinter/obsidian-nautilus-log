@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { enPlanner } from "../../../src/i18n/locales/en/planner.ts";
+import { enReview } from "../../../src/i18n/locales/en/review.ts";
 import { enShared } from "../../../src/i18n/locales/en/shared.ts";
 import { zhCNPlanner } from "../../../src/i18n/locales/zh-CN/planner.ts";
+import { zhCNReview } from "../../../src/i18n/locales/zh-CN/review.ts";
 import { zhCNShared } from "../../../src/i18n/locales/zh-CN/shared.ts";
 import {
   MessageContractError,
@@ -22,6 +24,11 @@ test("missing-plan copy names the required HTML markers in both locales", () => 
   assert.match(enPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
   assert.match(zhCNPlanner["status.missingDetail"], /<!-- nautilus-log:plan\/v1 -->/);
   assert.match(zhCNPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
+});
+
+test("review overrun filter label matches the bilingual handbook", () => {
+  assert.equal(enReview["filter.overruns"], "Only completed overruns");
+  assert.equal(zhCNReview["filter.overruns"], "只看已完成的超时任务");
 });
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
