@@ -60,6 +60,8 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNExecution["error.missingDailyNote"], /写入今日日记/);
   assert.match(enExecution["plan.noPrimaryDetail"], /Insert into today's Daily Note/);
   assert.match(zhCNExecution["plan.noPrimaryDetail"], /写入今日日记/);
+  assert.equal(enExecution["plan.noUnscheduled"], "Every open flexible task is already on the schedule.");
+  assert.equal(zhCNExecution["plan.noUnscheduled"], "所有未完成的弹性任务都已排进日程。");
   assert.match(enReview["state.missingPlan"], /If this is today, use Insert into today's Daily Note/);
   assert.match(zhCNReview["state.missingPlan"], /如果是今天，请点「写入今日日记」/);
   assert.match(enReview["state.missingNote"], /If this is today, use Insert into today's Daily Note/);

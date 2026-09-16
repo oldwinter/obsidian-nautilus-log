@@ -33,6 +33,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "plan.noPrimary": "今天没有找到主计划。",
   "plan.noPrimaryDetail": "请点「写入今日日记」，或把主计划标记写进今日日记并保存。下一步列在下面。",
   "plan.noTasks": "没有未完成的直接任务。",
+  "plan.noUnscheduled": "所有未完成的弹性任务都已排进日程。",
   "plan.emptyReady": "主计划里还没有列表项。请在标记之间写入一行 `- [ ]` 任务，然后保存。",
   "plan.loading": "正在刷新今日计划。",
   "plan.unavailable": "今日计划不可用。",

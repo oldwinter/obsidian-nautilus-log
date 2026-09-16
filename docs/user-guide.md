@@ -209,7 +209,9 @@ Plan.
 - Reopen a completed task from Planner, not from this tab.
 
 If the tab says **No Primary Plan was found today**, use **Insert into today's
-Daily Note** or the same marker checklist.
+Daily Note** or the same marker checklist. An empty **Unscheduled today**
+list means every open flexible task is already on the schedule, not that
+there are no unfinished tasks.
 
 ### Review
 
