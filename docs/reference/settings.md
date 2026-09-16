@@ -31,7 +31,7 @@ shown only while it is enabled.
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
 | Execution Layer | on/off | off | Enables CLOCK tracking, POMO, commands, and execution surfaces. |
-| Keep Timing Line first in the right sidebar | on/off | on | Opens the active task view after a successful Clock in. |
+| Keep Active Task first in the right sidebar | on/off | on | Opens the Active Task view after a successful Clock in. |
 | Pomodoro threshold | `15`, `20`, `25`, `30`, `45`, `50`, `60`, `90` minutes | `45` | Adds warning styling after the threshold; it does not stop timing. |
 | Recent retention minutes | non-negative integer | `45` | How long closed task timings remain in Recent. `0` disables retention. |
 | Forgotten timer minutes | non-negative integer | `120` | Adds a forgotten-clock warning after this duration. `0` disables the warning. |

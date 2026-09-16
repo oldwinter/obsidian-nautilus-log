@@ -44,6 +44,14 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(zhCNExecution["command.clockOut"], "Spiral Day: 2. 结束计时当前任务");
   assert.equal(enExecution["command.clockOut"].includes("Timing Line"), false);
   assert.equal(zhCNExecution["command.clockOut"].includes("计时线"), false);
+  assert.match(enExecution["settings.keepTimingFirst"], /Active Task/);
+  assert.equal(enExecution["settings.keepTimingFirst"].includes("Timing Line"), false);
+  assert.match(zhCNExecution["settings.keepTimingFirst"], /当前任务/);
+  assert.equal(zhCNExecution["settings.keepTimingFirst"].includes("计时线"), false);
+  assert.match(enExecution["error.sidebarOrder"], /Active Task/);
+  assert.equal(enExecution["error.sidebarOrder"].includes("Timing Line"), false);
+  assert.match(zhCNExecution["error.sidebarOrder"], /当前任务/);
+  assert.equal(zhCNExecution["error.sidebarOrder"].includes("计时线"), false);
   assert.equal(enExecution["menu.clockIn"], "Spiral Day: Clock in");
   assert.equal(zhCNExecution["menu.clockIn"], "Spiral Day: 开始计时");
   assert.match(enExecution["notice.firstRun"], /Planner or Settings/);
