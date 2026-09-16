@@ -151,6 +151,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     title.textContent = this.#dependencies.messages.t("execution", "settings.onboardingTitle");
     card.append(title);
     renderPlanMissingGuidance(card, this.#dependencies.messages, {
+      intro: this.#dependencies.messages.t("execution", "settings.onboardingDetail"),
       ...(this.#dependencies.insertPrimaryPlan
         ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
         : {}),
