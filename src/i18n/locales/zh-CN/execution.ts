@@ -122,7 +122,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.sidebarUnavailable": "Obsidian 侧栏不可用。",
   "error.sidebarOrder": "Obsidian 无法将当前任务视图移到顶部。",
   "error.sidebarOpen": "无法在右侧栏打开该任务。",
-  "error.sidebarAfterStart": "任务已开始，但 Obsidian 无法把它显示在侧栏顶部。",
+  "error.sidebarAfterStart": "任务已开始，但 Obsidian 无法把它显示在侧栏顶部。请在「计时」标签点「打开当前任务」。",
   "error.writerConflict": "启用 Spiral Day 实际时间追踪前，请停用其他 CLOCK 写入器。只能有一个扩展写入 CLOCK 记录。",
   "command.focusCurrent": "Spiral Day: 1. 开始计时当前任务",
   "command.clockOut": "Spiral Day: 2. 结束计时当前任务",

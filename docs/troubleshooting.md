@@ -156,7 +156,8 @@ Out, or Complete notice now says the **note** change could not be confirmed
 and points to save and refresh. It does not say graph. If plugin settings or
 the Pomodoro session could not be saved, the notice says that and tells you
 to retry the action or check that the vault is writable. It does not call
-that a note change. If the notice says
+that a note change. If Clock In succeeds but the sidebar cannot open, the
+notice names **Open active task** on the Timing tab. If the notice says
 CLOCK records are overlapping or ambiguous, use **Locate Primary Plan**, then
 **Clock Out** or repair the open CLOCK lines so only one is running. It does
 not say legacy.

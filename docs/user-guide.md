@@ -249,7 +249,8 @@ This singleton view lives in the right sidebar. It follows the current CLOCK,
 opens the source line, copies an Obsidian block link, and offers Clock Out.
 
 If **Keep Active Task first in the right sidebar** is on, a successful Clock
-In opens this view. If the view says Active Task is unavailable, save the
+In opens this view. If Clock In succeeds but the sidebar cannot open, the
+notice names **Open active task** on the Timing tab. If the view says Active Task is unavailable, save the
 note, then use **Try again** on the Timing tab. Use **Locate Primary Plan**
 if today's Daily Note or the running CLOCK needs a repair. **Show details**
 repeats a localized next step (Try again, Locate Primary, or plugin settings),
@@ -334,6 +335,7 @@ Start with the in-plugin empty states, then see
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 | Clock In says plugin settings could not be saved | Retry Clock In, Clock Out, or the setting you just changed. Check that the vault is writable. This is not a note-change failure. |
 | Plan tab says today's plan is unavailable | Save the Daily Note and refresh. Check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon. |
+| Clock In starts but the sidebar does not open | Use **Open active task** on the Timing tab. The CLOCK is already running. |
 
 ## Related documents
 
