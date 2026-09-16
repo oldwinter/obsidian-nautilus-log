@@ -130,7 +130,9 @@ Forgotten is a warning state, not an automatic stop. Use **Clock out** from the
 Timing panel or command palette when the task is finished. A `0` Forgotten timer
 setting disables that warning.
 
-If timing is unavailable, refresh the Timing panel. A degraded state means the
+If timing is unavailable, refresh the Timing panel. The notice and the
+degraded empty state now name **Try again** on the Timing tab after you save
+the note. A degraded state means the
 current CLOCK records could not be confirmed safely; do not edit those records
 manually while a repair or confirmation is pending. A failed Clock In, Clock
 Out, or Complete notice now says the **note** change could not be confirmed

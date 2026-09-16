@@ -195,7 +195,8 @@ Enable Execution Layer, then click the timer ribbon. The panel opens on
 - Recent: closed CLOCKs kept for the configured retention window.
 
 A POMO threshold only changes warning styling. It does not stop the timer.
-Forgotten is a warning, not an automatic Clock Out.
+Forgotten is a warning, not an automatic Clock Out. If Timing is unavailable,
+save the note and use **Try again** on this tab.
 
 ### Plan
 
@@ -316,6 +317,7 @@ Start with the in-plugin empty states, then see
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
+| Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
 ## Related documents

@@ -217,7 +217,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "notice.taskLinkCopied": "Active task link copied.",
   "notice.failed": "The change was not applied.",
   "notice.sourceUnavailable": "Source navigation is unavailable.",
-  "error.refresh": "Timing data could not be refreshed.",
+  "error.refresh": "Timing data could not be refreshed. Save the note, then use Try again on the Timing tab.",
   "error.copyTaskLink": "The active task link could not be copied.",
   "error.unconfirmed": "The note change could not be confirmed. Save, refresh, and try again.",
   "error.executionInactive": "Execution Layer is off. Enable it in Settings → Spiral Day to advance progress, Clock In, or Complete.",

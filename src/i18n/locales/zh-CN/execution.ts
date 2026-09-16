@@ -89,7 +89,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.taskLinkCopied": "当前任务链接已复制。",
   "notice.failed": "更改未应用。",
   "notice.sourceUnavailable": "来源导航不可用。",
-  "error.refresh": "无法刷新计时数据。",
+  "error.refresh": "无法刷新计时数据。请保存笔记，然后在「计时」标签点「重试」。",
   "error.copyTaskLink": "无法复制当前任务链接。",
   "error.unconfirmed": "无法确认笔记更改。请保存、刷新后再试。",
   "error.executionInactive": "执行层已关闭。请在 设置 → Spiral Day 启用执行层后，再推进进度、开始计时或完成任务。",
