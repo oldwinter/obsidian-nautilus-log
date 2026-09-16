@@ -220,7 +220,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.refresh": "Timing data could not be refreshed.",
   "error.copyTaskLink": "The active task link could not be copied.",
   "error.unconfirmed": "The note change could not be confirmed. Save, refresh, and try again.",
-  "error.executionInactive": "Actual Time Tracking is no longer active.",
+  "error.executionInactive": "Execution Layer is off. Enable it in Settings → Spiral Day to advance progress, Clock In, or Complete.",
   "error.overlap": "Legacy overlapping CLOCK records could not be reconciled.",
   "error.taskOwner": "Only an open `- [ ]` flexible task can be clocked in. Use an eligible line, or Clock In from the Plan tab.",
   "error.deleteTiming": "Only the current Timing CLOCK can be deleted.",

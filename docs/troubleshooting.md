@@ -71,6 +71,8 @@ Open the planner's warning/details area. Common causes are:
 Enable **Execution Layer** in the settings tab. If activation fails, the plugin
 rolls the setting back off and leaves execution surfaces disabled. Check the
 notice, correct the reported source or timing problem, then enable it again.
+Clicking a Planner task to advance progress while Execution is off names
+**Execution Layer** and Settings. It does not say Actual Time Tracking.
 
 The timer ribbon opens on **Timing**. If there is no Primary Plan yet, that
 idle state points to **Insert into today's Daily Note** on the Plan tab. If
