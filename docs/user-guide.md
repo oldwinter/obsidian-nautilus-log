@@ -53,10 +53,12 @@ The first-run path is easy to miss:
 ```
 
 If those markers are missing, Planner shows **No Primary Plan** plus the next
-steps, and the ribbon click also shows a short notice. Opening Planner does not
-insert the markers. Click **Insert into today's Daily Note** in Planner,
-Settings, or Review (today) when you want the plugin to create today's note and
-write the markers plus a sample task.
+steps, and the ribbon click also shows a short notice. That notice names
+Planner and Settings. After Execution Layer is on, it also names the Plan tab
+and Review (today). Opening Planner does not insert the markers. Click
+**Insert into today's Daily Note** in Planner or Settings — or on Review
+(today) after Execution is on — when you want the plugin to create today's
+note and write the markers plus a sample task.
 
 ![Settings first-run checklist](user-guide/images/02-settings-first-run.png)
 
