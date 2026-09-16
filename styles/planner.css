@@ -520,17 +520,31 @@
   white-space: pre;
 }
 
+.spiral-day-onboarding__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-self: start;
+  margin-top: 6px;
+}
+
 .spiral-day-onboarding__copy,
-.spiral-day-planner__status .spiral-day-onboarding__copy {
+.spiral-day-onboarding__insert,
+.spiral-day-planner__status .spiral-day-onboarding__copy,
+.spiral-day-planner__status .spiral-day-onboarding__insert {
   background: var(--interactive-normal, var(--background-secondary, #f2f3f5));
   border: 1px solid var(--background-modifier-border, #d7dbe1);
   border-radius: 4px;
   color: var(--text-normal, inherit);
   cursor: pointer;
   font: inherit;
-  justify-self: start;
-  margin-top: 6px;
   padding: 4px 10px;
+}
+
+.spiral-day-onboarding__insert {
+  background: var(--interactive-accent, #705dcf);
+  border-color: transparent;
+  color: var(--text-on-accent, #fff);
 }
 
 .spiral-day-settings-onboarding {
@@ -555,6 +569,10 @@
 .spiral-day-settings-onboarding p {
   color: var(--text-muted, #68707d);
   margin: 0;
+}
+
+.spiral-day-settings-onboarding .spiral-day-onboarding__actions {
+  margin-top: 0;
 }
 
 .spiral-day-planner__tooltip {

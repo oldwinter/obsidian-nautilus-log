@@ -5,7 +5,7 @@ import {
   type Plugin,
   type SettingDefinitionItem,
 } from "obsidian";
-import { PRIMARY_PLAN_MARKERS } from "../ui/onboarding/first-run";
+import { renderPlanMissingGuidance } from "../ui/onboarding/first-run";
 import type { PluginSettings } from "../runtime/plugin-data";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
@@ -19,6 +19,7 @@ export interface ExecutionSettingsDependencies {
   readonly setExecutionEnabled: (enabled: boolean) => Promise<boolean>;
   readonly onLocaleChanged: () => void;
   readonly onExecutionChanged: (enabled: boolean) => void;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -132,25 +133,15 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     card.className = "spiral-day-settings-onboarding";
     const title = container.ownerDocument.createElement("h3");
     title.textContent = this.#dependencies.messages.t("execution", "settings.onboardingTitle");
-    const steps = container.ownerDocument.createElement("ol");
-    for (const key of [
-      "status.missingStepNote",
-      "status.missingStepMarkers",
-      "status.missingStepItems",
-      "status.missingStepRefresh",
-    ] as const) {
-      const item = container.ownerDocument.createElement("li");
-      item.textContent = this.#dependencies.messages.t("planner", key);
-      steps.append(item);
-    }
-    const markers = container.ownerDocument.createElement("pre");
-    markers.className = "spiral-day-onboarding__markers";
-    const code = container.ownerDocument.createElement("code");
-    code.textContent = PRIMARY_PLAN_MARKERS;
-    markers.append(code);
+    card.append(title);
+    renderPlanMissingGuidance(card, this.#dependencies.messages, {
+      ...(this.#dependencies.insertPrimaryPlan
+        ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
+        : {}),
+    });
     const execution = container.ownerDocument.createElement("p");
     execution.textContent = this.#dependencies.messages.t("execution", "settings.onboardingExecution");
-    card.append(title, steps, markers, execution);
+    card.append(execution);
     container.append(card);
   }
 

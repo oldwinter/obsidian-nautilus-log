@@ -32,6 +32,7 @@ export interface PlannerItemViewDependencies {
   readonly defaultLogicalDate: () => LogicalDate;
   readonly debugControl?: () => boolean;
   readonly copySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
   readonly dispatchPlannerProgress?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly locale?: () => string;
   readonly subscribeLocale?: (listener: (locale: string) => void) => () => void;
@@ -254,6 +255,9 @@ export class SpiralDayPlannerView extends ItemView {
           locale: this.#dependencies.locale?.() ?? "en",
           ...(this.#dependencies.copySummary
             ? { onCopySummary: this.#dependencies.copySummary }
+            : {}),
+          ...(this.#dependencies.insertPrimaryPlan
+            ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
             : {}),
           ...(this.#dependencies.dispatchPlannerProgress
             ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }

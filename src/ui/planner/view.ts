@@ -94,6 +94,7 @@ export interface PlannerSurfaceOptions {
   readonly locale?: string;
   readonly messages?: Messages;
   readonly onCopySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
+  readonly onInsertPrimaryPlan?: () => void | Promise<void>;
   readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly renderIcon?: PlannerIconRenderer;
   readonly reducedMotion?: boolean;
@@ -521,6 +522,7 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #renderIcon: PlannerIconRenderer;
   readonly #messages: Messages;
   readonly #onCopySummary: PlannerSurfaceOptions["onCopySummary"];
+  readonly #onInsertPrimaryPlan: PlannerSurfaceOptions["onInsertPrimaryPlan"];
   readonly #onProgressIntent: ((intent: PlannerProgressIntent) => void | Promise<void>) | undefined;
   readonly #controls: PlannerControlsController;
   readonly #disclosures: PlannerDisclosuresController;
@@ -568,6 +570,7 @@ class PlannerSurfaceController implements PlannerSurface {
       ? createMessages()
       : createMessages({ locale: options.locale }));
     this.#onCopySummary = options.onCopySummary;
+    this.#onInsertPrimaryPlan = options.onInsertPrimaryPlan;
     this.#onProgressIntent = options.onProgressIntent;
     const acquisitions: Array<() => void> = [];
     try {
@@ -1119,7 +1122,9 @@ class PlannerSurfaceController implements PlannerSurface {
     heading.textContent = headingText;
     status.append(heading);
     if (state === "missing") {
-      renderPlanMissingGuidance(status, this.#messages);
+      renderPlanMissingGuidance(status, this.#messages, {
+        ...(this.#onInsertPrimaryPlan ? { onInsertPrimaryPlan: this.#onInsertPrimaryPlan } : {}),
+      });
     } else {
       const message = element(this.#root.ownerDocument, "span", "spiral-day-planner__status-message");
       message.textContent = messageText;

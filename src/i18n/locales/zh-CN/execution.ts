@@ -68,7 +68,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "日记日期格式",
   "settings.onboardingTitle": "第一次使用清单",
   "settings.onboardingExecution": "在下方启用执行层后，才能打开计时、计划、回顾、命令面板操作和右侧栏当前任务。",
-  "notice.firstRun": "还没有主计划。请把 nautilus-log:plan/v1 标记写进今日日记并保存。规划器里有完整下一步。",
+  "notice.firstRun": "还没有主计划。可在规划器或设置里点「写入今日日记」，或自行粘贴 nautilus-log:plan/v1 标记。",
   "notice.applied": "更改已确认。",
   "notice.alreadyApplied": "已经是最新状态。",
   "notice.refreshed": "计时数据已刷新。",

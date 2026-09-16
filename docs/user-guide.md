@@ -51,8 +51,9 @@ The first-run path is easy to miss:
 ```
 
 If those markers are missing, Planner shows **No Primary Plan** plus the next
-steps, and the ribbon click also shows a short notice. The plugin does not
-insert the markers for you.
+steps, and the ribbon click also shows a short notice. Opening Planner does not
+insert the markers. Click **Insert into today's Daily Note** when you want the
+plugin to create today's note and write the markers plus a sample task.
 
 ![Settings first-run checklist](user-guide/images/02-settings-first-run.png)
 
@@ -62,7 +63,8 @@ insert the markers for you.
    **Daily Note folder** and **Daily Note date format** so they resolve the
    note you already use.
 2. Create today's Daily Note. Default: `YYYY-MM-DD.md` at the vault root.
-3. Paste the two markers, then add direct list items between them.
+3. Click **Insert into today's Daily Note**, or paste the two markers and add
+   direct list items between them.
 4. Click the **Open Spiral Day** ribbon icon.
 5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan,
    Review, Active Task, and commands.
@@ -96,8 +98,9 @@ Rules that matter on day one:
   **Flexible Task** that the scheduler places into free time.
 - Tokens are read only from the first physical line of each item.
 
-If Planner is still empty, it now shows the markers, a **Copy markers**
-button, and where to open Timing / Plan / Review after you enable Execution.
+If Planner is still empty, it now shows the markers, **Copy markers**,
+**Insert into today's Daily Note**, and where to open Timing / Plan / Review
+after you enable Execution.
 
 ![Planner empty-state guidance](user-guide/images/05-planner-empty-guidance.png)
 
@@ -269,7 +272,7 @@ Start with the in-plugin empty states, then see
 
 | Symptom | Fix |
 | --- | --- |
-| Planner says No Primary Plan | Create today's note, paste the two markers at column zero, add list items, save, refresh. |
+| Planner says No Primary Plan | Click **Insert into today's Daily Note**, or paste the two markers at column zero, add list items, save, refresh. |
 | Ribbon is the only new control | Expected until Execution Layer is on. |
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |

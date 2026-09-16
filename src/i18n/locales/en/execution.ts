@@ -177,7 +177,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "Daily Note date format",
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
-  "notice.firstRun": "No Primary Plan yet. Add the nautilus-log:plan/v1 markers to today's Daily Note, then save. The Planner lists the exact next step.",
+  "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner or Settings, or paste the nautilus-log:plan/v1 markers yourself.",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
   "notice.refreshed": "Timing data refreshed.",

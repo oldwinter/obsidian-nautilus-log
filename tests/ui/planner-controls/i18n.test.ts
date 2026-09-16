@@ -104,6 +104,13 @@ test("TC-OBS-I18N-001-001 every over-limit kind is localized without leaking int
   }
 });
 
+test("missing-plan copy offers an explicit insert without rewriting on open", () => {
+  assert.match(enPlanner["status.missingInsert"], /Insert into today's Daily Note/);
+  assert.match(enPlanner["status.missingDetail"], /Opening Planner does not rewrite/);
+  assert.match(zhCNPlanner["status.missingInsert"], /写入今日日记/);
+  assert.match(zhCNPlanner["status.missingStepRefresh"], /刷新日程/);
+});
+
 test("TC-UP-ERR-09-001 missing-plan copy names the HTML markers and refresh step", () => {
   const open = "<!-- nautilus-log:plan/v1 -->";
   const close = "<!-- /nautilus-log:plan -->";
