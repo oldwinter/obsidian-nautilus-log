@@ -78,6 +78,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "settings.onboardingTitle": "第一次使用清单",
   "settings.onboardingDetail": "规划器只读今日配置的日记和 nautilus-log:plan/v1 区域。如果看到「没有主计划」，请点「写入今日日记」。计划写好后，说明仍会留在这里，「写入今日日记」会收起。",
   "settings.onboardingExecution": "在下方启用执行层后，才能打开计时、计划、回顾、命令面板操作和右侧栏当前任务。",
+  "settings.onboardingExecutionOn": "执行层已启用。用计时功能区打开计时、计划和回顾，右侧栏打开当前任务。",
   "notice.firstRun": "还没有主计划。可在规划器或设置里点「写入今日日记」，或自行粘贴计划模板（标记加示例任务）。",
   "notice.firstRunExecution": "还没有主计划。可在规划器、设置、「计划」标签或回顾（今天）里点「写入今日日记」，或自行粘贴计划模板（标记加示例任务）。",
   "notice.applied": "更改已确认。",

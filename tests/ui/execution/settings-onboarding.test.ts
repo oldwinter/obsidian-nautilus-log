@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   settingsOnboardingChanged,
+  settingsOnboardingExecutionKey,
   settingsOnboardingKind,
 } from "../../../src/adapters/settings-onboarding";
 import type { RuntimePlanProjection } from "../../../src/runtime/projection-runtime";
@@ -39,4 +40,9 @@ test("Settings onboarding remounts only when the plan kind changes", () => {
     state: "confirmed",
     projection: { items: [] },
   } as RuntimeSnapshot<RuntimePlanProjection>), false);
+});
+
+test("Settings onboarding names Execution only as the next step while it is off", () => {
+  assert.equal(settingsOnboardingExecutionKey(false), "settings.onboardingExecution");
+  assert.equal(settingsOnboardingExecutionKey(true), "settings.onboardingExecutionOn");
 });

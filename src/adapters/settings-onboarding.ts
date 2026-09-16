@@ -16,3 +16,9 @@ export function settingsOnboardingChanged(
 ): boolean {
   return settingsOnboardingKind(snapshot) !== previous;
 }
+
+export function settingsOnboardingExecutionKey(
+  executionEnabled: boolean,
+): "settings.onboardingExecutionOn" | "settings.onboardingExecution" {
+  return executionEnabled ? "settings.onboardingExecutionOn" : "settings.onboardingExecution";
+}

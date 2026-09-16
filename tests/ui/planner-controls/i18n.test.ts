@@ -125,6 +125,12 @@ test("Daily Note settings describe the Insert path in both locales", () => {
   assert.match(zhCNExecution["settings.onboardingDetail"], /没有主计划/);
   assert.match(zhCNExecution["settings.onboardingDetail"], /会收起/);
   assert.equal(zhCNExecution["settings.onboardingDetail"].includes("这份清单仍会留在这里"), false);
+  assert.match(enExecution["settings.onboardingExecution"], /Enable Execution Layer below/);
+  assert.match(enExecution["settings.onboardingExecutionOn"], /Execution Layer is on/);
+  assert.equal(enExecution["settings.onboardingExecutionOn"].includes("Enable Execution Layer below"), false);
+  assert.match(zhCNExecution["settings.onboardingExecution"], /在下方启用执行层/);
+  assert.match(zhCNExecution["settings.onboardingExecutionOn"], /执行层已启用/);
+  assert.equal(zhCNExecution["settings.onboardingExecutionOn"].includes("在下方启用执行层"), false);
 });
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {

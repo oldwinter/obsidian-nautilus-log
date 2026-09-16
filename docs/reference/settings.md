@@ -4,7 +4,8 @@ Open **Settings → Spiral Day**. Settings are stored in the plugin data documen
 (schema version 1). Missing, invalid, or unsupported saved values are repaired
 to defaults; unknown fields are ignored. The first-run explanation at the top is
 instructional and stays visible after a plan exists. Insert hides once today's
-Primary Plan is confirmed; an empty ready plan offers Copy sample task.
+Primary Plan is confirmed; an empty ready plan offers Copy sample task. After
+Execution Layer is on, the card says it is on and names the timer ribbon.
 
 ## General settings
 
