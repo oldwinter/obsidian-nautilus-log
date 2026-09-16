@@ -207,7 +207,8 @@ Plan.
 
 - Click a title to open the source line. Shift-click opens it in the right
   sidebar. A freshly inserted sample has no block ID yet; Clock In assigns
-  one, or use **Locate Primary Plan** to open today's Daily Note.
+  one, or use **Locate Primary Plan** to open today's Daily Note. If the ID
+  is missing or duplicated, the notice names Locate Primary and that repair.
 - **Clock in** starts the only Active Task.
 - **Complete** advances progress by 10 percentage points and completes the
   task at 100%.
@@ -318,6 +319,7 @@ Start with the in-plugin empty states, then see
 | Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. |
+| Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
 ## Related documents

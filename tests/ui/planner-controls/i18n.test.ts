@@ -146,6 +146,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(zhCNExecution["error.overlap"].includes("旧版"), false);
   assert.match(enExecution["error.refresh"], /Try again on the Timing tab/);
   assert.match(zhCNExecution["error.refresh"], /「计时」标签点「重试」/);
+  assert.match(enExecution["notice.sourceUnavailable"], /Locate Primary Plan/);
+  assert.equal(enExecution["notice.sourceUnavailable"].includes("UID"), false);
+  assert.match(zhCNExecution["notice.sourceUnavailable"], /定位主计划/);
+  assert.equal(zhCNExecution["notice.sourceUnavailable"].includes("UID"), false);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {
