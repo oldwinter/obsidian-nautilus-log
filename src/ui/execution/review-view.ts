@@ -9,6 +9,7 @@ export interface ReviewViewActions {
   readonly refresh: () => void;
   readonly setOnlyOverruns: (value: boolean) => void;
   readonly activate: (key: string, action: ReviewRowAction) => void;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
 function dateValue(date: LogicalDate): string {
@@ -26,6 +27,8 @@ export class ReviewView {
   readonly #filterLabel: HTMLElement;
   readonly #filterStatus: HTMLElement;
   readonly #status: HTMLElement;
+  readonly #guidance: HTMLElement;
+  #guidanceKey = "";
   readonly #summary: HTMLElement;
   readonly #counts: HTMLElement;
   readonly #totals: HTMLElement;
@@ -76,6 +79,9 @@ export class ReviewView {
     this.#status.className = "spiral-day-review__status";
     this.#status.setAttribute("role", "status");
     this.#status.setAttribute("aria-live", "polite");
+    this.#guidance = document.createElement("div");
+    this.#guidance.className = "spiral-day-review__guidance";
+    this.#guidance.hidden = true;
     this.#summary = document.createElement("div");
     this.#summary.className = "spiral-day-review__summary";
     this.#counts = document.createElement("p");
@@ -84,7 +90,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, filter, this.#status, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, filter, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -122,6 +128,7 @@ export class ReviewView {
         ? review.reason === "history-over-limit" ? "state.overLimit" : "state.unavailable"
         : review.state === "ready" ? "state.stale" : "state.loading");
       this.#status.hidden = false;
+      this.#setInsertGuidance(false, "", messages, pending);
       return;
     }
     this.#selectedDate = review.displayedDate;
@@ -143,6 +150,16 @@ export class ReviewView {
       : !hasRows ? messages.t("review", emptyMessage)
       : !writableDate ? messages.t("review", "state.readOnlyDate") : "";
     this.#status.hidden = this.#status.textContent === "";
+    this.#setInsertGuidance(
+      Boolean(this.#actions.insertPrimaryPlan)
+        && writableDate
+        && !hasRows
+        && !input.error
+        && (review.availability === "missing-plan" || review.availability === "missing-note"),
+      `${review.availability}:${messages.locale}`,
+      messages,
+      pending,
+    );
     const projectedRows = hasRows ? review.projection.rows.filter((row) => !input.onlyOverruns
       || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0)) : [];
     const filterStatus = messages.t("review", "filter.result", { count: projectedRows.length });
@@ -171,6 +188,33 @@ export class ReviewView {
       orderedRows.push(view);
     });
     if (fallbackIndex !== undefined && !this.#focusRow(orderedRows, fallbackIndex)) this.#focusToolbar();
+  }
+
+  #setInsertGuidance(
+    visible: boolean,
+    key: string,
+    messages: ReviewMessages,
+    pending: boolean,
+  ): void {
+    const guidanceKey = visible ? key : "";
+    if (this.#guidanceKey !== guidanceKey) {
+      this.#guidanceKey = guidanceKey;
+      this.#guidance.replaceChildren();
+      if (visible) {
+        const insert = this.#root.ownerDocument.createElement("button");
+        insert.type = "button";
+        insert.className = "spiral-day-review__insert-plan";
+        insert.textContent = messages.t("planner", "status.missingInsert");
+        insert.addEventListener("click", () => {
+          if (insert.disabled) return;
+          void this.#actions.insertPrimaryPlan?.();
+        });
+        this.#guidance.append(insert);
+      }
+    }
+    this.#guidance.hidden = !visible;
+    const insert = this.#guidance.querySelector("button");
+    if (insert) insert.disabled = pending;
   }
 
   #focusRow(rows: readonly ReviewRowView[], preferredIndex: number): boolean {

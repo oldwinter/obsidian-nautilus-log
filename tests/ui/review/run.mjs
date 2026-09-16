@@ -359,8 +359,30 @@ try {
       };
       check(`review.${mode}-hides-empty-summary-and-list`, observed.status === expectedStatus
         && observed.summaryHidden && observed.listHidden && observed.rows === 0 && observed.actions === 0, observed);
+      const insert = page.getByRole("button", { name: "Insert into today's Daily Note", exact: true });
+      const insertVisible = await insert.isVisible().catch(() => false);
+      check(`review.${mode}-insert-only-for-missing-today`,
+        insertVisible === (mode === "missing-note" || mode === "missing-plan"),
+        { mode, insertVisible });
       if (mode === "invalid-plan") await capture(page, "empty-invalid-plan");
     }
+    await open("missing-plan");
+    const insert = page.getByRole("button", { name: "Insert into today's Daily Note", exact: true });
+    const beforeInsert = await page.evaluate(() => window.reviewHarness.stats());
+    await insert.click();
+    await page.waitForFunction((expected) => window.reviewHarness.stats().planMutations === expected,
+      beforeInsert.planMutations + 1);
+    const afterInsert = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.missing-plan-insert-writes-today",
+      afterInsert.planMutations === beforeInsert.planMutations + 1
+        && afterInsert.refreshes === beforeInsert.refreshes + 1,
+      { beforeInsert, afterInsert });
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-28");
+    check("review.past-missing-plan-hides-insert",
+      !await page.getByRole("button", { name: "Insert into today's Daily Note", exact: true }).isVisible().catch(() => false),
+      await page.locator("input[type=date]").inputValue());
+    await capture(page, "empty-missing-plan-insert");
   });
 
   await scenario("stale-building-over-limit", async () => {

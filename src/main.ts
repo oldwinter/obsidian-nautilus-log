@@ -299,6 +299,7 @@ export default class SpiralDayPlugin extends Plugin {
       intentId: () => this.#intentId("review"),
       messages: this.#messages,
       addDisposer: (dispose) => this.register(dispose),
+      insertPrimaryPlan: () => this.#insertPrimaryPlan(),
     });
 
     this.registerView(PLANNER_VIEW_TYPE, createPlannerViewFactory({

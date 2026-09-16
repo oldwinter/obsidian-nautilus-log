@@ -25,6 +25,7 @@ export interface ReviewEntryDependencies {
   readonly intentId: () => string;
   readonly messages: ExecutionMessages;
   readonly addDisposer: (dispose: () => void) => void;
+  readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
 export interface ReviewEntryPort extends ReviewEntryDependencies {
@@ -106,6 +107,27 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
         selectDate: (date) => { void refresh(() => dependencies.selectDate(date)); },
         refresh: () => { void refresh(dependencies.refresh); },
         activate: (key, action) => { void activate(key, action); },
+        ...(dependencies.insertPrimaryPlan
+          ? {
+              insertPrimaryPlan: () => {
+                void (async () => {
+                  if (destroyed || !visible || pending) return;
+                  pending = true;
+                  error = false;
+                  render();
+                  try {
+                    await dependencies.insertPrimaryPlan?.();
+                    await dependencies.refresh();
+                  } catch {
+                    error = true;
+                  } finally {
+                    pending = false;
+                    render();
+                  }
+                })();
+              },
+            }
+          : {}),
       });
       const unsubscribers = [
         dependencies.subscribeReview(render),
