@@ -23,6 +23,10 @@ If the Plan tab says today's plan is unavailable, save the Daily Note and
 refresh. Check Daily Note folder and date format in Settings → Spiral Day,
 or open Planner from the ribbon. That empty state used to have no next step.
 
+If Planner says it could not load a confirmed plan, open today's Daily Note,
+save, then use **Refresh plan**. **Locate Primary Plan** opens that note after
+Execution Layer is on. That empty state used to say only check the source note.
+
 Check the Daily Note path first:
 
 1. In **Settings → Spiral Day**, verify **Daily Note folder** and

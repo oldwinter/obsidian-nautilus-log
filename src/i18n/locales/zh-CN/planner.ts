@@ -57,7 +57,7 @@ export const zhCNPlanner = Object.freeze({
   "metric.fixedTime": "固定时间",
   "metric.flexibleTime": "弹性时间",
   "metric.scheduledTime": "已排期时间",
-  "status.errorDetail": "无法读取已确认的计划。请检查源笔记后刷新。",
+  "status.errorDetail": "无法读取已确认的计划。请打开今日日记并保存，然后点「刷新日程」。启用执行层后可用「定位主计划」打开该笔记。",
   "status.hiddenDetail": "此视图当前隐藏；再次显示时会刷新投影。",
   "status.loadingDetail": "正在读取已确认的计划快照。",
   "status.missingDetail": "没有找到受支持的计划区域。请点「写入今日日记」创建今日笔记并写入标记加示例任务，或在行首粘贴 `<!-- nautilus-log:plan/v1 -->` 和 `<!-- /nautilus-log:plan -->`。打开规划器不会自动改写笔记。",
