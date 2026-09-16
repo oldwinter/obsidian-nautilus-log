@@ -1,7 +1,14 @@
 import type { Command, Plugin } from "obsidian";
 
+export interface ExecutionCommandTitles {
+  readonly focusCurrent: string;
+  readonly clockOut: string;
+  readonly locatePrimary: string;
+}
+
 export interface ExecutionCommandDependencies {
   readonly plugin: Plugin;
+  readonly titles: () => ExecutionCommandTitles;
   readonly focusCurrent: () => void | Promise<void>;
   readonly clockOut: () => void | Promise<void>;
   readonly locatePrimary: () => void | Promise<void>;
@@ -22,19 +29,20 @@ export class ExecutionCommandRegistry {
 
   start(): void {
     if (this.active) return;
+    const titles = this.#dependencies.titles();
     const commands: readonly Omit<Command, "id">[] = [
       {
-        name: "Spiral Day: 1. Focus current block",
+        name: titles.focusCurrent,
         icon: "timer",
         callback: () => this.#run(this.#dependencies.focusCurrent),
       },
       {
-        name: "Spiral Day: 2. Clock out Timing Line",
+        name: titles.clockOut,
         icon: "square",
         callback: () => this.#run(this.#dependencies.clockOut),
       },
       {
-        name: "Spiral Day: 3. Locate Primary Plan",
+        name: titles.locatePrimary,
         icon: "locate-fixed",
         callback: () => this.#run(this.#dependencies.locatePrimary),
       },
@@ -47,6 +55,12 @@ export class ExecutionCommandRegistry {
       });
       this.#registered.push(id);
     });
+  }
+
+  refresh(): void {
+    if (!this.active) return;
+    this.stop();
+    this.start();
   }
 
   stop(): void {

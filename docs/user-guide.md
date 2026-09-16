@@ -52,8 +52,9 @@ The first-run path is easy to miss:
 
 If those markers are missing, Planner shows **No Primary Plan** plus the next
 steps, and the ribbon click also shows a short notice. Opening Planner does not
-insert the markers. Click **Insert into today's Daily Note** when you want the
-plugin to create today's note and write the markers plus a sample task.
+insert the markers. Click **Insert into today's Daily Note** in Planner,
+Settings, or Review (today) when you want the plugin to create today's note and
+write the markers plus a sample task.
 
 ![Settings first-run checklist](user-guide/images/02-settings-first-run.png)
 
@@ -135,7 +136,7 @@ Important fields for getting started:
 
 | Setting | Default | Why it matters |
 | --- | --- | --- |
-| Language | English | Relabels Planner and Execution immediately. |
+| Language | English | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. |
 | Daily Note folder | empty (vault root) | Must match the folder of the note you edit. |
 | Daily Note date format | `YYYY-MM-DD` | Must contain year, month, and day tokens. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
@@ -195,8 +196,8 @@ Plan.
   duration.
 - Reopen a completed task from Planner, not from this tab.
 
-If the tab says **No Primary Plan was found today**, the same marker
-checklist appears here.
+If the tab says **No Primary Plan was found today**, use **Insert into today's
+Daily Note** or the same marker checklist.
 
 ### Review
 

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { enExecution } from "../../../src/i18n/locales/en/execution.ts";
 import { enPlanner } from "../../../src/i18n/locales/en/planner.ts";
 import { enReview } from "../../../src/i18n/locales/en/review.ts";
 import { enShared } from "../../../src/i18n/locales/en/shared.ts";
+import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution.ts";
 import { zhCNPlanner } from "../../../src/i18n/locales/zh-CN/planner.ts";
 import { zhCNReview } from "../../../src/i18n/locales/zh-CN/review.ts";
 import { zhCNShared } from "../../../src/i18n/locales/zh-CN/shared.ts";
@@ -29,6 +31,23 @@ test("missing-plan copy names the required HTML markers in both locales", () => 
 test("review overrun filter label matches the bilingual handbook", () => {
   assert.equal(enReview["filter.overruns"], "Only completed overruns");
   assert.equal(zhCNReview["filter.overruns"], "只看已完成的超时任务");
+});
+
+test("host chrome and empty-state copy stay bilingual after Review insert", () => {
+  assert.equal(enPlanner["ribbon.openPlanner"], "Open Spiral Day");
+  assert.equal(zhCNPlanner["ribbon.openPlanner"], "打开 Spiral Day");
+  assert.equal(enExecution["command.focusCurrent"], "Spiral Day: 1. Focus current block");
+  assert.equal(zhCNExecution["command.focusCurrent"], "Spiral Day: 1. 聚焦当前任务");
+  assert.equal(enExecution["menu.clockIn"], "Spiral Day: Clock in");
+  assert.equal(zhCNExecution["menu.clockIn"], "Spiral Day: 开始计时");
+  assert.match(enExecution["notice.firstRun"], /Planner, Settings, or Review \(today\)/);
+  assert.match(zhCNExecution["notice.firstRun"], /规划器、设置或回顾（今天）/);
+  assert.match(enExecution["plan.noPrimaryDetail"], /Insert into today's Daily Note/);
+  assert.match(zhCNExecution["plan.noPrimaryDetail"], /写入今日日记/);
+  assert.match(enReview["state.missingPlan"], /If this is today, use Insert into today's Daily Note/);
+  assert.match(zhCNReview["state.missingPlan"], /如果是今天，请点「写入今日日记」/);
+  assert.match(enReview["state.missingNote"], /If this is today, use Insert into today's Daily Note/);
+  assert.match(zhCNReview["state.missingNote"], /如果是今天，请点「写入今日日记」/);
 });
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {

@@ -75,6 +75,7 @@ export const enPlanner = Object.freeze({
   "status.missingInsertBlocked": "Today's Daily Note has a malformed Plan Region. Repair the existing markers instead of inserting another pair.",
   "status.missingInvalidPath": "Today's Daily Note path is invalid. Check Daily Note folder and date format in Settings → Spiral Day.",
   "status.missingNextSurfaces": "Open Planner from the shell ribbon icon (Open Spiral Day). Enable Execution Layer in Settings → Spiral Day to use Timing, Plan, Review, and the Active Task sidebar.",
+  "ribbon.openPlanner": "Open Spiral Day",
   "status.overLimitDetail": ({ actual, kind, limit }) => `${actual} ${LIMIT_LABELS[kind]}; limit ${limit}.`,
   "status.overLimitUnknownDetail": ({ actual, limit }) => `${actual} units; limit ${limit}.`,
   "status.staleDetail": "Refreshing after a source change. No stale projection is shown.",

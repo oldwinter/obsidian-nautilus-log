@@ -5,6 +5,7 @@ export type ExecutionEditorMenuAction = Readonly<{ readonly kind: "clock-in" | "
 export interface ExecutionEditorMenuDependencies {
   readonly plugin: Plugin;
   readonly enabled: () => boolean;
+  readonly titleFor: (kind: ExecutionEditorMenuAction["kind"]) => string;
   readonly resolveAction: (
     editor: Editor,
     info: MarkdownView | MarkdownFileInfo,
@@ -25,7 +26,7 @@ export function registerExecutionEditorMenu(dependencies: ExecutionEditorMenuDep
       const action = dependencies.resolveAction(editor, info);
       if (!action) return;
       menu.addItem((item) => item
-        .setTitle(action.kind === "clock-in" ? "Spiral Day: Clock in" : "Spiral Day: Clock out")
+        .setTitle(dependencies.titleFor(action.kind))
         .setIcon(action.kind === "clock-in" ? "timer" : "square")
         .onClick(() => {
           void Promise.resolve(dependencies.dispatch(action, editor, info)).catch(dependencies.onError);
