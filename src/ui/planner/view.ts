@@ -1293,6 +1293,11 @@ class PlannerSurfaceController implements PlannerSurface {
     }
     header.append(headerEnd);
     this.#content.append(header);
+    if (projection.items.length === 0) {
+      const empty = element(this.#root.ownerDocument, "p", "spiral-day-planner__status-message");
+      empty.textContent = this.#messages.t("planner", "status.emptyPlan");
+      this.#content.append(empty);
+    }
 
     if (this.#layout.showCompactOverview) {
       this.#content.append(this.#renderOverview(displayedProjection));

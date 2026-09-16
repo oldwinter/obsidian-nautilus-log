@@ -61,7 +61,7 @@ empty Planner that now lists the next action.
    (today). That creates today's note if needed (default `YYYY-MM-DD.md` at the
    vault root) and writes the markers plus one sample task. Opening Planner
    never inserts them by itself. You can still create the note yourself and
-   paste this pair at column zero:
+   paste this plan starter at column zero:
 
    ```markdown
    <!-- nautilus-log:plan/v1 -->

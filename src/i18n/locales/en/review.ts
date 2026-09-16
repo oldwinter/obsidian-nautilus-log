@@ -18,6 +18,7 @@ export type ReviewCatalog = Readonly<{
   "state.not-tracked": string;
   "state.compared": string;
   "state.empty": string;
+  "state.emptyPlan": string;
   "state.loading": string;
   "state.missingNote": string;
   "state.missingPlan": string;
@@ -57,6 +58,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "state.not-tracked": "Not tracked",
   "state.compared": "Compared",
   "state.empty": "No tasks to review on this date.",
+  "state.emptyPlan": "This Primary Plan has no list items. Add a direct `- [ ] Write the release note 45m` line between the markers, then save and refresh.",
   "state.loading": "Loading review…",
   "state.missingNote": "No Daily Note exists for this date. If this is today, use Insert into today's Daily Note. Or create the note that matches Settings → Daily Note folder and date format.",
   "state.missingPlan": "This Daily Note has no Primary Plan. If this is today, use Insert into today's Daily Note. Or add `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero, then save.",

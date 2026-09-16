@@ -33,6 +33,7 @@ export type ExecutionCatalog = Readonly<{
   "plan.noPrimary": string;
   "plan.noPrimaryDetail": string;
   "plan.noTasks": string;
+  "plan.emptyReady": string;
   "plan.loading": string;
   "plan.unavailable": string;
   "plan.capacity": string;
@@ -150,6 +151,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",
   "plan.noTasks": "No unfinished direct tasks are available.",
+  "plan.emptyReady": "The Primary Plan has no list items yet. Add a direct `- [ ]` task between the markers, then save.",
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
   "plan.capacity": "Capacity",
@@ -188,7 +190,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormatDesc": "Date format for the Daily Note filename. Must include year, month, and day tokens. The plugin adds .md.",
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
-  "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today), or paste the nautilus-log:plan/v1 markers yourself.",
+  "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today), or paste the plan starter (markers plus a sample task).",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
   "notice.refreshed": "Timing data refreshed.",

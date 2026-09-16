@@ -43,10 +43,12 @@ The first-run path is easy to miss:
    Review panel and no `Spiral Day:` commands.
 2. Planner only reads today's configured Daily Note.
 3. Ordinary checkboxes anywhere else in the vault are ignored.
-4. The Daily Note must contain this exact Plan Region pair at column zero:
+4. The Daily Note must contain this Plan Region at column zero, with at least
+   one direct list item:
 
 ```markdown
 <!-- nautilus-log:plan/v1 -->
+- [ ] Write the release note 45m
 <!-- /nautilus-log:plan -->
 ```
 
@@ -67,7 +69,8 @@ write the markers plus a sample task.
    resolve the note you already use.
 2. Click **Insert into today's Daily Note**. It creates today's note if needed
    (default `YYYY-MM-DD.md` at the vault root) and writes the markers plus a
-   sample task. Or create the note yourself and paste the two markers.
+   sample task. Or create the note yourself and paste the plan starter
+   (markers plus a sample task).
 3. Click the **Open Spiral Day** ribbon icon.
 4. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan,
    Review, Active Task, and commands.
@@ -276,12 +279,13 @@ Start with the in-plugin empty states, then see
 
 | Symptom | Fix |
 | --- | --- |
-| Planner says No Primary Plan | Click **Insert into today's Daily Note**, or paste the two markers at column zero, add list items, save, refresh. |
+| Planner says No Primary Plan | Click **Insert into today's Daily Note**, or paste the plan starter at column zero, save, refresh. |
+| Planner or Review looks empty after paste | The note has markers but no list items. Add a direct `- [ ]` task between them, save, refresh. |
 | Ribbon is the only new control | Expected until Execution Layer is on. |
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |
 | Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. |
-| Review is empty | There is no reviewable task on that date, or the note / plan is missing. |
+| Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 
 ## Related documents
