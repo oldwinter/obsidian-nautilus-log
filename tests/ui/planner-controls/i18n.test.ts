@@ -85,6 +85,10 @@ test("Daily Note settings describe the Insert path in both locales", () => {
   );
   assert.match(enExecution["settings.componentPrefixDesc"], /does not change Markdown grammar/);
   assert.match(zhCNExecution["settings.componentPrefixDesc"], /不会改变 Markdown 语法/);
+  assert.match(enExecution["settings.onboardingDetail"], /If you see No Primary Plan/);
+  assert.match(enExecution["settings.onboardingDetail"], /stays here after a plan exists/);
+  assert.match(zhCNExecution["settings.onboardingDetail"], /没有主计划/);
+  assert.match(zhCNExecution["settings.onboardingDetail"], /仍会留在这里/);
 });
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {

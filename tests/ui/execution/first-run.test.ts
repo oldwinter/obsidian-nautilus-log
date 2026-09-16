@@ -122,6 +122,27 @@ test("missing-plan guidance copies the localized plan starter", async () => {
   assert.equal(copy!.textContent, "已复制计划模板。");
 });
 
+test("missing-plan guidance keeps the live diagnosis unless Settings overrides the intro", () => {
+  const document = new DocumentStub();
+  const live = document.createElement();
+  const settings = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanMissingGuidance(live as unknown as HTMLElement, messages);
+  renderPlanMissingGuidance(settings as unknown as HTMLElement, messages, {
+    intro: messages.t("execution", "settings.onboardingDetail"),
+  });
+  const liveText = collect(live).join("\n");
+  const settingsText = collect(settings).join("\n");
+  assert.match(liveText, /No supported Plan Region was found/);
+  assert.equal(liveText.includes("This checklist stays here after a plan exists"), false);
+  assert.match(settingsText, /If you see No Primary Plan/);
+  assert.match(settingsText, /This checklist stays here after a plan exists/);
+  assert.equal(settingsText.includes("No supported Plan Region was found"), false);
+});
+
 test("missing-plan guidance omits insert when the host has no write action", () => {
   const document = new DocumentStub();
   const root = document.createElement();

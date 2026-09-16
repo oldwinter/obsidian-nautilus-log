@@ -75,6 +75,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormatHostIgnored": ({ format }) =>
     `Obsidian 核心日记的日期格式（${format}）含有不受支持的标记，因此没有复制。规划器和「写入今日日记」使用下面的格式，而不是核心日记文件名。`,
   "settings.onboardingTitle": "第一次使用清单",
+  "settings.onboardingDetail": "规划器只读今日配置的日记和 nautilus-log:plan/v1 区域。如果看到「没有主计划」，请点「写入今日日记」。计划写好后，这份清单仍会留在这里。",
   "settings.onboardingExecution": "在下方启用执行层后，才能打开计时、计划、回顾、命令面板操作和右侧栏当前任务。",
   "notice.firstRun": "还没有主计划。可在规划器、设置或回顾（今天）里点「写入今日日记」，或自行粘贴计划模板（标记加示例任务）。",
   "notice.applied": "更改已确认。",

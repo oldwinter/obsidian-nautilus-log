@@ -32,6 +32,7 @@ export interface PlanMissingCopy {
 
 export interface PlanMissingActions {
   readonly onInsertPrimaryPlan?: () => void | Promise<void>;
+  readonly intro?: string;
 }
 
 function create<K extends keyof HTMLElementTagNameMap>(
@@ -119,7 +120,7 @@ export function renderPlanMissingGuidance(
   actions: PlanMissingActions = {},
 ): void {
   const intro = create(parent.ownerDocument, "p", "spiral-day-onboarding__intro");
-  intro.textContent = messages.t("planner", "status.missingDetail");
+  intro.textContent = actions.intro ?? messages.t("planner", "status.missingDetail");
   const steps = create(parent.ownerDocument, "ol", "spiral-day-onboarding__steps");
   for (const key of [
     "status.missingStepNote",
