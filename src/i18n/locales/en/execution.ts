@@ -221,7 +221,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.copyTaskLink": "The active task link could not be copied.",
   "error.unconfirmed": "The note change could not be confirmed. Save, refresh, and try again.",
   "error.executionInactive": "Execution Layer is off. Enable it in Settings → Spiral Day to advance progress, Clock In, or Complete.",
-  "error.overlap": "Legacy overlapping CLOCK records could not be reconciled.",
+  "error.overlap": "CLOCK records are overlapping or ambiguous. Use Locate Primary Plan to open the note, then Clock Out or repair the open CLOCK lines so only one is running.",
   "error.taskOwner": "Only an open `- [ ]` flexible task can be clocked in. Use an eligible line, or Clock In from the Plan tab.",
   "error.deleteTiming": "Only the current Timing CLOCK can be deleted.",
   "error.deleteRunning": "Only the current running CLOCK can be deleted.",

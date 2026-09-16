@@ -93,7 +93,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.copyTaskLink": "无法复制当前任务链接。",
   "error.unconfirmed": "无法确认笔记更改。请保存、刷新后再试。",
   "error.executionInactive": "执行层已关闭。请在 设置 → Spiral Day 启用执行层后，再推进进度、开始计时或完成任务。",
-  "error.overlap": "无法协调旧版重叠 CLOCK 记录。",
+  "error.overlap": "CLOCK 记录重叠或无法判定。请用「定位主计划」打开笔记，然后结束计时，或修好未结束的 CLOCK，只保留一条在计时。",
   "error.taskOwner": "只有未完成的 `- [ ]` 弹性任务可以开始计时。请选中符合条件的行，或在「计划」标签点「开始计时」。",
   "error.deleteTiming": "只能删除当前计时 CLOCK。",
   "error.deleteRunning": "只能删除当前运行中的 CLOCK。",
