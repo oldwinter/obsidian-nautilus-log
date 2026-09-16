@@ -244,7 +244,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.noPrimary": "No Primary Plan was found today. Use Insert into today's Daily Note, or check Daily Note folder and date format in Settings → Spiral Day.",
   "error.missingDailyNote": "Today's Daily Note does not exist yet. Use Insert into today's Daily Note in Planner, Settings, the Plan tab, or Review (today).",
   "error.navigationUnavailable": "Obsidian navigation is unavailable.",
-  "error.noBlockId": "This task has no block UID.",
+  "error.noBlockId": "This task has no block ID yet. Clock In from the Plan tab to assign one, or use Locate Primary Plan to open today's Daily Note.",
   "error.sidebarUnavailable": "The Obsidian sidebar is unavailable.",
   "error.sidebarOrder": "Obsidian could not move the Timing Line view to the top.",
   "error.sidebarOpen": "Could not open this task in the right sidebar.",

@@ -72,6 +72,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(enExecution["error.missingDailyNote"], /the Plan tab/);
   assert.match(zhCNExecution["error.missingDailyNote"], /写入今日日记/);
   assert.match(zhCNExecution["error.missingDailyNote"], /「计划」标签/);
+  assert.match(enExecution["error.noBlockId"], /Clock In from the Plan tab/);
+  assert.equal(enExecution["error.noBlockId"].includes("UID"), false);
+  assert.match(zhCNExecution["error.noBlockId"], /「计划」标签点「开始计时」/);
+  assert.equal(zhCNExecution["error.noBlockId"].includes("UID"), false);
   assert.match(enExecution["plan.noPrimaryDetail"], /Insert into today's Daily Note/);
   assert.match(zhCNExecution["plan.noPrimaryDetail"], /写入今日日记/);
   assert.equal(enExecution["plan.noUnscheduled"], "Every open flexible task is already on the schedule.");

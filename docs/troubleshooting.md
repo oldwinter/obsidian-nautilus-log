@@ -117,7 +117,9 @@ reopen the planner view so it can rebuild its source snapshot.
 Task navigation requires a unique terminal block ID. If the ID was deleted,
 changed, or copied to another item, repair the Markdown so the ID is present on
 exactly one item, save, and refresh. An item without an ID can still be planned;
-an explicit identity-requiring action may assign a generated `^nl-<uuid>` ID.
+**Clock In** from the Plan tab assigns a generated `^nl-<uuid>` ID, or use
+**Locate Primary Plan** to open today's Daily Note. The notice no longer says
+block UID.
 
 ## A timer is marked forgotten or timing is unavailable
 

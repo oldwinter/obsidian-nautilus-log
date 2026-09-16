@@ -205,7 +205,8 @@ Plan.
 ![Plan tab with open tasks](user-guide/images/09-plan-tab.png)
 
 - Click a title to open the source line. Shift-click opens it in the right
-  sidebar.
+  sidebar. A freshly inserted sample has no block ID yet; Clock In assigns
+  one, or use **Locate Primary Plan** to open today's Daily Note.
 - **Clock in** starts the only Active Task.
 - **Complete** advances progress by 10 percentage points and completes the
   task at 100%.
