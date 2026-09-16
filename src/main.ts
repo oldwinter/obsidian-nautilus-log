@@ -872,6 +872,11 @@ export default class SpiralDayPlugin extends Plugin {
     const messages = this.#messages;
     if (!pluginData || !clock || !messages) return;
     try {
+      await pluginData.persistSeededIfNeeded();
+    } catch (error) {
+      this.#reportError(error);
+    }
+    try {
       const outcome = await insertPrimaryPlan({
         app: this.app,
         locale: () => messages.locale,
