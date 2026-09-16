@@ -72,7 +72,7 @@ export const enPlanner = Object.freeze({
   "status.missingInserted": "Primary Plan inserted. Edit the sample task, then save.",
   "status.missingInsertFailed": "Could not insert the Primary Plan. Copy the plan starter and paste it yourself.",
   "status.missingAlreadyPresent": "Today's Daily Note already has a Primary Plan. If it looks empty, use Copy sample task and paste that line between the markers, then refresh.",
-  "status.missingInsertBlocked": "Today's Daily Note has a malformed Plan Region. Repair the existing markers instead of inserting another pair.",
+  "status.missingInsertBlocked": "Today's Daily Note has a malformed Plan Region. Open today's Daily Note and repair the existing markers instead of inserting another pair. Locate Primary Plan opens that note after Execution Layer is on.",
   "status.missingInvalidPath": "Today's Daily Note path is invalid. Check Daily Note folder and date format in Settings → Spiral Day.",
   "status.missingFolderConflict": "A file is blocking a folder in today's Daily Note path. Rename or move that file, then try Insert again.",
   "status.missingNextSurfaces": "Open Planner from the left ribbon button Open Spiral Day. Enable Execution Layer in Settings → Spiral Day to use Timing, Plan, Review, and the Active Task sidebar.",

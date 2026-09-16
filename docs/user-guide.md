@@ -331,6 +331,7 @@ Start with the in-plugin empty states, then see
 | Planner progress click does nothing useful | Enable **Execution Layer** in Settings → Spiral Day. The notice names that setting. |
 | Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. Settings rejects `dddd` and snaps back to the last accepted value. |
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
+| Insert says the Plan Region is malformed | Open today's Daily Note and repair the existing markers. Do not insert another pair. **Locate Primary Plan** opens that note after Execution Layer is on. |
 | Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. If the markers are invalid, use **Locate Primary Plan** today and repair the existing pair. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. The Active Task unavailable state names the same next step, plus **Locate Primary Plan** if the note or running CLOCK needs a repair. **Show details** is localized and does not expose a raw code. |

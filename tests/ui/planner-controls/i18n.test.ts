@@ -91,11 +91,17 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(enPlanner["status.emptyCopySample"], "Copy sample task");
   assert.match(enPlanner["status.missingAlreadyPresent"], /Copy sample task/);
   assert.match(enPlanner["status.missingFolderConflict"], /file is blocking a folder/);
+  assert.match(enPlanner["status.missingInsertBlocked"], /Open today's Daily Note/);
+  assert.match(enPlanner["status.missingInsertBlocked"], /Locate Primary Plan/);
+  assert.match(enPlanner["status.missingInsertBlocked"], /repair the existing markers/);
   assert.match(zhCNPlanner["status.emptyPlan"], /还没有列表项/);
   assert.match(zhCNPlanner["status.emptyPlan"], /复制示例任务/);
   assert.equal(zhCNPlanner["status.emptyCopySample"], "复制示例任务");
   assert.match(zhCNPlanner["status.missingAlreadyPresent"], /复制示例任务/);
   assert.match(zhCNPlanner["status.missingFolderConflict"], /文件挡住了需要的文件夹/);
+  assert.match(zhCNPlanner["status.missingInsertBlocked"], /打开今日日记/);
+  assert.match(zhCNPlanner["status.missingInsertBlocked"], /定位主计划/);
+  assert.match(zhCNPlanner["status.missingInsertBlocked"], /修好现有标记/);
   assert.match(enExecution["error.noPrimary"], /Insert into today's Daily Note/);
   assert.match(zhCNExecution["error.noPrimary"], /写入今日日记/);
   assert.match(enExecution["error.missingDailyNote"], /Insert into today's Daily Note/);
