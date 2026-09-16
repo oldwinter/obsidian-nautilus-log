@@ -77,7 +77,7 @@ means every open flexible task is already on the schedule, not that there are
 no unfinished tasks. If scheduled is empty because remaining items are done or
 not clockable, use **Copy sample task** and paste another open `- [ ]` line.
 
-`Spiral Day: 1. Focus current block` needs today's Daily Note focused and the
+`Spiral Day: 1. Clock in current task` needs today's Daily Note focused and the
 caret on an open `- [ ]` flexible task. Otherwise the notice points to that
 line or **Clock In** on the Plan tab. It does not use Roam TODO wording. If
 that task is already being timed, the notice says so and points to **Clock

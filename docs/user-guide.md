@@ -128,7 +128,7 @@ A typical day:
 3. Enable **Execution Layer** once. Open the timer ribbon to reach
    **Timing**, **Plan**, and **Review**.
 4. Clock in an open `- [ ]` flexible task from the Plan tab, the editor
-   context menu, or `Spiral Day: 1. Focus current block`.
+   context menu, or `Spiral Day: 1. Clock in current task`.
 5. Work. Clock out when you stop. Advance progress or Complete from Plan or
    Planner.
 6. Use **Review** to compare planned and recorded time. Filter **Only
@@ -246,7 +246,7 @@ In opens this view.
 
 These exist only while Execution Layer is enabled:
 
-- `Spiral Day: 1. Focus current block` — Clock In the unfinished task under
+- `Spiral Day: 1. Clock in current task` — Clock In the unfinished task under
   the caret. If no Markdown note is focused, or the caret is not on an open
   `- [ ]` flexible task, the notice points to today's Daily Note or **Clock
   In** on the Plan tab. If that task is already being timed, the notice says

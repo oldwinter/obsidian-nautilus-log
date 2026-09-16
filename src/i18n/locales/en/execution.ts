@@ -248,7 +248,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.sidebarOpen": "Could not open this task in the right sidebar.",
   "error.sidebarAfterStart": "The task started, but Obsidian could not show it at the top of the sidebar.",
   "error.writerConflict": "Disable another CLOCK writer before enabling Spiral Day Actual Time Tracking. Only one extension may write CLOCK records.",
-  "command.focusCurrent": "Spiral Day: 1. Focus current block",
+  "command.focusCurrent": "Spiral Day: 1. Clock in current task",
   "command.clockOut": "Spiral Day: 2. Clock out Timing Line",
   "command.locatePrimary": "Spiral Day: 3. Locate Primary Plan",
   "menu.clockIn": "Spiral Day: Clock in",
