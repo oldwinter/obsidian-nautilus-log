@@ -31,7 +31,7 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "state.stale": "正在等待已确认的计时数据，暂时无法操作任务。",
   "state.working": "正在保存更改…",
   "state.malformed": "部分计时记录无法读取，其用时未计入统计。",
-  "state.noTarget": "无法安全定位此任务，请先检查来源再进行更改。",
+  "state.noTarget": "无法安全定位此任务。如果是今天，请用「定位主计划」打开日记。如果区块 ID 重复，请只保留在一项上，然后保存并刷新。",
   "action.clockIn": "开始计时",
   "action.complete": "完成任务",
   "action.openSource": ({ title }) => `打开“${title}”的来源`,

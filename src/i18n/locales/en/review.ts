@@ -69,7 +69,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "state.stale": "Waiting for confirmed timing data. Task actions are unavailable.",
   "state.working": "Saving changes…",
   "state.malformed": "Some timing records could not be read. Their time is excluded.",
-  "state.noTarget": "This task cannot be identified safely. Check its source before making changes.",
+  "state.noTarget": "This task cannot be identified safely. If this is today, use Locate Primary Plan to open the note. If the block ID is duplicated, keep it on exactly one item, then save and refresh.",
   "action.clockIn": "Clock in",
   "action.complete": "Complete",
   "action.openSource": ({ title }) => `Open source for ${title}`,

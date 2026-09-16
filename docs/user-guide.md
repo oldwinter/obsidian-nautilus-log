@@ -244,7 +244,9 @@ Review compares planned and recorded time for a chosen date.
   task — including a day of only fixed events — it offers **Copy sample
   task**. It does not say the plan has no list items. If the markers are
   invalid, it names **Locate Primary Plan** (today) and says to repair the
-  existing pair, not insert another.
+  existing pair, not insert another. A row that cannot be identified names
+  **Locate Primary Plan** (today) and says to keep a duplicated block ID on
+  exactly one item.
 
 ### Active Task
 
@@ -332,7 +334,7 @@ Start with the in-plugin empty states, then see
 | Review is empty | There is no reviewable `- [ ]` / `- [x]` task on that date, the note / plan is missing, or the plan has only fixed events or plain items. Use **Copy sample task** today. If the markers are invalid, use **Locate Primary Plan** today and repair the existing pair. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. The Active Task unavailable state names the same next step, plus **Locate Primary Plan** if the note or running CLOCK needs a repair. **Show details** is localized and does not expose a raw code. |
-| Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
+| Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. Review rows with a duplicated ID name the same next step. |
 | Copy task link fails | Use **Locate Primary Plan** and copy the wikilink from the task line. If the block ID is missing, Clock In from the Plan tab first. |
 | Insert or enable Execution fails | Read the one specific notice. A first-run settings persist failure before Insert is logged only. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |

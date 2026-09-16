@@ -44,6 +44,7 @@ time range, plain items without a checkbox, completed `[x]`/`[X]` items, and
 foreign checkboxes are read-only projections.
 
 If the item has a duplicate block ID, identity-dependent actions are disabled.
+The Review row warning names **Locate Primary Plan** when the date is today.
 Give one occurrence a distinct terminal ID, save, and refresh.
 
 ## The item title or duration looks wrong
