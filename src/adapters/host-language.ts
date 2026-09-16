@@ -4,7 +4,7 @@ export function readHostLanguage(readLanguage?: () => string): string {
       const locale = readLanguage();
       if (typeof locale === "string" && locale.trim() !== "") return locale;
     } catch {
-      // Obsidian 1.7.7 hosts do not export getLanguage.
+      // Older hosts and the test foundation stub omit getLanguage.
     }
   }
   try {

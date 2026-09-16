@@ -3,7 +3,6 @@ import {
   Notice,
   Plugin,
   TFile,
-  getLanguage,
   type Editor,
   type MarkdownFileInfo,
   type TAbstractFile,
@@ -235,9 +234,7 @@ export default class SpiralDayPlugin extends Plugin {
     this.#pluginData = new PluginDataStore({
       load: () => this.loadData(),
       save: (data) => this.saveData(data),
-    }, {
-      hostLanguage: readHostLanguage(typeof getLanguage === "function" ? getLanguage : undefined),
-    });
+    }, { hostLanguage: readHostLanguage() });
     this.#clock = new RealSystemClock();
     this.#configureLocalTimeResolver(this.#clock.timeZone());
     this.#workspaceIndex = new WorkspaceIndex(this.#atomicAccess, {
