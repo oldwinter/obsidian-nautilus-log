@@ -197,7 +197,11 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     return;
   }
   if (snapshot.state !== "confirmed") {
-    appendState(root, options.messages.t("execution", "plan.unavailable"), "");
+    appendState(
+      root,
+      options.messages.t("execution", "plan.unavailable"),
+      options.messages.t("execution", "plan.unavailableDetail"),
+    );
     return;
   }
   const { projection } = snapshot;

@@ -234,3 +234,26 @@ test("Plan confirmed empty region names Copy sample task", () => {
   assert.match(text, /Copy sample task/);
   assert.match(text, /- \[ \] Write the release note 45m/);
 });
+
+test("Plan error state names Settings and Planner", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: { state: "error" } as PlanViewOptions["snapshot"],
+  });
+  const text = collectText(root).join("\n");
+  assert.match(text, /Today's plan is unavailable/);
+  assert.match(text, /Settings → Spiral Day/);
+  assert.match(text, /open Planner from the ribbon/);
+});

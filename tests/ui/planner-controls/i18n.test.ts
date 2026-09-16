@@ -168,6 +168,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNExecution["error.copyTaskLink"], /定位主计划/);
   assert.match(zhCNExecution["error.copyTaskLink"], /「计划」标签开始计时/);
   assert.equal(zhCNExecution["error.copyTaskLink"].includes("UID"), false);
+  assert.match(enExecution["plan.unavailableDetail"], /Settings → Spiral Day/);
+  assert.match(enExecution["plan.unavailableDetail"], /open Planner from the ribbon/);
+  assert.match(zhCNExecution["plan.unavailableDetail"], /设置 → Spiral Day/);
+  assert.match(zhCNExecution["plan.unavailableDetail"], /功能区打开规划器/);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {
