@@ -68,8 +68,10 @@ export type ExecutionCatalog = Readonly<{
   "settings.forgottenWarning": string;
   "settings.dailyNoteFolder": string;
   "settings.dailyNoteFolderDesc": string;
+  "settings.dailyNoteFolderRejected": string;
   "settings.dailyNoteFormat": string;
   "settings.dailyNoteFormatDesc": string;
+  "settings.dailyNoteFormatRejected": string;
   "settings.onboardingTitle": string;
   "settings.onboardingExecution": string;
   "notice.firstRun": string;
@@ -185,9 +187,11 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.recentRetention": "Recent retention minutes",
   "settings.forgottenWarning": "Forgotten timer minutes",
   "settings.dailyNoteFolder": "Daily Note folder",
-  "settings.dailyNoteFolderDesc": "Vault-relative folder for today's Daily Note. Leave empty for the vault root. Must match the note Insert creates and Planner reads.",
+  "settings.dailyNoteFolderDesc": "Vault-relative folder for today's Daily Note. Leave empty for the vault root. Must match the note Insert creates and Planner reads. Invalid folders are rejected and the field returns to the last accepted value.",
+  "settings.dailyNoteFolderRejected": "That Daily Note folder is invalid. The last accepted folder was kept. Use a vault-relative folder, not .. or an absolute path.",
   "settings.dailyNoteFormat": "Daily Note date format",
-  "settings.dailyNoteFormatDesc": "Date format for the Daily Note filename. Must include year, month, and day tokens. The plugin adds .md.",
+  "settings.dailyNoteFormatDesc": "Date format for the Daily Note filename. Must include year, month, and day tokens. The plugin adds .md. Unsupported tokens such as dddd are rejected and the field returns to the last accepted format.",
+  "settings.dailyNoteFormatRejected": "That Daily Note date format is invalid. The last accepted format was kept. Use year, month, and day tokens (YYYY, MM/M, DD/D). Weekday names such as dddd are not supported.",
   "settings.onboardingTitle": "First-run checklist",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
   "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, or Review (today), or paste the plan starter (markers plus a sample task).",

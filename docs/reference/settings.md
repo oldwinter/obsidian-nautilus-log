@@ -41,8 +41,8 @@ retention and 120 for Forgotten timer.
 
 | Setting | Accepted values | Default | Effect |
 | --- | --- | --- | --- |
-| Daily Note folder | vault-relative folder; empty means vault root | Core Daily Notes `folder` on first enable, otherwise empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. Insert or a Settings change locks the first-run value so later core-plugin edits do not overwrite it. |
-| Daily Note date format | a format containing year, month, and day tokens | Core Daily Notes `format` on first enable, otherwise `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. Insert or a Settings change locks the first-run value. |
+| Daily Note folder | vault-relative folder; empty means vault root | Core Daily Notes `folder` on first enable, otherwise empty | Prefix for the resolved Daily Note path. Backslashes are normalized to `/`. Insert or a Settings change locks the first-run value so later core-plugin edits do not overwrite it. An invalid folder is rejected; the field returns to the last accepted value instead of falling back to the factory default while you type. |
+| Daily Note date format | a format containing year, month, and day tokens | Core Daily Notes `format` on first enable, otherwise `YYYY-MM-DD` | Produces the Daily Note path for the requested logical date. Insert or a Settings change locks the first-run value. Unsupported tokens such as `dddd` are rejected; the field returns to the last accepted format. |
 
 Supported date tokens:
 
