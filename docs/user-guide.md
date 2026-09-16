@@ -327,6 +327,7 @@ Start with the in-plugin empty states, then see
 | Copy task link fails | Use **Locate Primary Plan** and copy the wikilink from the task line. If the block ID is missing, Clock In from the Plan tab first. |
 | Insert or enable Execution fails | Read the one specific notice. A first-run settings persist failure before Insert is logged only. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
+| Clock In says plugin settings could not be saved | Retry Clock In, Clock Out, or the setting you just changed. Check that the vault is writable. This is not a note-change failure. |
 
 ## Related documents
 

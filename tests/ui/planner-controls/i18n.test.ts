@@ -132,6 +132,12 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(enExecution["error.unconfirmed"].includes("graph"), false);
   assert.match(zhCNExecution["error.unconfirmed"], /笔记更改/);
   assert.equal(zhCNExecution["error.unconfirmed"].includes("图谱"), false);
+  assert.match(enExecution["error.pluginData"], /plugin settings or the Pomodoro session/);
+  assert.match(enExecution["error.pluginData"], /vault is writable/);
+  assert.equal(enExecution["error.pluginData"].includes("note change"), false);
+  assert.match(zhCNExecution["error.pluginData"], /插件设置或番茄钟会话/);
+  assert.match(zhCNExecution["error.pluginData"], /库可以写入/);
+  assert.equal(zhCNExecution["error.pluginData"].includes("笔记更改"), false);
   assert.match(enExecution["error.executionInactive"], /Execution Layer/);
   assert.match(enExecution["error.executionInactive"], /Settings → Spiral Day/);
   assert.equal(enExecution["error.executionInactive"].includes("Actual Time Tracking"), false);
