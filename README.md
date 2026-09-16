@@ -54,11 +54,10 @@ empty Planner that now lists the next action.
 
 1. Open **Settings → Spiral Day**. Leave the defaults for the first run, or set
    **Daily Note folder** and **Daily Note date format** to match your journal.
-2. Create today's Daily Note. The default path is `YYYY-MM-DD.md` at the vault
-   root.
-3. Open Planner or **Settings → Spiral Day** and click **Insert into today's
-   Daily Note**. That creates today's note if needed and writes the markers plus
-   one sample task. Opening Planner never inserts them by itself. You can still
+2. Click **Insert into today's Daily Note** in Planner, Settings, or Review
+   (today). That creates today's note if needed (default `YYYY-MM-DD.md` at the
+   vault root) and writes the markers plus one sample task. Opening Planner
+   never inserts them by itself. You can still create the note yourself and
    paste this pair at column zero:
 
    ```markdown
@@ -68,10 +67,10 @@ empty Planner that now lists the next action.
    <!-- /nautilus-log:plan -->
    ```
 
-4. Click the **Open Spiral Day** ribbon icon. The Planner reads that Primary
+3. Click the **Open Spiral Day** ribbon icon. The Planner reads that Primary
    Plan. If the markers are missing, it shows them again and offers **Copy
    markers** and **Insert into today's Daily Note**.
-5. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan, Review,
+4. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan, Review,
    the Active Task sidebar, and `Spiral Day:` command-palette actions.
 
 Complete manuals:
