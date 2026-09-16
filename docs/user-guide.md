@@ -257,7 +257,8 @@ These exist only while Execution Layer is enabled:
   notice says so and points to **Clock In** on the Plan tab.
 - `Spiral Day: 3. Locate Primary Plan` — opens today's Daily Note even when
   the Primary Plan is missing. If the note does not exist, a notice points to
-  **Insert into today's Daily Note**.
+  **Insert into today's Daily Note** in Planner, Settings, the Plan tab, or
+  Review (today).
 
 Right-click an eligible open flexible task for **Spiral Day: Clock in**.
 Right-click the timed task for **Clock out**.

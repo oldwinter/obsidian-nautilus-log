@@ -114,7 +114,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "error.commandsUnavailable": "Obsidian 命令面板操作不可用。",
   "error.generic": "Spiral Day 无法完成该操作。",
   "error.noPrimary": "今天没有找到主计划。请点「写入今日日记」，或检查 设置 → Spiral Day 中的日记文件夹和日期格式。",
-  "error.missingDailyNote": "今日日记还不存在。请在规划器、设置或回顾（今天）里点「写入今日日记」。",
+  "error.missingDailyNote": "今日日记还不存在。请在规划器、设置、「计划」标签或回顾（今天）里点「写入今日日记」。",
   "error.navigationUnavailable": "Obsidian 导航不可用。",
   "error.noBlockId": "该任务没有区块 UID。",
   "error.sidebarUnavailable": "Obsidian 侧栏不可用。",
