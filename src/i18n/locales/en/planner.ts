@@ -75,7 +75,7 @@ export const enPlanner = Object.freeze({
   "status.missingInsertBlocked": "Today's Daily Note has a malformed Plan Region. Repair the existing markers instead of inserting another pair.",
   "status.missingInvalidPath": "Today's Daily Note path is invalid. Check Daily Note folder and date format in Settings → Spiral Day.",
   "status.missingFolderConflict": "A file is blocking a folder in today's Daily Note path. Rename or move that file, then try Insert again.",
-  "status.missingNextSurfaces": "Open Planner from the shell ribbon icon (Open Spiral Day). Enable Execution Layer in Settings → Spiral Day to use Timing, Plan, Review, and the Active Task sidebar.",
+  "status.missingNextSurfaces": "Open Planner from the left ribbon button Open Spiral Day. Enable Execution Layer in Settings → Spiral Day to use Timing, Plan, Review, and the Active Task sidebar.",
   "status.emptyPlan": "This Primary Plan has no list items. Use Copy sample task and paste that line between the markers, then save and refresh.",
   "status.emptyCopySample": "Copy sample task",
   "status.emptyCopied": "Sample task copied.",
