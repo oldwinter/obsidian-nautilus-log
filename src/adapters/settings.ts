@@ -15,7 +15,11 @@ import { renderEmptyPlanGuidance, renderPlanMissingGuidance } from "../ui/onboar
 import type { HostDailyNoteSeed, PluginSettings } from "../runtime/plugin-data";
 import type { RuntimePlanProjection } from "../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../runtime/snapshots";
-import { settingsOnboardingKind } from "./settings-onboarding";
+import {
+  settingsOnboardingChanged,
+  settingsOnboardingKind,
+  type SettingsOnboardingKind,
+} from "./settings-onboarding";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
 
@@ -30,6 +34,9 @@ export interface ExecutionSettingsDependencies {
   readonly onExecutionChanged: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
   readonly planSnapshot?: () => RuntimeSnapshot<RuntimePlanProjection> | undefined;
+  readonly subscribePlan?: (
+    listener: (snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void,
+  ) => () => void;
   readonly hostDailyNote?: () => HostDailyNoteSeed | undefined;
   readonly onError?: (error: unknown) => void;
 }
@@ -54,6 +61,8 @@ function numericMinutes(value: string, fallback: number): number | undefined {
 export class SpiralDaySettingTab extends PluginSettingTab {
   readonly #dependencies: ExecutionSettingsDependencies;
   #displayGeneration = 0;
+  #unsubscribePlan: (() => void) | undefined;
+  #onboardingKind: SettingsOnboardingKind | undefined;
 
   constructor(dependencies: ExecutionSettingsDependencies) {
     super(dependencies.app, dependencies.plugin);
@@ -65,6 +74,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
   }
 
   override display(): void {
+    this.#stopWatchingOnboarding();
     const generation = ++this.#displayGeneration;
     const { containerEl } = this;
     containerEl.replaceChildren();
@@ -72,6 +82,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     heading.textContent = this.#dependencies.messages.t("execution", "settings.title");
     containerEl.append(heading);
     this.#appendOnboarding(containerEl);
+    this.#watchOnboarding();
     const current = this.#dependencies.settings();
 
     new Setting(containerEl)
@@ -144,6 +155,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
   }
 
   override hide(): void {
+    this.#stopWatchingOnboarding();
     this.#displayGeneration += 1;
     super.hide();
   }
@@ -155,6 +167,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     title.textContent = this.#dependencies.messages.t("execution", "settings.onboardingTitle");
     card.append(title);
     const kind = settingsOnboardingKind(this.#dependencies.planSnapshot?.());
+    this.#onboardingKind = kind;
     const intro = this.#dependencies.messages.t("execution", "settings.onboardingDetail");
     if (kind === "ready") {
       const detail = container.ownerDocument.createElement("p");
@@ -179,6 +192,20 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     execution.textContent = this.#dependencies.messages.t("execution", "settings.onboardingExecution");
     card.append(execution);
     container.append(card);
+  }
+
+  #watchOnboarding(): void {
+    const subscribe = this.#dependencies.subscribePlan;
+    if (!subscribe) return;
+    this.#unsubscribePlan = subscribe((snapshot) => {
+      if (!settingsOnboardingChanged(this.#onboardingKind, snapshot)) return;
+      this.display();
+    });
+  }
+
+  #stopWatchingOnboarding(): void {
+    this.#unsubscribePlan?.();
+    this.#unsubscribePlan = undefined;
   }
 
   #select<Key extends keyof PluginSettings, Value extends PluginSettings[Key] & number>(

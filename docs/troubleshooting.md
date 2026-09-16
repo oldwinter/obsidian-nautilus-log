@@ -3,7 +3,7 @@
 ## The planner says “No Primary Plan”
 
 The Planner and Plan tab show the next step, including the two HTML markers.
-The Settings first-run checklist is instructional and stays visible after a
+The Settings first-run explanation is instructional and stays visible after a
 plan exists, but Insert hides once today's Primary Plan is confirmed. Opening
 a surface does not rewrite your note.
 **Locate Primary Plan** opens today's configured Daily Note even when the

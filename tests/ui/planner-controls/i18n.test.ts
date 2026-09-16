@@ -104,9 +104,11 @@ test("Daily Note settings describe the Insert path in both locales", () => {
   assert.match(enExecution["settings.componentPrefixDesc"], /does not change Markdown grammar/);
   assert.match(zhCNExecution["settings.componentPrefixDesc"], /不会改变 Markdown 语法/);
   assert.match(enExecution["settings.onboardingDetail"], /If you see No Primary Plan/);
-  assert.match(enExecution["settings.onboardingDetail"], /stays here after a plan exists/);
+  assert.match(enExecution["settings.onboardingDetail"], /explanation stays and Insert hides/);
+  assert.equal(enExecution["settings.onboardingDetail"].includes("checklist stays here"), false);
   assert.match(zhCNExecution["settings.onboardingDetail"], /没有主计划/);
-  assert.match(zhCNExecution["settings.onboardingDetail"], /仍会留在这里/);
+  assert.match(zhCNExecution["settings.onboardingDetail"], /会收起/);
+  assert.equal(zhCNExecution["settings.onboardingDetail"].includes("这份清单仍会留在这里"), false);
 });
 
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {

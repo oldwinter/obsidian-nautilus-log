@@ -137,9 +137,9 @@ test("missing-plan guidance keeps the live diagnosis unless Settings overrides t
   const liveText = collect(live).join("\n");
   const settingsText = collect(settings).join("\n");
   assert.match(liveText, /No supported Plan Region was found/);
-  assert.equal(liveText.includes("This checklist stays here after a plan exists"), false);
+  assert.equal(liveText.includes("this explanation stays and Insert hides"), false);
   assert.match(settingsText, /If you see No Primary Plan/);
-  assert.match(settingsText, /This checklist stays here after a plan exists/);
+  assert.match(settingsText, /After a plan exists, this explanation stays and Insert hides/);
   assert.equal(settingsText.includes("No supported Plan Region was found"), false);
 });
 

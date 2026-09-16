@@ -9,3 +9,10 @@ export function settingsOnboardingKind(
   if (snapshot?.state !== "confirmed") return "missing";
   return snapshot.projection.items.length === 0 ? "empty" : "ready";
 }
+
+export function settingsOnboardingChanged(
+  previous: SettingsOnboardingKind | undefined,
+  snapshot: RuntimeSnapshot<RuntimePlanProjection> | undefined,
+): boolean {
+  return settingsOnboardingKind(snapshot) !== previous;
+}
