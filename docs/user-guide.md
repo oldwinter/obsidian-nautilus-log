@@ -310,6 +310,7 @@ Start with the in-plugin empty states, then see
 | Ribbon is the only new control | Expected until Execution Layer is on. |
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |
+| Planner progress click does nothing useful | Enable **Execution Layer** in Settings → Spiral Day. The notice names that setting. |
 | Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. Settings rejects `dddd` and snaps back to the last accepted value. |
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |

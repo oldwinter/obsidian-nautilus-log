@@ -627,8 +627,12 @@ export default class SpiralDayPlugin extends Plugin {
 
   async #dispatchPlannerProgress(intent: PlannerProgressIntent): Promise<void> {
     const snapshot = this.#planSnapshot;
-    if (!this.#execution || snapshot?.state !== "confirmed") {
+    if (!this.#execution) {
       new Notice(this.#requireMessages().t("execution", "error.executionInactive"), 5_000);
+      return;
+    }
+    if (snapshot?.state !== "confirmed") {
+      new Notice(this.#requireMessages().t("execution", "error.unconfirmed"), 5_000);
       return;
     }
     const item = snapshot.projection.items.find((candidate) =>

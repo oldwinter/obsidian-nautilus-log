@@ -130,6 +130,12 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(enExecution["error.unconfirmed"].includes("graph"), false);
   assert.match(zhCNExecution["error.unconfirmed"], /笔记更改/);
   assert.equal(zhCNExecution["error.unconfirmed"].includes("图谱"), false);
+  assert.match(enExecution["error.executionInactive"], /Execution Layer/);
+  assert.match(enExecution["error.executionInactive"], /Settings → Spiral Day/);
+  assert.equal(enExecution["error.executionInactive"].includes("Actual Time Tracking"), false);
+  assert.match(zhCNExecution["error.executionInactive"], /执行层/);
+  assert.match(zhCNExecution["error.executionInactive"], /设置 → Spiral Day/);
+  assert.equal(zhCNExecution["error.executionInactive"].includes("实际时间追踪"), false);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {
