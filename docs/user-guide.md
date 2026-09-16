@@ -187,8 +187,9 @@ Enable Execution Layer, then click the timer ribbon. The panel opens on
 ![Timing idle guidance](user-guide/images/08-timing-idle.png)
 
 - Idle: no CLOCK. The empty state says to use **Insert into today's Daily
-  Note** on the Plan tab if there is no Primary Plan yet, then Clock In from
-  Plan or the editor. You can start a standalone POMO.
+  Note** on the Plan tab if there is no Primary Plan yet, or **Copy sample
+  task** on the Plan tab if the list is empty or every task is done, then
+  Clock In from Plan or the editor. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
   forgotten-timer warning.
 - Recent: closed CLOCKs kept for the configured retention window.

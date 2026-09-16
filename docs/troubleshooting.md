@@ -72,11 +72,13 @@ rolls the setting back off and leaves execution surfaces disabled. Check the
 notice, correct the reported source or timing problem, then enable it again.
 
 The timer ribbon opens on **Timing**. If there is no Primary Plan yet, that
-idle state now points to **Insert into today's Daily Note** on the Plan tab
-instead of only Clock In. An empty **Unscheduled today** list on the Plan tab
-means every open flexible task is already on the schedule, not that there are
-no unfinished tasks. If scheduled is empty because remaining items are done or
-not clockable, use **Copy sample task** and paste another open `- [ ]` line.
+idle state points to **Insert into today's Daily Note** on the Plan tab. If
+the list is empty or every task is done, it points to **Copy sample task** on
+the Plan tab instead of only Clock In. An empty **Unscheduled today** list on
+the Plan tab means every open flexible task is already on the schedule, not
+that there are no unfinished tasks. If scheduled is empty because remaining
+items are done or not clockable, use **Copy sample task** and paste another
+open `- [ ]` line.
 
 `Spiral Day: 1. Clock in current task` needs today's Daily Note focused and the
 caret on an open `- [ ]` flexible task. Otherwise the notice points to that

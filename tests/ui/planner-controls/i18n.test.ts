@@ -87,7 +87,9 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(enReview["state.missingNote"], /If this is today, use Insert into today's Daily Note/);
   assert.match(zhCNReview["state.missingNote"], /如果是今天，请点「写入今日日记」/);
   assert.match(enExecution["timing.nextAction"], /If there is no Primary Plan yet, use Insert into today's Daily Note/);
+  assert.match(enExecution["timing.nextAction"], /Copy sample task/);
   assert.match(zhCNExecution["timing.nextAction"], /如果还没有主计划，请先在「计划」标签点「写入今日日记」/);
+  assert.match(zhCNExecution["timing.nextAction"], /复制示例任务/);
   assert.match(enExecution["error.focusTodo"], /Clock In from the Plan tab/);
   assert.equal(enExecution["error.focusTodo"].includes("TODO"), false);
   assert.match(zhCNExecution["error.focusTodo"], /「计划」标签点「开始计时」/);
