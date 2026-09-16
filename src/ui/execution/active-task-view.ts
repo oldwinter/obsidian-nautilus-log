@@ -1,3 +1,4 @@
+import { executionFeedbackKey } from "../../adapters/execution-feedback";
 import type { ExecutionApplicationSnapshot } from "../../runtime/execution/application";
 import {
   executionElement,
@@ -67,7 +68,10 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
     const summary = executionElement(root.ownerDocument, "summary");
     summary.textContent = options.messages.t("execution", "action.showDetails");
     const code = executionElement(root.ownerDocument, "p");
-    code.textContent = options.snapshot.code ?? options.snapshot.status;
+    code.textContent = options.messages.t(
+      "execution",
+      executionFeedbackKey(options.snapshot.code) ?? "active.unavailableDetail",
+    );
     disclosure.append(summary, code);
     state.append(title, detail, disclosure);
     root.append(state);

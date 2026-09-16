@@ -170,6 +170,14 @@ test("active task surface uses explicit commands instead of a focusable article 
   assert.match(activeTask, /className: "spiral-day-active-task__action spiral-day-active-task__open"/);
 });
 
+test("Active Task unavailable details use localized copy instead of a raw code", async () => {
+  const activeTask = await readFile("src/ui/execution/active-task-view.ts", "utf8");
+  assert.match(activeTask, /executionFeedbackKey\(options\.snapshot\.code\)/);
+  assert.match(activeTask, /active\.unavailableDetail/);
+  assert.doesNotMatch(activeTask, /code\.textContent = options\.snapshot\.code/);
+  assert.doesNotMatch(activeTask, /options\.snapshot\.status/);
+});
+
 test("unavailable and working execution states disable mutation controls", async () => {
   const [timingView, planView] = await Promise.all([
     readFile("src/ui/execution/timing-view.ts", "utf8"),
