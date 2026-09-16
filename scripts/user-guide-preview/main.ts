@@ -4,6 +4,7 @@ import { zhCNExecution } from "../../src/i18n/locales/zh-CN/execution";
 import { enReview } from "../../src/i18n/locales/en/review";
 import { zhCNReview } from "../../src/i18n/locales/zh-CN/review";
 import { PRIMARY_PLAN_MARKERS } from "../../src/ui/onboarding/first-run";
+import { primaryPlanSeed } from "../../src/workspace/insert-primary-plan";
 import {
   confirmedSnapshot,
   createProjectionRevision,
@@ -191,7 +192,7 @@ function settingsScene(executionOn: boolean) {
     steps.append(el("li", undefined, messages.t("planner", key)));
   }
   const markers = el("pre", "spiral-day-onboarding__markers");
-  markers.append(el("code", undefined, PRIMARY_PLAN_MARKERS));
+  markers.append(el("code", undefined, primaryPlanSeed("en")));
   const actions = el("div", "spiral-day-onboarding__actions");
   actions.append(el("button", "spiral-day-onboarding__copy", messages.t("planner", "status.missingCopyMarkers")));
   actions.append(el("button", "spiral-day-onboarding__insert", messages.t("planner", "status.missingInsert")));

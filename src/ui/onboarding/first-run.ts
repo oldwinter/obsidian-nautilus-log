@@ -1,11 +1,10 @@
 import { PLAN_CLOSE_MARKER, PLAN_OPEN_MARKER_V1 } from "../../workspace/plan-region";
-import { ENGLISH_SAMPLE_FLEXIBLE_TASK } from "../../workspace/insert-primary-plan";
+import { primaryPlanSeed } from "../../workspace/insert-primary-plan";
 
 export const PRIMARY_PLAN_MARKERS = `${PLAN_OPEN_MARKER_V1}\n${PLAN_CLOSE_MARKER}`;
 
-export const SAMPLE_FLEXIBLE_TASK = ENGLISH_SAMPLE_FLEXIBLE_TASK;
-
 export interface PlanMissingCopy {
+  readonly locale: string;
   t(
     namespace: "planner",
     key:
@@ -69,9 +68,10 @@ export function renderPlanMissingGuidance(
     item.textContent = messages.t("planner", key);
     steps.append(item);
   }
+  const seed = primaryPlanSeed(messages.locale);
   const markers = create(parent.ownerDocument, "pre", "spiral-day-onboarding__markers");
   const code = create(parent.ownerDocument, "code");
-  code.textContent = PRIMARY_PLAN_MARKERS;
+  code.textContent = seed;
   markers.append(code);
   const actionsRow = create(parent.ownerDocument, "div", "spiral-day-onboarding__actions");
   const copy = create(parent.ownerDocument, "button", "spiral-day-onboarding__copy");
@@ -84,7 +84,7 @@ export function renderPlanMissingGuidance(
       copy.textContent = messages.t("planner", "status.missingCopyFailed");
       return;
     }
-    void clipboard.writeText(PRIMARY_PLAN_MARKERS).then(() => {
+    void clipboard.writeText(seed).then(() => {
       copy.textContent = messages.t("planner", "status.missingCopied");
     }).catch(() => {
       selectMarkers(code);

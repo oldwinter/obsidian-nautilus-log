@@ -101,9 +101,9 @@ Rules that matter on day one:
   **Flexible Task** that the scheduler places into free time.
 - Tokens are read only from the first physical line of each item.
 
-If Planner is still empty, it now shows the markers, **Copy markers**,
-**Insert into today's Daily Note**, and where to open Timing / Plan / Review
-after you enable Execution.
+If Planner is still empty, it now shows the markers plus a sample task,
+**Copy plan starter**, **Insert into today's Daily Note**, and where to open
+Timing / Plan / Review after you enable Execution.
 
 ![Planner empty-state guidance](user-guide/images/05-planner-empty-guidance.png)
 

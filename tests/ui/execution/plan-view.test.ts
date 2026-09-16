@@ -6,7 +6,7 @@ import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
 import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolver";
 import type { RuntimePlanItemSource } from "../../../src/runtime/projection-runtime";
-import { PRIMARY_PLAN_MARKERS } from "../../../src/ui/onboarding/first-run";
+import { primaryPlanSeed } from "../../../src/workspace/insert-primary-plan";
 import { renderPlanView, type PlanViewOptions } from "../../../src/ui/execution/plan-view";
 
 class ElementStub {
@@ -137,5 +137,5 @@ test("Plan missing state shows the Primary Plan markers and next actions", () =>
   const text = collectText(root).join("\n");
   assert.match(text, /No Primary Plan was found today/);
   assert.match(text, /nautilus-log:plan\/v1/);
-  assert.equal(text.includes(PRIMARY_PLAN_MARKERS), true);
+  assert.equal(text.includes(primaryPlanSeed("en")), true);
 });
