@@ -252,7 +252,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "error.sidebarUnavailable": "The Obsidian sidebar is unavailable.",
   "error.sidebarOrder": "Obsidian could not move the Active Task view to the top.",
   "error.sidebarOpen": "Could not open this task in the right sidebar.",
-  "error.sidebarAfterStart": "The task started, but Obsidian could not show it at the top of the sidebar.",
+  "error.sidebarAfterStart": "The task started, but Obsidian could not show it at the top of the sidebar. Use Open active task on the Timing tab.",
   "error.writerConflict": "Disable another CLOCK writer before enabling Spiral Day Actual Time Tracking. Only one extension may write CLOCK records.",
   "command.focusCurrent": "Spiral Day: 1. Clock in current task",
   "command.clockOut": "Spiral Day: 2. Clock out current task",

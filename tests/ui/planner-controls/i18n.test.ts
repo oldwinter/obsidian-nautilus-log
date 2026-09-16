@@ -52,6 +52,8 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(enExecution["error.sidebarOrder"].includes("Timing Line"), false);
   assert.match(zhCNExecution["error.sidebarOrder"], /当前任务/);
   assert.equal(zhCNExecution["error.sidebarOrder"].includes("计时线"), false);
+  assert.match(enExecution["error.sidebarAfterStart"], /Open active task on the Timing tab/);
+  assert.match(zhCNExecution["error.sidebarAfterStart"], /「计时」标签点「打开当前任务」/);
   assert.equal(enExecution["menu.clockIn"], "Spiral Day: Clock in");
   assert.equal(zhCNExecution["menu.clockIn"], "Spiral Day: 开始计时");
   assert.match(enExecution["notice.firstRun"], /Planner or Settings/);
