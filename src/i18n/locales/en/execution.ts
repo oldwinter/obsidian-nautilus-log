@@ -142,7 +142,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "action.hideDetails": "Hide details",
   "timing.idle": "Idle",
   "timing.noActive": "No task is being timed.",
-  "timing.nextAction": "Clock in from the Plan tab on an open `- [ ]` flexible task, or right-click that task in the Daily Note. Standalone POMO can run when no CLOCK is active.",
+  "timing.nextAction": "If there is no Primary Plan yet, use Insert into today's Daily Note on the Plan tab. Otherwise clock in from the Plan tab on an open `- [ ]` flexible task, or right-click that task in the Daily Note. Standalone POMO can run when no CLOCK is active.",
   "timing.active": "Current task",
   "timing.forgotten": "This CLOCK may have been left running.",
   "timing.pomo": "POMO",

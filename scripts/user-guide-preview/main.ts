@@ -279,7 +279,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
     const body = shell({
       title: "Execution · Timing",
       ribbon: "execution",
-      caption: "Timing idle state now says how to Clock In.",
+      caption: "Timing idle state now says how to Insert or Clock In.",
     });
     const surface = el("div", "surface-card");
     body.append(surface);
@@ -371,7 +371,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
     const body = shell({
       title: "Active Task",
       ribbon: "execution",
-      caption: "Right-sidebar Active Task tells you how to start a CLOCK.",
+      caption: "Right-sidebar Active Task tells you how to Insert or start a CLOCK.",
     });
     const surface = el("div", "surface-card");
     body.append(surface);
