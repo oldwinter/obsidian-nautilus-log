@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { ExecutionCommandRegistry } from "../../../src/adapters/commands";
 import { registerExecutionEditorMenu } from "../../../src/adapters/editor-menu";
+import { executionFeedbackKey } from "../../../src/adapters/execution-feedback";
 import { executionOutcomeNotice } from "../../../src/adapters/notices";
 import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
@@ -157,6 +158,9 @@ test("UP-ERR-05/06 maps runtime failures to specific localized feedback", () => 
   assert.equal(executionOutcomeNotice(outcome("plugin-data-failed"), messages).message, "error.pluginData");
   assert.equal(executionOutcomeNotice(outcome("source-over-limit"), messages).message, "error.refresh");
   assert.equal(executionOutcomeNotice(outcome("multiple-running-clocks"), messages).message, "error.overlap");
+  assert.equal(executionFeedbackKey("focused-task-unavailable"), "notice.sourceUnavailable");
+  assert.equal(executionFeedbackKey("clock-index-unavailable"), "error.refresh");
+  assert.equal(executionFeedbackKey("degraded"), undefined);
 });
 
 test("idle Clock Out already-applied names Clock In on the Plan tab", () => {
