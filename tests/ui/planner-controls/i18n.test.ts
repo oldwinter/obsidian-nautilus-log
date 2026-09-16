@@ -144,6 +144,8 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNExecution["error.overlap"], /定位主计划/);
   assert.match(zhCNExecution["error.overlap"], /结束计时/);
   assert.equal(zhCNExecution["error.overlap"].includes("旧版"), false);
+  assert.match(enExecution["error.refresh"], /Try again on the Timing tab/);
+  assert.match(zhCNExecution["error.refresh"], /「计时」标签点「重试」/);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {
