@@ -42,7 +42,7 @@ test("execution locale catalogs have exact keys and switch without fallback", ()
   assert.match(messages.t("execution", "error.noPrimary"), /写入今日日记/);
   assert.match(messages.t("execution", "error.missingDailyNote"), /还不存在/);
   assert.equal(messages.t("execution", "plan.noPrimary"), "今天没有找到主计划。");
-  assert.equal(messages.t("execution", "error.focusTodo").length > 0, true);
+  assert.match(messages.t("execution", "error.focusTodo"), /「计划」标签点「开始计时」/);
 });
 
 test("locale refresh updates static execution panel controls", async () => {

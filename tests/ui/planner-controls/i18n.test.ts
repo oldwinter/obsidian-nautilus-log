@@ -74,6 +74,14 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNReview["state.missingNote"], /如果是今天，请点「写入今日日记」/);
   assert.match(enExecution["timing.nextAction"], /If there is no Primary Plan yet, use Insert into today's Daily Note/);
   assert.match(zhCNExecution["timing.nextAction"], /如果还没有主计划，请先在「计划」标签点「写入今日日记」/);
+  assert.match(enExecution["error.focusTodo"], /Clock In from the Plan tab/);
+  assert.equal(enExecution["error.focusTodo"].includes("TODO"), false);
+  assert.match(zhCNExecution["error.focusTodo"], /「计划」标签点「开始计时」/);
+  assert.match(enExecution["error.taskOwner"], /open `- \[ \]` flexible task/);
+  assert.equal(enExecution["error.taskOwner"].includes("TODO"), false);
+  assert.match(zhCNExecution["error.taskOwner"], /`- \[ \]` 弹性任务/);
+  assert.match(enExecution["error.completeTask"], /open `- \[ \]` flexible task/);
+  assert.equal(enExecution["error.completeTask"].includes("TODO"), false);
 });
 
 test("Daily Note settings describe the Insert path in both locales", () => {
