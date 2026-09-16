@@ -24,6 +24,7 @@ import {
   insertPrimaryPlan,
   insertPrimaryPlanNoticeKey,
 } from "./adapters/insert-primary-plan";
+import { locatePrimaryPath, primaryNavigationMessageKey } from "./adapters/locate-primary";
 import { executionOutcomeNotice, showExecutionNotice } from "./adapters/notices";
 import { copyPlannerSummary } from "./adapters/plan-summary";
 import {
@@ -69,6 +70,7 @@ import {
   zonedTimeParts,
 } from "./runtime/system-clock";
 import { ObsidianAtomicTextAccess, type AtomicTextAccess } from "./workspace/commit";
+import { resolveDailyNotePath } from "./workspace/daily-notes";
 import { HistoryIndex, type HistoryIndexSnapshot } from "./workspace/history-index";
 import { WorkspaceIndex } from "./workspace/identity-index";
 import type {
@@ -895,15 +897,25 @@ export default class SpiralDayPlugin extends Plugin {
   }
 
   #primaryPath(): string | null {
-    return this.#planSnapshot?.state === "confirmed"
-      ? this.#planSnapshot.projection.sourcePath
-      : null;
+    return locatePrimaryPath(
+      this.#planSnapshot?.state === "confirmed" ? this.#planSnapshot.projection.sourcePath : undefined,
+      this.#resolvedTodayPath(),
+    );
+  }
+
+  #resolvedTodayPath(): string | null {
+    const clock = this.#clock;
+    const pluginData = this.#pluginData;
+    if (!clock || !pluginData) return null;
+    const resolved = resolveDailyNotePath(logicalDateAt(clock), {
+      folder: pluginData.data.settings.dailyNoteFolder,
+      format: pluginData.data.settings.dailyNoteFormat,
+    });
+    return resolved.ok ? resolved.path : null;
   }
 
   #navigationMessage(code: string): string {
-    if (code === "primary-plan-missing") return this.#requireMessages().t("execution", "error.noPrimary");
-    if (code === "no-block-id") return this.#requireMessages().t("execution", "error.noBlockId");
-    return this.#requireMessages().t("execution", "notice.sourceUnavailable");
+    return this.#requireMessages().t("execution", primaryNavigationMessageKey(code));
   }
 
   #intentId(prefix: string): string {

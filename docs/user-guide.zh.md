@@ -183,7 +183,7 @@ Spiral Day 是面向 Obsidian 桌面端的插件：用 Markdown 规划一天，�
 
 - `Spiral Day: 1. 聚焦当前任务` — 对光标所在的未完成任务开始计时
 - `Spiral Day: 2. 结束计时线`
-- `Spiral Day: 3. 定位主计划`
+- `Spiral Day: 3. 定位主计划` — 即使还没有主计划，也会打开今日日记。笔记不存在时，提示去点 **写入今日日记**。
 
 在符合条件的未完成弹性任务上右键，可 **Spiral Day: 开始计时**；在当前计时任务上右键，可 **Spiral Day: 结束计时**。语言为英文时，命令名仍是 `Focus current block` / `Clock in`。
 

@@ -236,7 +236,9 @@ These exist only while Execution Layer is enabled:
 - `Spiral Day: 1. Focus current block` — Clock In the unfinished task under
   the caret.
 - `Spiral Day: 2. Clock out Timing Line`
-- `Spiral Day: 3. Locate Primary Plan`
+- `Spiral Day: 3. Locate Primary Plan` — opens today's Daily Note even when
+  the Primary Plan is missing. If the note does not exist, a notice points to
+  **Insert into today's Daily Note**.
 
 Right-click an eligible open flexible task for **Spiral Day: Clock in**.
 Right-click the timed task for **Clock out**.
