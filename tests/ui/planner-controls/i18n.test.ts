@@ -36,8 +36,10 @@ test("review overrun filter label matches the bilingual handbook", () => {
 test("host chrome and empty-state copy stay bilingual after Review insert", () => {
   assert.equal(enPlanner["ribbon.openPlanner"], "Open Spiral Day");
   assert.equal(zhCNPlanner["ribbon.openPlanner"], "打开 Spiral Day");
-  assert.equal(enExecution["command.focusCurrent"], "Spiral Day: 1. Focus current block");
-  assert.equal(zhCNExecution["command.focusCurrent"], "Spiral Day: 1. 聚焦当前任务");
+  assert.equal(enExecution["command.focusCurrent"], "Spiral Day: 1. Clock in current task");
+  assert.equal(zhCNExecution["command.focusCurrent"], "Spiral Day: 1. 开始计时当前任务");
+  assert.equal(enExecution["command.focusCurrent"].includes("block"), false);
+  assert.equal(zhCNExecution["command.focusCurrent"].includes("聚焦"), false);
   assert.equal(enExecution["menu.clockIn"], "Spiral Day: Clock in");
   assert.equal(zhCNExecution["menu.clockIn"], "Spiral Day: 开始计时");
   assert.match(enExecution["notice.firstRun"], /Planner or Settings/);

@@ -44,7 +44,7 @@ test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and remov
   registry.start();
   assert.equal(registry.active, true);
   assert.deepEqual(registered.map((command) => command.name), [
-    "Spiral Day: 1. Focus current block",
+    "Spiral Day: 1. Clock in current task",
     "Spiral Day: 2. Clock out Timing Line",
     "Spiral Day: 3. Locate Primary Plan",
   ]);
@@ -82,7 +82,7 @@ test("command palette titles refresh when the locale catalog changes", () => {
   titles = chineseTitles;
   registry.refresh();
   assert.deepEqual(registered.slice(-3).map((command) => command.name), [
-    "Spiral Day: 1. 聚焦当前任务",
+    "Spiral Day: 1. 开始计时当前任务",
     "Spiral Day: 2. 结束计时线",
     "Spiral Day: 3. 定位主计划",
   ]);
