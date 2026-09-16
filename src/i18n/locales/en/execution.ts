@@ -173,7 +173,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "review.empty": "No Review tasks for today.",
   "active.title": "Active Task",
   "active.unavailable": "Active task unavailable",
-  "active.unavailableDetail": "The current task could not be confirmed. Source navigation is disabled.",
+  "active.unavailableDetail": "The current task could not be confirmed. Save the note, then use Try again on the Timing tab. Use Locate Primary Plan if today's Daily Note or the running CLOCK needs a repair.",
   "active.elapsed": "Elapsed",
   "active.keyboardHint": "Press Enter to open the source task.",
   "status.ready": "Ready",
