@@ -72,6 +72,8 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormat": "日记日期格式",
   "settings.dailyNoteFormatDesc": "日记文件名的日期格式，必须包含年、月、日标记。插件会补上 .md。不支持 dddd 这类星期名；无效格式会被拒绝，输入框恢复为上次可用的值。",
   "settings.dailyNoteFormatRejected": "日记日期格式无效，已恢复为上次可用的值。请使用年、月、日标记（YYYY、MM/M、DD/D）。不支持 dddd 这类星期名。",
+  "settings.dailyNoteFormatHostIgnored": ({ format }) =>
+    `Obsidian 核心日记的日期格式（${format}）含有不受支持的标记，因此没有复制。规划器和「写入今日日记」使用下面的格式，而不是核心日记文件名。`,
   "settings.onboardingTitle": "第一次使用清单",
   "settings.onboardingExecution": "在下方启用执行层后，才能打开计时、计划、回顾、命令面板操作和右侧栏当前任务。",
   "notice.firstRun": "还没有主计划。可在规划器、设置或回顾（今天）里点「写入今日日记」，或自行粘贴计划模板（标记加示例任务）。",

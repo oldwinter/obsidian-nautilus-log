@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { interpretDailyNoteSetting } from "../../../src/adapters/daily-note-setting";
+import { ignoredHostDailyNoteFormat, interpretDailyNoteSetting } from "../../../src/adapters/daily-note-setting";
 import {
   acceptedDailyNoteFolder,
   acceptedDailyNoteFormat,
@@ -81,4 +82,37 @@ test("rejected Daily Note setting notices stay bilingual and distinct", () => {
     enExecution["settings.dailyNoteFormatRejected"],
     enExecution["settings.dailyNoteFormatDesc"],
   );
+});
+
+test("Settings explain when the host Daily Notes format was not copied", () => {
+  assert.equal(ignoredHostDailyNoteFormat(undefined), undefined);
+  assert.equal(ignoredHostDailyNoteFormat({ format: "YYYY/MM/DD" }), undefined);
+  assert.equal(ignoredHostDailyNoteFormat({ format: "YYYY-MM-DD dddd" }), "YYYY-MM-DD dddd");
+  assert.equal(ignoredHostDailyNoteFormat({ format: "dddd" }), "dddd");
+  assert.match(
+    enExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /YYYY-MM-DD dddd/,
+  );
+  assert.match(
+    enExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /was not copied/,
+  );
+  assert.match(
+    zhCNExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /YYYY-MM-DD dddd/,
+  );
+  assert.match(
+    zhCNExecution["settings.dailyNoteFormatHostIgnored"]({ format: "YYYY-MM-DD dddd" }),
+    /没有复制/,
+  );
+});
+
+test("Settings display the ignored host Daily Notes format next to the plugin format", async () => {
+  const [settings, main] = await Promise.all([
+    readFile("src/adapters/settings.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(settings, /ignoredHostDailyNoteFormat\(/);
+  assert.match(settings, /settings\.dailyNoteFormatHostIgnored/);
+  assert.match(main, /hostDailyNote: \(\) => this\.#hostDailyNote/);
 });

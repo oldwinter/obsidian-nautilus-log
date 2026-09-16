@@ -56,3 +56,7 @@ Use separators around variable-width `M` and `D` tokens. The rendered path must
 be a normalized relative Markdown path; it must not be absolute, contain `..`,
 end in `.md`, or contain forbidden path characters. The plugin adds the `.md`
 extension when resolving a Daily Note.
+
+If core Daily Notes uses an unsupported format such as `YYYY-MM-DD dddd`, first
+enable does not copy that format. Settings then shows the host string and
+explains that Planner and Insert use the plugin format below.

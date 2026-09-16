@@ -6,9 +6,13 @@ import {
   type Plugin,
   type SettingDefinitionItem,
 } from "obsidian";
-import { interpretDailyNoteSetting, type DailyNoteSettingField } from "./daily-note-setting";
+import {
+  ignoredHostDailyNoteFormat,
+  interpretDailyNoteSetting,
+  type DailyNoteSettingField,
+} from "./daily-note-setting";
 import { renderPlanMissingGuidance } from "../ui/onboarding/first-run";
-import type { PluginSettings } from "../runtime/plugin-data";
+import type { HostDailyNoteSeed, PluginSettings } from "../runtime/plugin-data";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
 
@@ -22,6 +26,7 @@ export interface ExecutionSettingsDependencies {
   readonly onLocaleChanged: () => void;
   readonly onExecutionChanged: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
+  readonly hostDailyNote?: () => HostDailyNoteSeed | undefined;
   readonly onError?: (error: unknown) => void;
 }
 
@@ -121,6 +126,17 @@ export class SpiralDaySettingTab extends PluginSettingTab {
 
     this.#dailyNoteText(containerEl, "folder", current.dailyNoteFolder);
     this.#dailyNoteText(containerEl, "format", current.dailyNoteFormat);
+    const ignoredHostFormat = ignoredHostDailyNoteFormat(this.#dependencies.hostDailyNote?.());
+    if (ignoredHostFormat !== undefined) {
+      const hint = containerEl.ownerDocument.createElement("p");
+      hint.className = "spiral-day-settings-host-ignored";
+      hint.textContent = this.#dependencies.messages.t(
+        "execution",
+        "settings.dailyNoteFormatHostIgnored",
+        { format: ignoredHostFormat },
+      );
+      containerEl.append(hint);
+    }
   }
 
   override hide(): void {

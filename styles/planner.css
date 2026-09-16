@@ -575,6 +575,11 @@
   margin-top: 0;
 }
 
+.spiral-day-settings-host-ignored {
+  color: var(--text-muted, #68707d);
+  margin: 0 0 16px;
+}
+
 .spiral-day-planner__tooltip {
   background: var(--background-primary, #fff);
   border: 1px solid var(--spiral-day-border, var(--background-modifier-border, #d7dbe1));

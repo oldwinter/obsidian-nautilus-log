@@ -56,7 +56,7 @@ import {
 } from "./runtime/execution/application";
 import type { ExecutionCommandOutcome } from "./runtime/execution/commands";
 import { projectRecentTasks } from "./runtime/execution/execution-state";
-import { PluginDataStore, type PluginSettings } from "./runtime/plugin-data";
+import { PluginDataStore, type HostDailyNoteSeed, type PluginSettings } from "./runtime/plugin-data";
 import {
   NautilusProjectionRuntime,
   type RuntimePlanProjection,
@@ -194,6 +194,7 @@ export default class SpiralDayPlugin extends Plugin {
   #textAccess: ObsidianVaultTextAccess | undefined;
   #atomicAccess: AtomicTextAccess | undefined;
   #pluginData: PluginDataStore | undefined;
+  #hostDailyNote: HostDailyNoteSeed | undefined;
   #clock: RealSystemClock | undefined;
   #localTimeResolver: ZonedLocalTimeResolver | undefined;
   #workspaceIndex: WorkspaceIndex | undefined;
@@ -235,6 +236,7 @@ export default class SpiralDayPlugin extends Plugin {
       editorForPath: editorResolver.editorForPath,
     });
     const hostDailyNote = await readHostDailyNoteConfiguration(this.app);
+    this.#hostDailyNote = hostDailyNote;
     this.#pluginData = new PluginDataStore({
       load: () => this.loadData(),
       save: (data) => this.saveData(data),
@@ -375,6 +377,7 @@ export default class SpiralDayPlugin extends Plugin {
       onLocaleChanged: () => this.#onLocaleChanged(),
       onExecutionChanged: () => undefined,
       insertPrimaryPlan: () => this.#insertPrimaryPlan(),
+      hostDailyNote: () => this.#hostDailyNote,
       onError: (error) => this.#reportError(error),
     }));
     registerExecutionEditorMenu({
