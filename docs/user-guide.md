@@ -233,7 +233,9 @@ Review compares planned and recorded time for a chosen date.
   day.
 - Missing Daily Note and missing Primary Plan states now say how to create
   the note and add the markers. When the selected date is today,
-  **Insert into today's Daily Note** writes the markers for you.
+  **Insert into today's Daily Note** writes the markers for you. If the
+  markers are already there but the list is empty, it offers **Copy sample
+  task**.
 
 ### Active Task
 
