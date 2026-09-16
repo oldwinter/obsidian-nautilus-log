@@ -88,7 +88,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.refreshed": "计时数据已刷新。",
   "notice.taskLinkCopied": "当前任务链接已复制。",
   "notice.failed": "更改未应用。",
-  "notice.sourceUnavailable": "来源导航不可用。",
+  "notice.sourceUnavailable": "无法打开该任务。请用「定位主计划」打开今日日记。如果区块 ID 缺失或重复，请只保留在一项上，然后保存并刷新。",
   "error.refresh": "无法刷新计时数据。请保存笔记，然后在「计时」标签点「重试」。",
   "error.copyTaskLink": "无法复制当前任务链接。",
   "error.unconfirmed": "无法确认笔记更改。请保存、刷新后再试。",

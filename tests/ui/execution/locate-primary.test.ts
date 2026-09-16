@@ -16,7 +16,15 @@ test("Locate Primary notices distinguish a missing note from a missing plan", ()
   assert.equal(primaryNavigationMessageKey("primary-plan-missing"), "error.noPrimary");
   assert.equal(primaryNavigationMessageKey("primary-source-missing"), "error.missingDailyNote");
   assert.equal(primaryNavigationMessageKey("source-file-missing"), "notice.sourceUnavailable");
+  assert.equal(primaryNavigationMessageKey("source-task-missing"), "notice.sourceUnavailable");
+  assert.equal(primaryNavigationMessageKey("identity-collision"), "notice.sourceUnavailable");
   assert.equal(primaryNavigationMessageKey("no-block-id"), "error.noBlockId");
+  assert.match(enExecution["notice.sourceUnavailable"], /Locate Primary Plan/);
+  assert.match(enExecution["notice.sourceUnavailable"], /block ID/);
+  assert.equal(enExecution["notice.sourceUnavailable"].includes("UID"), false);
+  assert.match(zhCNExecution["notice.sourceUnavailable"], /定位主计划/);
+  assert.match(zhCNExecution["notice.sourceUnavailable"], /区块 ID/);
+  assert.equal(zhCNExecution["notice.sourceUnavailable"].includes("UID"), false);
   assert.match(enExecution["error.noBlockId"], /Clock In from the Plan tab/);
   assert.equal(enExecution["error.noBlockId"].includes("UID"), false);
   assert.match(zhCNExecution["error.noBlockId"], /「计划」标签点「开始计时」/);
