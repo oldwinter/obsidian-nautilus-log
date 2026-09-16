@@ -128,7 +128,9 @@ exactly one item, save, and refresh. An item without an ID can still be planned;
 **Locate Primary Plan** to open today's Daily Note. A failed title click now
 names **Locate Primary Plan** and repairing a missing or duplicated block ID.
 It does not say only that source navigation is unavailable, and it does not
-say block UID.
+say block UID. A failed **Copy task link** names Locate Primary and copying
+the wikilink from the task line, or **Clock In** from the Plan tab when the
+block ID is missing.
 
 ## A timer is marked forgotten or timing is unavailable
 

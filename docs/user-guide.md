@@ -248,7 +248,9 @@ opens the source line, copies an Obsidian block link, and offers Clock Out.
 If **Keep Active Task first in the right sidebar** is on, a successful Clock
 In opens this view. If the view says Active Task is unavailable, save the
 note, then use **Try again** on the Timing tab. Use **Locate Primary Plan**
-if today's Daily Note or the running CLOCK needs a repair.
+if today's Daily Note or the running CLOCK needs a repair. If **Copy task
+link** fails, the notice names Locate Primary and copying the wikilink from
+the task line, or **Clock In** from the Plan tab when the block ID is missing.
 
 ![Active Task empty state](user-guide/images/11-active-task.png)
 
@@ -322,6 +324,7 @@ Start with the in-plugin empty states, then see
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 | Timing is unavailable or refresh fails | Save the note, then use **Try again** on the Timing tab. The Active Task unavailable state names the same next step, plus **Locate Primary Plan** if the note or running CLOCK needs a repair. |
 | Task title cannot open the source | Use **Locate Primary Plan**. If the block ID is missing or duplicated, keep it on exactly one item, save, refresh. |
+| Copy task link fails | Use **Locate Primary Plan** and copy the wikilink from the task line. If the block ID is missing, Clock In from the Plan tab first. |
 | Insert or enable Execution fails | Read the one specific notice. There is no second generic toast. |
 | Clock In says overlapping CLOCK records | Use **Locate Primary Plan**, then **Clock Out** or repair the open CLOCK lines so only one is running. |
 
