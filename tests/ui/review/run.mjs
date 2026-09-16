@@ -364,6 +364,11 @@ try {
       check(`review.${mode}-insert-only-for-missing-today`,
         insertVisible === (mode === "missing-note" || mode === "missing-plan"),
         { mode, insertVisible });
+      const copySample = page.getByRole("button", { name: "Copy sample task", exact: true });
+      const copyVisible = await copySample.isVisible().catch(() => false);
+      check(`review.${mode}-copy-sample-only-for-empty-today`,
+        copyVisible === (mode === "empty"),
+        { mode, copyVisible });
       if (mode === "invalid-plan") await capture(page, "empty-invalid-plan");
     }
     await open("missing-plan");
