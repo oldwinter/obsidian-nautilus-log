@@ -9,6 +9,7 @@ import {
   PluginDataReadbackError,
   PluginDataStoppedError,
   PluginDataStore,
+  pluginLanguageFromHost,
   type PluginDataDocument,
   type PluginDataPort,
   type PluginSettings,
@@ -41,6 +42,24 @@ test("issue 21 plugin-data defaults and validated results are deeply immutable",
   assert.equal(Object.isFrozen(DEFAULT_PLUGIN_DATA), true);
   assert.equal(Object.isFrozen(fresh), true);
   assert.equal(Object.isFrozen(fresh.diagnostics), true);
+});
+
+test("fresh plugin data follows a Chinese host locale and keeps saved English", async () => {
+  assert.equal(pluginLanguageFromHost("zh-CN"), "zh");
+  assert.equal(pluginLanguageFromHost("zh"), "zh");
+  assert.equal(pluginLanguageFromHost("zh_Hans_CN"), "zh");
+  assert.equal(pluginLanguageFromHost("en"), "en");
+  assert.equal(pluginLanguageFromHost("fr"), "en");
+  const seeded = validatePluginData(undefined, { hostLanguage: "zh-CN" });
+  assert.equal(seeded.data.settings.language, "zh");
+  assert.notStrictEqual(seeded.data, DEFAULT_PLUGIN_DATA);
+  const englishHost = validatePluginData(undefined, { hostLanguage: "en" });
+  assert.strictEqual(englishHost.data, DEFAULT_PLUGIN_DATA);
+  const saved = validatePluginData(pluginData({ language: "en" }), { hostLanguage: "zh-CN" });
+  assert.equal(saved.data.settings.language, "en");
+  const store = new PluginDataStore(new InMemoryPluginDataPort(), { hostLanguage: "zh" });
+  const loaded = await store.load();
+  assert.equal(loaded.data.settings.language, "zh");
 });
 
 test("issue 21 validation repairs fields independently and ignores unowned data", () => {

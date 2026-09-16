@@ -136,7 +136,7 @@ Important fields for getting started:
 
 | Setting | Default | Why it matters |
 | --- | --- | --- |
-| Language | English | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. |
+| Language | Follows Obsidian on first run (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. A saved choice wins after that. |
 | Daily Note folder | empty (vault root) | Must match the folder of the note you edit. |
 | Daily Note date format | `YYYY-MM-DD` | Must contain year, month, and day tokens. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
