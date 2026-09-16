@@ -254,7 +254,7 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   for (const item of unscheduledItems) appendTaskRow(unscheduledList, item, projection, options);
   if (unscheduledItems.length === 0) {
     const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
-    empty.textContent = options.messages.t("execution", "plan.noTasks");
+    empty.textContent = options.messages.t("execution", "plan.noUnscheduled");
     unscheduled.append(empty);
   } else unscheduled.append(unscheduledList);
   root.append(scheduled, unscheduled);

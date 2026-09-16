@@ -140,6 +140,38 @@ test("Plan missing state shows the Primary Plan markers and next actions", () =>
   assert.equal(text.includes(primaryPlanSeed("en")), true);
 });
 
+test("Plan unscheduled empty copy does not claim there are no unfinished tasks", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        items: [partialTask],
+        schedule: {
+          fixedEvents: [],
+          plannedSlots: [{ task: partialTask, startMinutes: 600, endMinutes: 645 }],
+        },
+      },
+    } as PlanViewOptions["snapshot"],
+  });
+  const text = collectText(root).join("\n");
+  assert.match(text, /Write a draft/);
+  assert.match(text, /Every open flexible task is already on the schedule/);
+  assert.equal(text.includes("No unfinished direct tasks are available"), false);
+});
+
 test("Plan confirmed empty region tells the user to add a list item", () => {
   const document = new DocumentStub();
   const root = document.createElement();
