@@ -24,6 +24,10 @@ const FONTS = Object.freeze({
   "/fonts/JetBrainsMono-Regular.ttf": "/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf",
 });
 
+const requestedScenes = (process.env.SPIRAL_DAY_GUIDE_SCENES ?? "")
+  .split(",")
+  .map((scene) => scene.trim())
+  .filter(Boolean);
 const SCENES = [
   ["enable-plugin", "01-enable-plugin.png"],
   ["settings-first-run", "02-settings-first-run.png"],
@@ -37,7 +41,10 @@ const SCENES = [
   ["review-tab", "10-review-tab.png"],
   ["active-task", "11-active-task.png"],
   ["daily-loop", "12-daily-loop.png"],
-];
+].filter(([scene]) => requestedScenes.length === 0 || requestedScenes.includes(scene));
+if (requestedScenes.length > 0 && SCENES.length === 0) {
+  throw new Error(`No user-guide scenes matched ${requestedScenes.join(",")}`);
+}
 
 const [bundle, html, ...styles] = await Promise.all([
   build({
