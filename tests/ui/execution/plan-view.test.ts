@@ -172,6 +172,43 @@ test("Plan unscheduled empty copy does not claim there are no unfinished tasks",
   assert.equal(text.includes("No unfinished direct tasks are available"), false);
 });
 
+test("Plan scheduled-empty with existing items offers Copy sample task", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  const doneTask = {
+    ...partialTask,
+    status: "done" as const,
+    progressPercent: 100,
+    remainingDurationMinutes: 0,
+    executionEligible: false,
+  };
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        items: [doneTask],
+        schedule: { fixedEvents: [], plannedSlots: [] },
+      },
+    } as PlanViewOptions["snapshot"],
+  });
+  const text = collectText(root).join("\n");
+  assert.match(text, /No unfinished direct tasks are available/);
+  assert.match(text, /Add a direct `- \[ \]` flexible task/);
+  assert.match(text, /Copy sample task/);
+  assert.match(text, /- \[ \] Write the release note 45m/);
+});
+
 test("Plan confirmed empty region tells the user to add a list item", () => {
   const document = new DocumentStub();
   const root = document.createElement();

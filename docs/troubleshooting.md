@@ -73,7 +73,8 @@ The timer ribbon opens on **Timing**. If there is no Primary Plan yet, that
 idle state now points to **Insert into today's Daily Note** on the Plan tab
 instead of only Clock In. An empty **Unscheduled today** list on the Plan tab
 means every open flexible task is already on the schedule, not that there are
-no unfinished tasks.
+no unfinished tasks. If scheduled is empty because remaining items are done or
+not clockable, use **Copy sample task** and paste another open `- [ ]` line.
 
 ## Review is empty or missing a Daily Note
 
