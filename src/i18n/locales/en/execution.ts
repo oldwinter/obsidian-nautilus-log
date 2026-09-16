@@ -81,6 +81,7 @@ export type ExecutionCatalog = Readonly<{
   "notice.firstRunExecution": string;
   "notice.applied": string;
   "notice.alreadyApplied": string;
+  "notice.clockOutIdle": string;
   "notice.refreshed": string;
   "notice.taskLinkCopied": string;
   "notice.failed": string;
@@ -207,6 +208,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "notice.firstRunExecution": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, the Plan tab, or Review (today), or paste the plan starter (markers plus a sample task).",
   "notice.applied": "Change confirmed.",
   "notice.alreadyApplied": "Already up to date.",
+  "notice.clockOutIdle": "No task is being timed. Clock In from the Plan tab.",
   "notice.refreshed": "Timing data refreshed.",
   "notice.taskLinkCopied": "Active task link copied.",
   "notice.failed": "The change was not applied.",

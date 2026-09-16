@@ -79,6 +79,9 @@ not clockable, use **Copy sample task** and paste another open `- [ ]` line.
 `Spiral Day: 1. Focus current block` needs today's Daily Note focused and the
 caret on an open `- [ ]` flexible task. Otherwise the notice points to that
 line or **Clock In** on the Plan tab. It does not use Roam TODO wording.
+`Spiral Day: 2. Clock out Timing Line` with no running CLOCK says nothing is
+being timed and points to **Clock In** on the Plan tab. It does not say
+Already up to date.
 
 ## Review is empty or missing a Daily Note
 

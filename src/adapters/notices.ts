@@ -58,6 +58,13 @@ export function executionOutcomeNotice(
     return Object.freeze({ message: messages.t("execution", "notice.applied"), level: "info", durationMs: 3_000 });
   }
   if (outcome.outcome === "already-applied") {
+    if (outcome.code === "already-idle") {
+      return Object.freeze({
+        message: messages.t("execution", "notice.clockOutIdle"),
+        level: "warning",
+        durationMs: 5_000,
+      });
+    }
     return Object.freeze({ message: messages.t("execution", "notice.alreadyApplied"), level: "info", durationMs: 3_000 });
   }
   const key = outcome.code ? CODE_TO_MESSAGE[outcome.code] : undefined;

@@ -895,7 +895,9 @@ export class ExecutionApplication {
       if (decision.kind === "rejected") {
         return { kind: "rejected", code: this.#rejectionCode(decision.code) };
       }
-      if (decision.kind === "no-op") return { kind: "confirmed-no-op" };
+      if (decision.kind === "no-op") {
+        return { kind: "confirmed-no-op", reason: decision.reason };
+      }
       if (decision.action !== advertisedAction) {
         return { kind: "rejected", code: "action-no-longer-applicable" };
       }
