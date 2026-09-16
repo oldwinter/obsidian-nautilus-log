@@ -141,7 +141,7 @@ A typical day:
 ### Settings
 
 **Settings → Spiral Day** is bilingual (`English` / `简体中文`). The first-run
-checklist stays at the top. It is instructional, not a live Planner diagnosis.
+explanation stays at the top. It is instructional, not a live Planner diagnosis.
 After a Primary Plan exists, Settings keeps the explanation but hides
 **Insert into today's Daily Note**. An empty ready plan offers **Copy sample
 task** instead.

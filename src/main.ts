@@ -384,6 +384,7 @@ export default class SpiralDayPlugin extends Plugin {
       onExecutionChanged: () => undefined,
       insertPrimaryPlan: () => this.#insertPrimaryPlan(),
       planSnapshot: () => this.#planSnapshot,
+      subscribePlan: (listener) => this.#subscribePlan(listener),
       hostDailyNote: () => this.#hostDailyNote,
       onError: (error) => this.#reportError(error),
     }));

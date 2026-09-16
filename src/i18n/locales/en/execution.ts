@@ -202,7 +202,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "settings.dailyNoteFormatHostIgnored": ({ format }) =>
     `Obsidian's Daily Notes format (${format}) was not copied because it uses unsupported tokens. Planner and Insert use the format below, not that host filename.`,
   "settings.onboardingTitle": "First-run checklist",
-  "settings.onboardingDetail": "Planner reads only today's configured Daily Note and the nautilus-log:plan/v1 region. If you see No Primary Plan, click Insert into today's Daily Note. This checklist stays here after a plan exists.",
+  "settings.onboardingDetail": "Planner reads only today's configured Daily Note and the nautilus-log:plan/v1 region. If you see No Primary Plan, click Insert into today's Daily Note. After a plan exists, this explanation stays and Insert hides.",
   "settings.onboardingExecution": "Enable Execution Layer below to open Timing, Plan, Review, command-palette actions, and the Active Task sidebar.",
   "notice.firstRun": "No Primary Plan yet. Use Insert into today's Daily Note in Planner or Settings, or paste the plan starter (markers plus a sample task).",
   "notice.firstRunExecution": "No Primary Plan yet. Use Insert into today's Daily Note in Planner, Settings, the Plan tab, or Review (today), or paste the plan starter (markers plus a sample task).",
