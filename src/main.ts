@@ -25,7 +25,7 @@ import {
   insertPrimaryPlanNoticeKey,
 } from "./adapters/insert-primary-plan";
 import { locatePrimaryPath, primaryNavigationMessageKey } from "./adapters/locate-primary";
-import { executionOutcomeNotice, showExecutionNotice } from "./adapters/notices";
+import { executionOutcomeNotice, firstRunNoticeKey, showExecutionNotice } from "./adapters/notices";
 import { copyPlannerSummary } from "./adapters/plan-summary";
 import {
   createPlannerViewFactory,
@@ -359,7 +359,13 @@ export default class SpiralDayPlugin extends Plugin {
         void openPlannerView(this.app, logicalDateAt(this.#requireClock()))
           .then(() => {
             if (this.#planSnapshot?.state === "missing") {
-              new Notice(this.#requireMessages().t("execution", "notice.firstRun"), 8_000);
+              new Notice(
+                this.#requireMessages().t(
+                  "execution",
+                  firstRunNoticeKey(this.#requirePluginData().data.settings.executionEnabled),
+                ),
+                8_000,
+              );
             }
           })
           .catch((error) => this.#reportError(error));

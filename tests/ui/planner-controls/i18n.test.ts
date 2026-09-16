@@ -40,10 +40,14 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.equal(zhCNExecution["command.focusCurrent"], "Spiral Day: 1. 聚焦当前任务");
   assert.equal(enExecution["menu.clockIn"], "Spiral Day: Clock in");
   assert.equal(zhCNExecution["menu.clockIn"], "Spiral Day: 开始计时");
-  assert.match(enExecution["notice.firstRun"], /Planner, Settings, or Review \(today\)/);
+  assert.match(enExecution["notice.firstRun"], /Planner or Settings/);
+  assert.equal(enExecution["notice.firstRun"].includes("Review"), false);
   assert.match(enExecution["notice.firstRun"], /plan starter/);
-  assert.match(zhCNExecution["notice.firstRun"], /规划器、设置或回顾（今天）/);
+  assert.match(zhCNExecution["notice.firstRun"], /规划器或设置/);
+  assert.equal(zhCNExecution["notice.firstRun"].includes("回顾"), false);
   assert.match(zhCNExecution["notice.firstRun"], /计划模板/);
+  assert.match(enExecution["notice.firstRunExecution"], /Plan tab, or Review \(today\)/);
+  assert.match(zhCNExecution["notice.firstRunExecution"], /「计划」标签或回顾（今天）/);
   assert.match(enReview["state.emptyPlan"], /no list items/);
   assert.match(zhCNReview["state.emptyPlan"], /还没有列表项/);
   assert.match(enExecution["plan.emptyReady"], /no list items/);

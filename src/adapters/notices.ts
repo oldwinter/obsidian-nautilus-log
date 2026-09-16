@@ -36,6 +36,12 @@ const CODE_TO_MESSAGE: Readonly<Partial<Record<
   "write-outcome-uncertain": "error.unconfirmed",
 });
 
+export function firstRunNoticeKey(
+  executionEnabled: boolean,
+): "notice.firstRun" | "notice.firstRunExecution" {
+  return executionEnabled ? "notice.firstRunExecution" : "notice.firstRun";
+}
+
 export type NoticeLevel = "info" | "warning" | "danger";
 
 export interface ExecutionNotice {
