@@ -22,3 +22,12 @@ test("Insert notices distinguish invalid path from a file blocking a folder", ()
   assert.match(zhCNPlanner["status.missingFolderConflict"], /文件挡住了需要的文件夹/);
   assert.match(enPlanner["status.missingInvalidPath"], /path is invalid/);
 });
+
+test("already-present Insert notice names Copy sample task", () => {
+  assert.equal(
+    insertPrimaryPlanNoticeKey({ kind: "already-present", path: "2026-09-16.md" }),
+    "status.missingAlreadyPresent",
+  );
+  assert.match(enPlanner["status.missingAlreadyPresent"], /Copy sample task/);
+  assert.match(zhCNPlanner["status.missingAlreadyPresent"], /复制示例任务/);
+});

@@ -60,9 +60,11 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNExecution["plan.emptyReady"], /还没有列表项/);
   assert.match(enPlanner["status.emptyPlan"], /no list items/);
   assert.equal(enPlanner["status.emptyCopySample"], "Copy sample task");
+  assert.match(enPlanner["status.missingAlreadyPresent"], /Copy sample task/);
   assert.match(enPlanner["status.missingFolderConflict"], /file is blocking a folder/);
   assert.match(zhCNPlanner["status.emptyPlan"], /还没有列表项/);
   assert.equal(zhCNPlanner["status.emptyCopySample"], "复制示例任务");
+  assert.match(zhCNPlanner["status.missingAlreadyPresent"], /复制示例任务/);
   assert.match(zhCNPlanner["status.missingFolderConflict"], /文件挡住了需要的文件夹/);
   assert.match(enExecution["error.noPrimary"], /Insert into today's Daily Note/);
   assert.match(zhCNExecution["error.noPrimary"], /写入今日日记/);

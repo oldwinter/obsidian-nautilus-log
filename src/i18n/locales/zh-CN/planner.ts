@@ -71,7 +71,7 @@ export const zhCNPlanner = Object.freeze({
   "status.missingInsert": "写入今日日记",
   "status.missingInserted": "已写入主计划。请改示例任务，然后保存。",
   "status.missingInsertFailed": "无法写入主计划。请复制计划模板后自行粘贴。",
-  "status.missingAlreadyPresent": "今日日记里已经有主计划。如果看起来是空的，请在标记之间写入一行直接列表项，然后刷新。",
+  "status.missingAlreadyPresent": "今日日记里已经有主计划。如果看起来是空的，请用「复制示例任务」把那一行贴进标记之间，然后刷新。",
   "status.missingInsertBlocked": "今日日记里的计划区域不完整。请先修好现有标记，不要再插入一对。",
   "status.missingInvalidPath": "今日日记路径无效。请检查 设置 → Spiral Day 中的日记文件夹和日期格式。",
   "status.missingFolderConflict": "今日日记路径上有一个文件挡住了需要的文件夹。请先重命名或移走该文件，再点「写入今日日记」。",
