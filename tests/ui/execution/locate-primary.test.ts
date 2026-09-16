@@ -19,8 +19,10 @@ test("Locate Primary notices distinguish a missing note from a missing plan", ()
   assert.equal(primaryNavigationMessageKey("no-block-id"), "error.noBlockId");
   assert.match(enExecution["error.noPrimary"], /Insert into today's Daily Note/);
   assert.match(enExecution["error.missingDailyNote"], /does not exist yet/);
+  assert.match(enExecution["error.missingDailyNote"], /the Plan tab/);
   assert.match(zhCNExecution["error.noPrimary"], /写入今日日记/);
   assert.match(zhCNExecution["error.missingDailyNote"], /还不存在/);
+  assert.match(zhCNExecution["error.missingDailyNote"], /「计划」标签/);
 });
 
 test("Locate Primary opens the resolved Daily Note path when the snapshot is missing", async () => {

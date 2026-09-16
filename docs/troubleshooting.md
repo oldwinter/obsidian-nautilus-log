@@ -7,7 +7,8 @@ The Settings first-run explanation is instructional and stays visible after a
 plan exists, but Insert hides once today's Primary Plan is confirmed. Opening
 a surface does not rewrite your note.
 **Locate Primary Plan** opens today's configured Daily Note even when the
-region is missing; if that file does not exist, the notice points to Insert.
+region is missing; if that file does not exist, the notice points to Insert
+on Planner, Settings, the Plan tab, or Review (today).
 **Insert into today's Daily Note** writes only after you click it. It creates
 today's configured Daily Note when needed and refuses to insert when a valid or
 malformed Plan Region is already present. If the region is already there and
