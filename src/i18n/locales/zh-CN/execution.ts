@@ -83,6 +83,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.applied": "更改已确认。",
   "notice.alreadyApplied": "已经是最新状态。",
   "notice.clockOutIdle": "当前没有计时任务。请在「计划」标签点「开始计时」。",
+  "notice.clockInFocused": "这个任务已经在计时中。结束时请在「计划」标签点「结束计时」。",
   "notice.refreshed": "计时数据已刷新。",
   "notice.taskLinkCopied": "当前任务链接已复制。",
   "notice.failed": "更改未应用。",

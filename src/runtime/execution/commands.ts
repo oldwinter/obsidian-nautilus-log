@@ -29,7 +29,8 @@ export type ExecutionRuntimeCode =
   | "runtime-not-started"
   | "runtime-stopping"
   | "time-review-required"
-  | "already-idle";
+  | "already-idle"
+  | "already-focused";
 
 export type ExecutionRuntimeStatus =
   | "starting"
@@ -549,7 +550,9 @@ export class ExecutionCoordinator {
         "already-applied",
         this.#setSnapshot("ready", confirmed),
         undefined,
-        prepared.reason === "already-idle" ? "already-idle" : undefined,
+        prepared.reason === "already-idle" || prepared.reason === "already-focused"
+          ? prepared.reason
+          : undefined,
       );
     }
     const { plan, expectation } = prepared.mutation;

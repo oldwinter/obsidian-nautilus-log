@@ -65,6 +65,13 @@ export function executionOutcomeNotice(
         durationMs: 5_000,
       });
     }
+    if (outcome.code === "already-focused") {
+      return Object.freeze({
+        message: messages.t("execution", "notice.clockInFocused"),
+        level: "info",
+        durationMs: 5_000,
+      });
+    }
     return Object.freeze({ message: messages.t("execution", "notice.alreadyApplied"), level: "info", durationMs: 3_000 });
   }
   const key = outcome.code ? CODE_TO_MESSAGE[outcome.code] : undefined;
