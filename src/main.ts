@@ -896,7 +896,7 @@ export default class SpiralDayPlugin extends Plugin {
     try {
       await pluginData.persistSeededIfNeeded();
     } catch (error) {
-      this.#reportError(error);
+      console.error("Spiral Day", error);
     }
     try {
       const outcome = await insertPrimaryPlan({

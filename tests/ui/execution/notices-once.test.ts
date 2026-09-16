@@ -8,6 +8,12 @@ test("failed Insert and rejected enable do not add a second generic notice", asy
   assert.match(main, /throw new ExecutionActivationRejected/);
   assert.match(main, /if \(error instanceof ExecutionActivationRejected\) console\.error/);
   assert.match(main, /status\.missingInsertFailed/);
+  const persistCatch = main.slice(
+    main.indexOf("persistSeededIfNeeded"),
+    main.indexOf("insertPrimaryPlan({"),
+  );
+  assert.match(persistCatch, /console\.error/);
+  assert.equal(persistCatch.includes("#reportError"), false);
   const insertCatch = main.slice(main.indexOf("status.missingInsertFailed"));
   assert.equal(insertCatch.slice(0, 280).includes("#reportError"), false);
 });
