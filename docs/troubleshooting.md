@@ -111,6 +111,11 @@ Use a vault-relative folder and a format containing a year, month, and day
 component. The default is `YYYY-MM-DD`. Avoid absolute paths, `..`,
 backslashes, a trailing `.md`, adjacent variable-width tokens (`M`/`D`), and
 unescaped alphabetic literals; wrap alphabetic literals in `[square brackets]`.
+Obsidian weekday tokens such as `dddd` are not supported.
+
+If Settings rejects a folder or format, the field snaps back to the last
+accepted value and a notice explains why. The plugin does not silently keep
+showing a discarded `YYYY-MM-DD dddd` while Planner reads `YYYY-MM-DD`.
 
 After correcting the setting, reopen the planner for the target date. If the
 resolved Markdown path does not exist, create that Daily Note or change the

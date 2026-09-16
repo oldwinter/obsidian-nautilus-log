@@ -238,6 +238,15 @@ function validDailyNoteFormat(value: string): boolean {
   return true;
 }
 
+export function acceptedDailyNoteFolder(value: string): string | undefined {
+  return normalizeFolder(value);
+}
+
+export function acceptedDailyNoteFormat(value: string): string | undefined {
+  const format = value.trim();
+  return validDailyNoteFormat(format) ? format : undefined;
+}
+
 function validateSettings(
   value: unknown,
   diagnostics: PluginDataDiagnostic[],

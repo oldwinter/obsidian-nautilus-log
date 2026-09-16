@@ -64,7 +64,11 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
 
 test("Daily Note settings describe the Insert path in both locales", () => {
   assert.match(enExecution["settings.dailyNoteFolderDesc"], /Insert creates and Planner reads/);
+  assert.match(enExecution["settings.dailyNoteFolderDesc"], /last accepted value/);
   assert.match(zhCNExecution["settings.dailyNoteFolderDesc"], /写入今日日记/);
+  assert.match(zhCNExecution["settings.dailyNoteFolderDesc"], /上次可用的值/);
+  assert.match(enExecution["settings.dailyNoteFormatDesc"], /dddd are rejected/);
+  assert.match(zhCNExecution["settings.dailyNoteFormatDesc"], /dddd/);
   assert.match(enExecution["settings.componentPrefixDesc"], /does not change Markdown grammar/);
   assert.match(zhCNExecution["settings.componentPrefixDesc"], /不会改变 Markdown 语法/);
 });

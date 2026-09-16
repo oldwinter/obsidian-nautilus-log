@@ -1,10 +1,12 @@
 import {
+  Notice,
   PluginSettingTab,
   Setting,
   type App,
   type Plugin,
   type SettingDefinitionItem,
 } from "obsidian";
+import { interpretDailyNoteSetting, type DailyNoteSettingField } from "./daily-note-setting";
 import { renderPlanMissingGuidance } from "../ui/onboarding/first-run";
 import type { PluginSettings } from "../runtime/plugin-data";
 import type { ExecutionCatalog } from "../i18n/locales/en/execution";
@@ -117,10 +119,8 @@ export class SpiralDaySettingTab extends PluginSettingTab {
         (value) => ({ forgottenWarningMinutes: value }));
     }
 
-    this.#text(containerEl, "settings.dailyNoteFolder", current.dailyNoteFolder,
-      (value) => ({ dailyNoteFolder: value }), "settings.dailyNoteFolderDesc");
-    this.#text(containerEl, "settings.dailyNoteFormat", current.dailyNoteFormat,
-      (value) => ({ dailyNoteFormat: value }), "settings.dailyNoteFormatDesc");
+    this.#dailyNoteText(containerEl, "folder", current.dailyNoteFolder);
+    this.#dailyNoteText(containerEl, "format", current.dailyNoteFormat);
   }
 
   override hide(): void {
@@ -176,6 +176,38 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     setting.addText((text) => text
       .setValue(current)
       .onChange((value) => this.#run(generation, () => this.#dependencies.update(patch(value)))));
+  }
+
+  #dailyNoteText(
+    container: HTMLElement,
+    field: DailyNoteSettingField,
+    current: string,
+  ): void {
+    const generation = this.#displayGeneration;
+    const label = field === "folder" ? "settings.dailyNoteFolder" : "settings.dailyNoteFormat";
+    const description = field === "folder" ? "settings.dailyNoteFolderDesc" : "settings.dailyNoteFormatDesc";
+    const key = field === "folder" ? "dailyNoteFolder" : "dailyNoteFormat";
+    const setting = new Setting(container)
+      .setName(this.#dependencies.messages.t("execution", label))
+      .setDesc(this.#dependencies.messages.t("execution", description));
+    setting.addText((text) => {
+      text.setValue(current);
+      const persistIfAccepted = (submitted: string, finalize: boolean): void => {
+        const result = interpretDailyNoteSetting(field, submitted);
+        if (result.kind === "accept") {
+          if (result.value !== this.#dependencies.settings()[key]) {
+            this.#run(generation, () => this.#dependencies.update({ [key]: result.value }));
+          }
+          if (finalize && result.value !== text.inputEl.value) text.setValue(result.value);
+          return;
+        }
+        if (!finalize) return;
+        text.setValue(this.#dependencies.settings()[key]);
+        new Notice(this.#dependencies.messages.t("execution", result.notice), 6_000);
+      };
+      text.onChange((value) => persistIfAccepted(value, false));
+      text.inputEl.addEventListener("blur", () => persistIfAccepted(text.inputEl.value, true));
+    });
   }
 
   #numeric<Key extends keyof PluginSettings>(

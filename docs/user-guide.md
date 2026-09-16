@@ -143,8 +143,8 @@ Important fields for getting started:
 | Setting | Default | Why it matters |
 | --- | --- | --- |
 | Language | Copied from Obsidian on first enable (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. Insert or a Settings change saves it; a later Settings choice wins. |
-| Daily Note folder | Copied from core Daily Notes on first enable, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. Insert or a Settings change locks it so later core-plugin edits do not move it. |
-| Daily Note date format | Copied from core Daily Notes on first enable, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens. Insert or a Settings change locks it. |
+| Daily Note folder | Copied from core Daily Notes on first enable, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. Insert or a Settings change locks it so later core-plugin edits do not move it. Invalid folders snap back to the last accepted value. |
+| Daily Note date format | Copied from core Daily Notes on first enable, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens (`YYYY`, `MM`/`M`, `DD`/`D`). Insert or a Settings change locks it. Tokens such as `dddd` are rejected and the field returns to the last accepted format. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
 | Execution Layer | off | Turns on Timing, Plan, Review, commands, and Active Task. |
 
@@ -285,7 +285,7 @@ Start with the in-plugin empty states, then see
 | Ribbon is the only new control | Expected until Execution Layer is on. |
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |
-| Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. |
+| Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. Settings rejects `dddd` and snaps back to the last accepted value. |
 | Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
