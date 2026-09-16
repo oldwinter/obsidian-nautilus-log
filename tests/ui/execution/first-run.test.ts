@@ -4,7 +4,8 @@ import test from "node:test";
 import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolver";
 import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
-import { PRIMARY_PLAN_MARKERS, renderPlanMissingGuidance } from "../../../src/ui/onboarding/first-run";
+import { renderPlanMissingGuidance } from "../../../src/ui/onboarding/first-run";
+import { CHINESE_SAMPLE_FLEXIBLE_TASK, ENGLISH_SAMPLE_FLEXIBLE_TASK, primaryPlanSeed } from "../../../src/workspace/insert-primary-plan";
 
 class ElementStub {
   className = "";
@@ -78,8 +79,9 @@ test("missing-plan guidance copies markers and inserts only after an explicit cl
   const text = collect(root).join("\n");
   assert.match(text, /Insert into today's Daily Note/);
   assert.match(text, /creates today's note if needed/);
-  assert.match(text, /Or paste these two markers/);
-  assert.equal(text.includes(PRIMARY_PLAN_MARKERS), true);
+  assert.match(text, /Or paste the markers and sample task/);
+  assert.equal(text.includes(primaryPlanSeed("en")), true);
+  assert.equal(text.includes(ENGLISH_SAMPLE_FLEXIBLE_TASK), true);
   assert.equal(inserted, 0);
 
   const insert = byClass(root, "spiral-day-onboarding__insert");
@@ -91,7 +93,33 @@ test("missing-plan guidance copies markers and inserts only after an explicit cl
   const copy = byClass(root, "spiral-day-onboarding__copy");
   assert.ok(copy);
   copy!.click();
-  assert.match(copy!.textContent, /Clipboard is unavailable|Copy markers/);
+  assert.match(copy!.textContent, /Clipboard is unavailable|Copy plan starter/);
+});
+
+test("missing-plan guidance copies the localized plan starter", async () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  let copied = "";
+  document.defaultView.navigator.clipboard = {
+    writeText(text: string) {
+      copied = text;
+      return Promise.resolve();
+    },
+  };
+  const messages = createMessages({
+    locale: "zh-CN",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanMissingGuidance(root as unknown as HTMLElement, messages);
+  const text = collect(root).join("\n");
+  assert.equal(text.includes(primaryPlanSeed("zh-CN")), true);
+  assert.equal(text.includes(CHINESE_SAMPLE_FLEXIBLE_TASK), true);
+  const copy = byClass(root, "spiral-day-onboarding__copy");
+  assert.ok(copy);
+  copy!.click();
+  await Promise.resolve();
+  assert.equal(copied, primaryPlanSeed("zh-CN"));
+  assert.equal(copy!.textContent, "已复制计划模板。");
 });
 
 test("missing-plan guidance omits insert when the host has no write action", () => {
@@ -103,5 +131,5 @@ test("missing-plan guidance omits insert when the host has no write action", () 
   });
   renderPlanMissingGuidance(root as unknown as HTMLElement, messages);
   assert.equal(byClass(root, "spiral-day-onboarding__insert"), undefined);
-  assert.match(collect(root).join("\n"), /复制标记/);
+  assert.match(collect(root).join("\n"), /复制计划模板/);
 });

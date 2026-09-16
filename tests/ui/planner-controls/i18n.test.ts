@@ -141,10 +141,12 @@ test("missing-plan copy offers an explicit insert without rewriting on open", ()
   assert.match(enPlanner["status.missingInsert"], /Insert into today's Daily Note/);
   assert.match(enPlanner["status.missingDetail"], /Opening Planner does not rewrite/);
   assert.match(enPlanner["status.missingStepNote"], /^Click Insert into today's Daily Note/);
-  assert.match(enPlanner["status.missingStepMarkers"], /^Or paste these two markers/);
+  assert.match(enPlanner["status.missingStepMarkers"], /^Or paste the markers and sample task/);
+  assert.equal(enPlanner["status.missingCopyMarkers"], "Copy plan starter");
   assert.match(zhCNPlanner["status.missingInsert"], /写入今日日记/);
   assert.match(zhCNPlanner["status.missingStepNote"], /^点「写入今日日记」/);
-  assert.match(zhCNPlanner["status.missingStepMarkers"], /^或者把下面两个标记/);
+  assert.match(zhCNPlanner["status.missingStepMarkers"], /^或者把下面的标记和示例任务/);
+  assert.equal(zhCNPlanner["status.missingCopyMarkers"], "复制计划模板");
   assert.match(zhCNPlanner["status.missingStepRefresh"], /刷新日程/);
 });
 

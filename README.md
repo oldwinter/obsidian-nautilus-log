@@ -71,8 +71,8 @@ empty Planner that now lists the next action.
    ```
 
 3. Click the **Open Spiral Day** ribbon icon. The Planner reads that Primary
-   Plan. If the markers are missing, it shows them again and offers **Copy
-   markers** and **Insert into today's Daily Note**.
+   Plan. If the markers are missing, it shows the plan starter again and offers
+   **Copy plan starter** and **Insert into today's Daily Note**.
 4. Enable **Execution Layer** when you want CLOCK, POMO, Timing, Plan, Review,
    the Active Task sidebar, and `Spiral Day:` command-palette actions.
 
