@@ -116,6 +116,11 @@ After correcting the setting, reopen the planner for the target date. If the
 resolved Markdown path does not exist, create that Daily Note or change the
 folder/format to match the note you use.
 
+If Insert says a file is blocking a folder, a note already occupies a parent
+segment of the resolved path (for example `Journal.md` when the format needs
+`Journal/2026-09-16.md`). Rename or move that file, then try Insert again. The
+folder and format settings can still be valid.
+
 ## The planner reports an over-limit state
 
 The runtime protects responsiveness with limits on active note bytes, plan-region

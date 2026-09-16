@@ -120,12 +120,12 @@ export function insertPrimaryPlanNoticeKey(
   | "status.missingAlreadyPresent"
   | "status.missingInsertBlocked"
   | "status.missingInvalidPath"
+  | "status.missingFolderConflict"
   | "status.missingInsertFailed" {
   if (outcome.kind === "created" || outcome.kind === "appended") return "status.missingInserted";
   if (outcome.kind === "already-present") return "status.missingAlreadyPresent";
   if (outcome.reason === "malformed-region") return "status.missingInsertBlocked";
-  if (outcome.reason === "invalid-path" || outcome.reason === "folder-conflict") {
-    return "status.missingInvalidPath";
-  }
+  if (outcome.reason === "invalid-path") return "status.missingInvalidPath";
+  if (outcome.reason === "folder-conflict") return "status.missingFolderConflict";
   return "status.missingInsertFailed";
 }

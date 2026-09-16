@@ -74,6 +74,7 @@ export const zhCNPlanner = Object.freeze({
   "status.missingAlreadyPresent": "今日日记里已经有主计划。如果看起来是空的，请在标记之间写入一行直接列表项，然后刷新。",
   "status.missingInsertBlocked": "今日日记里的计划区域不完整。请先修好现有标记，不要再插入一对。",
   "status.missingInvalidPath": "今日日记路径无效。请检查 设置 → Spiral Day 中的日记文件夹和日期格式。",
+  "status.missingFolderConflict": "今日日记路径上有一个文件挡住了需要的文件夹。请先重命名或移走该文件，再点「写入今日日记」。",
   "status.missingNextSurfaces": "用左侧功能区的贝壳图标打开规划器（打开 Spiral Day）。在 设置 → Spiral Day 启用执行层后，才能使用计时、计划、回顾和右侧栏当前任务。",
   "status.emptyPlan": "主计划里还没有列表项。请在标记之间写入一行 `- [ ] 写发布说明 45m`，然后保存并刷新。",
   "status.emptyCopySample": "复制示例任务",

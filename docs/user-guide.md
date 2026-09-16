@@ -286,6 +286,7 @@ Start with the in-plugin empty states, then see
 | A row has no Clock In | It must be a direct open `- [ ]` flexible task, not a fixed event or nested item. |
 | Commands are missing | Enable Execution Layer. Search the palette for `Spiral Day:`. |
 | Daily Note cannot be resolved | Folder must be vault-relative; format must include `YYYY` plus month and day tokens. |
+| Insert says a file is blocking a folder | A note occupies a parent segment of today's path. Rename or move that file, then retry Insert. |
 | Review is empty | There is no reviewable task on that date, the note / plan is missing, or the plan has markers but no list items. |
 | Write is stale or unavailable | Save the note, refresh, retry from the current row. |
 
