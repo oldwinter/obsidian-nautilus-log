@@ -94,6 +94,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(enPlanner["status.missingInsertBlocked"], /Open today's Daily Note/);
   assert.match(enPlanner["status.missingInsertBlocked"], /Locate Primary Plan/);
   assert.match(enPlanner["status.missingInsertBlocked"], /repair the existing markers/);
+  assert.match(enPlanner["status.errorDetail"], /Open today's Daily Note/);
+  assert.match(enPlanner["status.errorDetail"], /Refresh plan/);
+  assert.match(enPlanner["status.errorDetail"], /Locate Primary Plan/);
+  assert.equal(enPlanner["status.errorDetail"].includes("checking the source note"), false);
   assert.match(zhCNPlanner["status.emptyPlan"], /还没有列表项/);
   assert.match(zhCNPlanner["status.emptyPlan"], /复制示例任务/);
   assert.equal(zhCNPlanner["status.emptyCopySample"], "复制示例任务");
@@ -102,6 +106,10 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNPlanner["status.missingInsertBlocked"], /打开今日日记/);
   assert.match(zhCNPlanner["status.missingInsertBlocked"], /定位主计划/);
   assert.match(zhCNPlanner["status.missingInsertBlocked"], /修好现有标记/);
+  assert.match(zhCNPlanner["status.errorDetail"], /打开今日日记/);
+  assert.match(zhCNPlanner["status.errorDetail"], /「刷新日程」/);
+  assert.match(zhCNPlanner["status.errorDetail"], /定位主计划/);
+  assert.equal(zhCNPlanner["status.errorDetail"].includes("检查源笔记后刷新"), false);
   assert.match(enExecution["error.noPrimary"], /Insert into today's Daily Note/);
   assert.match(zhCNExecution["error.noPrimary"], /写入今日日记/);
   assert.match(enExecution["error.missingDailyNote"], /Insert into today's Daily Note/);

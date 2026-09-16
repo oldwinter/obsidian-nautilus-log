@@ -57,7 +57,7 @@ export const enPlanner = Object.freeze({
   "metric.fixedTime": "fixed time",
   "metric.flexibleTime": "flexible time",
   "metric.scheduledTime": "scheduled time",
-  "status.errorDetail": "The confirmed plan could not be read. Refresh after checking the source note.",
+  "status.errorDetail": "The confirmed plan could not be read. Open today's Daily Note, save, then use Refresh plan. Locate Primary Plan opens that note after Execution Layer is on.",
   "status.hiddenDetail": "This leaf is hidden; the projection will refresh when revealed.",
   "status.loadingDetail": "Reading the confirmed plan snapshot.",
   "status.missingDetail": "No supported Plan Region was found. Click Insert into today's Daily Note to create today's note and write the markers plus a sample task, or paste `<!-- nautilus-log:plan/v1 -->` and `<!-- /nautilus-log:plan -->` at column zero. Opening Planner does not rewrite your note.",
