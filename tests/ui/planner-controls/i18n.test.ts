@@ -50,6 +50,13 @@ test("host chrome and empty-state copy stay bilingual after Review insert", () =
   assert.match(zhCNReview["state.missingNote"], /如果是今天，请点「写入今日日记」/);
 });
 
+test("Daily Note settings describe the Insert path in both locales", () => {
+  assert.match(enExecution["settings.dailyNoteFolderDesc"], /Insert creates and Planner reads/);
+  assert.match(zhCNExecution["settings.dailyNoteFolderDesc"], /写入今日日记/);
+  assert.match(enExecution["settings.componentPrefixDesc"], /does not change Markdown grammar/);
+  assert.match(zhCNExecution["settings.componentPrefixDesc"], /不会改变 Markdown 语法/);
+});
+
 test("TC-UP-INS-03-001 bootstrap copy matches the independent English literals", () => {
   const messages = createMessages({ locale: "en" });
   assert.equal(enShared["status.loading"], "Loading Spiral Day...");

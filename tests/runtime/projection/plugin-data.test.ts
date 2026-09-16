@@ -62,6 +62,28 @@ test("fresh plugin data follows a Chinese host locale and keeps saved English", 
   assert.equal(loaded.data.settings.language, "zh");
 });
 
+test("fresh plugin data copies a valid host Daily Note folder and format", async () => {
+  const seeded = validatePluginData(undefined, {
+    hostDailyNote: { folder: "Journal\\Daily//", format: "YYYY/MM/DD" },
+  });
+  assert.equal(seeded.data.settings.dailyNoteFolder, "Journal/Daily");
+  assert.equal(seeded.data.settings.dailyNoteFormat, "YYYY/MM/DD");
+  const ignored = validatePluginData(undefined, {
+    hostDailyNote: { folder: "../outside", format: "dddd" },
+  });
+  assert.strictEqual(ignored.data, DEFAULT_PLUGIN_DATA);
+  const saved = validatePluginData(pluginData(), {
+    hostDailyNote: { folder: "Daily", format: "YYYY-MM-DD" },
+  });
+  assert.equal(saved.data.settings.dailyNoteFolder, "");
+  const store = new PluginDataStore(new InMemoryPluginDataPort(), {
+    hostDailyNote: { folder: "日记", format: "YYYY年MM月DD日" },
+  });
+  const loaded = await store.load();
+  assert.equal(loaded.data.settings.dailyNoteFolder, "日记");
+  assert.equal(loaded.data.settings.dailyNoteFormat, "YYYY年MM月DD日");
+});
+
 test("issue 21 validation repairs fields independently and ignores unowned data", () => {
   const result = validatePluginData({
     schemaVersion: 1,

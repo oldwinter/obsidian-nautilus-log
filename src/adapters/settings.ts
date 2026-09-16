@@ -80,7 +80,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     this.#select(containerEl, "settings.chartEnd", current.chartEndHour, CHART_END,
       (value) => ({ chartEndHour: value }));
     this.#text(containerEl, "settings.componentPrefix", current.componentPrefix,
-      (value) => ({ componentPrefix: value }));
+      (value) => ({ componentPrefix: value }), "settings.componentPrefixDesc");
     this.#select(containerEl, "settings.legendLength", current.legendMaxLength, LEGEND_LENGTH,
       (value) => ({ legendMaxLength: value }));
     this.#select(containerEl, "settings.defaultDuration", current.defaultDurationMinutes, DEFAULT_DURATION,
@@ -118,9 +118,9 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     }
 
     this.#text(containerEl, "settings.dailyNoteFolder", current.dailyNoteFolder,
-      (value) => ({ dailyNoteFolder: value }));
+      (value) => ({ dailyNoteFolder: value }), "settings.dailyNoteFolderDesc");
     this.#text(containerEl, "settings.dailyNoteFormat", current.dailyNoteFormat,
-      (value) => ({ dailyNoteFormat: value }));
+      (value) => ({ dailyNoteFormat: value }), "settings.dailyNoteFormatDesc");
   }
 
   override hide(): void {
@@ -167,13 +167,15 @@ export class SpiralDaySettingTab extends PluginSettingTab {
     label: SettingsMessageKey,
     current: string,
     patch: (value: string) => Pick<PluginSettings, Key>,
+    description?: SettingsMessageKey,
   ): void {
     const generation = this.#displayGeneration;
-    new Setting(container)
-      .setName(this.#dependencies.messages.t("execution", label))
-      .addText((text) => text
-        .setValue(current)
-        .onChange((value) => this.#run(generation, () => this.#dependencies.update(patch(value)))));
+    const setting = new Setting(container)
+      .setName(this.#dependencies.messages.t("execution", label));
+    if (description) setting.setDesc(this.#dependencies.messages.t("execution", description));
+    setting.addText((text) => text
+      .setValue(current)
+      .onChange((value) => this.#run(generation, () => this.#dependencies.update(patch(value)))));
   }
 
   #numeric<Key extends keyof PluginSettings>(

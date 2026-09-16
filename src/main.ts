@@ -16,6 +16,7 @@ import {
 } from "./adapters/active-task-view";
 import { ExecutionCommandRegistry } from "./adapters/commands";
 import { createLoadedMarkdownEditorResolver } from "./adapters/editor-buffer";
+import { readHostDailyNoteConfiguration } from "./adapters/host-daily-note";
 import { readHostLanguage } from "./adapters/host-language";
 import { registerExecutionEditorMenu } from "./adapters/editor-menu";
 import { ExecutionEntryAdapter } from "./adapters/execution-entry";
@@ -231,10 +232,14 @@ export default class SpiralDayPlugin extends Plugin {
       },
       editorForPath: editorResolver.editorForPath,
     });
+    const hostDailyNote = await readHostDailyNoteConfiguration(this.app);
     this.#pluginData = new PluginDataStore({
       load: () => this.loadData(),
       save: (data) => this.saveData(data),
-    }, { hostLanguage: readHostLanguage() });
+    }, {
+      hostLanguage: readHostLanguage(),
+      ...(hostDailyNote ? { hostDailyNote } : {}),
+    });
     this.#clock = new RealSystemClock();
     this.#configureLocalTimeResolver(this.#clock.timeZone());
     this.#workspaceIndex = new WorkspaceIndex(this.#atomicAccess, {

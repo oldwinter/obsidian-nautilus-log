@@ -60,8 +60,9 @@ write the markers plus a sample task.
 
 ### First-run checklist
 
-1. Open **Settings → Spiral Day**. Leave defaults for the first day, or set
-   **Daily Note folder** and **Daily Note date format** so they resolve the
+1. Open **Settings → Spiral Day**. On first run, Language follows Obsidian,
+   and Daily Note folder/format copy the core Daily Notes plugin when that
+   file exists. Otherwise leave defaults, or set them so they resolve the
    note you already use.
 2. Click **Insert into today's Daily Note**. It creates today's note if needed
    (default `YYYY-MM-DD.md` at the vault root) and writes the markers plus a
@@ -137,8 +138,8 @@ Important fields for getting started:
 | Setting | Default | Why it matters |
 | --- | --- | --- |
 | Language | Follows Obsidian on first run (`en` / `zh`) | Relabels Planner, Execution, commands, editor menu, and the Planner ribbon immediately. A saved choice wins after that. |
-| Daily Note folder | empty (vault root) | Must match the folder of the note you edit. |
-| Daily Note date format | `YYYY-MM-DD` | Must contain year, month, and day tokens. |
+| Daily Note folder | Core Daily Notes folder on first run, otherwise empty (vault root) | Must match the folder Insert creates and Planner reads. |
+| Daily Note date format | Core Daily Notes format on first run, otherwise `YYYY-MM-DD` | Must contain year, month, and day tokens. |
 | Default task duration | 15 minutes | Used when a flexible task has no `30m` / `2h` token. |
 | Execution Layer | off | Turns on Timing, Plan, Review, commands, and Active Task. |
 
