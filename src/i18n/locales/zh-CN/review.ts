@@ -6,6 +6,11 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "date.next": "后一天",
   "date.today": "今天",
   "filter.overruns": "只看已完成的超时任务",
+  "search.label": "搜索任务标题",
+  "search.placeholder": "输入以筛选，按 Esc 清空",
+  "search.result": ({ count }) => count === 0
+    ? "没有符合当前筛选条件的任务。请清空搜索或取消「只看已完成的超时任务」。汇总仍显示全天数据。"
+    : `正在显示 ${count} 项匹配的任务。汇总仍显示全天数据。`,
   "filter.result": ({ count }) => count === 0
     ? "没有已完成的任务超出计划用时。汇总仍显示全天数据。"
     : `正在显示 ${count} 项已完成的超时任务。汇总仍显示全天数据。`,
