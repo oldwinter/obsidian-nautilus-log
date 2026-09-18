@@ -14,6 +14,10 @@ class ElementStub {
   textContent = "";
   readonly dataset: Record<string, string> = {};
   readonly children: ElementStub[] = [];
+  checked = false;
+  readonly listeners = new Map<string, (event?: { shiftKey: boolean }) => void>();
+  focus(): void { this.ownerDocument.activeElement = this; }
+  fire(event: string): void { this.listeners.get(event)?.(); }
 
   constructor(readonly ownerDocument: DocumentStub) {}
   append(...children: ElementStub[]): void { this.children.push(...children); }
@@ -21,15 +25,17 @@ class ElementStub {
   querySelector(selector: string): ElementStub | null {
     if (selector.startsWith(".")) {
       const className = selector.slice(1);
-      return this.children.find((child) => child.className === className) ?? null;
+      return this.children.find((child) => child.className === className)
+        ?? this.children.map((child) => child.querySelector(selector)).find(Boolean) ?? null;
     }
     return null;
   }
   setAttribute(): void {}
-  addEventListener(): void {}
+  addEventListener(event: string, listener: (event?: { shiftKey: boolean }) => void): void { this.listeners.set(event, listener); }
 }
 
 class DocumentStub {
+  activeElement: ElementStub | null = null;
   readonly elements: ElementStub[] = [];
   createElement(): ElementStub {
     const element = new ElementStub(this);
@@ -257,3 +263,63 @@ test("Plan error state names Settings and Planner", () => {
   assert.match(text, /Settings → Spiral Day/);
   assert.match(text, /open Planner from the ribbon/);
 });
+
+for (const locale of ["en", "zh-CN"]) {
+  test(`unscheduled quick-task sorting uses remaining time and preserves source targets in ${locale}`, () => {
+    const document = new DocumentStub();
+    const root = document.createElement();
+    const makeTask = (label: string, sourceOrder: number, duration: number, remaining: number) => ({
+      ...partialTask, label, sourceOrder, durationMinutes: duration, remainingDurationMinutes: remaining,
+      source: { ...partialTask.source, sourceOrder, blockId: `task-${sourceOrder}` },
+    });
+    const items = Object.freeze([
+      makeTask("Long task", 0, 30, 30),
+      makeTask("Almost finished", 1, 60, 5),
+      makeTask("Quick task", 2, 5, 5),
+    ]);
+    const navigated: unknown[] = [];
+    const dispatched: unknown[] = [];
+    let shortestFirst = false;
+    const options: PlanViewOptions = {
+      nowEpochMs: 0,
+      messages: createMessages({ locale, namespaces: {
+        execution: defineLocaleNamespace("execution", enExecution, zhCNExecution),
+      } }),
+      pending: new Set(), renderIcon: () => {},
+      dispatch: (intent) => { dispatched.push(intent); },
+      navigateTask: (target) => { navigated.push(target); },
+      setShortestFirst: (enabled) => { shortestFirst = enabled; },
+      execution: { writeBlocked: false } as PlanViewOptions["execution"],
+      snapshot: { state: "confirmed", projection: {
+        sourceFingerprint: "original", items,
+        schedule: { fixedEvents: [], plannedSlots: [] },
+      } } as PlanViewOptions["snapshot"],
+    };
+    const render = () => renderPlanView(root as unknown as HTMLElement, { ...options, shortestFirst });
+    const titles = () => root.querySelector(".spiral-day-execution__unscheduled")!
+      .querySelector(".spiral-day-execution__rows")!.children
+      .map((row) => row.querySelector(".spiral-day-execution__task-title")!);
+    render();
+    assert.deepEqual(titles().map((title) => title.textContent), ["Long task", "Almost finished", "Quick task"]);
+    const toggle = root.querySelector(".spiral-day-execution__shortest-first")!;
+    toggle.focus();
+    toggle.checked = true;
+    toggle.fire("change");
+    assert.equal(shortestFirst, true);
+    assert.deepEqual(titles().map((title) => title.textContent), ["Almost finished", "Quick task", "Long task"]);
+    assert.equal(document.activeElement, toggle);
+    assert.deepEqual(dispatched, []);
+    // Navigation keeps the original source reference after rows move.
+    titles()[0].listeners.get("click")?.({ shiftKey: false });
+    assert.deepEqual(navigated, [{ path: "Daily/today.md", ownerId: "task-1", sourceOrder: 1 }]);
+    render();
+    const refreshed = root.querySelector(".spiral-day-execution__shortest-first")!;
+    assert.equal(refreshed.checked, true);
+    assert.equal(document.activeElement, refreshed);
+    refreshed.checked = false;
+    refreshed.fire("change");
+    assert.deepEqual(titles().map((title) => title.textContent), ["Long task", "Almost finished", "Quick task"]);
+    assert.deepEqual(items.map((item) => item.label), ["Long task", "Almost finished", "Quick task"]);
+    assert.ok(collectText(root).includes(locale === "en" ? "Shortest remaining first" : "剩余用时短的优先"));
+  });
+}

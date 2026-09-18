@@ -37,6 +37,8 @@ export interface PlanViewOptions {
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
   ) => void;
+  readonly shortestFirst?: boolean;
+  readonly setShortestFirst?: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
@@ -173,6 +175,8 @@ function appendState(root: HTMLElement, heading: string, detail: string): void {
 }
 
 export function renderPlanView(root: HTMLElement, options: PlanViewOptions): void {
+  const previousSort = root.querySelector(".spiral-day-execution__shortest-first");
+  const sortHadFocus = previousSort !== null && root.ownerDocument.activeElement === previousSort;
   const unscheduledOpen = root
     .querySelector<HTMLDetailsElement>(".spiral-day-execution__unscheduled")
     ?.open ?? false;
@@ -262,11 +266,37 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   summary.append(summaryTitle, summaryMeta);
   unscheduled.append(summary);
   const unscheduledList = executionElement(root.ownerDocument, "ul", "spiral-day-execution__rows");
-  for (const item of unscheduledItems) appendTaskRow(unscheduledList, item, projection, options);
+  const renderUnscheduled = (shortestFirst: boolean): void => {
+    const ordered = shortestFirst
+      ? [...unscheduledItems].sort((left, right) =>
+          left.remainingDurationMinutes - right.remainingDurationMinutes
+          || left.sourceOrder - right.sourceOrder)
+      : unscheduledItems;
+    unscheduledList.replaceChildren();
+    for (const item of ordered) appendTaskRow(unscheduledList, item, projection, options);
+  };
+  let sortToggle: HTMLInputElement | undefined;
+  if (unscheduledItems.length > 1) {
+    const sortLabel = executionElement(root.ownerDocument, "label", "spiral-day-execution__sort");
+    sortToggle = executionElement(root.ownerDocument, "input", "spiral-day-execution__shortest-first");
+    sortToggle.type = "checkbox";
+    sortToggle.checked = options.shortestFirst ?? false;
+    const toggle = sortToggle;
+    toggle.addEventListener("change", () => {
+      options.setShortestFirst?.(toggle.checked);
+      renderUnscheduled(toggle.checked);
+    });
+    const text = executionElement(root.ownerDocument, "span");
+    text.textContent = options.messages.t("execution", "plan.shortestFirst");
+    sortLabel.append(toggle, text);
+    unscheduled.append(sortLabel);
+  }
+  renderUnscheduled(options.shortestFirst ?? false);
   if (unscheduledItems.length === 0) {
     const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
     empty.textContent = options.messages.t("execution", "plan.noUnscheduled");
     unscheduled.append(empty);
   } else unscheduled.append(unscheduledList);
   root.append(scheduled, unscheduled);
+  if (sortHadFocus) (sortToggle ?? summary).focus();
 }
