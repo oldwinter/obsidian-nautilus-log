@@ -19,7 +19,7 @@ Foundation version: `0.1.0`
   already have progress. The task currently being timed keeps its Current task
   indicator.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
-- Compare planned and recorded time in Review, filter to completed overruns, and
+- Compare planned and recorded time in Review, search task titles, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review
   summary still covers the whole day.
 - Open the Planner and Active Task surfaces from Obsidian's workspace and sidebar.

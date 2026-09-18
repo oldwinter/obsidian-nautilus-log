@@ -1,4 +1,8 @@
 import { createReviewEntryPort } from "@review-source/adapters/review-entry.ts";
+import { mountExecutionPanel } from "@review-source/ui/execution/panel.ts";
+import { createMessages, defineLocaleNamespace } from "@review-source/i18n/resolver.ts";
+import { enExecution } from "@review-source/i18n/locales/en/execution.ts";
+import { zhCNExecution } from "@review-source/i18n/locales/zh-CN/execution.ts";
 import { projectReview, type ReviewClock, type ReviewTask } from "@review-source/core/review.ts";
 import type { LogicalDate } from "@review-source/core/day.ts";
 import type { ExecutionApplicationSnapshot, ExecutionTargetReference } from "@review-source/runtime/execution/application.ts";
@@ -8,6 +12,7 @@ type Locale = "en" | "zh-CN";
 type Outcome = "applied" | "already-applied" | "rejected" | "uncertain";
 type ReadyReviewMode =
   | "full"
+  | "search"
   | "target"
   | "completed-target"
   | "row-removed"
@@ -205,6 +210,7 @@ function executionSnapshot(
 
 function readySnapshot(reviewMode: ReadyReviewMode, date: LogicalDate): ReviewCoordinatorSnapshot {
   const tasks = reviewMode === "full" ? FULL_TASKS
+    : reviewMode === "search" ? [task("row:chinese", "整理项目复盘", "open", 20, 8), ...FULL_TASKS]
     : reviewMode === "target" ? TARGET_TASKS
     : reviewMode === "completed-target" ? COMPLETED_TARGET_TASKS
     : reviewMode === "row-removed" ? ROW_REMOVED_TASKS : [];
@@ -334,6 +340,28 @@ const port = createReviewEntryPort({
 const surface = port.createSurface(root);
 
 const api = Object.freeze({
+  openPanel(): void {
+    surface.destroy();
+    const trigger = document.createElement("button");
+    trigger.textContent = "Execution";
+    document.body.append(trigger);
+    const panel = mountExecutionPanel({
+      ...port,
+      now: () => now,
+      refresh: async () => execution,
+      subscribePlan: () => () => undefined,
+      subscribeRecent: () => () => undefined,
+      outcomeFeedback: () => ({ message: "", level: "info" }),
+      navigatePrimary: () => undefined,
+      openActiveTask: () => undefined,
+      createReviewSurface: port.createSurface,
+    }, {
+      trigger,
+      messages: createMessages({ namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) } }),
+      renderIcon: () => undefined,
+    });
+    panel.open("review");
+  },
   show(): void {
     root.hidden = false;
     surface.render(root, true);

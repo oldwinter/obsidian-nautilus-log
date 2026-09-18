@@ -9,6 +9,7 @@ export interface ReviewViewActions {
   readonly selectDate: (date: LogicalDate | null) => void;
   readonly refresh: () => void;
   readonly setOnlyOverruns: (value: boolean) => void;
+  readonly setSearchQuery: (value: string) => void;
   readonly activate: (key: string, action: ReviewRowAction) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
@@ -25,6 +26,8 @@ export class ReviewView {
   readonly #today: HTMLButtonElement;
   readonly #refresh: HTMLButtonElement;
   readonly #onlyOverruns: HTMLInputElement;
+  readonly #search: HTMLInputElement;
+  readonly #searchLabel: HTMLElement;
   readonly #filterLabel: HTMLElement;
   readonly #filterStatus: HTMLElement;
   readonly #status: HTMLElement;
@@ -64,6 +67,20 @@ export class ReviewView {
       this.#selectDate({ year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate() });
     });
     toolbar.append(this.#previous, this.#date, this.#next, this.#today, this.#refresh);
+    const search = document.createElement("label");
+    search.className = "spiral-day-review__search";
+    this.#searchLabel = document.createElement("span");
+    this.#search = document.createElement("input");
+    this.#search.type = "search";
+    this.#search.addEventListener("input", () => actions.setSearchQuery(this.#search.value));
+    this.#search.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || this.#search.value === "") return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.#search.value = "";
+      actions.setSearchQuery("");
+    });
+    search.append(this.#searchLabel, this.#search);
     const filter = document.createElement("label");
     filter.className = "spiral-day-review__filter";
     this.#onlyOverruns = document.createElement("input");
@@ -91,7 +108,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, filter, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, search, filter, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -101,6 +118,7 @@ export class ReviewView {
     readonly pending: boolean;
     readonly error: boolean;
     readonly onlyOverruns: boolean;
+    readonly searchQuery: string;
   }): void {
     const { review, execution, messages, pending } = input;
     this.#previous.textContent = "‹";
@@ -112,12 +130,16 @@ export class ReviewView {
     this.#refresh.textContent = messages.t("review", "action.refresh");
     this.#filterLabel.textContent = messages.t("review", "filter.overruns");
     this.#onlyOverruns.checked = input.onlyOverruns;
+    this.#searchLabel.textContent = messages.t("review", "search.label");
+    this.#search.placeholder = messages.t("review", "search.placeholder");
+    if (this.#search.value !== input.searchQuery) this.#search.value = input.searchQuery;
+    const query = input.searchQuery.trim().toLowerCase();
     this.#list.setAttribute("aria-label", messages.t("review", "list.label"));
     const reviewReady = review.state === "ready";
     const ready = reviewReady && (execution.status === "ready" || execution.status === "working");
     const hasRows = reviewReady && review.availability === "ready" && review.projection.rows.length > 0;
     const displayRows = ready && hasRows;
-    this.#filterStatus.hidden = !displayRows || !input.onlyOverruns;
+    this.#filterStatus.hidden = !displayRows || (!input.onlyOverruns && query === "");
     this.#root.setAttribute("aria-busy", String(pending || review.state === "building"));
     this.#refresh.disabled = pending || review.state === "building";
     if (!displayRows && this.#list.contains(this.#root.ownerDocument.activeElement)) this.#focusToolbar();
@@ -168,9 +190,9 @@ export class ReviewView {
       messages,
       pending,
     );
-    const projectedRows = hasRows ? review.projection.rows.filter((row) => !input.onlyOverruns
-      || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0)) : [];
-    const filterStatus = messages.t("review", "filter.result", { count: projectedRows.length });
+    const projectedRows = hasRows ? review.projection.rows.filter((row) => row.task.label.toLowerCase().includes(query)
+      && (!input.onlyOverruns || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0))) : [];
+    const filterStatus = messages.t("review", query ? "search.result" : "filter.result", { count: projectedRows.length });
     if (this.#filterStatus.textContent !== filterStatus) this.#filterStatus.textContent = filterStatus;
     this.#list.hidden = !displayRows || projectedRows.length === 0;
     const retained = new Set(projectedRows.map((row) => row.task.key));
@@ -238,7 +260,7 @@ export class ReviewView {
   }
 
   #focusToolbar(): void {
-    const fallback = this.#onlyOverruns.checked ? this.#onlyOverruns
+    const fallback = this.#search.value.trim() ? this.#search : this.#onlyOverruns.checked ? this.#onlyOverruns
       : this.#refresh.disabled ? this.#date : this.#refresh;
     fallback.focus({ preventScroll: true });
   }
