@@ -661,3 +661,23 @@
     outline-offset: 2px;
   }
 }
+
+.spiral-day-execution__sort {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 4px;
+}
+
+.spiral-day-execution__shortest-first {
+  accent-color: var(--spiral-day-execution-focus);
+  flex-shrink: 0;
+}
+
+.spiral-day-execution__shortest-first:focus-visible {
+  outline: 2px solid var(--spiral-day-execution-focus);
+  outline-offset: 3px;
+}
