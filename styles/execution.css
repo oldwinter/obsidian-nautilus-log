@@ -262,6 +262,13 @@
   line-height: 19px;
 }
 
+.spiral-day-execution__recent-source {
+  color: var(--text-muted, #626b78);
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .spiral-day-execution__elapsed,
 .spiral-day-active-task__elapsed {
   background: color-mix(in srgb, var(--spiral-day-execution-task) 9%, transparent);

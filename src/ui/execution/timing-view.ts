@@ -248,7 +248,11 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     const list = executionElement(root.ownerDocument, "ul", "spiral-day-execution__rows");
     for (const task of options.recent) {
       const item = executionElement(root.ownerDocument, "li", "spiral-day-execution__row");
-      titleButton(item, task.label, (event) => options.navigateTask(task, event.shiftKey ? "sidebar" : "main"));
+      const title = titleButton(item, task.label, (event) => options.navigateTask(task, event.shiftKey ? "sidebar" : "main"));
+      title.setAttribute("aria-label", `${task.label} · ${task.path}`);
+      const source = executionElement(root.ownerDocument, "span", "spiral-day-execution__recent-source");
+      source.textContent = task.path;
+      title.append(source);
       const actual = executionElement(root.ownerDocument, "span", "spiral-day-execution__row-meta");
       actual.textContent = messages.t("shared", "unit.duration", { minutes: task.actualMinutes });
       item.append(actual);

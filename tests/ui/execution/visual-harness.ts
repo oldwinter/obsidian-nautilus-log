@@ -9,10 +9,21 @@ import type { RuntimePlanProjection } from "../../../src/runtime/projection-runt
 import type { RuntimeSnapshot } from "../../../src/runtime/snapshots";
 import { renderActiveTaskSurface } from "../../../src/ui/execution/active-task-view";
 import { mountExecutionPanel } from "../../../src/ui/execution/panel";
+import type { ExecutionRecentTask } from "../../../src/ui/execution/timing-view";
 
 const NOW = Date.UTC(2026, 7, 29, 2, 14, 35);
 const PATH = "Daily/2026-08-29.md";
 const OWNER = "nl-11111111-1111-4111-8111-111111111111";
+const recentNavigation: { path: string; ownerId: string | null; sourceOrder: number; location: string }[] = [];
+const recentTasks: readonly ExecutionRecentTask[] = [
+  { key: "recent-1", ownerId: "nl-33333333-3333-4333-8333-333333333333", path: PATH,
+    sourceOrder: 2, label: "Check release artifact hashes", actualMinutes: 12 },
+  { key: "recent-2", ownerId: "nl-44444444-4444-4444-8444-444444444444", path: "Projects/Release.md",
+    sourceOrder: 4, label: "Check release artifact hashes", actualMinutes: 8 },
+  { key: "recent-3", ownerId: "nl-55555555-5555-4555-8555-555555555555",
+    path: "项目/本周计划/很长的笔记名称用于确认窄窗口中的来源路径可以完整换行/<release>&验收.md",
+    sourceOrder: 6, label: "检查发布记录", actualMinutes: 5 },
+];
 const messages = createMessages({
   locale: "en",
   namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
@@ -239,19 +250,14 @@ const surface = mountExecutionPanel({
     };
   },
   subscribeRecent(listener) {
-    listener([{
-      key: "recent-1",
-      ownerId: "nl-33333333-3333-4333-8333-333333333333",
-      path: PATH,
-      sourceOrder: 2,
-      label: "Check release artifact hashes",
-      actualMinutes: 12,
-    }]);
+    listener(recentTasks);
     return () => undefined;
   },
   navigatePrimary: () => undefined,
   openActiveTask: () => undefined,
-  navigateTask: () => undefined,
+  navigateTask: (target, location) => { recentNavigation.push({
+    path: target.path, ownerId: target.ownerId, sourceOrder: target.sourceOrder, location,
+  }); },
   refresh: async () => {
     refreshCalls += 1;
     await new Promise((resolve) => setTimeout(resolve, 120));
@@ -303,6 +309,7 @@ Object.assign(window, {
         viewportHeight: document.documentElement.clientHeight,
         viewportWidth: document.documentElement.clientWidth,
         refreshCalls,
+        recentNavigation,
       };
     },
     surface,

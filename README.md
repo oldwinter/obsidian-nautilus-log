@@ -19,6 +19,8 @@ Foundation version: `0.1.0`
   already have progress. The task currently being timed keeps its Current task
   indicator.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
+- Identify same-named recent tasks by their source note paths in Timing. Click
+  a task to open its source, or Shift-click to open it in the sidebar.
 - Compare planned and recorded time in Review, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review
   summary still covers the whole day.
