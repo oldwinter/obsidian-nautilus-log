@@ -92,6 +92,9 @@ export class ExecutionRovingTabs<TName extends string> {
     readonly onChange: (name: TName) => void;
   }) {
     if (input.tabs.length === 0) throw new Error("Execution tabs require at least one tab");
+    if (!input.tabs.some((tab) => tab.name === input.active)) {
+      throw new Error(`Execution tabs require the active tab "${input.active}" to exist`);
+    }
     this.#tabs = Object.freeze([...input.tabs]);
     this.#active = input.active;
     this.#onChange = input.onChange;
