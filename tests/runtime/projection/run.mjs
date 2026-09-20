@@ -1,12 +1,13 @@
 import { build } from "esbuild";
+import { readdir } from "node:fs/promises";
 
-const entryPoints = [
-  "tests/runtime/projection/lifecycle.test.ts",
-  "tests/runtime/projection/plugin-data.test.ts",
-  "tests/runtime/projection/projection-runtime.test.ts",
-  "tests/runtime/projection/refresh-clock.test.ts",
-  "tests/runtime/projection/snapshots-cache.test.ts",
-];
+const directory = "tests/runtime/projection";
+const entryPoints = (await readdir(directory))
+  .filter((file) => file.endsWith(".test.ts"))
+  .sort()
+  .map((file) => `${directory}/${file}`);
+
+if (entryPoints.length === 0) throw new Error("runtime projection test runner found no tests");
 
 const result = await build({
   absWorkingDir: process.cwd(),

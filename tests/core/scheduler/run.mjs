@@ -1,12 +1,13 @@
 import { build } from "esbuild";
+import { readdir } from "node:fs/promises";
 
-const entryPoints = [
-  "tests/core/scheduler/capacity.test.ts",
-  "tests/core/scheduler/day.test.ts",
-  "tests/core/scheduler/history.test.ts",
-  "tests/core/scheduler/purity-performance.test.ts",
-  "tests/core/scheduler/scheduler.test.ts",
-];
+const directory = "tests/core/scheduler";
+const entryPoints = (await readdir(directory))
+  .filter((file) => file.endsWith(".test.ts"))
+  .sort()
+  .map((file) => `${directory}/${file}`);
+
+if (entryPoints.length === 0) throw new Error("scheduler test runner found no tests");
 
 const result = await build({
   absWorkingDir: process.cwd(),

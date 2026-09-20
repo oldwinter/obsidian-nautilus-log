@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readdir } from "node:fs/promises";
 import process from "node:process";
 
 import { build } from "esbuild";
@@ -9,15 +10,13 @@ execFileSync(process.execPath, [
   "tests/ui/planner-controls/tsconfig.json",
 ], { cwd: process.cwd(), stdio: "inherit" });
 
-const entryPoints = [
-  "tests/ui/planner-controls/adapter-seam.test.ts",
-  "tests/ui/planner-controls/controls.test.ts",
-  "tests/ui/planner-controls/disclosures.test.ts",
-  "tests/ui/planner-controls/focus.test.ts",
-  "tests/ui/planner-controls/i18n.test.ts",
-  "tests/ui/planner-controls/playback.test.ts",
-  "tests/ui/planner-controls/styles.test.ts",
-];
+const directory = "tests/ui/planner-controls";
+const entryPoints = (await readdir(directory))
+  .filter((file) => file.endsWith(".test.ts"))
+  .sort()
+  .map((file) => `${directory}/${file}`);
+
+if (entryPoints.length === 0) throw new Error("planner-controls test runner found no tests");
 
 const obsidianStub = {
   name: "planner-controls-obsidian-stub",
