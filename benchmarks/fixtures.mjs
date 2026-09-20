@@ -46,12 +46,14 @@ export function historyFixture(clockCount, formatClosed, formatRunning) {
       const count = Math.floor(clockCount / taskCount) + (owner < clockCount % taskCount ? 1 : 0);
       for (let index = 0; index < count; index += 1) {
         const id = identity("nl-clock-", clockNumber);
-        const start = DAY_START + (clockNumber % 23 === 0 ? -30 : 60 + index * 20) * MINUTE;
+        const crossesMidnight = clockNumber % 23 === 0;
+        const start = DAY_START + (crossesMidnight ? -30 : 60 + index * 20) * MINUTE;
+        const durationMinutes = (crossesMidnight ? 40 : 10) + clockNumber % 5;
         const clock = clockNumber === clockCount - 1
           ? formatRunning(DAY_START + 600 * MINUTE, 0, id)
           : clockNumber % 97 === 0
             ? `CLOCK: [malformed]--[malformed] ^${id}`
-            : formatClosed(start, 0, start + (10 + clockNumber % 5) * MINUTE, 0, id);
+            : formatClosed(start, 0, start + durationMinutes * MINUTE, 0, id);
         rows.push(`    - ${clock}`);
         clockNumber += 1;
       }
