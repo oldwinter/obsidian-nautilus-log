@@ -192,7 +192,9 @@ panel opens on **Timing**.
   Clock In from Plan or the editor. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
   forgotten-timer warning.
-- Recent: closed CLOCKs kept for the configured retention window.
+- Recent: closed CLOCKs kept for the configured retention window. Each row
+  also offers **Copy task link** so you can share or revisit it without
+  opening the note first.
 
 A POMO threshold only changes warning styling. It does not stop the timer.
 Forgotten is a warning, not an automatic Clock Out. The Timing warning now

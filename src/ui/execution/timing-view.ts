@@ -34,6 +34,7 @@ export interface TimingViewOptions {
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
   ) => void;
+  readonly copyTaskLink: (task: ExecutionRecentTask) => void;
   readonly requestDelete: (clock: ExecutionClockReference) => void;
 }
 
@@ -248,10 +249,23 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     const list = executionElement(root.ownerDocument, "ul", "spiral-day-execution__rows");
     for (const task of options.recent) {
       const item = executionElement(root.ownerDocument, "li", "spiral-day-execution__row");
-      titleButton(item, task.label, (event) => options.navigateTask(task, event.shiftKey ? "sidebar" : "main"));
+      const body = executionElement(root.ownerDocument, "div", "spiral-day-execution__plan-row-body");
+      titleButton(body, task.label, (event) => options.navigateTask(task, event.shiftKey ? "sidebar" : "main"));
       const actual = executionElement(root.ownerDocument, "span", "spiral-day-execution__row-meta");
       actual.textContent = messages.t("shared", "unit.duration", { minutes: task.actualMinutes });
-      item.append(actual);
+      body.append(actual);
+      const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__row-actions");
+      const copy = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.copyTaskLink"),
+        icon: "copy",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__icon-button",
+        onActivate: () => options.copyTaskLink(task),
+      });
+      appendPending(copy, options.pending.has(`copy-task-link:${task.key}`), messages);
+      actions.append(copy);
+      item.append(body, actions);
       list.append(item);
     }
     recent.append(list);

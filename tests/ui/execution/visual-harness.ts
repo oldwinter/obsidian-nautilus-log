@@ -252,6 +252,7 @@ const surface = mountExecutionPanel({
   navigatePrimary: () => undefined,
   openActiveTask: () => undefined,
   navigateTask: () => undefined,
+  copyTaskLink: async () => ({ kind: "copied" as const }),
   refresh: async () => {
     refreshCalls += 1;
     await new Promise((resolve) => setTimeout(resolve, 120));

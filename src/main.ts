@@ -478,6 +478,16 @@ export default class SpiralDayPlugin extends Plugin {
         navigateTask: async (target: SourceTaskReference, location: "main" | "sidebar") => {
           await this.#requireNavigator().openTask(target, location);
         },
+        copyTaskLink: async (target: SourceTaskReference, label: string) => {
+          const result = await copyTaskMarkdownLink({
+            app: this.app,
+            target,
+            label,
+          });
+          return Object.freeze({
+            kind: result.kind === "copied" ? "copied" : "unavailable",
+          } as const);
+        },
         subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => this.#subscribeRecent(listener),
         createReviewSurface: (root: HTMLElement) => this.#requireReviewPort().createSurface(root),
         insertPrimaryPlan: () => this.#insertPrimaryPlan(),

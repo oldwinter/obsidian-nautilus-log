@@ -43,6 +43,10 @@ export interface ExecutionPanelPort {
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
   ) => void | Promise<void>;
+  readonly copyTaskLink: (
+    target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
+    label: string,
+  ) => Promise<{ readonly kind: "copied" | "unavailable" }>;
   readonly subscribeRecent: (listener: (recent: readonly ExecutionRecentTask[]) => void) => () => void;
   readonly createReviewSurface?: (root: HTMLElement) => ExecutionReviewSurface;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
@@ -277,6 +281,34 @@ export function mountExecutionPanel(
     });
   };
 
+  const copyRecentTaskLink = (task: ExecutionRecentTask): void => {
+    const key = `copy-task-link:${task.key}`;
+    if (pending.has(key) || destroyed) return;
+    pending.add(key);
+    render();
+    void port.copyTaskLink({
+      path: task.path,
+      ownerId: task.ownerId,
+      sourceOrder: task.sourceOrder,
+    }, task.label).then((result) => {
+      showFeedback({
+        message: options.messages.t("execution", result.kind === "copied"
+          ? "notice.taskLinkCopied"
+          : "error.copyTaskLink"),
+        level: result.kind === "copied" ? "info" : "warning",
+      });
+    }, (error: unknown) => {
+      showFeedback({
+        message: options.messages.t("execution", "error.copyTaskLink"),
+        level: "warning",
+      });
+      options.onError?.(error);
+    }).finally(() => {
+      pending.delete(key);
+      render();
+    });
+  };
+
   const refreshExecution = (): void => {
     if (pending.has("refresh") || destroyed) return;
     pending.add("refresh");
@@ -354,6 +386,7 @@ export function mountExecutionPanel(
       refresh: refreshExecution,
       openActiveTask: () => void Promise.resolve(port.openActiveTask()).catch(options.onError),
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
+      copyTaskLink: copyRecentTaskLink,
       requestDelete,
     });
     renderPlanView(planPanel, {
