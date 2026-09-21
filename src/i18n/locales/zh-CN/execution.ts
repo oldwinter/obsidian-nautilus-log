@@ -13,6 +13,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "action.copyTaskLink": "复制任务链接",
   "action.openSource": "打开来源",
   "action.openActiveTask": "打开当前任务",
+  "action.resumeRecent": "开始计时这个最近任务",
   "action.stopPomo": "停止番茄钟",
   "action.startPomo": "开始番茄钟",
   "action.retry": "重试",
