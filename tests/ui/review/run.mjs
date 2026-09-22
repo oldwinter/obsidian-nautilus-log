@@ -237,6 +237,67 @@ try {
   const metric = async (title, name) => (await row(title).locator(`[data-metric=${name}]`).textContent())?.trim();
   const visibleMutationCount = () => page.locator(".spiral-day-review__actions button:visible").count();
 
+  await scenario("task-order", async () => {
+    await open("full");
+    const sort = page.getByRole("combobox", { name: "Task order", exact: true });
+    const titles = () => page.locator(".spiral-day-review__title").allTextContents();
+    const sourceOrder = await titles();
+    const summary = await page.locator(".spiral-day-review__summary").textContent();
+    check("review.sort-defaults-to-note-order", await sort.inputValue() === "source", sourceOrder);
+    await sort.selectOption("actual");
+    const actualOrder = await titles();
+    check("review.sort-actual-descending-with-stable-ties-and-missing-last", JSON.stringify(actualOrder) === JSON.stringify([
+      "Positive variance", "Zero variance", "Paused task", "Negative variance", "Live timer", "Not started", "No recorded time",
+    ]), actualOrder);
+    await sort.selectOption("variance");
+    const varianceOrder = await titles();
+    check("review.sort-variance-includes-zero-and-negative-before-missing", JSON.stringify(varianceOrder) === JSON.stringify([
+      "Positive variance", "Zero variance", "Negative variance", "Not started", "Live timer", "Paused task", "No recorded time",
+    ]), varianceOrder);
+    check("review.sort-preserves-summary", await page.locator(".spiral-day-review__summary").textContent() === summary, summary);
+    const filter = page.getByRole("checkbox", { name: "Only completed overruns", exact: true });
+    await filter.check();
+    check("review.sort-composes-with-filter", JSON.stringify(await titles()) === JSON.stringify(["Positive variance"]), await titles());
+    await filter.uncheck();
+    await sort.selectOption("source");
+    check("review.sort-restores-original-note-order", JSON.stringify(await titles()) === JSON.stringify(sourceOrder), await titles());
+    await sort.focus();
+    await sort.press("m");
+    await sort.press("Enter");
+    check("review.sort-keyboard-keeps-focus", await sort.inputValue() === "actual"
+      && await sort.evaluate((element) => document.activeElement === element), await sort.inputValue());
+    const live = row("Live timer").locator(".spiral-day-review__title");
+    await live.focus();
+    await page.evaluate(() => { for (let i = 0; i < 10; i += 1) window.reviewHarness.tickNow(); });
+    check("review.sort-live-reordering-preserves-row-focus", (await titles()).indexOf("Live timer") < (await titles()).indexOf("Paused task")
+      && await live.evaluate((element) => document.activeElement === element), await titles());
+    await page.getByRole("button", { name: "Open source for Paused task", exact: true }).click();
+    const stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.sort-retains-source-target-and-never-writes", stats.navigations[0]?.target.path === "Daily/Review Fixture 2.md"
+      && stats.dispatches.length === 0 && stats.planMutations === 0, stats);
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    check("review.sort-survives-date-change", await sort.inputValue() === "actual", await sort.inputValue());
+    await page.evaluate(() => { window.reviewHarness.hide(); window.reviewHarness.show(); });
+    check("review.sort-survives-hide-and-show", await sort.inputValue() === "actual", await sort.inputValue());
+    await capture(page, "sort-wide-en");
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    const translated = page.getByRole("combobox", { name: "任务排序", exact: true });
+    check("review.sort-localizes-with-selection-retained", await translated.inputValue() === "actual"
+      && await translated.locator("option:checked").textContent() === "实际耗时从多到少", await translated.textContent());
+    check("review.sort-fits-narrow-layout", await translated.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.left >= 0 && bounds.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth;
+    }), await translated.boundingBox());
+    await capture(page, "sort-narrow-zh");
+    await translated.focus();
+    await page.evaluate(() => window.reviewHarness.setReviewMode("building"));
+    check("review.sort-loading-disables-and-recovers-focus", await translated.isDisabled()
+      && await page.getByLabel("回顾日期", { exact: true }).evaluate((element) => document.activeElement === element), await translated.isDisabled());
+    await page.evaluate(() => window.reviewHarness.setReviewMode("empty"));
+    check("review.sort-empty-disables-control", await translated.isDisabled(), await translated.isDisabled());
+  });
+
   await scenario("states-summary-variance", async () => {
     await open("full");
     await page.locator(".spiral-day-review__row").first().waitFor();

@@ -234,6 +234,11 @@ Review compares planned and recorded time for a chosen date.
 ![Review surface](user-guide/images/10-review-tab.png)
 
 - **Today** is writable. Past and future dates are read-only.
+- **Task order** defaults to **Note order**. Choose **Most recorded time first**
+  to find your longest tasks, or **Largest variance first** to see completed
+  tasks from most over plan to most under plan. Missing values go last; ties
+  keep note order. Sorting works with the overrun filter and keeps the same
+  day summary. It changes no Markdown and resets when the surface is recreated.
 - **Only completed overruns** hides everything except completed tasks whose
   recorded time exceeded the plan. The day summary still covers the whole
   day.

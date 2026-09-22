@@ -4,11 +4,14 @@ import type { ExecutionApplicationSnapshot } from "../../runtime/execution/appli
 import { appendCopySampleAction } from "../onboarding/first-run";
 import { ReviewRowView, reviewDuration, reviewVariance, type ReviewMessages, type ReviewRowAction } from "./review-row";
 
+export type ReviewSortOrder = "source" | "actual" | "variance";
+
 export interface ReviewViewActions {
   readonly today: () => LogicalDate;
   readonly selectDate: (date: LogicalDate | null) => void;
   readonly refresh: () => void;
   readonly setOnlyOverruns: (value: boolean) => void;
+  readonly setSortOrder: (value: ReviewSortOrder) => void;
   readonly activate: (key: string, action: ReviewRowAction) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
@@ -26,6 +29,9 @@ export class ReviewView {
   readonly #refresh: HTMLButtonElement;
   readonly #onlyOverruns: HTMLInputElement;
   readonly #filterLabel: HTMLElement;
+  readonly #sort: HTMLSelectElement;
+  readonly #sortLabel: HTMLElement;
+  readonly #sortOptions: readonly { readonly value: ReviewSortOrder; readonly element: HTMLOptionElement }[];
   readonly #filterStatus: HTMLElement;
   readonly #status: HTMLElement;
   readonly #guidance: HTMLElement;
@@ -71,6 +77,21 @@ export class ReviewView {
     this.#onlyOverruns.addEventListener("change", () => actions.setOnlyOverruns(this.#onlyOverruns.checked));
     this.#filterLabel = document.createElement("span");
     filter.append(this.#onlyOverruns, this.#filterLabel);
+    const sort = document.createElement("label");
+    sort.className = "spiral-day-review__sort";
+    this.#sortLabel = document.createElement("span");
+    this.#sort = document.createElement("select");
+    this.#sortOptions = (["source", "actual", "variance"] as const).map((value) => {
+      const element = document.createElement("option");
+      element.value = value;
+      this.#sort.append(element);
+      return { value, element };
+    });
+    this.#sort.addEventListener("change", () => {
+      const value = this.#sort.value;
+      if (value === "source" || value === "actual" || value === "variance") actions.setSortOrder(value);
+    });
+    sort.append(this.#sortLabel, this.#sort);
     this.#filterStatus = document.createElement("p");
     this.#filterStatus.className = "spiral-day-review__filter-status";
     this.#filterStatus.setAttribute("role", "status");
@@ -91,7 +112,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, filter, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, filter, sort, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -101,6 +122,7 @@ export class ReviewView {
     readonly pending: boolean;
     readonly error: boolean;
     readonly onlyOverruns: boolean;
+    readonly sortOrder: ReviewSortOrder;
   }): void {
     const { review, execution, messages, pending } = input;
     this.#previous.textContent = "‹";
@@ -112,14 +134,23 @@ export class ReviewView {
     this.#refresh.textContent = messages.t("review", "action.refresh");
     this.#filterLabel.textContent = messages.t("review", "filter.overruns");
     this.#onlyOverruns.checked = input.onlyOverruns;
+    this.#sortLabel.textContent = messages.t("review", "sort.label");
+    for (const option of this.#sortOptions) {
+      const label = messages.t("review", `sort.${option.value}`);
+      if (option.element.textContent !== label) option.element.textContent = label;
+    }
+    if (this.#sort.value !== input.sortOrder) this.#sort.value = input.sortOrder;
     this.#list.setAttribute("aria-label", messages.t("review", "list.label"));
     const reviewReady = review.state === "ready";
     const ready = reviewReady && (execution.status === "ready" || execution.status === "working");
     const hasRows = reviewReady && review.availability === "ready" && review.projection.rows.length > 0;
     const displayRows = ready && hasRows;
+    const sortFocused = this.#root.ownerDocument.activeElement === this.#sort;
+    this.#sort.disabled = !displayRows;
     this.#filterStatus.hidden = !displayRows || !input.onlyOverruns;
     this.#root.setAttribute("aria-busy", String(pending || review.state === "building"));
     this.#refresh.disabled = pending || review.state === "building";
+    if (!displayRows && sortFocused) this.#focusToolbar();
     if (!displayRows && this.#list.contains(this.#root.ownerDocument.activeElement)) this.#focusToolbar();
     this.#summary.hidden = !displayRows;
     this.#list.hidden = !displayRows;
@@ -170,6 +201,16 @@ export class ReviewView {
     );
     const projectedRows = hasRows ? review.projection.rows.filter((row) => !input.onlyOverruns
       || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0)) : [];
+    if (input.sortOrder !== "source") {
+      const metric = input.sortOrder === "actual" ? "actualMinutes" : "varianceMinutes";
+      projectedRows.sort((left, right) => {
+        const a = left[metric];
+        const b = right[metric];
+        if (a == null) return b == null ? 0 : 1;
+        if (b == null) return -1;
+        return b - a;
+      });
+    }
     const filterStatus = messages.t("review", "filter.result", { count: projectedRows.length });
     if (this.#filterStatus.textContent !== filterStatus) this.#filterStatus.textContent = filterStatus;
     this.#list.hidden = !displayRows || projectedRows.length === 0;
@@ -184,6 +225,7 @@ export class ReviewView {
       this.#rows.delete(key);
     }
     const orderedRows: ReviewRowView[] = [];
+    const active = this.#root.ownerDocument.activeElement;
     projectedRows.forEach((row, index) => {
       let view = this.#rows.get(row.task.key);
       if (!view) {
@@ -196,6 +238,8 @@ export class ReviewView {
       orderedRows.push(view);
     });
     if (fallbackIndex !== undefined && !this.#focusRow(orderedRows, fallbackIndex)) this.#focusToolbar();
+    else if (fallbackIndex === undefined && active instanceof HTMLElement && this.#list.contains(active)
+      && this.#root.ownerDocument.activeElement !== active) active.focus({ preventScroll: true });
   }
 
   #setInsertGuidance(

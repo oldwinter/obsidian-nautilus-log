@@ -1,6 +1,10 @@
 import type { ReviewCatalog } from "../en/review";
 
 export const zhCNReview: ReviewCatalog = Object.freeze({
+  "sort.label": "任务排序",
+  "sort.source": "笔记顺序",
+  "sort.actual": "实际耗时从多到少",
+  "sort.variance": "耗时偏差从大到小",
   "date.label": "回顾日期",
   "date.previous": "前一天",
   "date.next": "后一天",

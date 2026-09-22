@@ -13,6 +13,8 @@
 .spiral-day-review__toolbar button { min-height: 30px; white-space: normal; }
 .spiral-day-review__filter { display: flex; align-items: center; gap: 6px; margin-top: 10px; min-height: 30px; font-size: var(--font-ui-small); overflow-wrap: anywhere; }
 .spiral-day-review__filter input { flex: none; }
+.spiral-day-review__sort { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--font-ui-small); }
+.spiral-day-review__sort select { min-width: 0; max-width: 100%; min-height: 30px; color: var(--text-normal); font: inherit; }
 .spiral-day-review__summary { margin-block: 12px; font-size: var(--font-ui-small); }
 .spiral-day-review__summary p { margin-block: 4px; overflow-wrap: anywhere; }
 .spiral-day-review__summary p:first-child { font-weight: var(--font-semibold); }
@@ -46,8 +48,8 @@
 .spiral-day-review__overrun { color: var(--review-overrun); }
 .spiral-day-review__actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .spiral-day-review__actions button { min-height: 30px; }
-.spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible, .spiral-day-review select:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
 @media (forced-colors: active) {
   .spiral-day-review__overrun { color: CanvasText; font-weight: bold; }
-  .spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible { outline-color: Highlight; }
+  .spiral-day-review button:focus-visible, .spiral-day-review input:focus-visible, .spiral-day-review select:focus-visible { outline-color: Highlight; }
 }

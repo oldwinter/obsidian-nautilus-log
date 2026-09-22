@@ -7,7 +7,7 @@ import type { ExecutionCommandOutcome } from "../runtime/execution/commands";
 import type { ReviewCoordinatorSnapshot } from "../runtime/review/coordinator";
 import type { ExecutionMessages } from "../ui/execution/shared-controls";
 import type { ExecutionReviewSurface } from "../ui/execution/panel";
-import { ReviewView } from "../ui/execution/review-view";
+import { ReviewView, type ReviewSortOrder } from "../ui/execution/review-view";
 import type { ReviewRowAction } from "../ui/execution/review-row";
 import type { SourceTaskReference } from "./source-navigation";
 
@@ -43,6 +43,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
       let pending = false;
       let error = false;
       let onlyOverruns = false;
+      let sortOrder: ReviewSortOrder = "source";
       let timer: number | undefined;
       const messages = createMessages({
         locale: dependencies.messages.locale,
@@ -57,6 +58,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
           pending,
           error,
           onlyOverruns,
+          sortOrder,
         });
       };
       const refresh = async (operation: () => Promise<void>): Promise<void> => {
@@ -104,6 +106,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
       const view = new ReviewView(root, {
         today: dependencies.today,
         setOnlyOverruns: (value) => { onlyOverruns = value; render(); },
+        setSortOrder: (value) => { sortOrder = value; render(); },
         selectDate: (date) => { void refresh(() => dependencies.selectDate(date)); },
         refresh: () => { void refresh(dependencies.refresh); },
         activate: (key, action) => { void activate(key, action); },
