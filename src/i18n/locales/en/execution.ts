@@ -13,6 +13,7 @@ export type ExecutionCatalog = Readonly<{
   "action.copyTaskLink": string;
   "action.openSource": string;
   "action.openActiveTask": string;
+  "action.resumeRecent": string;
   "action.stopPomo": string;
   "action.startPomo": string;
   "action.retry": string;
@@ -144,6 +145,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "action.copyTaskLink": "Copy task link",
   "action.openSource": "Open source",
   "action.openActiveTask": "Open active task",
+  "action.resumeRecent": "Start timing this recent task",
   "action.stopPomo": "Stop POMO",
   "action.startPomo": "Start POMO",
   "action.retry": "Try again",

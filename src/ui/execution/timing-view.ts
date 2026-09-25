@@ -13,11 +13,27 @@ import {
 
 export interface ExecutionRecentTask {
   readonly key: string;
-  readonly ownerId: string | null;
+  readonly ownerId: string;
   readonly path: string;
   readonly sourceOrder: number;
   readonly label: string;
   readonly actualMinutes: number;
+}
+
+export function recentTaskClockInIntent(
+  task: ExecutionRecentTask,
+  nowEpochMs: number,
+): Extract<ExecutionApplicationIntent, { readonly type: "clock-in" }> {
+  return Object.freeze({
+    type: "clock-in" as const,
+    intentId: `clock-in-recent-${task.ownerId}-${nowEpochMs}`,
+    target: Object.freeze({
+      path: task.path,
+      ownerId: task.ownerId,
+      sourceOrder: task.sourceOrder,
+      sourceFingerprint: "identified-target",
+    }),
+  });
 }
 
 export interface TimingViewOptions {
@@ -249,9 +265,21 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     for (const task of options.recent) {
       const item = executionElement(root.ownerDocument, "li", "spiral-day-execution__row");
       titleButton(item, task.label, (event) => options.navigateTask(task, event.shiftKey ? "sidebar" : "main"));
+      const details = executionElement(root.ownerDocument, "div", "spiral-day-execution__row-actions");
       const actual = executionElement(root.ownerDocument, "span", "spiral-day-execution__row-meta");
       actual.textContent = messages.t("shared", "unit.duration", { minutes: task.actualMinutes });
-      item.append(actual);
+      const resume = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.resumeRecent"),
+        icon: "clock",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__icon-button",
+        onActivate: () => options.dispatch(recentTaskClockInIntent(task, options.nowEpochMs)),
+      });
+      appendPending(resume, options.pending.has(`task:${task.ownerId}`), messages);
+      if (snapshot.writeBlocked) resume.disabled = true;
+      details.append(actual, resume);
+      item.append(details);
       list.append(item);
     }
     recent.append(list);
