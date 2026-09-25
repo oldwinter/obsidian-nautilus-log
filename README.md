@@ -18,6 +18,8 @@ Foundation version: `0.1.0`
 - See remaining and original planned duration on scheduled Plan tasks that
   already have progress. The task currently being timed keeps its Current task
   indicator.
+- Sort unscheduled Plan tasks by shortest remaining time to find a quick task
+  for a spare moment. Turn the toggle off to restore note order.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
 - Compare planned and recorded time in Review, search task titles, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review

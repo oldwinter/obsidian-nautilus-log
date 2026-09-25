@@ -30,6 +30,7 @@ export type ExecutionCatalog = Readonly<{
   "timing.pending": string;
   "plan.scheduled": string;
   "plan.unscheduled": string;
+  "plan.shortestFirst": string;
   "plan.noPrimary": string;
   "plan.noPrimaryDetail": string;
   "plan.noTasks": string;
@@ -159,6 +160,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.deleteConfirm": "Activate again to delete this CLOCK.",
   "timing.pending": "Confirming change",
   "plan.scheduled": "Scheduled",
+  "plan.shortestFirst": "Shortest remaining first",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",
