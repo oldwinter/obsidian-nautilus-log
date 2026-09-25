@@ -6,6 +6,9 @@ export type ReviewCatalog = Readonly<{
   "date.next": string;
   "date.today": string;
   "filter.overruns": string;
+  "search.label": string;
+  "search.placeholder": string;
+  "search.result": MessageFunction<{ count: number }>;
   "filter.result": MessageFunction<{ count: number }>;
   "summary.counts": MessageFunction<{ completed: number; total: number; compared: number }>;
   "metric.planned": string;
@@ -44,6 +47,11 @@ export const enReview: ReviewCatalog = Object.freeze({
   "date.next": "Next day",
   "date.today": "Today",
   "filter.overruns": "Only completed overruns",
+  "search.label": "Search task titles",
+  "search.placeholder": "Type to filter; Esc to clear",
+  "search.result": ({ count }) => count === 0
+    ? "No tasks match these filters. Clear the search or turn off Only completed overruns. The summary covers the whole day."
+    : `Showing ${count} matching ${count === 1 ? "task" : "tasks"}. The summary covers the whole day.`,
   "filter.result": ({ count }) => count === 0
     ? "No completed tasks exceeded their plan. The summary covers the whole day."
     : `Showing ${count} completed ${count === 1 ? "overrun" : "overruns"}. The summary covers the whole day.`,

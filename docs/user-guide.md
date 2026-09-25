@@ -234,6 +234,11 @@ Review compares planned and recorded time for a chosen date.
 ![Review surface](user-guide/images/10-review-tab.png)
 
 - **Today** is writable. Past and future dates are read-only.
+- **Search task titles** filters the list as you type, ignoring case and outer
+  spaces. It combines with **Only completed overruns** without changing the day
+  summary. Press **Esc** in the search field to clear it. The search stays when
+  changing dates, switching tabs, or reopening the panel. Reloading the plugin
+  resets it.
 - **Only completed overruns** hides everything except completed tasks whose
   recorded time exceeded the plan. The day summary still covers the whole
   day.

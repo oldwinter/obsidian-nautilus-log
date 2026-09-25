@@ -401,7 +401,7 @@ export function mountExecutionPanel(
     surface.close(false);
   };
   const onDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!opened || event.key !== "Escape") return;
+    if (!opened || event.key !== "Escape" || event.defaultPrevented) return;
     event.preventDefault();
     surface.close(true);
   };
@@ -417,7 +417,7 @@ export function mountExecutionPanel(
   trigger.addEventListener("click", onTrigger);
   trigger.addEventListener("keydown", onTriggerKeyDown);
   document.addEventListener("pointerdown", onDocumentPointerDown, true);
-  document.addEventListener("keydown", onDocumentKeyDown, true);
+  document.addEventListener("keydown", onDocumentKeyDown);
   document.defaultView?.addEventListener("resize", onResize);
 
   const unsubscribeExecution = port.subscribeExecution((snapshot) => {
@@ -488,7 +488,7 @@ export function mountExecutionPanel(
       trigger.removeEventListener("click", onTrigger);
       trigger.removeEventListener("keydown", onTriggerKeyDown);
       document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-      document.removeEventListener("keydown", onDocumentKeyDown, true);
+      document.removeEventListener("keydown", onDocumentKeyDown);
       document.defaultView?.removeEventListener("resize", onResize);
       popover.remove();
     },

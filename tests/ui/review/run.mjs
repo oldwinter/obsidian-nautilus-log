@@ -44,6 +44,7 @@ const productionPaths = [
   "src/runtime/review/coordinator.ts",
   "src/ui/execution/review-row.ts",
   "src/ui/execution/review-view.ts",
+  "src/ui/execution/panel.ts",
   "src/i18n/locales/en/review.ts",
   "src/i18n/locales/zh-CN/review.ts",
   "styles/review.css",
@@ -254,6 +255,88 @@ try {
     check("review.summary-counts", summary[0] === "4/7 completed · 3 compared", summary);
     check("review.summary-compared-only", summary[1] === "Planned 1h 30m · Actual 1h 35m · Variance +5m", summary);
     await capture(page, "states-wide-en");
+  });
+
+  await scenario("task-title-search", async () => {
+    await open("full");
+    const search = page.getByRole("searchbox", { name: "Search task titles", exact: true });
+    const titles = () => page.locator(".spiral-day-review__title").allTextContents();
+    const summary = await page.locator(".spiral-day-review__summary").textContent();
+    await search.fill("  VARIANCE  ");
+    check("review.search-case-and-whitespace", JSON.stringify(await titles()) === JSON.stringify([
+      "Positive variance", "Negative variance", "Zero variance",
+    ]), await titles());
+    check("review.search-keeps-input-focus", await search.evaluate((element) => element === document.activeElement), await search.inputValue());
+    await page.getByRole("checkbox", { name: "Only completed overruns", exact: true }).check();
+    check("review.search-intersects-overruns", JSON.stringify(await titles()) === JSON.stringify(["Positive variance"]), await titles());
+    check("review.search-preserves-summary", await page.locator(".spiral-day-review__summary").textContent() === summary, summary);
+    await page.getByRole("button", { name: "Open source for Positive variance", exact: true }).click();
+    const navigation = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.search-preserves-source-target", navigation.navigations.at(-1)?.target.path === "Daily/Review Fixture 4.md", navigation.navigations);
+    await search.fill("nothing matches");
+    check("review.search-empty-has-recovery", await page.locator(".spiral-day-review__filter-status").isVisible()
+      && (await page.locator(".spiral-day-review__filter-status").textContent()).includes("Clear the search")
+      && !await page.locator(".spiral-day-review__list").isVisible(), await titles());
+    await capture(page, "search-no-matches");
+    await search.press("Escape");
+    check("review.search-escape-keeps-overrun-filter-and-focus", await search.inputValue() === ""
+      && JSON.stringify(await titles()) === JSON.stringify(["Positive variance"])
+      && await search.evaluate((element) => element === document.activeElement), await titles());
+    await page.getByRole("checkbox", { name: "Only completed overruns", exact: true }).uncheck();
+    await search.fill("   ");
+    check("review.search-blank-restores-all", (await titles()).length === 7
+      && !await page.locator(".spiral-day-review__filter-status").isVisible(), await titles());
+    await search.fill("Paused");
+    const statusMutations = await page.locator(".spiral-day-review__filter-status").evaluate((element) => {
+      const observer = new MutationObserver(() => undefined);
+      observer.observe(element, { childList: true, subtree: true, characterData: true });
+      window.reviewHarness.tickNow();
+      const count = observer.takeRecords().length;
+      observer.disconnect();
+      return count;
+    });
+    check("review.search-no-repeated-announcements", statusMutations === 0, statusMutations);
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await page.evaluate(() => { window.reviewHarness.hide(); window.reviewHarness.show(); });
+    check("review.search-survives-date-and-reopen", await search.inputValue() === "Paused"
+      && JSON.stringify(await titles()) === JSON.stringify(["Paused task"]), await titles());
+    await page.getByRole("button", { name: "Open source for Paused task", exact: true }).focus();
+    await page.evaluate(() => window.reviewHarness.setReviewMode("row-removed"));
+    check("review.search-removed-row-recovers-focus", await search.evaluate((element) => element === document.activeElement), await titles());
+    for (const mode of ["building", "unavailable", "missing-note", "empty"]) {
+      await page.evaluate((nextMode) => window.reviewHarness.setReviewMode(nextMode), mode);
+      check(`review.search-does-not-mask-${mode}`, !await page.locator(".spiral-day-review__filter-status").isVisible()
+        && await page.locator(".spiral-day-review__status").isVisible(), mode);
+    }
+    const stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.search-does-not-dispatch-or-write", stats.dispatches.length === 0 && stats.planMutations === 0, stats);
+    await open("search", { width: 320, height: 740 });
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    const chineseSearch = page.getByRole("searchbox", { name: "搜索任务标题", exact: true });
+    await chineseSearch.fill("复盘");
+    check("review.search-chinese-title", JSON.stringify(await titles()) === JSON.stringify(["整理项目复盘"]), await titles());
+    check("review.search-localized-result", await page.getByText("正在显示 1 项匹配的任务。汇总仍显示全天数据。", { exact: true }).isVisible(), await chineseSearch.inputValue());
+    const fits = await chineseSearch.evaluate((element) => {
+      const root = document.querySelector("#review-root");
+      return element.getBoundingClientRect().width > 0 && root.scrollWidth <= root.clientWidth + 1
+        && document.documentElement.scrollWidth <= document.documentElement.clientWidth;
+    });
+    check("review.search-fits-320px", fits, fits);
+    await capture(page, "search-chinese-320");
+    await chineseSearch.press("Escape");
+    check("review.search-clearing-restores-source-order", (await titles()).length === 8 && (await titles())[0] === "Not started", await titles());
+  });
+
+  await scenario("search-escape-in-execution-panel", async () => {
+    await open("full");
+    await page.evaluate(() => window.reviewHarness.openPanel());
+    const search = page.getByRole("searchbox", { name: "Search task titles", exact: true });
+    await search.fill("variance");
+    await search.press("Escape");
+    check("review.search-first-escape-clears-without-closing", await search.isVisible() && await search.inputValue() === ""
+      && await search.evaluate((element) => element === document.activeElement), await search.inputValue());
+    await search.press("Escape");
+    check("review.search-second-escape-closes-panel", !await search.isVisible(), await search.isVisible());
   });
 
   await scenario("completed-overrun-filter", async () => {
