@@ -56,9 +56,9 @@ async function confirmInsertion(
   dependencies: InsertPrimaryPlanDependencies,
   file: TFile,
   expectedText: string,
+  editor?: Pick<Editor, "getValue">,
 ): Promise<void> {
-  // Opening the note may have loaded a new authoritative editor after the write.
-  const editor = dependencies.editorForPath(file.path);
+  // Confirm through the write primitive: newly opened editors normalize vault line endings.
   const actualText = editor ? editor.getValue() : await dependencies.app.vault.read(file);
   if (actualText !== expectedText) {
     throw new Error("Primary Plan insertion could not be confirmed");
@@ -128,7 +128,7 @@ export async function insertPrimaryPlan(
     return Object.freeze({ kind: "blocked", reason: prepared.reason });
   }
   await openDailyNote(dependencies.app, existing);
-  await confirmInsertion(dependencies, existing, prepared.nextText);
+  await confirmInsertion(dependencies, existing, prepared.nextText, fromEditor ? editor : undefined);
   return Object.freeze({ kind: prepared.kind === "create" ? "created" : "appended", path });
 }
 
