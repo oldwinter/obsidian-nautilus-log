@@ -1,16 +1,13 @@
 import { build } from "esbuild";
+import { readdir } from "node:fs/promises";
 
-const entryPoints = [
-  "tests/ui/planner/adapter.test.ts",
-  "tests/ui/planner/diagnostics.test.ts",
-  "tests/ui/planner/geometry.test.ts",
-  "tests/ui/planner/planner-state.test.ts",
-  "tests/ui/planner/responsive-layout.test.ts",
-  "tests/ui/planner/spiral.test.ts",
-  "tests/ui/planner/styles.test.ts",
-  "tests/ui/planner/summary.test.ts",
-  "tests/ui/planner/view-model.test.ts",
-];
+const directory = "tests/ui/planner";
+const entryPoints = (await readdir(directory))
+  .filter((file) => file.endsWith(".test.ts"))
+  .sort()
+  .map((file) => `${directory}/${file}`);
+
+if (entryPoints.length === 0) throw new Error("planner test runner found no tests");
 
 const obsidianStub = {
   name: "planner-obsidian-stub",
