@@ -334,8 +334,6 @@ export class ExecutionApplication {
   #refreshPromise: Promise<ExecutionApplicationSnapshot> | undefined;
   #refreshPromiseGeneration: number | undefined;
   #refreshFollowUpPromise: Promise<ExecutionApplicationSnapshot> | undefined;
-  #resolveRefreshFollowUp: ((snapshot: ExecutionApplicationSnapshot) => void) | undefined;
-  #rejectRefreshFollowUp: ((error: unknown) => void) | undefined;
   #dispatchDepth = 0;
   #sourceRefreshPending = false;
   #snapshot: ExecutionApplicationSnapshot;
@@ -481,29 +479,19 @@ export class ExecutionApplication {
           this.#refreshAgain = false;
           const queuedGeneration = this.#refreshGeneration;
           const followUp = new Promise<ExecutionApplicationSnapshot>((resolve, reject) => {
-            this.#resolveRefreshFollowUp = resolve;
-            this.#rejectRefreshFollowUp = reject;
+            queueMicrotask(() => {
+              if (!this.#stopped && this.#refreshGeneration === queuedGeneration) {
+                void this.refresh().then(resolve, reject);
+              } else {
+                resolve(this.#snapshot);
+              }
+            });
+          }).finally(() => {
+            if (this.#refreshFollowUpPromise === followUp) {
+              this.#refreshFollowUpPromise = undefined;
+            }
           });
           this.#refreshFollowUpPromise = followUp;
-          queueMicrotask(() => {
-            if (!this.#stopped && this.#refreshGeneration === queuedGeneration) {
-              void this.refresh().then(
-                (snapshot) => this.#resolveRefreshFollowUp?.(snapshot),
-                (error: unknown) => this.#rejectRefreshFollowUp?.(error),
-              ).finally(() => {
-                if (this.#refreshFollowUpPromise === followUp) {
-                  this.#refreshFollowUpPromise = undefined;
-                  this.#resolveRefreshFollowUp = undefined;
-                  this.#rejectRefreshFollowUp = undefined;
-                }
-              });
-              return;
-            }
-            this.#resolveRefreshFollowUp?.(this.#snapshot);
-            this.#refreshFollowUpPromise = undefined;
-            this.#resolveRefreshFollowUp = undefined;
-            this.#rejectRefreshFollowUp = undefined;
-          });
         }
       }
     }
@@ -512,6 +500,21 @@ export class ExecutionApplication {
   async dispatch(intent: ExecutionApplicationIntent): Promise<ExecutionCommandOutcome> {
     safeIntentId(intent.intentId);
     await this.#waitForRefreshSettled();
+    if (this.#refreshPromise || this.#refreshFollowUpPromise || this.#snapshot.status === "stale") {
+      const code = this.#stopped ? "runtime-stopping" : "source-conflict";
+      return Object.freeze({
+        intentId: intent.intentId,
+        outcome: "rejected",
+        code,
+        snapshot: Object.freeze({
+          ...this.#snapshot.runtime,
+          status: this.#stopped ? "stopped" : "degraded",
+          writeBlocked: true,
+          code,
+        }),
+        pluginDataWarning: false,
+      });
+    }
     this.#dispatchDepth += 1;
     try {
       return await this.#dispatchIntent(intent);
@@ -525,18 +528,11 @@ export class ExecutionApplication {
   }
 
   async #waitForRefreshSettled(): Promise<void> {
-    for (;;) {
-      const refresh = this.#refreshPromise;
-      if (refresh) {
-        await refresh;
-        continue;
-      }
-      const followUp = this.#refreshFollowUpPromise;
-      if (followUp) {
-        await followUp;
-        continue;
-      }
-      return;
+    // Wait for the current refresh and one follow-up, never an endless dirty chain.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const refresh = this.#refreshFollowUpPromise ?? this.#refreshPromise;
+      if (!refresh) return;
+      await refresh;
     }
   }
 
@@ -605,17 +601,18 @@ export class ExecutionApplication {
   }
 
   async #runRefresh(generation: number): Promise<ExecutionApplicationSnapshot> {
-    while (true) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       this.#refreshAgain = false;
       const clocks = await this.#clockReader.scan();
       if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
       if (this.#refreshAgain) continue;
       const runtime = refreshedRuntime(this.#coordinator.snapshot, clocks);
-      await this.#publishConfirmed(runtime);
+      await this.#publishConfirmed(runtime, generation);
       if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
       if (this.#refreshAgain) continue;
       return this.#snapshot;
     }
+    return this.#snapshot;
   }
 
   #subscribeToSourceChanges(): void {
@@ -1108,7 +1105,7 @@ export class ExecutionApplication {
     this.#publish(this.#makeSnapshot(runtime, applicationStatus(runtime), runtime.code, focused));
   }
 
-  async #publishConfirmed(runtime: ExecutionRuntimeSnapshot): Promise<void> {
+  async #publishConfirmed(runtime: ExecutionRuntimeSnapshot, refreshGeneration?: number): Promise<void> {
     let focused: ExecutionFocusedTaskSnapshot | undefined;
     let code: string | undefined = runtime.code;
     let status = applicationStatus(runtime);
@@ -1134,6 +1131,8 @@ export class ExecutionApplication {
         code = "focused-task-unavailable";
       }
     }
+    if (refreshGeneration !== undefined
+      && (refreshGeneration !== this.#refreshGeneration || this.#refreshAgain || this.#stopped)) return;
     this.#publish(this.#makeSnapshot(runtime, status, code, focused));
   }
 
