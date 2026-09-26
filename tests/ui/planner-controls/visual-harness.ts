@@ -13,6 +13,7 @@ import type { SupportedLocale } from "../../../src/i18n/types.ts";
 import type {
   RuntimePlanItemSource,
   RuntimePlanProjection,
+  RuntimeViewContext,
 } from "../../../src/runtime/projection-runtime.ts";
 import {
   confirmedSnapshot,
@@ -1244,8 +1245,8 @@ window.issue24Harness = {
     const fillsResolveWithinOwningSurface = initial.every(({ dots, elapsed, hatch, progress, svg }) => (
       elapsed.style.fill === `url(\"#${hatch.id}\")`
       && progress.style.fill === `url(\"#${dots.id}\")`
-      && document.getElementById(hatch.id) === hatch
-      && document.getElementById(dots.id) === dots
+      && (document.getElementById(hatch.id) as Element | null) === hatch
+      && (document.getElementById(dots.id) as Element | null) === dots
       && svg.contains(hatch)
       && svg.contains(dots)
     ));
@@ -1338,8 +1339,8 @@ window.issue24Harness = {
     const visibleFillsResolveWithinOwningSurface = (
       visibleState.elapsed.style.fill === `url(\"#${visibleState.hatch.id}\")`
       && visibleState.progress.style.fill === `url(\"#${visibleState.dots.id}\")`
-      && document.getElementById(visibleState.hatch.id) === visibleState.hatch
-      && document.getElementById(visibleState.dots.id) === visibleState.dots
+      && (document.getElementById(visibleState.hatch.id) as Element | null) === visibleState.hatch
+      && (document.getElementById(visibleState.dots.id) as Element | null) === visibleState.dots
       && visibleState.svg.contains(visibleState.hatch)
       && visibleState.svg.contains(visibleState.dots)
     );
@@ -1394,8 +1395,8 @@ window.issue24Harness = {
     await nextFrame();
     const framePatterns = [...frameRoot.querySelectorAll<SVGPatternElement>("defs pattern")];
     const differentDocumentsAllocateIndependently = framePatterns.length === 2
-      && framePatterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern)
-      && framePatterns.every((pattern) => document.getElementById(pattern.id) !== pattern);
+      && framePatterns.every((pattern) => (frameDocument.getElementById(pattern.id) as Element | null) === pattern)
+      && framePatterns.every((pattern) => (document.getElementById(pattern.id) as Element | null) !== pattern);
 
     return Object.freeze({
       differentDocumentsAllocateIndependently,
@@ -1507,7 +1508,7 @@ window.issue24Harness = {
           .filter(Boolean);
         results.set(hostileCase, patterns.length === 2
           && new Set(patterns.map((pattern) => pattern.id)).size === 2
-          && patterns.every((pattern) => frameDocument.getElementById(pattern.id) === pattern)
+          && patterns.every((pattern) => (frameDocument.getElementById(pattern.id) as Element | null) === pattern)
           && tooltipIds.length > 0
           && new Set(tooltipIds).size === tooltipIds.length
           && tooltipIds.every((id) => frameDocument.getElementById(id)?.getAttribute("role") === "tooltip"));
@@ -1666,7 +1667,7 @@ window.issue24Harness = {
         connectCalls += 1;
         listener(snapshotFor(context.logicalDate));
         return Object.freeze({
-          setContext(nextContext) {
+          setContext(nextContext: RuntimeViewContext) {
             contextDays.push(nextContext.logicalDate.day);
             if (nextContext.logicalDate.day === dateB.day) {
               if (mode === "rollback-queues-b") {
@@ -1822,7 +1823,7 @@ window.issue24Harness = {
         subscribers.add(listener);
         let attached = true;
         return Object.freeze({
-          setContext(nextContext) {
+          setContext(nextContext: RuntimeViewContext) {
             if (nextContext.logicalDate.day === dateB.day) {
               throw new Error("candidate context failed");
             }
@@ -2046,7 +2047,7 @@ window.issue24Harness = {
       configurable: true,
       value: (handler: TimerHandler, timeout?: number) => {
         intervalCount += 1;
-        probeCallback = typeof handler === "function" ? handler : undefined;
+        probeCallback = typeof handler === "function" ? handler as () => void : undefined;
         probeDelay = timeout;
         return timerId;
       },

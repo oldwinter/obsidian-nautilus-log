@@ -37,9 +37,10 @@ test("copy task link delegates block-link formatting to Obsidian and writes the 
 
 test("copy task link fails closed before touching the clipboard when source identity is unavailable", async () => {
   let writes = 0;
+  const fileManager = { generateMarkdownLink() { throw new Error("not reached"); } };
   const app = {
     vault: { getAbstractFileByPath: () => markdownFile() },
-    fileManager: { generateMarkdownLink() { throw new Error("not reached"); } },
+    fileManager,
   } as never;
   const clipboard = { async writeText() { writes += 1; } };
 
@@ -52,7 +53,7 @@ test("copy task link fails closed before touching the clipboard when source iden
   assert.deepEqual(await copyTaskMarkdownLink({
     app: {
       vault: { getAbstractFileByPath: () => undefined },
-      fileManager: app.fileManager,
+      fileManager,
     } as never,
     target: { path: "Missing.md", ownerId: "nl-task", sourceOrder: 3 },
     label: "Missing",

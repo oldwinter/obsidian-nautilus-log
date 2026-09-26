@@ -197,7 +197,7 @@ test("preview tokens bind every normalized plan field and reject post-preview mu
   assert.equal(mutationPlanIsValid(plan), true);
 
   const operation = plan.stages[0]!.operations[0];
-  assert.equal(operation.kind, "initialize-plan");
+  assert.equal(operation?.kind, "initialize-plan");
   const mutated = {
     ...plan,
     stages: [{
@@ -219,9 +219,9 @@ test("preview tokens bind every normalized plan field and reject post-preview mu
   ];
   for (const variant of fieldVariants) assert.notEqual(createMutationPreviewToken(variant), plan.previewToken);
 
+  const { previewToken: _unconfirmedToken, ...unconfirmedPlan } = plan;
   assert.throws(() => createMutationPlan({
-    ...plan,
-    previewToken: undefined,
+    ...unconfirmedPlan,
     stages: [{ ...plan.stages[0]!, confirmationRequired: "not-confirmed" as never }],
   }), /confirmationRequired must be boolean/);
   assert.equal(mutationPlanIsValid({

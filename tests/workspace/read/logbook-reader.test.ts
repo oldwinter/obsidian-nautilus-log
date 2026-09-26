@@ -68,6 +68,7 @@ test("legacy CLOCK parsing delegates offset-free local time and never guesses ga
   assert.equal(closed.kind, "record");
   if (closed.kind === "record") {
     assert.equal(closed.record.format, "legacy");
+    assert.equal(closed.record.state, "closed");
     assert.equal(closed.record.actualMinutes, 35);
     assert.deepEqual(closed.diagnostics.map((entry) => entry.code), [
       "displayed-duration-mismatch",

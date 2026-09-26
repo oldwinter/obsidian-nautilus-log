@@ -105,7 +105,7 @@ test("UP-INS-04 manual clock changes zones and fires equal timers deterministica
 test("UP-INS-04 editor refresh is trailing at 150 ms and capped at 500 ms", () => {
   const clock = new ManualSystemClock();
   const refreshedAt: number[] = [];
-  const refresh = new RefreshCoordinator(clock, () => refreshedAt.push(clock.now()));
+  const refresh = new RefreshCoordinator(clock, () => { refreshedAt.push(clock.now()); });
 
   refresh.schedule("editor");
   for (let elapsed = 100; elapsed <= 400; elapsed += 100) {
@@ -131,7 +131,7 @@ test("UP-INS-04 editor refresh is trailing at 150 ms and capped at 500 ms", () =
 test("UP-INS-04 vault refresh is trailing at 250 ms and editor timing wins mixed bursts", () => {
   const clock = new ManualSystemClock();
   const refreshedAt: number[] = [];
-  const refresh = new RefreshCoordinator(clock, () => refreshedAt.push(clock.now()));
+  const refresh = new RefreshCoordinator(clock, () => { refreshedAt.push(clock.now()); });
 
   refresh.schedule("vault");
   clock.advanceBy(200);
@@ -153,7 +153,7 @@ test("UP-INS-04 vault refresh is trailing at 250 ms and editor timing wins mixed
 test("UP-INS-04 immediate refresh bypasses and replaces queued debounce", () => {
   const clock = new ManualSystemClock();
   const refreshedAt: number[] = [];
-  const refresh = new RefreshCoordinator(clock, () => refreshedAt.push(clock.now()));
+  const refresh = new RefreshCoordinator(clock, () => { refreshedAt.push(clock.now()); });
 
   refresh.schedule("vault");
   clock.advanceBy(50);

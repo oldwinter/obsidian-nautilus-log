@@ -4,6 +4,7 @@ import test from "node:test";
 import { copyPlannerSummary } from "../../../src/adapters/plan-summary.ts";
 import { createMessages } from "../../../src/i18n/resolver.ts";
 import { schedulePlan } from "../../../src/core/scheduler.ts";
+import type { RuntimePlanItemSource } from "../../../src/runtime/projection-runtime.ts";
 import {
   escapePlannerSummaryText,
   formatPlannerSummary,
@@ -33,7 +34,7 @@ test("plan summaries localize headings and state an empty schedule", () => {
   const projection = Object.freeze({
     ...original,
     items: Object.freeze([]),
-    schedule: schedulePlan({ ...BOUNDS, items: [] }),
+    schedule: schedulePlan<RuntimePlanItemSource>({ ...BOUNDS, items: [] }),
   });
   assert.equal(formatPlannerSummary(projection, BOUNDS, createMessages({ locale: "zh-CN" })), [
     "## Spiral Day - 2026-08-28",
@@ -57,7 +58,7 @@ test("copy plan summary reports clipboard success, absence, and rejection", asyn
     clipboard: { async writeText(value) { copied.push(value); } },
   }), "copied");
   assert.deepEqual(copied, ["summary"]);
-  assert.equal(await copyPlannerSummary({ summary: "summary", clipboard: undefined }), "failed");
+  assert.equal(await copyPlannerSummary({ summary: "summary" }), "failed");
   assert.equal(await copyPlannerSummary({
     summary: "summary",
     clipboard: { async writeText() { throw new Error("denied"); } },

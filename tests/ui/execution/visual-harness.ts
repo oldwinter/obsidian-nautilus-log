@@ -57,7 +57,7 @@ function runtime(kind: "idle" | "active" | "pomo"): ExecutionApplicationSnapshot
                 state: "running" as const,
                 startEpochMs: focused!.clock.startEpochMs,
                 clockId: focused!.clock.clockId,
-              }) }),
+              }), diagnostics: Object.freeze([]) }),
             }),
           })
         : Object.freeze({ kind: "idle" as const, generation: 2 }),

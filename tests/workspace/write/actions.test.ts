@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { WorkspaceCommitter, legacyRunningClockKey } from "../../../src/workspace/commit.ts";
+import {
+  WorkspaceCommitter,
+  legacyRunningClockKey,
+  type CommitContext,
+} from "../../../src/workspace/commit.ts";
 import { parseClockText } from "../../../src/workspace/clock-parser.ts";
 import { createMutationExpectation, type MutationExpectation } from "../../../src/workspace/expectation.ts";
 import {
@@ -30,7 +34,7 @@ import {
 const PATH = "Daily/Actions.md";
 const START = NOW - 30 * 60_000;
 
-function writer(access: MemoryAtomicTextAccess, context = CONTEXT): WorkspaceCommitter {
+function writer(access: MemoryAtomicTextAccess, context: CommitContext = CONTEXT): WorkspaceCommitter {
   return new WorkspaceCommitter(access, { readContext: () => context });
 }
 
@@ -1198,11 +1202,13 @@ test("selected DST fold normalizes end-to-end while a nonexistent local time rem
   const identifiedFold = fold.replace("[2026-11-01 01:30]", `[2026-11-01 01:30] ^${CLOCK_A}`);
   const identifiedAccess = new MemoryAtomicTextAccess({ [PATH]: identifiedFold });
   const { previewToken: _foldPreviewToken, ...foldInput } = mutation;
+  const foldOperation = mutation.stages[0]!.operations[0]!;
+  assert.equal(foldOperation.kind, "normalize-legacy-clock");
   const identifiedMutation = createMutationPlan({
     ...foldInput,
     intentId: "normalize-identified-fold",
     stages: [{ path: PATH, confirmationRequired: true, operations: [{
-      ...mutation.stages[0]!.operations[0]!,
+      ...foldOperation,
       target: { kind: "clock", id: CLOCK_A, ownerId: PLAN_A },
       clockId: CLOCK_A,
     }] }],

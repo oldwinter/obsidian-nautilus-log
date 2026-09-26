@@ -63,7 +63,7 @@ function task(
 ): RuntimeReviewTask {
   return Object.freeze({
     key,
-    ownerId: executionTarget.ownerId ?? undefined,
+    ...(executionTarget.ownerId === null ? {} : { ownerId: executionTarget.ownerId }),
     sourceOrder,
     direct: true,
     kind: "flexible-task",
@@ -249,7 +249,19 @@ function reviewSnapshot(reviewMode: ReviewMode, date: LogicalDate): ReviewCoordi
       state: "unavailable",
       generation: ++generation,
       reason: reviewMode === "over-limit" ? "history-over-limit" : "history-unavailable",
-      history: Object.freeze({ state: "unavailable", generation, reason: "read-failed" }),
+      history: Object.freeze({
+        state: "unavailable",
+        generation,
+        sourceRevision: 0,
+        counts: Object.freeze({
+          markdownFiles: 0,
+          markdownBytes: 0,
+          dailyNotes: 0,
+          clockRecords: 0,
+          tasks: 0,
+        }),
+        reason: "source-read-failed",
+      }),
     }) as ReviewCoordinatorSnapshot;
   }
   return readySnapshot(reviewMode, date);

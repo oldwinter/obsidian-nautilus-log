@@ -51,7 +51,7 @@ function snapshot(input: Partial<WorkspaceIndexSnapshot> = {}): WorkspaceIndexSn
   });
 }
 
-const eligible = async (clock: IndexedClockSource) => ({ state: "eligible" as const, ownerId: clock.ownerId });
+const eligible = async (clock: IndexedClockSource) => ({ state: "eligible" as const, ownerId: clock.ownerId! });
 
 test("TC-UP-CLK-04-001 one eligible running CLOCK resumes without startup writes", async () => {
   const clock = running();

@@ -360,7 +360,7 @@ test("TC-UP-ERR-09-001 missing-plan copy names the HTML markers and refresh step
 test("TC-OBS-I18N-001-001 later equal execution/review namespaces register without changing base catalogs", () => {
   const execution = defineLocaleNamespace(
     "execution",
-    Object.freeze({ "action.start": "Start" }),
+    Object.freeze({ "action.start": "Start" as string }),
     Object.freeze({ "action.start": "开始" }),
   );
   const review = defineLocaleNamespace(
@@ -389,7 +389,7 @@ test("TC-OBS-I18N-001-001 unequal later namespace keys fail closed", () => {
 test("TC-OBS-I18N-001-001 later registration cannot replace core catalogs", () => {
   const replacement = defineLocaleNamespace(
     "planner-replacement",
-    Object.freeze({ key: "replacement" }),
+    Object.freeze({ key: "replacement" as string }),
     Object.freeze({ key: "替换" }),
   );
   assert.throws(
@@ -397,7 +397,7 @@ test("TC-OBS-I18N-001-001 later registration cannot replace core catalogs", () =
     /core message namespace cannot be replaced/,
   );
   assert.throws(
-    () => defineLocaleNamespace(" ", Object.freeze({ key: "A" }), Object.freeze({ key: "甲" })),
+    () => defineLocaleNamespace(" ", Object.freeze({ key: "A" as string }), Object.freeze({ key: "甲" })),
     /must not be empty/,
   );
 });
@@ -417,7 +417,7 @@ test("TC-OBS-I18N-001-001 registered catalogs are immutable snapshots", () => {
 test("TC-OBS-I18N-001-002 zero-argument message functions match their callable type", () => {
   const execution = defineLocaleNamespace(
     "execution",
-    Object.freeze({ "status.ready": () => "Ready" }),
+    Object.freeze({ "status.ready": (): string => "Ready" }),
     Object.freeze({ "status.ready": () => "就绪" }),
   );
   const messages = createMessages({ namespaces: { execution } });
@@ -448,7 +448,7 @@ test("TC-OBS-I18N-001-002 callable dispatch follows typed arguments rather than 
       "status.defaulted": ({ name }: { readonly name: string } = { name: "fallback" }) => name,
       "status.optional": (parameters?: { readonly name: string }) => parameters?.name ?? "missing",
       "status.required": ({ name }: { readonly name: string }) => name,
-      "status.zero": () => "zero",
+      "status.zero": (): string => "zero",
     }),
     Object.freeze({
       "status.defaulted": ({ name }: { readonly name: string } = { name: "后备" }) => name,

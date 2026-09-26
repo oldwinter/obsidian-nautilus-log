@@ -257,7 +257,7 @@ export class RealSystemClock implements PairedSystemClock {
   }
 
   setTimeout(callback: () => void, delayMilliseconds: number): TimerHandle {
-    return globalThis.setTimeout(callback, delayMilliseconds);
+    return Number(globalThis.setTimeout(callback, delayMilliseconds));
   }
 
   clearTimeout(handle: TimerHandle): void {

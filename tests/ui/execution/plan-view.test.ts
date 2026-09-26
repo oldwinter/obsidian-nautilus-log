@@ -86,11 +86,11 @@ function metadata(item = partialTask, locale = "en", scheduled = true, current =
           plannedSlots: scheduled && item.kind === "flexible-task" ? [{ task: item, ...interval }] : [],
         },
       },
-    } as PlanViewOptions["snapshot"],
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const row = document.elements.find((element) => element.className === "spiral-day-execution__plan-row");
   assert.ok(row);
-  return row.children[0].children
+  return row.children[0]!.children
     .filter((element) => element.className === "spiral-day-execution__row-meta")
     .map((element) => element.textContent);
 }
@@ -138,7 +138,7 @@ test("Plan missing state shows the Primary Plan markers and next actions", () =>
     dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
     navigateTask: () => assert.fail("Rendering must not navigate"),
     execution: { writeBlocked: false } as PlanViewOptions["execution"],
-    snapshot: { state: "missing" } as PlanViewOptions["snapshot"],
+    snapshot: { state: "missing" } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const text = collectText(root).join("\n");
   assert.match(text, /No Primary Plan was found today/);
@@ -170,7 +170,7 @@ test("Plan unscheduled empty copy does not claim there are no unfinished tasks",
           plannedSlots: [{ task: partialTask, startMinutes: 600, endMinutes: 645 }],
         },
       },
-    } as PlanViewOptions["snapshot"],
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const text = collectText(root).join("\n");
   assert.match(text, /Write a draft/);
@@ -206,7 +206,7 @@ test("Plan scheduled-empty with existing items offers Copy sample task", () => {
         items: [doneTask],
         schedule: { fixedEvents: [], plannedSlots: [] },
       },
-    } as PlanViewOptions["snapshot"],
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const text = collectText(root).join("\n");
   assert.match(text, /No unfinished direct tasks are available/);
@@ -233,7 +233,7 @@ test("Plan confirmed empty region names Copy sample task", () => {
     snapshot: {
       state: "confirmed",
       projection: { items: [], schedule: { fixedEvents: [], plannedSlots: [] } },
-    } as PlanViewOptions["snapshot"],
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const text = collectText(root).join("\n");
   assert.match(text, /This Primary Plan has no list items/);
@@ -256,7 +256,7 @@ test("Plan error state names Settings and Planner", () => {
     dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
     navigateTask: () => assert.fail("Rendering must not navigate"),
     execution: { writeBlocked: false } as PlanViewOptions["execution"],
-    snapshot: { state: "error" } as PlanViewOptions["snapshot"],
+    snapshot: { state: "error" } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
   });
   const text = collectText(root).join("\n");
   assert.match(text, /Today's plan is unavailable/);
@@ -293,7 +293,7 @@ for (const locale of ["en", "zh-CN"]) {
       snapshot: { state: "confirmed", projection: {
         sourceFingerprint: "original", items,
         schedule: { fixedEvents: [], plannedSlots: [] },
-      } } as PlanViewOptions["snapshot"],
+      } } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
     };
     const render = () => renderPlanView(root as unknown as HTMLElement, { ...options, shortestFirst });
     const titles = () => root.querySelector(".spiral-day-execution__unscheduled")!
@@ -310,7 +310,7 @@ for (const locale of ["en", "zh-CN"]) {
     assert.equal(document.activeElement, toggle);
     assert.deepEqual(dispatched, []);
     // Navigation keeps the original source reference after rows move.
-    titles()[0].listeners.get("click")?.({ shiftKey: false });
+    titles()[0]!.listeners.get("click")?.({ shiftKey: false });
     assert.deepEqual(navigated, [{ path: "Daily/today.md", ownerId: "task-1", sourceOrder: 1 }]);
     render();
     const refreshed = root.querySelector(".spiral-day-execution__shortest-first")!;
