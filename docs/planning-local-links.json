@@ -40,6 +40,18 @@
     },
     {
       "source": "README.md",
+      "href": "docs/media/spiral-day-intro-poster.jpg",
+      "target": "docs/media/spiral-day-intro-poster.jpg",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
+      "href": "docs/media/spiral-day-intro.mp4",
+      "target": "docs/media/spiral-day-intro.mp4",
+      "occurrence": 1
+    },
+    {
+      "source": "README.md",
       "href": "docs/user-guide.md",
       "target": "docs/user-guide.md",
       "occurrence": 1

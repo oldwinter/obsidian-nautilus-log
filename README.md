@@ -4,6 +4,12 @@ Spiral Day is an unofficial, independently maintained Obsidian plugin for
 spiral planning and lightweight time tracking. It brings the Nautilus Log v1.0.2
 workflow to Obsidian with native Markdown, Planner and Execution surfaces.
 
+[![Watch the 100-second Spiral Day introduction](docs/media/spiral-day-intro-poster.jpg)](docs/media/spiral-day-intro.mp4)
+
+The [100-second introduction](docs/media/spiral-day-intro.mp4) walks through
+planning, the spiral schedule, timing, Review, write safety, and setup. It has
+music and sound effects, and its on-screen text is in Simplified Chinese.
+
 Version `0.1.0` is a desktop development preview. The plugin is local-only. It
 uses Obsidian workspace and file APIs, sends no network requests, and has no
 telemetry service.
