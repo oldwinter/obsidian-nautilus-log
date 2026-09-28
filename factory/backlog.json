@@ -694,6 +694,45 @@
       "verified_head": "c530d816fc76a69d9e9d385a713dc77125c354e2",
       "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
       "verified_work": "d502945f66f1ac1a5fa054bedca1b86131791643ce28e1792d3bd1d55e11e58b"
+    },
+    {
+      "id": "FAC-119",
+      "title": "feat(factory): transitions map validated against canonical rules at load",
+      "kind": "code-change",
+      "priority": 67,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "release/cancel consume backlog.transitions, so a hand edit could widen a gate. loadBacklog now rejects any transitions entry that diverges from the canonical runner rules or names an unknown action; a missing map still loads. Covered by a tamper test.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3748f27237915fab5c2c7553ec4574fdc04cb5fb",
+      "verified_head": "3748f27237915fab5c2c7553ec4574fdc04cb5fb",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "6155d985f75364a74336bcd56e53a7d846624d5f585d862b00072e56d5659000"
     }
   ]
 }

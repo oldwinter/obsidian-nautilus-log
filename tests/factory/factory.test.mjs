@@ -425,6 +425,31 @@ test("verify resumes an item left in verifying state", () => {
   }
 });
 
+test("backlog transitions drift fails closed", () => {
+  const box = sandbox([makeItem()], { git: false });
+  try {
+    const backlogFile = path.join(box.dir, "factory", "backlog.json");
+    const tampered = JSON.parse(readFileSync(backlogFile, "utf8"));
+    tampered.transitions = { release: ["delivered"] };
+    writeFileSync(backlogFile, `${JSON.stringify(tampered, null, 2)}\n`);
+    const widened = box.run("list");
+    fails(widened, "a widened release gate must not load");
+    assert.match(widened.stderr + widened.stdout, /transitions\.release diverges/);
+
+    tampered.transitions = { sneak: ["ready"] };
+    writeFileSync(backlogFile, `${JSON.stringify(tampered, null, 2)}\n`);
+    const unknown = box.run("list");
+    fails(unknown, "an unknown transition key must not load");
+    assert.match(unknown.stderr + unknown.stdout, /unknown transition/);
+
+    delete tampered.transitions;
+    writeFileSync(backlogFile, `${JSON.stringify(tampered, null, 2)}\n`);
+    ok(box.run("list"), "a missing transitions map still loads");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);

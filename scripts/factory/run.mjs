@@ -223,6 +223,33 @@ function verifyStaleReason(item) {
   return null;
 }
 
+// Canonical transition rules. The backlog's `transitions` map is an advisory
+// mirror of these — release/cancel read it back — so loadBacklog rejects any
+// entry that would widen (or rename) a gate the runner actually enforces.
+const CANONICAL_TRANSITIONS = {
+  claim: ["ready"],
+  retry: ["failed"],
+  implemented: ["claimed"],
+  verify: ["implemented", "verified", "verifying"],
+  deliver: ["verified", "delivered"],
+  release: ["claimed", "implemented", "verifying", "failed"],
+  block: ["ready"],
+  unblock: ["blocked"],
+  cancel: ["ready", "claimed", "implemented", "verifying", "verified", "failed", "blocked"],
+};
+
+function validateTransitions(backlog) {
+  const declared = backlog.transitions ?? {};
+  for (const [action, fromStates] of Object.entries(declared)) {
+    const canonical = CANONICAL_TRANSITIONS[action];
+    assert(canonical, `backlog.transitions.${action}: unknown transition`);
+    assert(
+      JSON.stringify([...fromStates].sort()) === JSON.stringify([...canonical].sort()),
+      `backlog.transitions.${action} diverges from runner rules (canonical: ${canonical.join(", ")})`,
+    );
+  }
+}
+
 function loadBacklog() {
   assert(existsSync(backlogPath), `backlog missing: ${backlogPath}`);
   const backlog = readJson(backlogPath);
@@ -230,6 +257,7 @@ function loadBacklog() {
   assert(Array.isArray(backlog.states) && backlog.states.length > 1, "backlog.states must list ordered states");
   assert(Array.isArray(backlog.items), "backlog.items must be an array");
   validateItems(backlog);
+  validateTransitions(backlog);
   return backlog;
 }
 
