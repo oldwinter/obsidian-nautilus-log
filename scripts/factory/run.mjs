@@ -106,12 +106,15 @@ function changedPaths() {
   return { available: true, paths };
 }
 
+// Boundary entries ending in "/" mean "this directory prefix" — they match
+// everything beneath the directory (equivalent to appending "**").
 function globToRegExp(glob) {
+  const pattern = glob.endsWith("/") ? `${glob}**` : glob;
   let out = "^";
-  for (let i = 0; i < glob.length; i += 1) {
-    const ch = glob[i];
+  for (let i = 0; i < pattern.length; i += 1) {
+    const ch = pattern[i];
     if (ch === "*") {
-      if (glob[i + 1] === "*") {
+      if (pattern[i + 1] === "*") {
         out += ".*";
         i += 1;
       } else {

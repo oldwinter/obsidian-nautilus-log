@@ -24,10 +24,10 @@ factory-chore and evidence items that do not duplicate an open issue or PR.
 - `state`: one of `states`.
 - `attempts`, `max_attempts`: retry bookkeeping; a `failed` item may be
   re-claimed with `claim --retry` while `attempts < max_attempts`.
-- `module_boundary`: glob prefixes that bound the item's allowed diff
-  (`*` = one path segment, `**` = any depth). `implemented` fails when the
-  working tree contains changes outside it. `factory/backlog.json` and
-  `.codex/` are always exempt.
+- `module_boundary`: globs bounding the item's allowed diff (`*` = one path
+  segment, `**` = any depth, a trailing `/` = that directory prefix).
+  `implemented` fails when the working tree contains changes outside it.
+  `factory/backlog.json` and `.codex/` are always exempt.
 - `allow_empty_diff`: when true, `implemented` accepts a clean tree
   (verification/audit items that produce evidence only).
 - `implementation`: what the operator/agent is expected to do.

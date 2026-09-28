@@ -127,8 +127,8 @@
       "title": "Real host smoke: full lifecycle + CLOCK write in disposable vault",
       "kind": "verification",
       "priority": 30,
-      "state": "ready",
-      "attempts": 0,
+      "state": "failed",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -144,7 +144,8 @@
         }
       ],
       "verify": [],
-      "notes": "Depends on FAC-102 succeeding first; same disposable-vault isolation rules."
+      "notes": "Depends on FAC-102 succeeding first; same disposable-vault isolation rules.",
+      "claimed_head": "802fabe5edf6a2441183fb3062c467abcc9a59f8"
     },
     {
       "id": "FAC-104",
@@ -267,6 +268,51 @@
       ],
       "verify": [],
       "notes": "Placeholder that becomes concrete only with a recorded finding."
+    },
+    {
+      "id": "FAC-107",
+      "title": "fix(panel): restore trigger focus on Escape before hiding popover",
+      "kind": "code-change",
+      "priority": 35,
+      "state": "claimed",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/ui/execution/panel.ts",
+        "tests/ui/execution/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Found by FAC-103 host run: execution-escape-restores-trigger failed on real Obsidian 1.13.7. In close(), move trigger.focus() before popover.hidden=true so focus leaves the popover before Blink can reset activeElement, and stopPropagation() the consumed Escape so the host's window-level Escape handling cannot steal the restored focus. Add a source-contract assertion in tests/ui/execution/contracts.test.ts pinning focus-before-hide ordering, matching the lane's existing style.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Focused execution lane passes including the new ordering assertion",
+          "check": {
+            "type": "command",
+            "command": "node tests/ui/execution/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "Real host full probe passes all assertions after rebuild (execution-escape-restores-trigger included)",
+          "check": {
+            "type": "command",
+            "command": "node esbuild.config.mjs build && node scripts/factory/checks/host-probe.mjs --mode full",
+            "timeout_ms": 900000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract source: dossier Execution panel machine 'Escape and close restore focus'; OBS-A11Y. Fix preserves the contract — no deviation record needed.",
+      "claimed_head": "802fabe5edf6a2441183fb3062c467abcc9a59f8"
     }
   ]
 }
