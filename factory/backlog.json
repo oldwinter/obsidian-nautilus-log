@@ -15,15 +15,45 @@
     "cancelled"
   ],
   "transitions": {
-    "claim": ["ready"],
-    "retry": ["failed"],
-    "implemented": ["claimed"],
-    "verify": ["implemented", "verified", "verifying"],
-    "deliver": ["verified", "delivered"],
-    "release": ["claimed", "implemented", "verifying", "failed"],
-    "block": ["ready"],
-    "unblock": ["blocked"],
-    "cancel": ["ready", "claimed", "implemented", "verifying", "verified", "failed", "blocked"]
+    "claim": [
+      "ready"
+    ],
+    "retry": [
+      "failed"
+    ],
+    "implemented": [
+      "claimed"
+    ],
+    "verify": [
+      "implemented",
+      "verified",
+      "verifying"
+    ],
+    "deliver": [
+      "verified",
+      "delivered"
+    ],
+    "release": [
+      "claimed",
+      "implemented",
+      "verifying",
+      "failed"
+    ],
+    "block": [
+      "ready"
+    ],
+    "unblock": [
+      "blocked"
+    ],
+    "cancel": [
+      "ready",
+      "claimed",
+      "implemented",
+      "verifying",
+      "verified",
+      "failed",
+      "blocked"
+    ]
   },
   "items": [
     {
@@ -31,8 +61,8 @@
       "title": "Performance lane evidence: run tests/performance/run.mjs under pinned Node 24.20.0",
       "kind": "verification",
       "priority": 10,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 2,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -41,16 +71,23 @@
         {
           "id": "AC1",
           "description": "tests/performance/run.mjs exits 0 under Node 24.20.0 and writes evidence into a fresh output directory",
-          "check": { "type": "command", "command": "node scripts/factory/checks/perf-lane.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/perf-lane.mjs"
+          }
         },
         {
           "id": "AC2",
           "description": "Report records a terminal result and retains its stated limitations",
-          "check": { "type": "command", "command": "node scripts/factory/checks/perf-report.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/perf-report.mjs"
+          }
         }
       ],
       "verify": [],
-      "notes": "Manual-only lane: npm test does not run it and CI has no job for it."
+      "notes": "Manual-only lane: npm test does not run it and CI has no job for it.",
+      "claimed_head": "d8ad222377d68b84736eba1408f29611f132e5bb"
     },
     {
       "id": "FAC-102",
@@ -67,12 +104,18 @@
         {
           "id": "AC1",
           "description": "Host probe exits 0 and writes evidence/report.json plus evidence/planner-tooltip.json",
-          "check": { "type": "command", "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip"
+          }
         },
         {
           "id": "AC2",
           "description": "Tooltip evidence records an accessible Alpha label and zero page errors",
-          "check": { "type": "command", "command": "node scripts/factory/checks/host-tooltip-report.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-tooltip-report.mjs"
+          }
         }
       ],
       "verify": [],
@@ -93,7 +136,10 @@
         {
           "id": "AC1",
           "description": "Full host run exits 0 and report.json records all assertions passing",
-          "check": { "type": "command", "command": "node scripts/factory/checks/host-probe.mjs --mode full" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode full"
+          }
         }
       ],
       "verify": [],
@@ -114,22 +160,34 @@
         {
           "id": "AC1",
           "description": "node --test tests/release/*.test.mjs passes",
-          "check": { "type": "command", "command": "node --test \"tests/release/evidence-harness.test.mjs\" \"tests/release/release-gates.test.mjs\" \"tests/release/requirements-contract.test.mjs\"" }
+          "check": {
+            "type": "command",
+            "command": "node --test \"tests/release/evidence-harness.test.mjs\" \"tests/release/release-gates.test.mjs\" \"tests/release/requirements-contract.test.mjs\""
+          }
         },
         {
           "id": "AC2",
           "description": "node scripts/release/dry-run.mjs exits 0",
-          "check": { "type": "command", "command": "node scripts/release/dry-run.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/release/dry-run.mjs"
+          }
         },
         {
           "id": "AC3",
           "description": "node scripts/check-planning-docs.mjs --sha HEAD passes offline",
-          "check": { "type": "command", "command": "node scripts/check-planning-docs.mjs --sha HEAD" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/check-planning-docs.mjs --sha HEAD"
+          }
         },
         {
           "id": "AC4",
           "description": "npm run validate:provenance exits 0",
-          "check": { "type": "command", "command": "npm run validate:provenance" }
+          "check": {
+            "type": "command",
+            "command": "npm run validate:provenance"
+          }
         }
       ],
       "verify": [],
@@ -143,22 +201,34 @@
       "state": "ready",
       "attempts": 0,
       "max_attempts": 3,
-      "module_boundary": ["scripts/factory/audits/", "docs/", "README.md"],
+      "module_boundary": [
+        "scripts/factory/audits/",
+        "docs/",
+        "README.md"
+      ],
       "allow_empty_diff": true,
       "implementation": "Add scripts/factory/audits/doc-surface.mjs which extracts the command titles, settings labels, and documented error codes from source and checks that docs/user-guide.md, docs/user-guide.zh.md, docs/reference/settings.md, docs/troubleshooting.md, and README.md name them consistently. Fix any drift it finds inside the declared boundary.",
       "acceptance_criteria": [
         {
           "id": "AC1",
           "description": "Audit script exits 0 (no undocumented drift remains)",
-          "check": { "type": "command", "command": "node scripts/factory/audits/doc-surface.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/audits/doc-surface.mjs"
+          }
         },
         {
           "id": "AC2",
           "description": "npm run check still passes",
-          "check": { "type": "command", "command": "npm run check" }
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
         }
       ],
-      "verify": ["node tests/ui/planner-controls/run.mjs"],
+      "verify": [
+        "node tests/ui/planner-controls/run.mjs"
+      ],
       "notes": "Audit first; only bounded doc fixes inside docs/ and README.md."
     },
     {
@@ -169,19 +239,29 @@
       "state": "ready",
       "attempts": 0,
       "max_attempts": 3,
-      "module_boundary": ["scripts/factory/", "tests/factory/", "factory/"],
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
       "allow_empty_diff": true,
       "implementation": "Reserved maintenance item. Only claim when an earlier iteration identifies a concrete factory gap (for example: missing retry backoff record, missing status rendering). Implement the narrow fix inside the factory boundary and extend tests/factory/.",
       "acceptance_criteria": [
         {
           "id": "AC1",
           "description": "Factory self-test lane passes",
-          "check": { "type": "command", "command": "node --test tests/factory/factory.test.mjs" }
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
         },
         {
           "id": "AC2",
           "description": "npm run check still passes",
-          "check": { "type": "command", "command": "npm run check" }
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
         }
       ],
       "verify": [],
