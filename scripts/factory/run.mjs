@@ -268,6 +268,13 @@ function validateItems(backlog) {
     assert(!ids.has(item.id), `duplicate item id ${item.id}`);
     ids.add(item.id);
     assert(backlog.states.includes(item.state), `${item.id}: unknown state ${item.state}`);
+    assert(typeof item.title === "string" && item.title.trim().length > 0, `${item.id}: title required`);
+    assert(typeof item.kind === "string" && item.kind.trim().length > 0, `${item.id}: kind required`);
+    assert(typeof item.implementation === "string" && item.implementation.trim().length > 0,
+      `${item.id}: implementation required`);
+    if (item.allow_empty_diff !== undefined) {
+      assert(typeof item.allow_empty_diff === "boolean", `${item.id}: allow_empty_diff must be a boolean`);
+    }
     assert(Array.isArray(item.acceptance_criteria) && item.acceptance_criteria.length > 0,
       `${item.id}: acceptance_criteria required`);
     for (const ac of item.acceptance_criteria) {

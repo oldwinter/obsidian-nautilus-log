@@ -487,6 +487,10 @@ test("malformed or escaping check payloads are rejected at load", () => {
     ["non-integer priority", { priority: "high" }],
     ["empty module boundary entry", { module_boundary: ["src/", ""] }],
     ["non-string verify entry", { verify: [42] }],
+    ["empty title", { title: "  " }],
+    ["non-string kind", { kind: 7 }],
+    ["missing implementation", { implementation: undefined }],
+    ["non-boolean allow_empty_diff", { allow_empty_diff: "yes" }],
   ]) {
     const bad = sandbox([makeItem(field)]);
     try {
