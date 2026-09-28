@@ -104,6 +104,23 @@ test("list and next are read-only and next picks lowest priority", () => {
   }
 });
 
+test("list on an empty queue prints an explicit empty-state line", () => {
+  const box = sandbox([]);
+  try {
+    const listed = box.run("list");
+    ok(listed, "list on empty queue must not error");
+    assert.match(listed.stdout, /empty/, "list must not be silently empty");
+    const json = box.run("list", "--json");
+    ok(json, "list --json on empty queue");
+    assert.deepEqual(JSON.parse(json.stdout), [], "--json still prints an empty array");
+    const next = box.run("next");
+    ok(next, "next on empty queue");
+    assert.match(next.stdout, /no ready items/);
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("ordered states reject out-of-order transitions", () => {
   const box = sandbox([makeItem()]);
   try {

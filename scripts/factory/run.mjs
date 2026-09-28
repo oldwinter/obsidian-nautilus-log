@@ -473,6 +473,10 @@ function cmdList(backlog) {
     console.log(JSON.stringify(rows, null, 2));
     return;
   }
+  if (rows.length === 0) {
+    console.log("list: queue empty");
+    return;
+  }
   for (const row of rows) {
     console.log(`${row.id.padEnd(8)} ${row.state.padEnd(11)} a=${row.attempts} p=${String(row.priority).padEnd(3)} ${row.title}`);
   }

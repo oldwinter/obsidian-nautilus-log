@@ -1544,6 +1544,46 @@
       "verified_head": "89686f6cf729db321dc6589b2a500147018bd443",
       "verified_contract": "f9dcf5166b61dee12e9ad26454d3ae24409873f0950b8a516e454de872fd7ffa",
       "verified_work": "7d6c4b0b2ea45a1a846e12bc8979a9c8c8423cf0998e997618ed03aca35e17dc"
+    },
+    {
+      "id": "FAC-142",
+      "title": "list on an empty queue prints an explicit empty-state line",
+      "kind": "factory",
+      "priority": 142,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "cmdList: when items.length === 0 and not --json, print an explicit 'list: queue empty' line so a new operator's first command cannot be mistaken for a swallowed error; --json still prints []. Add a factory test asserting the marker on an empty-queue sandbox.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "list against a valid empty-queue root exits 0 with an explicit empty-state line (probed behavior: silent exit 0)",
+          "check": {
+            "type": "command",
+            "command": "T=$(mktemp -d) && mkdir -p \"$T/factory\" && node -e \"const d=require('./factory/backlog.json');d.items=[];require('fs').writeFileSync(process.argv[1],JSON.stringify(d))\" \"$T/factory/backlog.json\" && O=$(node scripts/factory/run.mjs --root \"$T\" list); R=$?; rm -rf \"$T\"; test $R -eq 0 && printf '%s' \"$O\" | grep -qi 'empty'"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "regression test covers the empty-queue list line",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'empty queue' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "c1ffe6b481217675c07e94a4dca8c5dcdd2b2023",
+      "verified_head": "c1ffe6b481217675c07e94a4dca8c5dcdd2b2023",
+      "verified_contract": "e71daa8da7b10707d8bdd965dfe8752bf329c4931bda255028e68cfc0225b536",
+      "verified_work": "64e362347fac79181ee043f90daf9cd71010694f35f86c0eff8aeac6ae4c223d"
     }
   ]
 }
