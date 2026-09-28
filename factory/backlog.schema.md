@@ -42,9 +42,11 @@ rejects empty or wrong-typed values before any command runs.
 - `acceptance_criteria`: `[{ id, description, check }]`; every check must
   pass during `verify`. Check types:
   - `{ "type": "command", "command": "...", "timeout_ms"?: n }` runs via `sh -c`
-    at the repo root with `FACTORY_ROOT`, `FACTORY_ITEM_ID`, and
-    `FACTORY_EVIDENCE_DIR` in the environment. `command` must be non-empty;
-    `timeout_ms` when present must be a positive integer (default 600000).
+    at the repo root in its own process group, with `FACTORY_ROOT`,
+    `FACTORY_ITEM_ID`, and `FACTORY_EVIDENCE_DIR` in the environment. `command`
+    must be non-empty; `timeout_ms` when present must be a positive integer
+    (default 600000). A timeout SIGKILLs the check's whole process group, so
+    backgrounded descendants cannot write after cancellation.
   - `{ "type": "file-exists", "path": "..." }`.
   - `{ "type": "json-field", "path": "...", "field": "a.b", "equals": "..." }`.
   `path` must resolve inside the worktree; `json-field` requires `field` and

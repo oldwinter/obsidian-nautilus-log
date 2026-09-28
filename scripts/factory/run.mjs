@@ -12,7 +12,7 @@
 // fail, release, block, unblock, cancel, record, status, dry-run.
 
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync,
@@ -424,22 +424,67 @@ function claimAllowed(item, retry) {
   return readyOk || retryOk;
 }
 
-function runCheckCommand(command, env, timeoutMs) {
+// Command checks run in their own process group (detached) so cancellation is
+// complete: a `spawnSync` timeout only ever killed the direct `sh` child, and
+// backgrounded descendants survived to perform post-cancellation writes. The
+// group pgid equals the spawned pid; timeout and runner-signal paths SIGKILL
+// the whole group, and `exit` sweeps anything still registered.
+const activeCheckGroups = new Set();
+function sweepCheckGroups() {
+  for (const pgid of activeCheckGroups) {
+    try { process.kill(-pgid, "SIGKILL"); } catch { /* group already gone */ }
+  }
+}
+process.on("exit", sweepCheckGroups);
+for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129]]) {
+  process.once(signal, () => { sweepCheckGroups(); process.exit(code); });
+}
+
+async function runCheckCommand(command, env, timeoutMs) {
   const started = Date.now();
-  const result = spawnSync("sh", ["-c", command], {
-    cwd: root, env: { ...process.env, ...env }, encoding: "utf8",
-    timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024,
+  const child = spawn("sh", ["-c", command], {
+    cwd: root, env: { ...process.env, ...env },
+    detached: true, stdio: ["ignore", "pipe", "pipe"],
+  });
+  const killGroup = () => { try { process.kill(-child.pid, "SIGKILL"); } catch { /* gone */ } };
+  if (child.pid !== undefined) activeCheckGroups.add(child.pid);
+  const cap = 8 * 1024 * 1024;
+  let stdout = "", stderr = "", overflowed = false;
+  child.stdout.on("data", (chunk) => {
+    if (stdout.length >= cap) { overflowed = true; killGroup(); return; }
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    if (stderr.length >= cap) { overflowed = true; killGroup(); return; }
+    stderr += chunk;
+  });
+  const result = await new Promise((resolve) => {
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; killGroup(); }, timeoutMs);
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      resolve({ exit_code: 1, signal: null, timed_out: false, spawn_error: error.message });
+    });
+    child.on("exit", (code, signal) => {
+      clearTimeout(timer);
+      resolve({ exit_code: code ?? 1, signal, timed_out: timedOut });
+    });
   });
   const duration = Date.now() - started;
-  const outputTail = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim().slice(-4096);
+  if (child.pid !== undefined) activeCheckGroups.delete(child.pid);
+  child.stdout.destroy();
+  child.stderr.destroy();
+  let outputTail = `${stdout}${stderr}`.trim().slice(-4096);
+  if (overflowed) outputTail = `[output exceeded 8MB; check group killed]\n${outputTail}`;
+  if (result.spawn_error) outputTail = `spawn failed: ${result.spawn_error}\n${outputTail}`;
   return {
-    command, exit_code: result.status, signal: result.signal, duration_ms: duration,
-    output_tail: outputTail,
-    timed_out: result.error?.code === "ETIMEDOUT",
+    command, exit_code: result.exit_code, signal: result.signal, duration_ms: duration,
+    output_tail: outputTail.trim(),
+    timed_out: result.timed_out,
   };
 }
 
-function runCheck(check, env) {
+async function runCheck(check, env) {
   if (check.type === "command") {
     return runCheckCommand(check.command, env, check.timeout_ms ?? 600_000);
   }
@@ -564,7 +609,7 @@ function cmdImplemented(backlog, id) {
   console.log(`implemented ${item.id}: ${diff.skipped ? "no git" : `${diff.paths.length} path(s) inside boundary`}`);
 }
 
-function cmdVerify(backlog, id) {
+async function cmdVerify(backlog, id) {
   const item = findItem(backlog, id);
   if (!["implemented", "verified", "verifying"].includes(item.state)) {
     fail(`${item.id}: cannot verify from state ${item.state}` +
@@ -579,14 +624,14 @@ function cmdVerify(backlog, id) {
   const results = [];
   let ok = true;
   for (const ac of item.acceptance_criteria) {
-    const result = runCheck(ac.check, env);
+    const result = await runCheck(ac.check, env);
     results.push({ criterion: ac.id, description: ac.description, ...result });
     if (result.exit_code !== 0) ok = false;
     appendProgress({ event: "check", item: item.id, attempt: item.attempts, criterion: ac.id, ok: result.exit_code === 0, ...pickResult(result) });
   }
   if (ok) {
     for (const command of item.verify) {
-      const result = runCheckCommand(command, env, 600_000);
+      const result = await runCheckCommand(command, env, 600_000);
       results.push({ verify: command, ...result });
       if (result.exit_code !== 0) ok = false;
       appendProgress({ event: "verify-command", item: item.id, attempt: item.attempts, ok: result.exit_code === 0, ...pickResult(result) });

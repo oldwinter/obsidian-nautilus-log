@@ -162,6 +162,36 @@ test("verify failure marks item failed and never records success", () => {
   }
 });
 
+test("timed-out command check reaps its descendant process group", async () => {
+  const box = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "delayed descendant writer", check: {
+        type: "command",
+        command: "( sleep 1 && touch marker.txt ) & wait",
+        timeout_ms: 300,
+      } },
+    ],
+  })]);
+  try {
+    ok(box.run("claim", "IT-001"), "claim");
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    const verified = box.run("verify", "IT-001");
+    fails(verified, "verify must fail on check timeout");
+    const check = box.progress().find((row) => row.event === "check" && row.criterion === "AC1");
+    assert.equal(check.timed_out, true, "check row records the timeout");
+    assert.equal(box.item("IT-001").state, "failed");
+    // The backgrounded subshell was scheduled to write ~1s in; a live
+    // descendant would land the marker after the check already failed.
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    assert(!existsSync(path.join(box.dir, "marker.txt")),
+      "timed-out check must not leave descendants that write post-cancellation");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("retry consumes attempts and rejects claim past max_attempts", () => {
   const box = sandbox([makeItem({
     max_attempts: 2,
