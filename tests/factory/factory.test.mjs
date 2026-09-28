@@ -640,15 +640,37 @@ test("mutating commands serialize on the runtime lock", () => {
     const lockDir = path.join(box.dir, ".codex", "runtime", "devin-factory");
     mkdirSync(lockDir, { recursive: true });
     const lockPath = path.join(lockDir, "run.lock");
+    const ownerPath = path.join(lockPath, "owner.json");
+    const owner = (pid) => JSON.stringify({ pid, command: "verify", at: new Date().toISOString() });
 
-    writeFileSync(lockPath, JSON.stringify({ pid: process.pid, command: "verify", at: new Date().toISOString() }));
+    // Live owner: mutating command must fail and leave the lock untouched.
+    mkdirSync(lockPath);
+    const livePayload = owner(process.pid);
+    writeFileSync(ownerPath, livePayload);
     const blocked = box.run("claim", "IT-001");
     fails(blocked, "claim must fail while a live pid holds the lock");
     assert.match(blocked.stderr + blocked.stdout, /factory already running/);
     ok(box.run("list"), "read-only commands do not take the lock");
+    assert.equal(readFileSync(ownerPath, "utf8"), livePayload, "live lock must be preserved");
 
+    // Initialization window: a dir without owner.json must fail closed, not be reclaimed.
+    rmSync(ownerPath);
+    const initWindow = box.run("claim", "IT-001");
+    fails(initWindow, "unreadable lock metadata must fail closed");
+    assert.match(initWindow.stderr + initWindow.stdout, /no readable owner metadata/);
+    assert(existsSync(lockPath), "initializing lock dir must not be removed");
+
+    // Invalid metadata: fail closed as well.
+    writeFileSync(ownerPath, "not-json");
+    const invalid = box.run("claim", "IT-001");
+    fails(invalid, "invalid lock metadata must fail closed");
+    assert.match(invalid.stderr + invalid.stdout, /no readable owner metadata/);
+    assert(existsSync(ownerPath), "unreadable lock must be preserved for manual recovery");
+    rmSync(lockPath, { recursive: true, force: true });
+
+    // Legacy file lock with a dead pid: reclaimable via rename-aside.
     const dead = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
-    writeFileSync(lockPath, JSON.stringify({ pid: dead.pid, command: "claim", at: "stale" }));
+    writeFileSync(lockPath, owner(dead.pid));
     ok(box.run("claim", "IT-001"), "claim reclaims a stale lock");
     assert(!existsSync(lockPath), "lock released on process exit");
   } finally {

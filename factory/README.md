@@ -78,11 +78,16 @@ cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
 Each progress row carries timestamp, event, item, attempt, prior/next state,
 check exit codes, durations, output tails, and the current git HEAD.
 
-Mutating commands serialize on `.codex/runtime/devin-factory/run.lock`
-(atomic create + owner pid). A second mutation fails with
-"factory already running"; a lock left by a dead pid is reclaimed
-automatically. `list`/`next`/`show`/`status`/`inspect` stay lock-free so
-you can observe a long verify.
+Mutating commands serialize on `.codex/runtime/devin-factory/run.lock/`
+— a lock *directory* (`mkdir` is atomic) holding `owner.json` with the
+owner pid. A second mutation fails with "factory already running".
+A lock whose `owner.json` names a dead pid is reclaimed safely (the
+whole lock is moved aside and only deleted when byte-identical to what
+was read, so a new live owner can never be unlinked). A lock with
+missing or invalid `owner.json` — for example one left by an owner that
+died mid-creation — fails closed; remove the directory manually to
+recover. `list`/`next`/`show`/`status`/`inspect` stay lock-free so you
+can observe a long verify.
 
 ## Recover
 

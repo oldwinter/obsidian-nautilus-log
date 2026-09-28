@@ -56,27 +56,67 @@ function pidAlive(pid) {
   catch (error) { return error.code === "EPERM"; }
 }
 
+// The lock is a directory (`run.lock/`) containing `owner.json`: mkdir is an
+// atomic create, so a held lock never has an unreadable-content window.
+// Anything present without readable dead/live owner metadata is refused
+// outright — a live owner's lock is never unlinked. Stale locks are reclaimed
+// by renaming the whole entry aside and only deleting it when it is
+// byte-identical to what was read; a replaced lock is renamed back, so the
+// read→delete TOCTOU cannot drop a new live owner.
 function acquireLock(command) {
   mkdirSync(runtimeDir, { recursive: true });
+  const ownerFile = path.join(lockFile, "owner.json");
+  const unreadable = `factory lock at ${lockFile} has no readable owner metadata — ` +
+    "another instance may be initializing; if it is stale, remove it manually";
   const payload = JSON.stringify({ pid: process.pid, command, at: new Date().toISOString() });
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    let created = false;
     try {
-      writeFileSync(lockFile, payload, { flag: "wx" });
+      mkdirSync(lockFile);
+      created = true;
+    } catch (error) {
+      assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
+    }
+    if (created) {
+      writeFileSync(ownerFile, payload);
       process.on("exit", () => {
         try {
-          if (readFileSync(lockFile, "utf8") === payload) rmSync(lockFile);
+          if (readFileSync(ownerFile, "utf8") === payload) rmSync(lockFile, { recursive: true, force: true });
         } catch { /* lock already gone or replaced */ }
       });
       return;
-    } catch (error) {
-      assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
-      let held = null;
-      try { held = JSON.parse(readFileSync(lockFile, "utf8")); } catch { /* unreadable lock body */ }
-      if (held && Number.isInteger(held.pid) && held.pid !== process.pid && pidAlive(held.pid)) {
-        fail(`factory already running: pid ${held.pid} holds the lock since ${held.at ?? "unknown"}`);
-      }
-      rmSync(lockFile, { force: true });
     }
+    let raw = null;
+    try {
+      raw = readFileSync(ownerFile, "utf8");
+    } catch {
+      try { raw = readFileSync(lockFile, "utf8"); } catch { fail(unreadable); }
+    }
+    let held = null;
+    try { held = JSON.parse(raw); } catch { /* invalid owner metadata */ }
+    if (!held || !Number.isInteger(held.pid)) fail(unreadable);
+    if (held.pid !== process.pid && pidAlive(held.pid)) {
+      fail(`factory already running: pid ${held.pid} holds the lock since ${held.at ?? "unknown"}`);
+    }
+    const stash = `${lockFile}.reclaim-${process.pid}-${Date.now()}`;
+    try {
+      renameSync(lockFile, stash);
+    } catch (error) {
+      assert(error.code === "ENOENT", `could not reclaim ${lockFile}: ${error.message}`);
+      continue;
+    }
+    let movedRaw = null;
+    try {
+      movedRaw = readFileSync(path.join(stash, "owner.json"), "utf8");
+    } catch {
+      try { movedRaw = readFileSync(stash, "utf8"); } catch { /* unreadable */ }
+    }
+    if (movedRaw === raw) {
+      rmSync(stash, { recursive: true, force: true });
+      continue;
+    }
+    try { renameSync(stash, lockFile); } catch { /* slot already retaken; stash left for manual recovery */ }
+    fail(`factory lock changed while reclaiming; its contents are preserved at ${stash}`);
   }
   fail("could not acquire the factory lock");
 }
