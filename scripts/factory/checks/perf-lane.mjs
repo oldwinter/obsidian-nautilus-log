@@ -10,11 +10,10 @@
 import { copyFileSync, existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { evidenceDir, fail, findNode24, runLogged } from "./lib.mjs";
+import { evidenceDir, findNode24, nextEvidenceDir, runLogged } from "./lib.mjs";
 
 const evidence = evidenceDir("performance");
-const staged = path.join(evidence, "performance");
-if (existsSync(staged)) fail(`staged evidence already exists: ${staged}`);
+const staged = nextEvidenceDir(evidence, "performance");
 
 const node24 = findNode24();
 const external = mkdtempSync(path.join(tmpdir(), "spiral-day-perf-"));

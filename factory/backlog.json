@@ -907,6 +907,45 @@
       "verified_head": "77dce8fb69b3e93980b4e2c8d7d6686f4e402ad2",
       "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
       "verified_work": "70f2b5eb0bdc3cd0311d3ed3bfee07b657ca0981ec6947f7b99f8ad66d293247"
+    },
+    {
+      "id": "FAC-125",
+      "title": "fix(factory): versioned evidence dirs let a same-attempt re-verify run the lanes",
+      "kind": "code-change",
+      "priority": 73,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The pipeline allows verify on a verified item, but host-probe and perf-lane refused because their evidence dir already existed — a same-attempt re-verify would false-fail. Lanes now take the first free name-N slot (no overwrite), and readers (perf-report, host-tooltip-report) resolve the newest matching dir.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "5e9caccdd07d8ffc1e04a0e4a480968fd07d607e",
+      "verified_head": "5e9caccdd07d8ffc1e04a0e4a480968fd07d607e",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "38a9e5f7c292534890837163fdc2542fb3d57f5e80ca63ccf27531901ff38847"
     }
   ]
 }

@@ -4,10 +4,12 @@
 // delay, and zero new page errors.
 
 import path from "node:path";
-import { assertFile, evidenceDir, fail, readJson } from "./lib.mjs";
+import { assertFile, evidenceDir, fail, newestEvidenceDir, readJson } from "./lib.mjs";
 
 const envDir = process.env.FACTORY_EVIDENCE_DIR ?? evidenceDir("host-probe");
-const tooltipFile = path.join(envDir, "host-tooltip", "evidence", "planner-tooltip.json");
+const run = newestEvidenceDir(envDir, "host-tooltip")
+  ?? fail(`no host-tooltip evidence under ${envDir}`);
+const tooltipFile = path.join(run, "evidence", "planner-tooltip.json");
 assertFile(tooltipFile, "planner-tooltip.json");
 const report = readJson(tooltipFile);
 

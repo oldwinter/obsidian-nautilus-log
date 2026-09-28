@@ -14,7 +14,7 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import {
-  REPO_ROOT, assertFile, evidenceDir, fail, findNode24, runLogged,
+  REPO_ROOT, assertFile, evidenceDir, fail, findNode24, nextEvidenceDir, runLogged,
 } from "./lib.mjs";
 
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
@@ -26,8 +26,7 @@ function assertMode(mode) {
 }
 
 const evidence = evidenceDir("host-probe");
-const output = path.join(evidence, `host-${values.mode}`);
-if (existsSync(output)) fail(`output directory already exists: ${output}`);
+const output = nextEvidenceDir(evidence, `host-${values.mode}`);
 
 // Built package assets are required; build only when absent so the check stays
 // cheap under `verify` (the bundle is already validated upstream of the item).
