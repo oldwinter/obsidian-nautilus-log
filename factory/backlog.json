@@ -946,6 +946,45 @@
       "verified_head": "5e9caccdd07d8ffc1e04a0e4a480968fd07d607e",
       "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
       "verified_work": "38a9e5f7c292534890837163fdc2542fb3d57f5e80ca63ccf27531901ff38847"
+    },
+    {
+      "id": "FAC-126",
+      "title": "fix(factory): delivery checks bind the verify run that produced the current state",
+      "kind": "code-change",
+      "priority": 74,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "A re-verify on a verified item appends a second run's check rows for the same attempt; evidence.checks then mixed superseded results. writeDeliveryEvidence now takes only rows after the last verify-start for the attempt.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including latest-run binding",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "7ed1d3cb99c362295c075c82379c11661b997b3f",
+      "verified_head": "7ed1d3cb99c362295c075c82379c11661b997b3f",
+      "verified_contract": "7ed02e3fb0ec904edd61069a1b78fda9e5132afbfd8025780f3727c003e09b7c",
+      "verified_work": "86bada9c0ecbb7e5931754f6babedcbcdda4a079584faf55eba8af3621f7ad5d"
     }
   ]
 }

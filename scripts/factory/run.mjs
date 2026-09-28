@@ -550,19 +550,26 @@ function writeDeliveryEvidence(dir, item) {
   const untracked = bundle.untracked_files;
   const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
   const logBytes = existsSync(itemLog) ? readFileSync(itemLog) : null;
-  const checks = logBytes
+  // Only the rows that produced the current verification: a re-verify on the
+  // same attempt appends fresh check rows, so take everything after the last
+  // verify-start for this attempt.
+  const attemptRows = logBytes
     ? logBytes.toString("utf8").trim().split("\n")
       .filter(Boolean).map((line) => JSON.parse(line))
-      .filter((row) => row.attempt === item.attempts
-        && (row.event === "check" || row.event === "verify-command"))
+      .filter((row) => row.attempt === item.attempts)
+    : [];
+  const lastStart = attemptRows.reduce(
+    (index, row, i) => (row.event === "verify-start" ? i : index), -1);
+  const checks = attemptRows
+      .slice(lastStart + 1)
+      .filter((row) => row.event === "check" || row.event === "verify-command")
       .map((row) => ({
         criterion: row.criterion ?? null,
         command: row.command ?? null,
         ok: row.ok === true,
         exit_code: row.exit_code ?? null,
         duration_ms: row.duration_ms ?? null,
-      }))
-    : [];
+      }));
   const evidence = {
     schema_version: 1,
     item: item.id,

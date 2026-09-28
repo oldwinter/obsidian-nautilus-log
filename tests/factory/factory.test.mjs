@@ -497,6 +497,26 @@ test("malformed or escaping check payloads are rejected at load", () => {
   }
 });
 
+test("delivery evidence embeds only the latest verify run's checks", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true, verify: ["exit 0"] })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "first verify");
+    ok(box.run("verify", "IT-001"), "re-verify on verified state");
+    ok(box.run("deliver", "IT-001"), "deliver");
+    const bundle = path.join(box.dir, ".codex", "runtime", "devin-factory", "deliveries", "IT-001", "attempt-1");
+    const evidence = JSON.parse(readFileSync(path.join(bundle, "evidence.json"), "utf8"));
+    assert.equal(evidence.checks.length, 2,
+      "checks must cover only the run that produced the current verification, not earlier runs on the same attempt");
+    assert(evidence.checks.every((row) => row.ok === true), "latest run's checks all passed");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);
