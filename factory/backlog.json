@@ -94,8 +94,8 @@
       "title": "Real host probe: planner tooltip accessibility against installed Obsidian",
       "kind": "verification",
       "priority": 20,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -119,7 +119,8 @@
         }
       ],
       "verify": [],
-      "notes": "Single macOS host; not a release-gate lane. Limitations from tests/host-matrix/README.md apply."
+      "notes": "Single macOS host; not a release-gate lane. Limitations from tests/host-matrix/README.md apply.",
+      "claimed_head": "c3fc440ea89877780426703943b2f0fb91dd958d"
     },
     {
       "id": "FAC-103",
