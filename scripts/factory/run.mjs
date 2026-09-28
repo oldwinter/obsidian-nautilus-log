@@ -78,7 +78,16 @@ function acquireLock(command) {
       assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
     }
     if (created) {
-      writeFileSync(ownerFile, payload);
+      // wx: if the dir we created was replaced between mkdir and write, a
+      // foreign owner.json must never be clobbered — fail closed instead.
+      try {
+        writeFileSync(ownerFile, payload, { flag: "wx" });
+      } catch (error) {
+        if (error.code === "EEXIST") {
+          fail(`factory lock at ${lockFile} was replaced during initialization; inspect ${ownerFile} manually`);
+        }
+        throw error;
+      }
       process.on("exit", () => {
         try {
           if (readFileSync(ownerFile, "utf8") === payload) rmSync(lockFile, { recursive: true, force: true });
