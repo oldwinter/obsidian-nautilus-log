@@ -322,8 +322,8 @@
       "title": "Real host probe: Review scenario read+write in disposable vault",
       "kind": "verification",
       "priority": 36,
-      "state": "failed",
-      "attempts": 1,
+      "state": "delivered",
+      "attempts": 2,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -340,15 +340,18 @@
       ],
       "verify": [],
       "notes": "Extends FAC-103 host smoke with the optional Review scenario; same disposable-vault isolation.",
-      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf"
+      "claimed_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_contract": "fb539f2a0e800ea20d483f46d6b60dc07195f4ea205fefac5c8adfe85761dd7b",
+      "verified_work": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "FAC-109",
       "title": "Real host probe: privacy scenario asserts local-only operation",
       "kind": "verification",
       "priority": 37,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -364,7 +367,11 @@
         }
       ],
       "verify": [],
-      "notes": "Asserts the local-only contract in a live host session; extends FAC-103 coverage."
+      "notes": "Asserts the local-only contract in a live host session; extends FAC-103 coverage.",
+      "claimed_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_contract": "74914061776880a556bc7739c5f531127f34452d44a8382e3a2fb3e0d0ac193d",
+      "verified_work": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "id": "FAC-110",
