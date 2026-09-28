@@ -508,6 +508,28 @@ test("malformed or escaping check payloads are rejected at load", () => {
   }
 });
 
+test("delivery captures untracked files inside new directories", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true, verify: ["exit 0"] })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src", "newdir", "deep"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "newdir", "deep", "file.txt"), "nested\n");
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    ok(box.run("deliver", "IT-001"), "deliver");
+    const bundle = path.join(box.dir, ".codex", "runtime", "devin-factory", "deliveries", "IT-001", "attempt-1");
+    const manifest = JSON.parse(readFileSync(path.join(bundle, "bundle.json"), "utf8"));
+    assert(manifest.untracked_files.includes("src/newdir/deep/file.txt"),
+      "dir-collapse entry expanded to the real untracked file");
+    assert.equal(readFileSync(path.join(bundle, "files", "src", "newdir", "deep", "file.txt"), "utf8"),
+      "nested\n", "bundle captures the file bytes");
+    ok(box.run("inspect", "IT-001"), "inspect verifies captured untracked files exist");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("delivery evidence embeds only the latest verify run's checks", () => {
   const box = sandbox([makeItem({ allow_empty_diff: true, verify: ["exit 0"] })], { git: true });
   try {

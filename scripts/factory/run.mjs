@@ -675,10 +675,15 @@ function cmdDeliver(backlog, id) {
   const relevant = (paths ?? []).filter((p) => !selfExempt(p));
   const patch = git(["diff", "HEAD", "--", ...relevant], { allowFail: true }) ?? "";
   writeFileSync(path.join(dir, "change.patch"), patch);
-  // Porcelain collapses untracked dirs to "?? dir/"; only single files can be
-  // copied into the bundle, so dir-collapse entries are listed, not copied.
-  const untracked = relevant.filter((p) => !p.endsWith("/") &&
-    git(["status", "--porcelain=v1", "--", p], { allowFail: true })?.startsWith("??"));
+  // Porcelain collapses fully-untracked dirs to "?? dir/" — expand those
+  // entries to the real files so the bundle actually captures their bytes.
+  const untracked = relevant.flatMap((p) => {
+    if (p.endsWith("/")) {
+      return (git(["ls-files", "-o", "--exclude-standard", "-z", "--", p], { allowFail: true }) ?? "")
+        .split("\0").filter(Boolean);
+    }
+    return git(["status", "--porcelain=v1", "--", p], { allowFail: true })?.startsWith("??") ? [p] : [];
+  });
   const filesDir = path.join(dir, "files");
   for (const file of untracked) {
     const dest = path.join(filesDir, file);
@@ -704,6 +709,19 @@ function cmdInspect(backlog, id) {
     if (!existsSync(path.join(dir, file))) problems.push(`missing ${file}`);
   }
   let evidence = null;
+  let bundleManifest = null;
+  if (existsSync(path.join(dir, "bundle.json"))) {
+    try {
+      bundleManifest = readJson(path.join(dir, "bundle.json"));
+    } catch (error) {
+      problems.push(`bundle.json unparseable: ${error.message}`);
+    }
+  }
+  for (const file of bundleManifest?.untracked_files ?? []) {
+    if (!existsSync(path.join(dir, "files", file))) {
+      problems.push(`untracked file listed but not captured: files/${file}`);
+    }
+  }
   if (existsSync(path.join(dir, "evidence.json"))) {
     try {
       evidence = readJson(path.join(dir, "evidence.json"));

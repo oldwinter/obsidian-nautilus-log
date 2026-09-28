@@ -1221,6 +1221,47 @@
       "verified_head": "c08788f5bc83e02c08f48fa16b25c20ad91c16e9",
       "verified_contract": "9641bb4129c79e8c28cc512a480a94fe1d38169974fb7d2b018e139c4272a76b",
       "verified_work": "b35c93da6c58087b31277d572282835ad17e7322524b026034858ea123bbbb9f"
+    },
+    {
+      "id": "FAC-133",
+      "title": "Fix delivery bundles dropping files inside new directories",
+      "kind": "factory",
+      "priority": 33,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "git status collapses fully-untracked dirs to '?? dir/' so files inside new directories were neither copied into files/ nor listed. Expand collapsed entries via git ls-files -o, and make inspect verify every listed untracked file exists in the bundle.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. collapsed-dir regression",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "FAC-105's historical bundle defect reproduced and documented",
+          "check": {
+            "type": "command",
+            "command": "test -f .codex/runtime/devin-factory/deliveries/FAC-105/attempt-1/evidence.json"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "False-completeness defect: FAC-105's bundle shipped zero bytes of doc-surface.mjs (collapsed '?? scripts/factory/audits/'). Historical bundles stay immutable; this fix prevents future loss.",
+      "claimed_head": "c5439cc85f58632594bb52b0cf3dcf8e75f6dc71",
+      "verified_head": "c5439cc85f58632594bb52b0cf3dcf8e75f6dc71",
+      "verified_contract": "961ad318513e6b91c9b23375ba9df456ca5f15d4c6e92613792c685d03250b56",
+      "verified_work": "fb1bd5d127b50970afcda9394985f0f74e6be990acd49a89fa949567d2977cb0"
     }
   ]
 }
