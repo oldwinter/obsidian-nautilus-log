@@ -15,8 +15,8 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync,
-  renameSync, rmSync, writeFileSync,
+  appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync,
+  readFileSync, renameSync, rmSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -137,9 +137,8 @@ function pathAllowed(file, regexps) {
 }
 
 function checkDiffWithinBoundary(item) {
-  const { available, paths } = changedPaths();
-  if (!available) return { paths: [], skipped: true };
-  const relevant = paths.filter((p) => !selfExempt(p));
+  const relevant = relevantPaths();
+  if (relevant === null) return { paths: [], skipped: true };
   const regexps = boundaryRegexps(item);
   const offenders = relevant.filter((p) => !pathAllowed(p, regexps));
   if (offenders.length > 0) {
@@ -149,6 +148,79 @@ function checkDiffWithinBoundary(item) {
     fail("no changes present and item does not allow an empty diff");
   }
   return { paths: relevant, skipped: false };
+}
+
+// Non-exempt changed paths from git, or null when no repository is present.
+function relevantPaths() {
+  const { available, paths } = changedPaths();
+  if (!available) return null;
+  return paths.filter((p) => !selfExempt(p));
+}
+
+// sha256 over the exact contract the verifier ran. Any edit to an acceptance
+// criterion or a verify command between verify and deliver changes this.
+function contractHash(item) {
+  return createHash("sha256")
+    .update(JSON.stringify({ ac: item.acceptance_criteria, verify: item.verify ?? [] }))
+    .digest("hex");
+}
+
+// sha256 over the non-exempt worktree the verifier read. With git this is the
+// tracked diff plus untracked file bytes; without git it is every non-exempt
+// file under root (repo-free sandboxes are tiny).
+function workFingerprint(relevant) {
+  const hash = createHash("sha256");
+  if (relevant === null) {
+    const walk = (dir) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })
+        .sort((a, b) => a.name.localeCompare(b.name))) {
+        const full = path.join(dir, entry.name);
+        const rel = path.relative(root, full).split(path.sep).join("/");
+        if (rel === ".git" || rel.startsWith(".git/")
+          || rel === "node_modules" || rel.startsWith("node_modules/")
+          || selfExempt(rel)) continue;
+        if (entry.isDirectory()) walk(full);
+        else {
+          hash.update(`F\0${rel}\0`);
+          hash.update(readFileSync(full));
+        }
+      }
+    };
+    walk(root);
+    return hash.digest("hex");
+  }
+  for (const p of relevant.slice().sort()) {
+    hash.update(`P\0${p}\0`);
+    hash.update(git(["diff", "HEAD", "--", p], { allowFail: true }) ?? "");
+    const untracked = (git(["ls-files", "-o", "--exclude-standard", "-z", "--", p], { allowFail: true }) ?? "")
+      .split("\0").filter(Boolean).sort();
+    for (const file of untracked) {
+      const abs = path.join(root, file);
+      hash.update(`F\0${file}\0`);
+      if (existsSync(abs)) hash.update(readFileSync(abs));
+    }
+  }
+  return hash.digest("hex");
+}
+
+// A verified item must be delivered against the same contract and the same
+// worktree the verifier saw. Returns a reason string when verification is
+// stale; backlog/.codex bookkeeping is exempt and never invalidates.
+function verifyStaleReason(item) {
+  if (item.verified_contract === undefined || item.verified_work === undefined) {
+    return "no verification stamp; rerun verify";
+  }
+  if (contractHash(item) !== item.verified_contract) {
+    return "acceptance criteria or verify commands changed since verify";
+  }
+  const head = headSha();
+  if (head !== null && item.verified_head !== head) {
+    return `HEAD moved from ${item.verified_head}`;
+  }
+  if (workFingerprint(relevantPaths()) !== item.verified_work) {
+    return "worktree changed since verify";
+  }
+  return null;
 }
 
 function loadBacklog() {
@@ -389,6 +461,15 @@ function cmdVerify(backlog, id) {
   }
   const to = ok ? "verified" : "failed";
   item.state = to;
+  if (ok) {
+    item.verified_head = headSha();
+    item.verified_contract = contractHash(item);
+    item.verified_work = workFingerprint(relevantPaths());
+  } else {
+    delete item.verified_head;
+    delete item.verified_contract;
+    delete item.verified_work;
+  }
   saveBacklog(backlog);
   appendProgress({ event: "verify-end", item: item.id, attempt: item.attempts, to, ok });
   const failures = results.filter((r) => r.exit_code !== 0);
@@ -417,6 +498,8 @@ function cmdDeliver(backlog, id) {
     return;
   }
   if (item.state !== "verified") fail(`${item.id}: cannot deliver from state ${item.state}`);
+  const stale = verifyStaleReason(item);
+  if (stale) fail(`${item.id}: verification is stale (${stale}); rerun verify`);
   const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
   mkdirSync(dir, { recursive: true });
   const { paths } = changedPaths();

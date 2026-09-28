@@ -298,6 +298,45 @@ test("add appends a validated ready item and rejects malformed payloads", () => 
   }
 });
 
+test("deliver rejects stale verification after contract or source drift", () => {
+  const box = sandbox([makeItem({
+    allow_empty_diff: true,
+    acceptance_criteria: [
+      { id: "AC1", description: "flag says pass", check: { type: "command", command: "grep -q ^pass$ src/flag.txt" } },
+    ],
+  })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "flag.txt"), "pass\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+
+    writeFileSync(path.join(box.dir, "src", "flag.txt"), "fail\n");
+    const staleSource = box.run("deliver", "IT-001");
+    fails(staleSource, "deliver must reject tested-source drift after verify");
+    assert.match(staleSource.stderr + staleSource.stdout, /stale/);
+    assert.equal(box.item("IT-001").state, "verified", "item stays verified");
+
+    writeFileSync(path.join(box.dir, "src", "flag.txt"), "pass\n");
+    const backlogFile = path.join(box.dir, "factory", "backlog.json");
+    const drifted = JSON.parse(readFileSync(backlogFile, "utf8"));
+    drifted.items[0].acceptance_criteria[0].check.command = "grep -q ^pass$ src/flag.txt && false";
+    writeFileSync(backlogFile, `${JSON.stringify(drifted, null, 2)}\n`);
+    const staleContract = box.run("deliver", "IT-001");
+    fails(staleContract, "deliver must reject acceptance-contract drift after verify");
+    assert.match(staleContract.stderr + staleContract.stdout, /stale/);
+
+    drifted.items[0].acceptance_criteria[0].check.command = "grep -q ^pass$ src/flag.txt";
+    writeFileSync(backlogFile, `${JSON.stringify(drifted, null, 2)}\n`);
+    ok(box.run("verify", "IT-001"), "reverify recovers after drift is reverted");
+    ok(box.run("deliver", "IT-001"), "deliver after clean reverify");
+    assert.equal(box.item("IT-001").state, "delivered");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);

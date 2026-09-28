@@ -322,8 +322,8 @@
       "title": "Real host probe: Review scenario read+write in disposable vault",
       "kind": "verification",
       "priority": 36,
-      "state": "ready",
-      "attempts": 0,
+      "state": "failed",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -339,7 +339,8 @@
         }
       ],
       "verify": [],
-      "notes": "Extends FAC-103 host smoke with the optional Review scenario; same disposable-vault isolation."
+      "notes": "Extends FAC-103 host smoke with the optional Review scenario; same disposable-vault isolation.",
+      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf"
     },
     {
       "id": "FAC-109",
@@ -364,6 +365,73 @@
       ],
       "verify": [],
       "notes": "Asserts the local-only contract in a live host session; extends FAC-103 coverage."
+    },
+    {
+      "id": "FAC-110",
+      "title": "fix(host-matrix): bound tooltip-delay assertion above timer granularity",
+      "kind": "code-change",
+      "priority": 38,
+      "state": "ready",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "tests/host-matrix/planner-tooltip.mjs sleeps setTimeout(900) then asserts elapsedMilliseconds >= 900; Node timers may resolve ~1ms early, flooring to 899 under load. Wait 1000ms so the >= 900 setup invariant has headroom.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "host-probe --mode tooltip exits 0 and its report.json records all assertions passing",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Found by FAC-108 attempt 1: planner-svg-tooltip-delay-observed recorded 899.",
+      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf"
+    },
+    {
+      "id": "FAC-111",
+      "title": "fix(factory): deliver must reject stale verification (contract or worktree drift)",
+      "kind": "code-change",
+      "priority": 34,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Reproduced defect: verify->mutate acceptance command or tested source->deliver still exits 0. Stamp verified items with verified_head, verified_contract (sha256 of acceptance criteria + verify commands), and verified_work (sha256 of non-exempt worktree); deliver refuses when any drift is detected; backlog/.codex bookkeeping stays exempt.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including stale-delivery regressions",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Coordinator reproduction at general-tasks/.codex/runtime/devin-factory-10h-20260929/reviews/boundary-20260928T190712.598065Z/results.json: acceptance and dirty_source cases both incorrectly_delivered.",
+      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf",
+      "verified_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf",
+      "verified_contract": "ba78cc09228cfbc017eb6d013295d2aced8c2080d5a7a1eb6deef8680b6047d6",
+      "verified_work": "147f0b59fafe61a1f16216a422c0ec63ab7df64a4eb280a23db3deccd98c9ccb"
     }
   ]
 }

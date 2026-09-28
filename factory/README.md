@@ -37,7 +37,10 @@ node scripts/factory/run.mjs deliver FAC-101       # verified -> delivered
 ```
 
 `verify` exits nonzero and marks the item `failed` on the first failing
-check; it never records success after a failure. `deliver` writes
+check; it never records success after a failure. A successful `verify` stamps
+the item with the HEAD, the acceptance-contract hash, and a worktree
+fingerprint; `deliver` refuses when any of them drifted since verify
+(`verification is stale`) — rerun `verify` to restamp. `deliver` writes
 `.codex/runtime/devin-factory/deliveries/<id>/attempt-<n>/` with
 `change.patch`, untracked-file copies, `evidence.json`, and `summary.md` —
 the reviewable artifact. `deliver` on an already-delivered item is an

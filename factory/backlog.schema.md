@@ -42,6 +42,23 @@ factory-chore and evidence items that do not duplicate an open issue or PR.
   (heavier lanes; failures also mark the item failed).
 - `notes`: provenance/limitation notes.
 
+## Runner-maintained fields
+
+A successful `verify` stamps the item; `deliver` refuses a stale stamp:
+
+- `verified_head`: git HEAD at verify time; a HEAD move invalidates.
+- `verified_contract`: sha256 of the acceptance criteria and `verify`
+  commands; any contract edit invalidates.
+- `verified_work`: sha256 of the non-exempt worktree the verifier read
+  (tracked diff + untracked file bytes; without git, every non-exempt file
+  under the root). Any source edit invalidates. `.codex/` and the backlog's
+  own directory are exempt, so state and evidence bookkeeping never
+  invalidates a stamp.
+
+Any of the three rejecting means `deliver` exits nonzero with
+`verification is stale`; the item stays `verified` and a rerun of `verify`
+restamps cleanly.
+
 ## Evidence model
 
 Volatile evidence never enters git: `.codex/runtime/devin-factory/` holds
