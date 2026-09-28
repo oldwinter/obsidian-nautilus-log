@@ -78,6 +78,12 @@ cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
 Each progress row carries timestamp, event, item, attempt, prior/next state,
 check exit codes, durations, output tails, and the current git HEAD.
 
+Mutating commands serialize on `.codex/runtime/devin-factory/run.lock`
+(atomic create + owner pid). A second mutation fails with
+"factory already running"; a lock left by a dead pid is reclaimed
+automatically. `list`/`next`/`show`/`status`/`inspect` stay lock-free so
+you can observe a long verify.
+
 ## Recover
 
 - `verify` failure → fix the cause, then `claim <id> --retry` (bounded by

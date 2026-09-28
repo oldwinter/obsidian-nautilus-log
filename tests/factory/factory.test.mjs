@@ -561,6 +561,28 @@ test("inspect audits a delivery bundle read-only", () => {
   }
 });
 
+test("mutating commands serialize on the runtime lock", () => {
+  const box = sandbox([makeItem()]);
+  try {
+    const lockDir = path.join(box.dir, ".codex", "runtime", "devin-factory");
+    mkdirSync(lockDir, { recursive: true });
+    const lockPath = path.join(lockDir, "run.lock");
+
+    writeFileSync(lockPath, JSON.stringify({ pid: process.pid, command: "verify", at: new Date().toISOString() }));
+    const blocked = box.run("claim", "IT-001");
+    fails(blocked, "claim must fail while a live pid holds the lock");
+    assert.match(blocked.stderr + blocked.stdout, /factory already running/);
+    ok(box.run("list"), "read-only commands do not take the lock");
+
+    const dead = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
+    writeFileSync(lockPath, JSON.stringify({ pid: dead.pid, command: "claim", at: "stale" }));
+    ok(box.run("claim", "IT-001"), "claim reclaims a stale lock");
+    assert(!existsSync(lockPath), "lock released on process exit");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);

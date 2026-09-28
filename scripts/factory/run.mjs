@@ -42,6 +42,42 @@ const { values: opts, positionals } = parseArgs({
 const root = path.resolve(opts.root);
 const backlogPath = opts.backlog ? path.resolve(opts.backlog) : path.join(root, "factory", "backlog.json");
 const runtimeDir = path.join(root, ".codex", "runtime", "devin-factory");
+const lockFile = path.join(runtimeDir, "run.lock");
+// Commands that mutate backlog/progress state. Concurrent mutations could lose
+// each other's writes (last-writer-wins on backlog.json), so they serialize on
+// this lock. Read-only commands (list/next/show/status/inspect) do not take it.
+const MUTATING = new Set(["add", "claim", "implemented", "verify", "deliver",
+  "fail", "release", "block", "unblock", "cancel", "record"]);
+
+function pidAlive(pid) {
+  try { process.kill(pid, 0); return true; }
+  catch (error) { return error.code === "EPERM"; }
+}
+
+function acquireLock(command) {
+  mkdirSync(runtimeDir, { recursive: true });
+  const payload = JSON.stringify({ pid: process.pid, command, at: new Date().toISOString() });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      writeFileSync(lockFile, payload, { flag: "wx" });
+      process.on("exit", () => {
+        try {
+          if (readFileSync(lockFile, "utf8") === payload) rmSync(lockFile);
+        } catch { /* lock already gone or replaced */ }
+      });
+      return;
+    } catch (error) {
+      assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
+      let held = null;
+      try { held = JSON.parse(readFileSync(lockFile, "utf8")); } catch { /* unreadable lock body */ }
+      if (held && Number.isInteger(held.pid) && held.pid !== process.pid && pidAlive(held.pid)) {
+        fail(`factory already running: pid ${held.pid} holds the lock since ${held.at ?? "unknown"}`);
+      }
+      rmSync(lockFile, { force: true });
+    }
+  }
+  fail("could not acquire the factory lock");
+}
 // The canonical queue file is exempt from module boundaries: every state
 // transition rewrites it. `git status -z` collapses fully-untracked dirs to
 // "?? dir/", so an ancestor directory of the backlog is exempted as well —
@@ -909,6 +945,7 @@ async function main() {
     cmdDryRun();
     return;
   }
+  if (MUTATING.has(command)) acquireLock(command);
   const backlog = loadBacklog();
   switch (command) {
     case "list": return cmdList(backlog);

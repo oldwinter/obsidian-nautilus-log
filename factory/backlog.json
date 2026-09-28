@@ -1149,6 +1149,48 @@
       "verified_head": "19762583691650fcc8d89b7fe1ed1b1d8bfa7930",
       "verified_contract": "f8403abb7d30339264f17cb9d67fb4fb3307f90cb37bf6e4116b7adc05c984c0",
       "verified_work": "80fa1e48048a2805970d18d57781aedfed2b1d6ca19c4d6f43c060b31a820fcc"
+    },
+    {
+      "id": "FAC-131",
+      "title": "Serialize mutating commands on a runtime lockfile",
+      "kind": "factory",
+      "priority": 31,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Mutating commands acquire .codex/runtime/devin-factory/run.lock atomically; a live foreign pid fails them, a dead pid's lock is reclaimed, and the lock is removed on exit. Read-only commands stay lock-free.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. lock coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "live pipeline unaffected",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs status > /dev/null"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "Prevents last-writer-wins backlog corruption from concurrent invocations",
+      "claimed_head": "dbb1be16d3fd7f2eafa043c202547087c68e8b10",
+      "verified_head": "dbb1be16d3fd7f2eafa043c202547087c68e8b10",
+      "verified_contract": "7d276fadf57982af5dd1bce4e8dfdbc3e44d492738b22895aa9dd4d945b35e40",
+      "verified_work": "2652ad142054d0446a5542407cac1e0fefea3ca5e89d162d530e1a1b36f78f2e"
     }
   ]
 }
