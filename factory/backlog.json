@@ -1,0 +1,191 @@
+{
+  "$schema": "./backlog.schema.md",
+  "schema_version": 1,
+  "queue": "spiral-day devin-factory local work queue",
+  "note": "Canonical local queue for bounded factory work items. GitHub issues remain the canonical product queue; this file covers factory-chore and evidence items that do not duplicate any open issue or PR. Item state on disk is authoritative; .codex/runtime/devin-factory/ holds volatile evidence only.",
+  "states": [
+    "ready",
+    "claimed",
+    "implemented",
+    "verifying",
+    "verified",
+    "delivered",
+    "failed",
+    "blocked",
+    "cancelled"
+  ],
+  "transitions": {
+    "claim": ["ready"],
+    "retry": ["failed"],
+    "implemented": ["claimed"],
+    "verify": ["implemented", "verified", "verifying"],
+    "deliver": ["verified", "delivered"],
+    "release": ["claimed", "implemented", "verifying", "failed"],
+    "block": ["ready"],
+    "unblock": ["blocked"],
+    "cancel": ["ready", "claimed", "implemented", "verifying", "verified", "failed", "blocked"]
+  },
+  "items": [
+    {
+      "id": "FAC-101",
+      "title": "Performance lane evidence: run tests/performance/run.mjs under pinned Node 24.20.0",
+      "kind": "verification",
+      "priority": 10,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the pinned-Node performance lane and store its output under .codex/runtime/devin-factory/evidence/performance-<utc>/. The lane is an ENV-PURE contribution only and never counts as a release gate.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/performance/run.mjs exits 0 under Node 24.20.0 and writes evidence into a fresh output directory",
+          "check": { "type": "command", "command": "node scripts/factory/checks/perf-lane.mjs" }
+        },
+        {
+          "id": "AC2",
+          "description": "Report records a terminal result and retains its stated limitations",
+          "check": { "type": "command", "command": "node scripts/factory/checks/perf-report.mjs" }
+        }
+      ],
+      "verify": [],
+      "notes": "Manual-only lane: npm test does not run it and CI has no job for it."
+    },
+    {
+      "id": "FAC-102",
+      "title": "Real host probe: planner tooltip accessibility against installed Obsidian",
+      "kind": "verification",
+      "priority": 20,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run tests/host-matrix/run.mjs --planner-tooltip-only with the installed Obsidian.app and a borrowed Playwright module. Output goes to a fresh directory under .codex/runtime/devin-factory/evidence/host-probe-<utc>/. Disposable profile and vault only; the runner must prove isolation before touching the plugin.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Host probe exits 0 and writes evidence/report.json plus evidence/planner-tooltip.json",
+          "check": { "type": "command", "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip" }
+        },
+        {
+          "id": "AC2",
+          "description": "Tooltip evidence records an accessible Alpha label and zero page errors",
+          "check": { "type": "command", "command": "node scripts/factory/checks/host-tooltip-report.mjs" }
+        }
+      ],
+      "verify": [],
+      "notes": "Single macOS host; not a release-gate lane. Limitations from tests/host-matrix/README.md apply."
+    },
+    {
+      "id": "FAC-103",
+      "title": "Real host smoke: full lifecycle + CLOCK write in disposable vault",
+      "kind": "verification",
+      "priority": 30,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the complete tests/host-matrix/run.mjs scenario (no --review, no --privacy) against the built package inside a disposable vault. It performs ten clean open-close-disable-enable cycles plus one real CLOCK write/reload/clock-out round trip.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Full host run exits 0 and report.json records all assertions passing",
+          "check": { "type": "command", "command": "node scripts/factory/checks/host-probe.mjs --mode full" }
+        }
+      ],
+      "verify": [],
+      "notes": "Depends on FAC-102 succeeding first; same disposable-vault isolation rules."
+    },
+    {
+      "id": "FAC-104",
+      "title": "Release lane local evidence: release tests, dry-run, provenance, planning audit",
+      "kind": "verification",
+      "priority": 40,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the release CI job's non-browser steps locally and record each command and exit code.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "node --test tests/release/*.test.mjs passes",
+          "check": { "type": "command", "command": "node --test \"tests/release/evidence-harness.test.mjs\" \"tests/release/release-gates.test.mjs\" \"tests/release/requirements-contract.test.mjs\"" }
+        },
+        {
+          "id": "AC2",
+          "description": "node scripts/release/dry-run.mjs exits 0",
+          "check": { "type": "command", "command": "node scripts/release/dry-run.mjs" }
+        },
+        {
+          "id": "AC3",
+          "description": "node scripts/check-planning-docs.mjs --sha HEAD passes offline",
+          "check": { "type": "command", "command": "node scripts/check-planning-docs.mjs --sha HEAD" }
+        },
+        {
+          "id": "AC4",
+          "description": "npm run validate:provenance exits 0",
+          "check": { "type": "command", "command": "npm run validate:provenance" }
+        }
+      ],
+      "verify": [],
+      "notes": "Mirrors the release-evidence CI job minus the two browser lanes."
+    },
+    {
+      "id": "FAC-105",
+      "title": "Audit docs against live command/error surface and fix drift",
+      "kind": "audit",
+      "priority": 50,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": ["scripts/factory/audits/", "docs/", "README.md"],
+      "allow_empty_diff": true,
+      "implementation": "Add scripts/factory/audits/doc-surface.mjs which extracts the command titles, settings labels, and documented error codes from source and checks that docs/user-guide.md, docs/user-guide.zh.md, docs/reference/settings.md, docs/troubleshooting.md, and README.md name them consistently. Fix any drift it finds inside the declared boundary.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Audit script exits 0 (no undocumented drift remains)",
+          "check": { "type": "command", "command": "node scripts/factory/audits/doc-surface.mjs" }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": { "type": "command", "command": "npm run check" }
+        }
+      ],
+      "verify": ["node tests/ui/planner-controls/run.mjs"],
+      "notes": "Audit first; only bounded doc fixes inside docs/ and README.md."
+    },
+    {
+      "id": "FAC-106",
+      "title": "Self-maintenance: extend factory with item append + JSONL status rendering if gaps appear",
+      "kind": "code-change",
+      "priority": 90,
+      "state": "ready",
+      "attempts": 0,
+      "max_attempts": 3,
+      "module_boundary": ["scripts/factory/", "tests/factory/", "factory/"],
+      "allow_empty_diff": true,
+      "implementation": "Reserved maintenance item. Only claim when an earlier iteration identifies a concrete factory gap (for example: missing retry backoff record, missing status rendering). Implement the narrow fix inside the factory boundary and extend tests/factory/.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": { "type": "command", "command": "node --test tests/factory/factory.test.mjs" }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": { "type": "command", "command": "npm run check" }
+        }
+      ],
+      "verify": [],
+      "notes": "Placeholder that becomes concrete only with a recorded finding."
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+// FAC-102/FAC-103: drive the real installed Obsidian host through
+// tests/host-matrix/run.mjs inside a disposable profile+vault, using a
+// borrowed Playwright module. Evidence lands in the factory evidence dir.
+//
+// Modes: --mode tooltip (FAC-102 short read-only probe) or --mode full
+// (FAC-103 lifecycle cycles + real CLOCK write).
+
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import path from "node:path";
+import { parseArgs } from "node:util";
+import {
+  REPO_ROOT, assertFile, evidenceDir, fail, findNode24, runLogged,
+} from "./lib.mjs";
+
+const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
+assertMode(values.mode);
+
+function assertMode(mode) {
+  if (!["tooltip", "full"].includes(mode)) fail(`unknown --mode ${mode}`);
+}
+
+const evidence = evidenceDir("host-probe");
+const output = path.join(evidence, `host-${values.mode}`);
+if (existsSync(output)) fail(`output directory already exists: ${output}`);
+
+// Built package assets are required; build only when absent so the check stays
+// cheap under `verify` (the bundle is already validated upstream of the item).
+const pkgDir = path.join(evidence, "plugin-pkg");
+mkdirSync(pkgDir, { recursive: true });
+for (const asset of ["main.js", "styles.css"]) {
+  if (!existsSync(path.join(REPO_ROOT, asset))) {
+    runLogged(process.execPath, ["esbuild.config.mjs", "build"], { log: path.join(evidence, "build.log") });
+    break;
+  }
+}
+for (const asset of ["main.js", "manifest.json", "styles.css"]) {
+  const source = path.join(REPO_ROOT, asset);
+  assertFile(source, `package asset ${asset}; run npm run build first`);
+  copyFileSync(source, path.join(pkgDir, asset));
+}
+
+const executable = process.env.OBSIDIAN_EXECUTABLE
+  ?? "/Applications/Obsidian.app/Contents/MacOS/Obsidian";
+assertFile(executable, "installed Obsidian executable (set OBSIDIAN_EXECUTABLE)");
+
+const playwright = process.env.PLAYWRIGHT_MODULE
+  ?? path.join(process.env.HOME ?? "", "Code", "theme-hospital-hd", "node_modules", "playwright");
+assertFile(path.join(playwright, "package.json"), "Playwright module (set PLAYWRIGHT_MODULE)");
+
+const node24 = findNode24();
+const args = [
+  "tests/host-matrix/run.mjs",
+  "--executable", executable,
+  "--plugin-dir", pkgDir,
+  "--output", output,
+];
+if (values.mode === "tooltip") args.push("--planner-tooltip-only");
+
+const result = runLogged(node24, args, {
+  env: { PLAYWRIGHT_MODULE: playwright },
+  timeout: values.mode === "full" ? 600_000 : 240_000,
+  log: path.join(evidence, `run-${values.mode}.log`),
+});
+console.log(`host-probe(${values.mode}) exit ${result.status ?? "timeout"} -> ${output}`);
+process.exitCode = result.status ?? 1;

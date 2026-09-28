@@ -1,0 +1,92 @@
+# Spiral Day devin-factory
+
+A small executable factory for this repository: it takes one bounded work item
+at a time from `factory/backlog.json` through intake, implementation,
+verification, and a reviewable delivery artifact. It reuses the repo's own
+tooling (`npm run verify`, focused `tests/*/run.mjs` lanes, `node --test`
+suites, release scripts) and introduces no competing control system.
+
+GitHub issues remain the canonical product queue. `factory/backlog.json` holds
+local factory-chore and evidence items only; it must not duplicate an open
+issue or active PR. See `factory/backlog.schema.md` for the item contract.
+
+## Layout
+
+- `factory/backlog.json` — durable queue: items, acceptance criteria, ordered
+  states, retry bookkeeping. Committed.
+- `scripts/factory/run.mjs` — the factory entry point (Node stdlib only).
+- `scripts/factory/checks/` — lane wrappers used by acceptance checks.
+- `scripts/factory/audits/` — committed audit tools used by audit items.
+- `tests/factory/` — the factory's own test lane (auto-discovered by
+  `npm test` via `tests/**/*.test.mjs`).
+- `.codex/runtime/devin-factory/` — volatile runtime evidence, gitignored:
+  `session.json`, `progress.jsonl`, `status.md`, `items/<id>.jsonl`,
+  `evidence/`, `deliveries/`.
+
+## Run
+
+```sh
+node scripts/factory/run.mjs list           # queue overview
+node scripts/factory/run.mjs next           # next ready item (full spec)
+node scripts/factory/run.mjs claim FAC-101  # ready -> claimed (attempt +1)
+# ... do the item's `implementation` work inside its module_boundary ...
+node scripts/factory/run.mjs implemented FAC-101   # claimed -> implemented
+node scripts/factory/run.mjs verify FAC-101        # run acceptance + verify
+node scripts/factory/run.mjs deliver FAC-101       # verified -> delivered
+```
+
+`verify` exits nonzero and marks the item `failed` on the first failing
+check; it never records success after a failure. `deliver` writes
+`.codex/runtime/devin-factory/deliveries/<id>/attempt-<n>/` with
+`change.patch`, untracked-file copies, `evidence.json`, and `summary.md` —
+the reviewable artifact. `deliver` on an already-delivered item is an
+idempotent no-op that prints the existing bundle.
+
+Self-test without touching the repo:
+
+```sh
+node scripts/factory/run.mjs dry-run   # sandboxed full pipeline incl. failure+retry
+node --test tests/factory/             # unit lane
+npm run verify                         # repo gate; includes tests/factory/
+```
+
+## Inspect
+
+```sh
+node scripts/factory/run.mjs status    # counts + item table; rewrites status.md
+cat .codex/runtime/devin-factory/progress.jsonl   # every transition/check, JSONL
+cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
+```
+
+Each progress row carries timestamp, event, item, attempt, prior/next state,
+check exit codes, durations, output tails, and the current git HEAD.
+
+## Recover
+
+- `verify` failure → fix the cause, then `claim <id> --retry` (bounded by
+  `max_attempts`), `implemented`, `verify` again. Earlier attempts stay in the
+  JSONL logs.
+- Process died mid-`verify` → the item sits in `verifying`; rerun
+  `verify <id>` to resume the same attempt.
+- Wrong claim → `release <id>` returns it to `ready`; `fail <id> --reason`
+  records a terminal-for-this-attempt failure; `block`/`unblock` parks a
+  `ready` item; `cancel <id> --reason` removes it from rotation.
+- `record <id> --note "..."` appends free-form evidence (for example the
+  commit SHA that checkpointed a delivery).
+
+## Stop
+
+The factory is not a daemon: each command is one short process. Nothing keeps
+running between commands, so "stop" is simply not invoking the next command.
+Ctrl-C during `verify` leaves the item in `verifying` (see Recover). No
+command ever pushes, merges, deploys, or approves anything — those stay
+manual gates.
+
+## Environment knobs
+
+- `FACTORY_ROOT` — repo root override (used by `dry-run` and tests).
+- `FACTORY_ITEM_ID`, `FACTORY_EVIDENCE_DIR` — exported to check commands.
+- `FACTORY_NODE24` — path to a Node 24.20.0 binary for pinned lanes
+  (defaults to the mise install).
+- `OBSIDIAN_EXECUTABLE` — host probe target (default `/Applications/Obsidian.app`).
+- `PLAYWRIGHT_MODULE` — Playwright module dir for host probes.
