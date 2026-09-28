@@ -371,8 +371,8 @@
       "title": "fix(host-matrix): bound tooltip-delay assertion above timer granularity",
       "kind": "code-change",
       "priority": 38,
-      "state": "ready",
-      "attempts": 1,
+      "state": "delivered",
+      "attempts": 2,
       "max_attempts": 3,
       "module_boundary": [
         "tests/host-matrix/"
@@ -391,7 +391,10 @@
       ],
       "verify": [],
       "notes": "Found by FAC-108 attempt 1: planner-svg-tooltip-delay-observed recorded 899.",
-      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf"
+      "claimed_head": "9e2af6094fae1976e7b57f9c16831b0be59081c7",
+      "verified_head": "9e2af6094fae1976e7b57f9c16831b0be59081c7",
+      "verified_contract": "546c33c4dab75bf3f3131a94724e3654bd465822a28ef56b16e5c14b6c4b8ce0",
+      "verified_work": "c4042f927007cbb1c3f1d571bd037daf88cfa89b01b698029097543c676aeef9"
     },
     {
       "id": "FAC-111",

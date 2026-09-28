@@ -20,7 +20,9 @@ export async function observePlannerTooltip({ page, pageErrors, screenshot }) {
       title: element.querySelector(":scope > title")?.textContent ?? null,
       isShownType: typeof element.isShown })));
   const started = Date.now();
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  // The >= 900 delay assertion below needs margin: a timer may legally resolve
+  // a millisecond early, flooring an honest 899.x ms wait to 899.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   const elapsedMilliseconds = Date.now() - started;
   await screenshot("planner-svg-tooltip-hover");
   const result = { target: before, accessibleTree, hovered, elapsedMilliseconds,
