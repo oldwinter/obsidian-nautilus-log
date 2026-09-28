@@ -535,6 +535,7 @@ export class PluginDataStore {
   readonly #port: PluginDataPort;
   readonly #hostSeed: HostPluginSeed | undefined;
   #snapshot = snapshot(0, freezeValidation(DEFAULT_PLUGIN_DATA, []));
+  #confirmed: PluginDataDocument = DEFAULT_PLUGIN_DATA;
   #loaded = false;
   #seedUnpersisted = false;
   #loading: Promise<PluginDataSnapshot> | undefined;
@@ -569,6 +570,7 @@ export class PluginDataStore {
       const validation = validatePluginData(stored, this.#hostSeed);
       if (isAbsentPluginData(stored)) this.#seedUnpersisted = true;
       if (this.#stopped) throw new PluginDataStoppedError();
+      this.#confirmed = validation.data;
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       this.#loaded = true;
       return this.#snapshot;
@@ -591,10 +593,11 @@ export class PluginDataStore {
     }
 
     const operation = this.#tail.then(async () => {
-      const validation = validatePluginData(updater(this.#snapshot.data));
+      const validation = validatePluginData(updater(this.#confirmed));
       await this.#writeConfirmed(validation);
-      if (this.#stopped) throw new PluginDataStoppedError();
+      this.#confirmed = validation.data;
       this.#seedUnpersisted = false;
+      if (this.#stopped) throw new PluginDataStoppedError();
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       return this.#snapshot;
     });
@@ -615,12 +618,12 @@ export class PluginDataStore {
     const operation = this.#tail.then(async () => {
       if (!this.#seedUnpersisted) return this.#snapshot;
       const validation = Object.freeze({
-        data: this.#snapshot.data,
+        data: this.#confirmed,
         diagnostics: this.#snapshot.diagnostics,
       });
       await this.#writeConfirmed(validation);
-      if (this.#stopped) throw new PluginDataStoppedError();
       this.#seedUnpersisted = false;
+      if (this.#stopped) throw new PluginDataStoppedError();
       this.#snapshot = snapshot(this.#snapshot.revision + 1, validation);
       return this.#snapshot;
     });

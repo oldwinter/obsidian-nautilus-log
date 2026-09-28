@@ -376,3 +376,100 @@ test("OBS-LIFE-001 stop rejects new saves, drains admitted work, and is idempote
   assert.equal(durable.data.settings.language, "zh");
   assert.equal(stopSettled, true);
 });
+
+test("OBS-LIFE-001 stop drain applies a queued patch on top of an in-flight confirmed save", async () => {
+  let releaseSave: (() => void) | undefined;
+  let reportSaveStarted: (() => void) | undefined;
+  const saveStarted = new Promise<void>((resolve) => {
+    reportSaveStarted = resolve;
+  });
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+
+  class BlockingPort extends InMemoryPluginDataPort {
+    override async save(data: PluginDataDocument): Promise<void> {
+      reportSaveStarted?.();
+      await saveGate;
+      await super.save(data);
+    }
+  }
+
+  const port = new BlockingPort(pluginData());
+  const store = new PluginDataStore(port);
+  await store.load();
+  const loaded = store.snapshot;
+  const admitted = store.update((current) => pluginData({
+    ...current.settings,
+    language: "zh",
+  }, current));
+  await saveStarted;
+  const queued = store.update((current) => pluginData({
+    ...current.settings,
+    dailyNoteFolder: "Journal",
+  }, current));
+
+  const stopping = store.stop();
+  releaseSave?.();
+  await assert.rejects(admitted, PluginDataStoppedError);
+  await assert.rejects(queued, PluginDataStoppedError);
+  await stopping;
+
+  assert.strictEqual(store.snapshot, loaded);
+  assert.equal(port.saveCount, 2);
+  const durable = validatePluginData(await port.load());
+  assert.equal(durable.data.settings.language, "zh");
+  assert.equal(durable.data.settings.dailyNoteFolder, "Journal");
+});
+
+test("OBS-LIFE-001 stop drain preserves disjoint admitted patches in the durable document", async () => {
+  const port = new InMemoryPluginDataPort(pluginData());
+  const store = new PluginDataStore(port);
+  await store.load();
+  const loaded = store.snapshot;
+
+  const first = store.update((current) => pluginData({
+    ...current.settings,
+    language: "zh",
+  }, current));
+  const second = store.update((current) => pluginData({
+    ...current.settings,
+    dailyNoteFolder: "Journal",
+  }, current));
+  const stopping = store.stop();
+
+  await assert.rejects(first, PluginDataStoppedError);
+  await assert.rejects(second, PluginDataStoppedError);
+  await stopping;
+
+  assert.strictEqual(store.snapshot, loaded);
+  assert.equal(port.saveCount, 2);
+  const durable = validatePluginData(await port.load());
+  assert.equal(durable.data.settings.language, "zh");
+  assert.equal(durable.data.settings.dailyNoteFolder, "Journal");
+});
+
+test("OBS-LIFE-001 a seed persist queued behind a confirmed patch cannot revert it during stop", async () => {
+  const port = new InMemoryPluginDataPort();
+  const store = new PluginDataStore(port, { hostLanguage: "zh" });
+  await store.load();
+  const loaded = store.snapshot;
+  assert.equal(port.saveCount, 0);
+
+  const admitted = store.update((current) => pluginData({
+    ...current.settings,
+    dailyNoteFolder: "Journal",
+  }, current));
+  const persist = store.persistSeededIfNeeded();
+  const stopping = store.stop();
+
+  await assert.rejects(admitted, PluginDataStoppedError);
+  assert.strictEqual(await persist, loaded);
+  await stopping;
+
+  assert.strictEqual(store.snapshot, loaded);
+  assert.equal(port.saveCount, 1);
+  const durable = validatePluginData(await port.load());
+  assert.equal(durable.data.settings.language, "zh");
+  assert.equal(durable.data.settings.dailyNoteFolder, "Journal");
+});
