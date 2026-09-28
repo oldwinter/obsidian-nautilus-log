@@ -32,6 +32,10 @@ export type ExecutionCatalog = Readonly<{
   "plan.scheduled": string;
   "plan.unscheduled": string;
   "plan.shortestFirst": string;
+  "plan.search": string;
+  "plan.searchPlaceholder": string;
+  "plan.noScheduledMatches": string;
+  "plan.noUnscheduledMatches": string;
   "plan.noPrimary": string;
   "plan.noPrimaryDetail": string;
   "plan.noTasks": string;
@@ -163,6 +167,10 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.pending": "Confirming change",
   "plan.scheduled": "Scheduled",
   "plan.shortestFirst": "Shortest remaining first",
+  "plan.search": "Search plan titles",
+  "plan.searchPlaceholder": "Filter scheduled and unscheduled items",
+  "plan.noScheduledMatches": "No scheduled items match this search. Clear the search to show all items.",
+  "plan.noUnscheduledMatches": "No unscheduled tasks match this search. Clear the search to show all tasks.",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",

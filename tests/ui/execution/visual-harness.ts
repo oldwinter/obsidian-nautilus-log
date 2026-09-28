@@ -112,10 +112,11 @@ const baseItems = [
   },
 ] as const;
 
-const items = new URLSearchParams(location.search).get("scenario") === "short-tasks"
+const items = ["short-tasks", "plan-search"].includes(new URLSearchParams(location.search).get("scenario") ?? "")
   ? [...baseItems, ...[
       { label: "Finish the draft", durationMinutes: 60, remainingDurationMinutes: 5, progressPercent: 92 },
       { label: "Reply to a message", durationMinutes: 5, remainingDurationMinutes: 5, progressPercent: 0 },
+      { label: "整理笔记", durationMinutes: 10, remainingDurationMinutes: 10, progressPercent: 0 },
     ].map((task, index) => ({
       ...baseItems[1], ...task, sourceOrder: index + 2,
       source: { path: PATH, blockId: `short-task-${index}`, sourceOrder: index + 2 },

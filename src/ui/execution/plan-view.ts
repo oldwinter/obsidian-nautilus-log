@@ -38,6 +38,7 @@ export interface PlanViewOptions {
     location: "main" | "sidebar",
   ) => void;
   readonly shortestFirst?: boolean;
+  readonly searchQuery?: string;
   readonly setShortestFirst?: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
@@ -177,9 +178,9 @@ function appendState(root: HTMLElement, heading: string, detail: string): void {
 export function renderPlanView(root: HTMLElement, options: PlanViewOptions): void {
   const previousSort = root.querySelector(".spiral-day-execution__shortest-first");
   const sortHadFocus = previousSort !== null && root.ownerDocument.activeElement === previousSort;
-  const unscheduledOpen = root
-    .querySelector<HTMLDetailsElement>(".spiral-day-execution__unscheduled")
-    ?.open ?? false;
+  const previousUnscheduled = root.querySelector<HTMLDetailsElement>(".spiral-day-execution__unscheduled");
+  const unscheduledOpen = previousUnscheduled?.open ?? false;
+  const previousQuery = root.dataset.searchQuery ?? "";
   root.replaceChildren();
   const snapshot = options.snapshot;
   if (!snapshot || snapshot.state === "loading" || snapshot.state === "hidden" || snapshot.state === "stale") {
@@ -209,6 +210,9 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     return;
   }
   const { projection } = snapshot;
+  const query = options.searchQuery?.trim().toLowerCase() ?? "";
+  root.dataset.searchQuery = query;
+  const matches = (item: PlanItem<RuntimePlanItemSource>): boolean => item.label.toLowerCase().includes(query);
   const scheduled = executionElement(root.ownerDocument, "section", "spiral-day-execution__plan-section");
   const heading = executionElement(root.ownerDocument, "h3");
   heading.textContent = options.messages.t("execution", "plan.scheduled");
@@ -229,10 +233,14 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   ].sort((left, right) => left.start - right.start || left.item.sourceOrder - right.item.sourceOrder);
   for (const interval of intervals) {
     placed.add(taskKey(interval.item));
-    appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);
+    if (matches(interval.item)) appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);
   }
-  if (intervals.length === 0) {
-    if (projection.items.length === 0) {
+  if (list.children.length === 0) {
+    if (query) {
+      const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
+      empty.textContent = options.messages.t("execution", "plan.noScheduledMatches");
+      scheduled.append(empty);
+    } else if (projection.items.length === 0) {
       const empty = executionElement(root.ownerDocument, "div", "spiral-day-execution__empty-plan");
       renderEmptyPlanGuidance(empty, options.messages);
       scheduled.append(empty);
@@ -249,9 +257,10 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   const unscheduledItems = projection.items.filter((item) =>
     item.kind === "flexible-task"
     && item.status === "open"
+    && matches(item)
     && !placed.has(taskKey(item)));
   const unscheduled = executionElement(root.ownerDocument, "details", "spiral-day-execution__unscheduled");
-  unscheduled.open = unscheduledOpen;
+  unscheduled.open = unscheduledOpen || (query !== "" && (!previousUnscheduled || query !== previousQuery));
   const summary = executionElement(root.ownerDocument, "summary");
   const summaryTitle = executionElement(root.ownerDocument, "span");
   summaryTitle.textContent = options.messages.t("execution", "plan.unscheduled");
@@ -294,7 +303,7 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   renderUnscheduled(options.shortestFirst ?? false);
   if (unscheduledItems.length === 0) {
     const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
-    empty.textContent = options.messages.t("execution", "plan.noUnscheduled");
+    empty.textContent = options.messages.t("execution", query ? "plan.noUnscheduledMatches" : "plan.noUnscheduled");
     unscheduled.append(empty);
   } else unscheduled.append(unscheduledList);
   root.append(scheduled, unscheduled);

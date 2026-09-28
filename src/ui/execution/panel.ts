@@ -141,6 +141,21 @@ export function mountExecutionPanel(
   const tablist = executionElement(document, "div", "spiral-day-execution__tabs");
   const timingPanel = executionElement(document, "div", "spiral-day-execution__tabpanel");
   const planPanel = executionElement(document, "div", "spiral-day-execution__tabpanel");
+  const planSearchLabel = executionElement(document, "label", "spiral-day-execution__search");
+  const planSearchText = executionElement(document, "span");
+  const planSearch = executionElement(document, "input");
+  planSearch.type = "search";
+  planSearch.addEventListener("input", () => render());
+  planSearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || event.isComposing || planSearch.value === "") return;
+    event.preventDefault();
+    event.stopPropagation();
+    planSearch.value = "";
+    render();
+  });
+  planSearchLabel.append(planSearchText, planSearch);
+  const planContent = executionElement(document, "div");
+  planPanel.append(planSearchLabel, planContent);
   const reviewPanel = executionElement(document, "div", "spiral-day-execution__tabpanel");
   const tabs = new ExecutionRovingTabs({
     root: tablist,
@@ -357,7 +372,11 @@ export function mountExecutionPanel(
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
       requestDelete,
     });
-    renderPlanView(planPanel, {
+    planSearchLabel.hidden = plan?.state !== "confirmed" || plan.projection.items.length === 0;
+    planSearchText.textContent = options.messages.t("execution", "plan.search");
+    planSearch.placeholder = options.messages.t("execution", "plan.searchPlaceholder");
+    renderPlanView(planContent, {
+      searchQuery: planSearch.value,
       shortestFirst,
       setShortestFirst: (enabled) => { shortestFirst = enabled; },
       nowEpochMs: port.now(),
@@ -404,7 +423,7 @@ export function mountExecutionPanel(
     surface.close(false);
   };
   const onDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!opened || event.key !== "Escape" || event.defaultPrevented) return;
+    if (!opened || event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
     event.preventDefault();
     surface.close(true);
   };

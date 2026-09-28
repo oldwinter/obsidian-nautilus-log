@@ -272,6 +272,30 @@
   white-space: nowrap;
 }
 
+.spiral-day-execution__search {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.spiral-day-execution__search[hidden] {
+  display: none;
+}
+
+.spiral-day-execution__search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  font: inherit;
+  color: var(--text-normal);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+
 .spiral-day-execution__elapsed[data-warning="true"],
 .spiral-day-active-task__elapsed[data-warning="true"] {
   color: var(--spiral-day-execution-danger);

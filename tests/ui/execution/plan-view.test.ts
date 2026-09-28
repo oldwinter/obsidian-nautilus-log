@@ -15,6 +15,7 @@ class ElementStub {
   readonly dataset: Record<string, string> = {};
   readonly children: ElementStub[] = [];
   checked = false;
+  open = false;
   readonly listeners = new Map<string, (event?: { shiftKey: boolean }) => void>();
   focus(): void { this.ownerDocument.activeElement = this; }
   fire(event: string): void { this.listeners.get(event)?.(); }
@@ -265,6 +266,76 @@ test("Plan error state names Settings and Planner", () => {
 });
 
 for (const locale of ["en", "zh-CN"]) {
+  test(`Plan search combines schedule, unscheduled sorting, and original action targets in ${locale}`, () => {
+    const document = new DocumentStub();
+    const root = document.createElement();
+    const task = (label: string, sourceOrder: number, remaining: number) => Object.freeze({
+      ...partialTask, label, sourceOrder, remainingDurationMinutes: remaining,
+      source: Object.freeze({ ...partialTask.source, sourceOrder, blockId: `search-${sourceOrder}` }),
+    });
+    const items = Object.freeze([
+      task("Draft outline", 0, 30), task("Send email", 1, 20),
+      task("Draft conclusion", 2, 15), task("Draft title", 3, 5),
+      task("整理笔记", 4, 10),
+    ]);
+    const fixed = Object.freeze({ ...task("Draft meeting", 5, 30), kind: "fixed-event" as const, executionEligible: false });
+    const dispatched: unknown[] = [];
+    const navigated: unknown[] = [];
+    const options: PlanViewOptions = {
+      nowEpochMs: 10,
+      messages: createMessages({ locale, namespaces: {
+        execution: defineLocaleNamespace("execution", enExecution, zhCNExecution),
+      } }),
+      pending: new Set(), renderIcon: () => {},
+      dispatch: (intent) => { dispatched.push(intent); },
+      navigateTask: (target, location) => { navigated.push({ target, location }); },
+      execution: { writeBlocked: false } as PlanViewOptions["execution"],
+      snapshot: { state: "confirmed", projection: {
+        sourceFingerprint: "original-search-source", items: Object.freeze([...items, fixed]),
+        schedule: {
+          fixedEvents: [{ event: fixed, startMinutes: 540, endMinutes: 570 }],
+          plannedSlots: [{ task: items[0], startMinutes: 600, endMinutes: 630 }],
+        },
+      } } as PlanViewOptions["snapshot"],
+    };
+    const render = (searchQuery: string, shortestFirst = false) =>
+      renderPlanView(root as unknown as HTMLElement, { ...options, searchQuery, shortestFirst });
+    const rows = (section: string) => root.querySelector(section)?.querySelector(".spiral-day-execution__rows")?.children ?? [];
+    const titles = (section: string) => rows(section).map((row) => row.querySelector(".spiral-day-execution__task-title")!.textContent);
+    const scheduled = ".spiral-day-execution__plan-section";
+    const unscheduled = ".spiral-day-execution__unscheduled";
+    render("  DrAfT  ", true);
+    assert.deepEqual(titles(scheduled), ["Draft meeting", "Draft outline"]);
+    assert.deepEqual(titles(unscheduled), ["Draft title", "Draft conclusion"]);
+    assert.equal(root.querySelector(unscheduled)!.open, true);
+    root.querySelector(unscheduled)!.open = false;
+    render("  DrAfT  ", true);
+    assert.equal(root.querySelector(unscheduled)!.open, false, "a refresh preserves manual collapse");
+    assert.deepEqual(dispatched, []);
+    assert.deepEqual(navigated, []);
+    const first = rows(unscheduled)[0];
+    first.querySelector(".spiral-day-execution__task-title")!.listeners.get("click")?.({ shiftKey: true });
+    first.querySelector(".spiral-day-execution__row-actions")!.children[0].fire("click");
+    assert.deepEqual(navigated, [{ target: { path: "Daily/today.md", ownerId: "search-3", sourceOrder: 3 }, location: "sidebar" }]);
+    assert.deepEqual(dispatched, [{ type: "clock-in", intentId: "clock-in-search-3-10", target: {
+      path: "Daily/today.md", ownerId: "search-3", sourceOrder: 3, sourceFingerprint: "original-search-source",
+    } }]);
+    render("笔记");
+    assert.equal(root.querySelector(unscheduled)!.open, true, "a new search reveals unscheduled matches");
+    assert.deepEqual(titles(scheduled), []);
+    assert.deepEqual(titles(unscheduled), ["整理笔记"]);
+    render("no such item");
+    assert.deepEqual(titles(scheduled), []);
+    assert.deepEqual(titles(unscheduled), []);
+    assert.ok(collectText(root).includes(options.messages.t("execution", "plan.noScheduledMatches")));
+    assert.ok(collectText(root).includes(options.messages.t("execution", "plan.noUnscheduledMatches")));
+    assert.equal(collectText(root).includes(options.messages.t("execution", "plan.noTasks")), false);
+    render("   ");
+    assert.deepEqual(titles(scheduled), ["Draft meeting", "Draft outline"]);
+    assert.deepEqual(titles(unscheduled), ["Send email", "Draft conclusion", "Draft title", "整理笔记"]);
+    assert.deepEqual(items.map((item) => item.sourceOrder), [0, 1, 2, 3, 4]);
+  });
+
   test(`unscheduled quick-task sorting uses remaining time and preserves source targets in ${locale}`, () => {
     const document = new DocumentStub();
     const root = document.createElement();

@@ -206,6 +206,12 @@ save the note and use **Try again** on this tab.
 The Plan tab lists scheduled and unscheduled open tasks from today's Primary
 Plan.
 
+Use **Search plan titles** to filter scheduled items and unscheduled tasks.
+Search ignores case and outer whitespace, expands unscheduled results, and
+works with shortest-remaining sorting. Capacity and scheduling stay unchanged.
+The query survives tab switches and closing/reopening the panel. Press Escape
+in a nonempty search field to clear it; press Escape again to close the panel.
+
 ![Plan tab with open tasks](user-guide/images/09-plan-tab.png)
 
 - Click a title to open the source line. Shift-click opens it in the right
