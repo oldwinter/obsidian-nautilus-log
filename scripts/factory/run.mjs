@@ -40,7 +40,9 @@ const { values: opts, positionals } = parseArgs({
 });
 
 const root = path.resolve(opts.root);
-const backlogPath = opts.backlog ? path.resolve(opts.backlog) : path.join(root, "factory", "backlog.json");
+// --backlog is root-relative like every other path in the runner; an
+// absolute path still works for queues outside the root.
+const backlogPath = opts.backlog ? path.resolve(root, opts.backlog) : path.join(root, "factory", "backlog.json");
 const runtimeDir = path.join(root, ".codex", "runtime", "devin-factory");
 const lockFile = path.join(runtimeDir, "run.lock");
 // Commands that mutate backlog/progress state. Concurrent mutations could lose

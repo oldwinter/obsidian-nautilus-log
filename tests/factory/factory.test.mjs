@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -42,6 +42,9 @@ function sandbox(items, { git = false } = {}) {
   if (git) {
     run(dir, "git", ["init", "-q"]);
     run(dir, "git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init", "--allow-empty"]);
+    // Mirror production: the queue file is tracked, not an untracked dir-collapse.
+    run(dir, "git", ["add", "-A"]);
+    run(dir, "git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "fixture"]);
   }
   return {
     dir,
@@ -605,6 +608,27 @@ test("inspect audits a delivery bundle read-only", () => {
     const missing = box.run("inspect", "IT-001");
     fails(missing, "inspect must catch a missing bundle file");
     assert.match(missing.stderr + missing.stdout, /missing summary\.md/);
+  } finally {
+    box.cleanup();
+  }
+});
+
+test("--backlog selects an alternate queue whose directory stays boundary-exempt", () => {
+  const box = sandbox([makeItem()], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "queue"), { recursive: true });
+    copyFileSync(path.join(box.dir, "factory", "backlog.json"), path.join(box.dir, "queue", "alt.json"));
+    const runAlt = (...args) => spawnSync(
+      process.execPath, [runner, "--root", box.dir, "--backlog", "queue/alt.json", ...args], { encoding: "utf8" });
+    const listed = runAlt("list");
+    assert.equal(listed.status, 0, listed.stderr);
+    assert.match(listed.stdout, /IT-001/);
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    assert.equal(runAlt("claim", "IT-001").status, 0, "claim against the alternate queue");
+    const impl = runAlt("implemented", "IT-001");
+    assert.equal(impl.status, 0,
+      `queue/alt.json mutations must stay exempt like the default backlog dir: ${impl.stderr}${impl.stdout}`);
   } finally {
     box.cleanup();
   }

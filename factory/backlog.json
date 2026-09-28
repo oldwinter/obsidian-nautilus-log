@@ -1304,6 +1304,39 @@
       "verified_head": "dce7a241734d4793104ef841f0d26d6af737400c",
       "verified_contract": "450112ec3f4791291dc8c17f7e14ef30805fc6030fa18a509cbf2cfa4b9ca00a",
       "verified_work": "0bb882e95f5b12fd16666041d3a354f4336c65f88c64b58c37c617e0e306af05"
+    },
+    {
+      "id": "FAC-135",
+      "title": "Fix --backlog resolving against cwd instead of --root",
+      "kind": "factory",
+      "priority": 35,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Relative --backlog paths resolved against process cwd while every other runner path is root-relative, silently selecting a different queue under --root. Now resolves against root; absolute paths still work. Sandbox git fixture now commits the queue file to mirror production, and the alternate-queue directory exemption is covered.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. --backlog coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "Test caught the cwd-resolution defect plus a fixture fidelity gap",
+      "claimed_head": "f9bdbbc49a329b9a323ac7958a86dc852635b62c",
+      "verified_head": "f9bdbbc49a329b9a323ac7958a86dc852635b62c",
+      "verified_contract": "154be4358c738df2aa2ca8c6309c7b695426ff58e0c200d08954de966a7cbaa5",
+      "verified_work": "685a86db9171ede544b952238e9dd8b83d158d64c1e9c75433c189f1ffd4e9ac"
     }
   ]
 }
