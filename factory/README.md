@@ -28,6 +28,7 @@ issue or active PR. See `factory/backlog.schema.md` for the item contract.
 ```sh
 node scripts/factory/run.mjs list           # queue overview
 node scripts/factory/run.mjs next           # next ready item (full spec)
+node scripts/factory/run.mjs add --file item.json   # append a ready item
 node scripts/factory/run.mjs claim FAC-101  # ready -> claimed (attempt +1)
 # ... do the item's `implementation` work inside its module_boundary ...
 node scripts/factory/run.mjs implemented FAC-101   # claimed -> implemented
@@ -42,6 +43,11 @@ check; it never records success after a failure. `deliver` writes
 the reviewable artifact. `deliver` on an already-delivered item is an
 idempotent no-op that prints the existing bundle.
 
+`add` validates the payload (schema, unique id, acceptance criteria) and
+always appends at `ready` with a fresh attempt counter — later states are
+reachable only through the pipeline commands. `--file -` reads the item JSON
+from stdin.
+
 Self-test without touching the repo:
 
 ```sh
@@ -53,7 +59,7 @@ npm run verify                         # repo gate; includes tests/factory/
 ## Inspect
 
 ```sh
-node scripts/factory/run.mjs status    # counts + item table; rewrites status.md
+node scripts/factory/run.mjs status    # counts + item table + recent JSONL events
 cat .codex/runtime/devin-factory/progress.jsonl   # every transition/check, JSONL
 cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
 ```

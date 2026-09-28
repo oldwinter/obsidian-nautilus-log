@@ -8,8 +8,8 @@
 // check always marks the item failed and exits nonzero. Volatile evidence
 // stays under .codex/ (gitignored); backlog.json holds durable queue state.
 //
-// Subcommands: list, show, next, claim, implemented, verify, deliver, fail,
-// release, block, unblock, cancel, record, status, dry-run.
+// Subcommands: list, show, next, add, claim, implemented, verify, deliver,
+// fail, release, block, unblock, cancel, record, status, dry-run.
 
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -32,6 +32,7 @@ const { values: opts, positionals } = parseArgs({
     backlog: { type: "string" },
     note: { type: "string" },
     reason: { type: "string" },
+    file: { type: "string" },
     retry: { type: "boolean", default: false },
     json: { type: "boolean", default: false },
     help: { type: "boolean", default: false },
@@ -156,6 +157,11 @@ function loadBacklog() {
   assert(backlog.schema_version === 1, "backlog schema_version must be 1");
   assert(Array.isArray(backlog.states) && backlog.states.length > 1, "backlog.states must list ordered states");
   assert(Array.isArray(backlog.items), "backlog.items must be an array");
+  validateItems(backlog);
+  return backlog;
+}
+
+function validateItems(backlog) {
   const ids = new Set();
   for (const item of backlog.items) {
     assert(typeof item.id === "string" && /^[A-Z]+-\d+$/.test(item.id), `bad item id ${item.id}`);
@@ -175,7 +181,6 @@ function loadBacklog() {
     item.verify ??= [];
     assert(Array.isArray(item.verify), `${item.id}: verify must be an array`);
   }
-  return backlog;
 }
 
 function saveBacklog(backlog) {
@@ -274,6 +279,47 @@ function cmdList(backlog) {
 
 function cmdShow(backlog, id) {
   console.log(JSON.stringify(findItem(backlog, id), null, 2));
+}
+
+// Append a new item from a JSON payload (--file <path>, or --file - for
+// stdin). New items always enter at `ready` with attempts 0; history states
+// are only reachable through the pipeline commands.
+function cmdAdd(backlog) {
+  const file = opts.file ?? fail("add requires --file <item.json> (or --file - for stdin)");
+  const raw = file === "-" ? readFileSync(0, "utf8") : readFileSync(path.resolve(file), "utf8");
+  let spec;
+  try {
+    spec = JSON.parse(raw);
+  } catch (error) {
+    fail(`item payload is not valid JSON: ${error.message}`);
+  }
+  if (spec.state !== undefined && spec.state !== "ready") {
+    fail(`add requires state "ready" (got ${JSON.stringify(spec.state)})`);
+  }
+  const item = {
+    id: spec.id,
+    title: spec.title,
+    kind: spec.kind ?? "code-change",
+    priority: spec.priority,
+    state: "ready",
+    attempts: 0,
+    max_attempts: spec.max_attempts ?? 3,
+    module_boundary: spec.module_boundary ?? [],
+    allow_empty_diff: spec.allow_empty_diff ?? false,
+    implementation: spec.implementation,
+    acceptance_criteria: spec.acceptance_criteria,
+    verify: spec.verify ?? [],
+  };
+  if (spec.notes !== undefined) item.notes = spec.notes;
+  backlog.items.push(item);
+  try {
+    validateItems(backlog);
+  } catch (error) {
+    fail(`item rejected: ${error.message}`);
+  }
+  saveBacklog(backlog);
+  appendProgress({ event: "added", item: item.id, attempt: 0, title: item.title });
+  console.log(`added ${item.id} (state ready)`);
 }
 
 function cmdNext(backlog) {
@@ -443,6 +489,22 @@ function cmdRecord(backlog, id) {
   console.log(`recorded note on ${item.id}`);
 }
 
+function recentEvents(limit = 12) {
+  const file = path.join(runtimeDir, "progress.jsonl");
+  if (!existsSync(file)) return [];
+  return readFileSync(file, "utf8").trim().split("\n")
+    .filter(Boolean).slice(-limit)
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean);
+}
+
+function formatEvent(e) {
+  const transition = e.from && e.to ? ` ${e.from}->${e.to}` : "";
+  return `${e.ts} ${(e.item ?? "-").padEnd(8)} ${e.event}${transition}`;
+}
+
 function renderStatus() {
   if (!existsSync(backlogPath)) return;
   let backlog;
@@ -453,6 +515,7 @@ function renderStatus() {
   }
   const counts = {};
   for (const item of backlog.items ?? []) counts[item.state] = (counts[item.state] ?? 0) + 1;
+  const recent = recentEvents();
   const lines = [
     "# devin-factory status",
     "",
@@ -468,6 +531,10 @@ function renderStatus() {
     ...backlog.items.map((item) =>
       `- **${item.id}** [${item.state}] (attempts ${item.attempts}/${item.max_attempts}) ${item.title}`),
     "",
+    "## Recent events",
+    "",
+    ...(recent.length ? recent.map((e) => `- ${formatEvent(e)}`) : ["- (no progress rows yet)"]),
+    "",
   ];
   ensureRuntime();
   writeFileSync(path.join(runtimeDir, "status.md"), `${lines.join("\n")}\n`);
@@ -476,6 +543,11 @@ function renderStatus() {
 function cmdStatus(backlog) {
   renderStatus();
   cmdList(backlog);
+  const recent = recentEvents(5);
+  if (recent.length) {
+    console.log("recent:");
+    for (const e of recent) console.log(`  ${formatEvent(e)}`);
+  }
 }
 
 // Full sandboxed pipeline: claim -> implemented -> verify(fail) -> retry ->
@@ -561,6 +633,7 @@ commands:
   list                     list items (option --json)
   show <id>                print one item spec
   next                     print highest-priority ready item
+  add --file <item.json>   append a ready item (use --file - for stdin)
   claim <id> [--retry]     ready->claimed (or failed->claimed retry)
   implemented <id>         claimed->implemented; enforces module_boundary
   verify <id>              run acceptance criteria + verify commands
@@ -590,6 +663,7 @@ async function main() {
     case "list": return cmdList(backlog);
     case "show": return cmdShow(backlog, id ?? fail("show requires <id>"));
     case "next": return cmdNext(backlog);
+    case "add": return cmdAdd(backlog);
     case "claim": return cmdClaim(backlog, id ?? fail("claim requires <id>"));
     case "implemented": return cmdImplemented(backlog, id ?? fail("implemented requires <id>"));
     case "verify": return cmdVerify(backlog, id ?? fail("verify requires <id>"));

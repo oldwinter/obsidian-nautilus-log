@@ -44,7 +44,10 @@ function sandbox(items, { git = false } = {}) {
   }
   return {
     dir,
-    run: (...args) => spawnSync(process.execPath, [runner, "--root", dir, ...args], { encoding: "utf8" }),
+    run: (...args) => {
+      const extra = typeof args.at(-1) === "object" && args.at(-1) !== null ? args.pop() : {};
+      return spawnSync(process.execPath, [runner, "--root", dir, ...args], { encoding: "utf8", ...extra });
+    },
     backlog: () => JSON.parse(readFileSync(path.join(dir, "factory", "backlog.json"), "utf8")),
     item: (id) => JSON.parse(readFileSync(path.join(dir, "factory", "backlog.json"), "utf8")).items.find((i) => i.id === id),
     progress: () => readFileSync(path.join(dir, ".codex", "runtime", "devin-factory", "progress.jsonl"), "utf8").trim().split("\n").map(JSON.parse),
@@ -247,8 +250,49 @@ test("status.md and progress.jsonl are maintained", () => {
     ok(box.run("claim", "IT-001"), "claim");
     const status = readFileSync(path.join(box.dir, ".codex", "runtime", "devin-factory", "status.md"), "utf8");
     assert.match(status, /IT-001.*claimed/s, "status.md reflects current state");
+    assert.match(status, /## Recent events/, "status.md renders the JSONL tail");
+    assert.match(status, /ready->claimed/, "transition rendered from progress rows");
+    const rendered = box.run("status");
+    ok(rendered, "status");
+    assert.match(rendered.stdout, /recent:/, "console status prints recent events");
     const rows = box.progress();
     assert(rows.every((row) => row.ts && row.event && row.item), "progress rows carry ts/event/item");
+  } finally {
+    box.cleanup();
+  }
+});
+
+test("add appends a validated ready item and rejects malformed payloads", () => {
+  const box = sandbox([makeItem()]);
+  try {
+    const spec = {
+      id: "IT-009", title: "added via CLI", kind: "verification", priority: 9,
+      implementation: "run a lane", allow_empty_diff: true,
+      acceptance_criteria: [{ id: "AC1", description: "passes", check: { type: "command", command: "exit 0" } }],
+    };
+    const file = path.join(box.dir, "item.json");
+    writeFileSync(file, JSON.stringify(spec));
+    ok(box.run("add", "--file", file), "add --file");
+    const added = box.item("IT-009");
+    assert.equal(added.state, "ready");
+    assert.equal(added.attempts, 0);
+    assert.equal(added.max_attempts, 3, "default retry budget");
+    assert.deepEqual(added.module_boundary, []);
+    assert(box.progress().some((row) => row.event === "added" && row.item === "IT-009"), "added event recorded");
+
+    const duplicate = box.run("add", "--file", file);
+    fails(duplicate, "duplicate id rejected");
+    assert.match(duplicate.stderr + duplicate.stdout, /duplicate/);
+
+    const stdin = box.run("add", "--file", "-", {
+      input: JSON.stringify({ ...spec, id: "IT-010", state: "delivered" }),
+    });
+    fails(stdin, "a non-ready state must not bypass the pipeline");
+
+    writeFileSync(path.join(box.dir, "bad.json"), JSON.stringify({ id: "IT-011", title: "no criteria" }));
+    fails(box.run("add", "--file", path.join(box.dir, "bad.json")), "missing acceptance_criteria rejected");
+    assert.equal(box.item("IT-011"), undefined, "rejected item not persisted");
+    assert.equal(box.item("IT-009").state, "ready", "existing items untouched by failed adds");
   } finally {
     box.cleanup();
   }

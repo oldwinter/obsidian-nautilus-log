@@ -127,8 +127,8 @@
       "title": "Real host smoke: full lifecycle + CLOCK write in disposable vault",
       "kind": "verification",
       "priority": 30,
-      "state": "failed",
-      "attempts": 1,
+      "state": "delivered",
+      "attempts": 2,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -145,15 +145,15 @@
       ],
       "verify": [],
       "notes": "Depends on FAC-102 succeeding first; same disposable-vault isolation rules.",
-      "claimed_head": "802fabe5edf6a2441183fb3062c467abcc9a59f8"
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
     },
     {
       "id": "FAC-104",
       "title": "Release lane local evidence: release tests, dry-run, provenance, planning audit",
       "kind": "verification",
       "priority": 40,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [],
       "allow_empty_diff": true,
@@ -193,15 +193,16 @@
         }
       ],
       "verify": [],
-      "notes": "Mirrors the release-evidence CI job minus the two browser lanes."
+      "notes": "Mirrors the release-evidence CI job minus the two browser lanes.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
     },
     {
       "id": "FAC-105",
       "title": "Audit docs against live command/error surface and fix drift",
       "kind": "audit",
       "priority": 50,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [
         "scripts/factory/audits/",
@@ -231,15 +232,16 @@
       "verify": [
         "node tests/ui/planner-controls/run.mjs"
       ],
-      "notes": "Audit first; only bounded doc fixes inside docs/ and README.md."
+      "notes": "Audit first; only bounded doc fixes inside docs/ and README.md.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
     },
     {
       "id": "FAC-106",
       "title": "Self-maintenance: extend factory with item append + JSONL status rendering if gaps appear",
       "kind": "code-change",
       "priority": 90,
-      "state": "ready",
-      "attempts": 0,
+      "state": "delivered",
+      "attempts": 1,
       "max_attempts": 3,
       "module_boundary": [
         "scripts/factory/",
@@ -267,7 +269,8 @@
         }
       ],
       "verify": [],
-      "notes": "Placeholder that becomes concrete only with a recorded finding."
+      "notes": "Placeholder that becomes concrete only with a recorded finding.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
     },
     {
       "id": "FAC-107",
