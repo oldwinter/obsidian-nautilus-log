@@ -835,6 +835,7 @@ function cmdDryRun() {
     step(["verify", "IT-001"]);
     step(["deliver", "IT-001"]);
     step(["deliver", "IT-001"]);
+    step(["inspect", "IT-001"]);
     step(["claim", "IT-002"]);
     step(["implemented", "IT-002"]);
     step(["verify", "IT-002"], { expectExit: 1 });

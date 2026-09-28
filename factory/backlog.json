@@ -1027,6 +1027,39 @@
       "verified_head": "7d9833d75cce9debfb84e798eaba3eb896f350f0",
       "verified_contract": "c61fdd7d74de1ad5edeff40d9d64766480910826860c99ea5d1a0983b3498e3a",
       "verified_work": "14616de308bb273479099490795f63713d4b16a20d922567ddd7cec928cf6aee"
+    },
+    {
+      "id": "FAC-128",
+      "title": "Exercise inspect in dry-run pipeline smoke",
+      "kind": "factory",
+      "priority": 28,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "dry-run now runs inspect on the delivered sandbox item so the audit path is covered by the pipeline smoke test.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "dry-run passes including the inspect step",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs dry-run"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run",
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "notes": "Keeps the operator smoke test honest about the inspect command",
+      "claimed_head": "9a7dc6ad2c62baf13cb30ba0a3e94abedb96f88d",
+      "verified_head": "9a7dc6ad2c62baf13cb30ba0a3e94abedb96f88d",
+      "verified_contract": "c509083372763eb0d08069ab32bcf2552b90f8d569ae95761ad973526f9d071b",
+      "verified_work": "aacd04d64c8850ab906cba9c45a340d3c2db39ffcc356bd85951928d6e4b2c02"
     }
   ]
 }
