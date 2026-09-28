@@ -26,6 +26,7 @@ export class ReviewView {
   readonly #today: HTMLButtonElement;
   readonly #refresh: HTMLButtonElement;
   readonly #onlyOverruns: HTMLInputElement;
+  readonly #clearFilters: HTMLButtonElement;
   readonly #search: HTMLInputElement;
   readonly #searchLabel: HTMLElement;
   readonly #filterLabel: HTMLElement;
@@ -40,6 +41,7 @@ export class ReviewView {
   readonly #rows = new Map<string, ReviewRowView>();
   readonly #actions: ReviewViewActions;
   #selectedDate: LogicalDate;
+  #clearingFilters = false;
 
   constructor(root: HTMLElement, actions: ReviewViewActions) {
     this.#root = root;
@@ -88,6 +90,12 @@ export class ReviewView {
     this.#onlyOverruns.addEventListener("change", () => actions.setOnlyOverruns(this.#onlyOverruns.checked));
     this.#filterLabel = document.createElement("span");
     filter.append(this.#onlyOverruns, this.#filterLabel);
+    const filterRow = document.createElement("div");
+    filterRow.className = "spiral-day-review__filter-row";
+    this.#clearFilters = button(() => this.#clearActiveFilters());
+    this.#clearFilters.className = "spiral-day-review__clear-filters";
+    this.#clearFilters.hidden = true;
+    filterRow.append(filter, this.#clearFilters);
     this.#filterStatus = document.createElement("p");
     this.#filterStatus.className = "spiral-day-review__filter-status";
     this.#filterStatus.setAttribute("role", "status");
@@ -108,7 +116,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, search, filter, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, search, filterRow, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -129,6 +137,8 @@ export class ReviewView {
     this.#today.textContent = messages.t("review", "date.today");
     this.#refresh.textContent = messages.t("review", "action.refresh");
     this.#filterLabel.textContent = messages.t("review", "filter.overruns");
+    this.#clearFilters.textContent = messages.t("review", "filter.clear");
+    this.#clearFilters.hidden = input.searchQuery === "" && !input.onlyOverruns;
     this.#onlyOverruns.checked = input.onlyOverruns;
     this.#searchLabel.textContent = messages.t("review", "search.label");
     this.#search.placeholder = messages.t("review", "search.placeholder");
@@ -139,7 +149,7 @@ export class ReviewView {
     const ready = reviewReady && (execution.status === "ready" || execution.status === "working");
     const hasRows = reviewReady && review.availability === "ready" && review.projection.rows.length > 0;
     const displayRows = ready && hasRows;
-    this.#filterStatus.hidden = !displayRows || (!input.onlyOverruns && query === "");
+    this.#filterStatus.hidden = this.#clearingFilters || !displayRows || (!input.onlyOverruns && query === "");
     this.#root.setAttribute("aria-busy", String(pending || review.state === "building"));
     this.#refresh.disabled = pending || review.state === "building";
     if (!displayRows && this.#list.contains(this.#root.ownerDocument.activeElement)) this.#focusToolbar();
@@ -192,8 +202,10 @@ export class ReviewView {
     );
     const projectedRows = hasRows ? review.projection.rows.filter((row) => row.task.label.toLowerCase().includes(query)
       && (!input.onlyOverruns || (row.state === "compared" && (row.varianceMinutes ?? 0) > 0))) : [];
-    const filterStatus = messages.t("review", query ? "search.result" : "filter.result", { count: projectedRows.length });
-    if (this.#filterStatus.textContent !== filterStatus) this.#filterStatus.textContent = filterStatus;
+    if (!this.#clearingFilters) {
+      const filterStatus = messages.t("review", query ? "search.result" : "filter.result", { count: projectedRows.length });
+      if (this.#filterStatus.textContent !== filterStatus) this.#filterStatus.textContent = filterStatus;
+    }
     this.#list.hidden = !displayRows || projectedRows.length === 0;
     const retained = new Set(projectedRows.map((row) => row.task.key));
     let fallbackIndex: number | undefined;
@@ -263,6 +275,17 @@ export class ReviewView {
     const fallback = this.#search.value.trim() ? this.#search : this.#onlyOverruns.checked ? this.#onlyOverruns
       : this.#refresh.disabled ? this.#date : this.#refresh;
     fallback.focus({ preventScroll: true });
+  }
+
+  #clearActiveFilters(): void {
+    this.#clearingFilters = true;
+    try {
+      this.#actions.setSearchQuery("");
+      this.#actions.setOnlyOverruns(false);
+    } finally {
+      this.#clearingFilters = false;
+      this.#search.focus({ preventScroll: true });
+    }
   }
 
   #selectDate(date: LogicalDate | null): void {

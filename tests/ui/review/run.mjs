@@ -339,6 +339,126 @@ try {
     check("review.search-second-escape-closes-panel", !await search.isVisible(), await search.isVisible());
   });
 
+  await scenario("clear-filters", async () => {
+    const titles = () => page.locator(".spiral-day-review__title").allTextContents();
+    const clear = () => page.getByRole("button", { name: "Clear filters", exact: true });
+    const search = () => page.getByRole("searchbox", { name: "Search task titles", exact: true });
+    const filter = () => page.getByRole("checkbox", { name: "Only completed overruns", exact: true });
+    const sourceOrder = ["Not started", "Live timer", "Paused task", "No recorded time", "Positive variance", "Negative variance", "Zero variance"];
+
+    await open("full");
+    check("review.clear-filters-hidden-when-inactive", !await clear().isVisible(), await clear().count());
+    const initialDate = await page.getByRole("textbox", { name: "Review date", exact: true }).inputValue();
+    const initialSummary = await page.locator(".spiral-day-review__summary").textContent();
+    const initialStats = await page.evaluate(() => window.reviewHarness.stats());
+
+    await search().fill("variance");
+    check("review.clear-filters-visible-for-search", await clear().isVisible(), await search().inputValue());
+    await clear().click();
+    check("review.clear-filters-pointer-clears-search", await search().inputValue() === ""
+      && !await filter().isChecked()
+      && JSON.stringify(await titles()) === JSON.stringify(sourceOrder)
+      && await search().evaluate((element) => element === document.activeElement)
+      && !await clear().isVisible(), await titles());
+
+    await filter().check();
+    check("review.clear-filters-visible-for-overruns", await clear().isVisible(), await filter().isChecked());
+    await clear().focus();
+    await clear().press("Enter");
+    check("review.clear-filters-enter-clears-overruns", await search().inputValue() === ""
+      && !await filter().isChecked()
+      && JSON.stringify(await titles()) === JSON.stringify(sourceOrder)
+      && await search().evaluate((element) => element === document.activeElement)
+      && !await clear().isVisible(), await titles());
+
+    await search().fill("nothing matches");
+    await filter().check();
+    const filterStatusMutations = await page.locator(".spiral-day-review__filter-status").evaluate((element) => {
+      const observer = new MutationObserver(() => undefined);
+      observer.observe(element, { childList: true, subtree: true, characterData: true });
+      const button = document.querySelector(".spiral-day-review__clear-filters");
+      if (!(button instanceof HTMLButtonElement)) throw new Error("Clear filters button is missing");
+      button.click();
+      const count = observer.takeRecords().length;
+      observer.disconnect();
+      return count;
+    });
+    check("review.clear-filters-clears-both-without-transient-announcement", await search().inputValue() === ""
+      && !await filter().isChecked()
+      && filterStatusMutations === 0
+      && JSON.stringify(await titles()) === JSON.stringify(sourceOrder), { filterStatusMutations, titles: await titles() });
+
+    await search().fill("   ");
+    check("review.clear-filters-raw-whitespace-is-active", await clear().isVisible()
+      && JSON.stringify(await titles()) === JSON.stringify(sourceOrder)
+      && !await page.locator(".spiral-day-review__filter-status").isVisible(), await search().inputValue());
+    await clear().click();
+    check("review.clear-filters-clears-whitespace", await search().inputValue() === ""
+      && await search().evaluate((element) => element === document.activeElement), await search().inputValue());
+
+    check("review.clear-filters-preserves-date-and-summary", await page.getByRole("textbox", { name: "Review date", exact: true }).inputValue() === initialDate
+      && await page.locator(".spiral-day-review__summary").textContent() === initialSummary, { initialDate, initialSummary });
+    const afterClearStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.clear-filters-has-no-side-effects", afterClearStats.refreshes === initialStats.refreshes
+      && JSON.stringify(afterClearStats.selectedDates) === JSON.stringify(initialStats.selectedDates)
+      && afterClearStats.dispatches.length === initialStats.dispatches.length
+      && afterClearStats.planMutations === initialStats.planMutations, { initialStats, afterClearStats });
+
+    for (const [mode, expectedStatus] of [
+      ["empty", "No reviewable `- [ ]` or `- [x]` tasks today. Use Copy sample task and paste an open `- [ ]` flexible task between the markers, then save and refresh."],
+      ["building", "Loading review…"],
+      ["unavailable", "Review history is unavailable. Refresh to try again."],
+    ]) {
+      await open(mode);
+      await search().fill("state");
+      check(`review.clear-filters-visible-in-${mode}`, await clear().isVisible(), mode);
+      await clear().click();
+      check(`review.clear-filters-keeps-${mode}-truthful`, await page.getByText(expectedStatus, { exact: true }).isVisible()
+        && await search().evaluate((element) => element === document.activeElement), await page.locator(".spiral-day-review__status").textContent());
+    }
+
+    await open("full");
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-28");
+    await filter().check();
+    const readOnlyDate = await page.getByRole("textbox", { name: "Review date", exact: true }).inputValue();
+    const readOnlySummary = await page.locator(".spiral-day-review__summary").textContent();
+    const beforeReadOnlyClear = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.clear-filters-visible-on-read-only-date", await clear().isVisible(), readOnlyDate);
+    await clear().click();
+    const afterReadOnlyClear = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.clear-filters-keeps-read-only-date-truthful", await page.getByText("Past and future dates are read-only. Choose Today to change tasks.", { exact: true }).isVisible()
+      && await page.getByRole("textbox", { name: "Review date", exact: true }).inputValue() === readOnlyDate
+      && await page.locator(".spiral-day-review__summary").textContent() === readOnlySummary
+      && JSON.stringify(afterReadOnlyClear.selectedDates) === JSON.stringify(beforeReadOnlyClear.selectedDates), { beforeReadOnlyClear, afterReadOnlyClear });
+
+    await open("target");
+    await page.evaluate(() => window.reviewHarness.setNextOutcome("uncertain"));
+    await page.getByRole("button", { name: "Clock in", exact: true }).click();
+    await page.getByText("The action could not be confirmed. Refresh and try again.", { exact: true }).waitFor();
+    await search().fill("opaque");
+    await clear().click();
+    check("review.clear-filters-keeps-error-truthful", await page.getByText("The action could not be confirmed. Refresh and try again.", { exact: true }).isVisible()
+      && await search().evaluate((element) => element === document.activeElement), await page.locator(".spiral-day-review__status").textContent());
+
+    await open("search", { width: 320, height: 740 });
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    const chineseSearch = page.getByRole("searchbox", { name: "搜索任务标题", exact: true });
+    await chineseSearch.fill("复盘");
+    const chineseClear = page.getByRole("button", { name: "清除筛选", exact: true });
+    const layout = await page.locator("#review-root").evaluate((element) => ({
+      width: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      documentWidth: document.documentElement.clientWidth,
+      documentScrollWidth: document.documentElement.scrollWidth,
+    }));
+    check("review.clear-filters-localizes-and-fits-320px", await chineseClear.isVisible()
+      && layout.width > 0
+      && layout.scrollWidth <= layout.width + 1
+      && layout.documentScrollWidth <= layout.documentWidth + 1, layout);
+    await capture(page, "clear-filters-narrow-zh");
+  });
+
   await scenario("completed-overrun-filter", async () => {
     await open("full");
     const filter = page.getByRole("checkbox", { name: "Only completed overruns", exact: true });

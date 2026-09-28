@@ -244,6 +244,7 @@ Review compares planned and recorded time for a chosen date.
 - **Only completed overruns** hides everything except completed tasks whose
   recorded time exceeded the plan. The day summary still covers the whole
   day.
+- **Clear filters** resets both filters and returns focus to the search field.
 - Missing Daily Note and missing Primary Plan states now say how to create
   the note and add the markers. When the selected date is today,
   **Insert into today's Daily Note** writes the markers for you. If the

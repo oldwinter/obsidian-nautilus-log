@@ -6,6 +6,7 @@ export type ReviewCatalog = Readonly<{
   "date.next": string;
   "date.today": string;
   "filter.overruns": string;
+  "filter.clear": string;
   "search.label": string;
   "search.placeholder": string;
   "search.result": MessageFunction<{ count: number }>;
@@ -47,6 +48,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "date.next": "Next day",
   "date.today": "Today",
   "filter.overruns": "Only completed overruns",
+  "filter.clear": "Clear filters",
   "search.label": "Search task titles",
   "search.placeholder": "Type to filter; Esc to clear",
   "search.result": ({ count }) => count === 0
