@@ -16,6 +16,8 @@ issue or active PR. See `factory/backlog.schema.md` for the item contract.
   states, retry bookkeeping. Committed.
 - `scripts/factory/run.mjs` — the factory entry point (Node stdlib only).
 - `scripts/factory/checks/` — lane wrappers used by acceptance checks.
+- `npm run audit:docs` — standalone doc-surface audit (command titles,
+  settings labels, internal-code hygiene); same script FAC-105 delivered.
 - `scripts/factory/audits/` — committed audit tools used by audit items.
 - `tests/factory/` — the factory's own test lane (auto-discovered by
   `npm test` via `tests/**/*.test.mjs`).
