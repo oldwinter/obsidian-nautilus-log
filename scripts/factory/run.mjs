@@ -490,32 +490,13 @@ function pickResult(result) {
   };
 }
 
-function cmdDeliver(backlog, id) {
-  const item = findItem(backlog, id);
-  if (item.state === "delivered") {
-    const existing = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
-    console.log(`deliver ${item.id}: already delivered -> ${existing}`);
-    return;
-  }
-  if (item.state !== "verified") fail(`${item.id}: cannot deliver from state ${item.state}`);
-  const stale = verifyStaleReason(item);
-  if (stale) fail(`${item.id}: verification is stale (${stale}); rerun verify`);
-  const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
-  mkdirSync(dir, { recursive: true });
-  const { paths } = changedPaths();
-  const relevant = (paths ?? []).filter((p) => !selfExempt(p));
-  const patch = git(["diff", "HEAD", "--", ...relevant], { allowFail: true }) ?? "";
-  writeFileSync(path.join(dir, "change.patch"), patch);
-  // Porcelain collapses untracked dirs to "?? dir/"; only single files can be
-  // copied into the bundle, so dir-collapse entries are listed, not copied.
-  const untracked = relevant.filter((p) => !p.endsWith("/") &&
-    git(["status", "--porcelain=v1", "--", p], { allowFail: true })?.startsWith("??"));
-  const filesDir = path.join(dir, "files");
-  for (const file of untracked) {
-    const dest = path.join(filesDir, file);
-    mkdirSync(path.dirname(dest), { recursive: true });
-    copyFileSync(path.join(root, file), dest);
-  }
+// Writes evidence.json + summary.md into a prepared delivery dir. Runs after
+// the delivered state transition so item_log_sha256 covers the delivered row;
+// the pre-transition bundle.json preserves the diff file list for rebuilds.
+function writeDeliveryEvidence(dir, item) {
+  const bundle = JSON.parse(readFileSync(path.join(dir, "bundle.json"), "utf8"));
+  const relevant = bundle.diff_paths;
+  const untracked = bundle.untracked_files;
   const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
   const checks = existsSync(itemLog)
     ? readFileSync(itemLog, "utf8").trim().split("\n")
@@ -564,10 +545,47 @@ function cmdDeliver(backlog, id) {
     ...checks.map((check) =>
       `- ${check.ok ? "PASS" : "FAIL"} ${check.criterion ?? "verify"} ${check.command ?? ""} (exit ${check.exit_code}, ${check.duration_ms} ms)`),
     "",
-    "Evidence: change.patch, files/ (untracked copies), evidence.json, per-item JSONL log.",
+    "Evidence: change.patch, bundle.json, files/ (untracked copies), evidence.json, per-item JSONL log.",
   ].join("\n");
   writeFileSync(path.join(dir, "summary.md"), `${summary}\n`);
+}
+
+function cmdDeliver(backlog, id) {
+  const item = findItem(backlog, id);
+  const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
+  if (item.state === "delivered") {
+    if (existsSync(dir) && !existsSync(path.join(dir, "evidence.json"))) {
+      writeDeliveryEvidence(dir, item);
+      console.log(`deliver ${item.id}: rebuilt missing evidence -> ${dir}`);
+      return;
+    }
+    console.log(`deliver ${item.id}: already delivered -> ${dir}`);
+    return;
+  }
+  if (item.state !== "verified") fail(`${item.id}: cannot deliver from state ${item.state}`);
+  const stale = verifyStaleReason(item);
+  if (stale) fail(`${item.id}: verification is stale (${stale}); rerun verify`);
+  mkdirSync(dir, { recursive: true });
+  const { paths } = changedPaths();
+  const relevant = (paths ?? []).filter((p) => !selfExempt(p));
+  const patch = git(["diff", "HEAD", "--", ...relevant], { allowFail: true }) ?? "";
+  writeFileSync(path.join(dir, "change.patch"), patch);
+  // Porcelain collapses untracked dirs to "?? dir/"; only single files can be
+  // copied into the bundle, so dir-collapse entries are listed, not copied.
+  const untracked = relevant.filter((p) => !p.endsWith("/") &&
+    git(["status", "--porcelain=v1", "--", p], { allowFail: true })?.startsWith("??"));
+  const filesDir = path.join(dir, "files");
+  for (const file of untracked) {
+    const dest = path.join(filesDir, file);
+    mkdirSync(path.dirname(dest), { recursive: true });
+    copyFileSync(path.join(root, file), dest);
+  }
+  writeJsonAtomic(path.join(dir, "bundle.json"), {
+    diff_paths: relevant,
+    untracked_files: untracked,
+  });
   setState(backlog, item, "delivered", "delivered", { delivery: path.relative(root, dir) });
+  writeDeliveryEvidence(dir, item);
   console.log(`delivered ${item.id} -> ${dir}`);
 }
 

@@ -520,6 +520,45 @@
       "verified_head": "30ab344d4c8ea05dafddf39e8bdbecde69a7897f",
       "verified_contract": "365a368731253b96232dd50e43390452d494edd5c6e34254c2d9d57ddc85f5cf",
       "verified_work": "89e34087134397d8e01f9ff797a8b5d1bc9e45c4e21e6702c90c01c20f107dc6"
+    },
+    {
+      "id": "FAC-114",
+      "title": "feat(factory): verification-hardening — no-git fingerprint coverage, mid-verify resume test, delivery-bound log hash",
+      "kind": "code-change",
+      "priority": 62,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Three bounded gaps: (a) stale-verification regression covered only the git fingerprint; add the no-git walk path variant. (b) README documents 'process died mid-verify -> rerun verify resumes' but no test covers it. (c) evidence.json item_log_sha256 misses the delivered row because it is computed before setState; reorder so the hash binds the complete attempt log.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including no-git stale and verifying-resume coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "e67f06c6b135138ce864d86707f6ee689d3654f8",
+      "verified_head": "e67f06c6b135138ce864d86707f6ee689d3654f8",
+      "verified_contract": "481daaf85bad9681089b446530dd697af9d34d4f956d0b633cf3f11fb290cdd7",
+      "verified_work": "95815e564f7c436db41a1362af91ed6d3a8d717f2c55230a9db65851edc46041"
     }
   ]
 }

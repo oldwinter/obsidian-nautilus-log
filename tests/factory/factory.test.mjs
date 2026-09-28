@@ -368,6 +368,46 @@ test("status surfaces stale verification on verified items", () => {
   }
 });
 
+test("stale detection also applies without git (worktree fingerprint walk)", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true })]);
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "changed\n");
+    const stale = box.run("deliver", "IT-001");
+    fails(stale, "no-git deliver must reject worktree drift after verify");
+    assert.match(stale.stderr + stale.stdout, /stale/);
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("deliver", "IT-001"), "restored worktree delivers without reverify");
+    assert.equal(box.item("IT-001").state, "delivered");
+  } finally {
+    box.cleanup();
+  }
+});
+
+test("verify resumes an item left in verifying state", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    const backlogFile = path.join(box.dir, "factory", "backlog.json");
+    const crashed = JSON.parse(readFileSync(backlogFile, "utf8"));
+    crashed.items[0].state = "verifying";
+    writeFileSync(backlogFile, `${JSON.stringify(crashed, null, 2)}\n`);
+    ok(box.run("verify", "IT-001"), "verify after mid-verify crash resumes");
+    assert.equal(box.item("IT-001").state, "verified");
+    assert(box.progress().some((row) => row.event === "verify-start" && row.item === "IT-001"),
+      "resumed verify recorded");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);
