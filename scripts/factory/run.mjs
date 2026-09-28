@@ -57,77 +57,55 @@ function pidAlive(pid) {
 }
 
 // The lock is a directory (`run.lock/`) containing `owner.json`: mkdir is an
-// atomic create, so a held lock never has an unreadable-content window.
-// Anything present without readable dead/live owner metadata is refused
-// outright — a live owner's lock is never unlinked. Stale locks are reclaimed
-// by renaming the whole entry aside and only deleting it when it is
-// byte-identical to what was read; a replaced lock is renamed back, so the
-// read→delete TOCTOU cannot drop a new live owner.
+// atomic create, so a held lock never has an unreadable-content window. There
+// is NO automatic reclaim: any remove/rename of an existing lock opens the
+// canonical slot to a third writer before a post-move comparison can run —
+// a lost-update TOCTOU the coordinator reproduced end to end. Every occupied
+// state therefore fails closed: live pid reports busy; dead pid, missing or
+// invalid owner metadata asks for manual recovery. The only entry ever
+// deleted is our own payload-verified dir at process exit.
 function acquireLock(command) {
   mkdirSync(runtimeDir, { recursive: true });
   const ownerFile = path.join(lockFile, "owner.json");
-  const unreadable = `factory lock at ${lockFile} has no readable owner metadata — ` +
-    "another instance may be initializing; if it is stale, remove it manually";
+  const stale = `factory lock at ${lockFile} is stale or mid-initialization; ` +
+    "confirm the owner process is gone, then remove the lock manually";
   const payload = JSON.stringify({ pid: process.pid, command, at: new Date().toISOString() });
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    let created = false;
-    try {
-      mkdirSync(lockFile);
-      created = true;
-    } catch (error) {
-      assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
-    }
-    if (created) {
-      // wx: if the dir we created was replaced between mkdir and write, a
-      // foreign owner.json must never be clobbered — fail closed instead.
-      try {
-        writeFileSync(ownerFile, payload, { flag: "wx" });
-      } catch (error) {
-        if (error.code === "EEXIST") {
-          fail(`factory lock at ${lockFile} was replaced during initialization; inspect ${ownerFile} manually`);
-        }
-        throw error;
-      }
-      process.on("exit", () => {
-        try {
-          if (readFileSync(ownerFile, "utf8") === payload) rmSync(lockFile, { recursive: true, force: true });
-        } catch { /* lock already gone or replaced */ }
-      });
-      return;
-    }
+  let created = false;
+  try {
+    mkdirSync(lockFile);
+    created = true;
+  } catch (error) {
+    assert(error.code === "EEXIST", `could not create ${lockFile}: ${error.message}`);
+  }
+  if (!created) {
     let raw = null;
     try {
       raw = readFileSync(ownerFile, "utf8");
     } catch {
-      try { raw = readFileSync(lockFile, "utf8"); } catch { fail(unreadable); }
+      try { raw = readFileSync(lockFile, "utf8"); } catch { /* absent */ }
     }
     let held = null;
-    try { held = JSON.parse(raw); } catch { /* invalid owner metadata */ }
-    if (!held || !Number.isInteger(held.pid)) fail(unreadable);
-    if (held.pid !== process.pid && pidAlive(held.pid)) {
+    try { held = JSON.parse(raw ?? ""); } catch { /* invalid owner metadata */ }
+    if (held && Number.isInteger(held.pid) && held.pid !== process.pid && pidAlive(held.pid)) {
       fail(`factory already running: pid ${held.pid} holds the lock since ${held.at ?? "unknown"}`);
     }
-    const stash = `${lockFile}.reclaim-${process.pid}-${Date.now()}`;
-    try {
-      renameSync(lockFile, stash);
-    } catch (error) {
-      assert(error.code === "ENOENT", `could not reclaim ${lockFile}: ${error.message}`);
-      continue;
-    }
-    let movedRaw = null;
-    try {
-      movedRaw = readFileSync(path.join(stash, "owner.json"), "utf8");
-    } catch {
-      try { movedRaw = readFileSync(stash, "utf8"); } catch { /* unreadable */ }
-    }
-    if (movedRaw === raw) {
-      rmSync(stash, { recursive: true, force: true });
-      continue;
-    }
-    try { renameSync(stash, lockFile); } catch { /* slot already retaken; stash left for manual recovery */ }
-    fail(`factory lock changed while reclaiming; its contents are preserved at ${stash}`);
+    fail(stale);
   }
-  fail("could not acquire the factory lock");
+  // wx: if the dir we created was replaced between mkdir and write, a
+  // foreign owner.json must never be clobbered — fail closed instead.
+  try {
+    writeFileSync(ownerFile, payload, { flag: "wx" });
+  } catch (error) {
+    if (error.code === "EEXIST") {
+      fail(`factory lock at ${lockFile} was replaced during initialization; inspect ${ownerFile} manually`);
+    }
+    throw error;
+  }
+  process.on("exit", () => {
+    try {
+      if (readFileSync(ownerFile, "utf8") === payload) rmSync(lockFile, { recursive: true, force: true });
+    } catch { /* lock already gone or replaced */ }
+  });
 }
 // The canonical queue file is exempt from module boundaries: every state
 // transition rewrites it. `git status -z` collapses fully-untracked dirs to

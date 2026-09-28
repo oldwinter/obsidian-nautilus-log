@@ -81,13 +81,13 @@ check exit codes, durations, output tails, and the current git HEAD.
 Mutating commands serialize on `.codex/runtime/devin-factory/run.lock/`
 — a lock *directory* (`mkdir` is atomic) holding `owner.json` with the
 owner pid. A second mutation fails with "factory already running".
-A lock whose `owner.json` names a dead pid is reclaimed safely (the
-whole lock is moved aside and only deleted when byte-identical to what
-was read, so a new live owner can never be unlinked). A lock with
-missing or invalid `owner.json` — for example one left by an owner that
-died mid-creation — fails closed; remove the directory manually to
-recover. `list`/`next`/`show`/`status`/`inspect` stay lock-free so you
-can observe a long verify.
+There is no automatic reclaim: removing or renaming an existing lock
+opens the slot to a third writer before any comparison can run, so a
+dead pid, a missing/invalid `owner.json` (e.g. an owner that died
+mid-creation), or a foreign lock entry all fail closed — confirm the
+owner process is gone and remove the directory manually to recover.
+`list`/`next`/`show`/`status`/`inspect` stay lock-free so you can
+observe a long verify.
 
 ## Recover
 

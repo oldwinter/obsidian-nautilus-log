@@ -643,7 +643,10 @@ test("mutating commands serialize on the runtime lock", () => {
     const ownerPath = path.join(lockPath, "owner.json");
     const owner = (pid) => JSON.stringify({ pid, command: "verify", at: new Date().toISOString() });
 
-    // Live owner: mutating command must fail and leave the lock untouched.
+    // Deterministic lost-update regression (coordinator reproduction): a
+    // real live pid (the test runner itself) holds the lock; every contender
+    // must fail and leave the owner's entry byte-identical — nothing may
+    // open the slot beneath them.
     mkdirSync(lockPath);
     const livePayload = owner(process.pid);
     writeFileSync(ownerPath, livePayload);
@@ -653,25 +656,32 @@ test("mutating commands serialize on the runtime lock", () => {
     ok(box.run("list"), "read-only commands do not take the lock");
     assert.equal(readFileSync(ownerPath, "utf8"), livePayload, "live lock must be preserved");
 
-    // Initialization window: a dir without owner.json must fail closed, not be reclaimed.
+    // Dead pid: still fails closed — there is no automatic reclaim, so the
+    // stale entry must survive untouched for manual recovery.
+    const dead = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
+    writeFileSync(ownerPath, owner(dead.pid));
+    const staleClaim = box.run("claim", "IT-001");
+    fails(staleClaim, "dead-pid lock must fail closed, not be reclaimed");
+    assert.match(staleClaim.stderr + staleClaim.stdout, /stale or mid-initialization/);
+    assert.equal(JSON.parse(readFileSync(ownerPath, "utf8")).pid, dead.pid, "stale lock must be preserved");
+
+    // Initialization window: a dir without owner.json fails closed too.
     rmSync(ownerPath);
     const initWindow = box.run("claim", "IT-001");
     fails(initWindow, "unreadable lock metadata must fail closed");
-    assert.match(initWindow.stderr + initWindow.stdout, /no readable owner metadata/);
+    assert.match(initWindow.stderr + initWindow.stdout, /stale or mid-initialization/);
     assert(existsSync(lockPath), "initializing lock dir must not be removed");
 
     // Invalid metadata: fail closed as well.
     writeFileSync(ownerPath, "not-json");
     const invalid = box.run("claim", "IT-001");
     fails(invalid, "invalid lock metadata must fail closed");
-    assert.match(invalid.stderr + invalid.stdout, /no readable owner metadata/);
+    assert.match(invalid.stderr + invalid.stdout, /stale or mid-initialization/);
     assert(existsSync(ownerPath), "unreadable lock must be preserved for manual recovery");
-    rmSync(lockPath, { recursive: true, force: true });
 
-    // Legacy file lock with a dead pid: reclaimable via rename-aside.
-    const dead = spawnSync(process.execPath, ["-e", ""], { encoding: "utf8" });
-    writeFileSync(lockPath, owner(dead.pid));
-    ok(box.run("claim", "IT-001"), "claim reclaims a stale lock");
+    // Manual recovery: removing the lock entry by hand frees the slot.
+    rmSync(lockPath, { recursive: true, force: true });
+    ok(box.run("claim", "IT-001"), "claim succeeds after manual recovery");
     assert(!existsSync(lockPath), "lock released on process exit");
   } finally {
     box.cleanup();

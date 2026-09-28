@@ -1440,6 +1440,47 @@
       "verified_head": "16cf257d65631e53580076955114dfd8e00d4346",
       "verified_contract": "55b25fd6b756847b608cdf1e7b8abebfa7babc3a77e9eca9d26a678311555def",
       "verified_work": "98488a7dbdba3f3d2ba82321f17316f5e7983753c0697a160bacaa4cf34183da"
+    },
+    {
+      "id": "FAC-139",
+      "title": "remove unsafe lock auto-reclaim; fail closed on all stale state (coordinator P1-2)",
+      "kind": "factory",
+      "priority": 139,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "rename-aside reclaim opens the canonical slot to a third writer before byte-comparison runs — reproduced lost-update (B holds verify, A renames B live dir away, C claims, B overwrites C). Remove auto-reclaim entirely: live pid busy-fails; dead pid, missing or invalid owner.json all fail closed for manual recovery. Only our own payload-verified dir is ever deleted at exit",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "deterministic interleaving regression: live-owner preservation, dead-pid fail-closed with preserved dir, init-window fail-closed, invalid metadata fail-closed, manual-recovery path",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'serialize on the runtime lock' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "concurrent mutating calls still serialize: every lock acquisition succeeds and no note row is lost",
+          "check": {
+            "type": "command",
+            "command": "T=$(mktemp -d) && mkdir -p \"$T/factory\" && cp factory/backlog.json \"$T/factory/backlog.json\" && for i in 1 2 3 4 5 6 7 8; do node scripts/factory/run.mjs --root \"$T\" record FAC-101 --note \"c-$i\" >\"$T/o.$i\" 2>&1 & done; wait; S=$(grep -l \"recorded note\" \"$T\"/o.* | wc -l | tr -d \" \"); N=$(grep -c \"note\" \"$T/.codex/runtime/devin-factory/items/FAC-101.jsonl\"); test \"$S\" -ge 1 && test \"$S\" -eq \"$N\" && test ! -e \"$T/.codex/runtime/devin-factory/run.lock\"; R=$?; rm -rf \"$T\"; exit $R"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "0ef88b09ee3fb40b601344910de62a9512f3a2e0",
+      "verified_head": "0ef88b09ee3fb40b601344910de62a9512f3a2e0",
+      "verified_contract": "96a0586036419eff3a971518a3e6bcb47fed5d47b69de48bf1bf847049f85e5d",
+      "verified_work": "f05c95fe495ce792bcee88d79448ba54a3b987dab80bd9495d96e093d0e348e6"
     }
   ]
 }
