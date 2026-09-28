@@ -868,6 +868,45 @@
       "verified_head": "bf1cf85941a71cb08ec10d29fb0d9c32162c39ae",
       "verified_contract": "1c9e3157bf32294961cb06cc71c50b2b92d89b9f6276f6ba2811ba194eddf3d2",
       "verified_work": "8d5d5d828bcf60744adf9f98dc029313e65fab55714c9c29c9df6c7347962b55"
+    },
+    {
+      "id": "FAC-124",
+      "title": "feat(factory): validate priority, module_boundary, and verify payload types",
+      "kind": "code-change",
+      "priority": 72,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Non-integer priority silently broke `next` ordering, and empty module_boundary/verify entries slipped validation. loadBacklog now rejects all three; covered by the malformed-payload test family.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "77dce8fb69b3e93980b4e2c8d7d6686f4e402ad2",
+      "verified_head": "77dce8fb69b3e93980b4e2c8d7d6686f4e402ad2",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "70f2b5eb0bdc3cd0311d3ed3bfee07b657ca0981ec6947f7b99f8ad66d293247"
     }
   ]
 }

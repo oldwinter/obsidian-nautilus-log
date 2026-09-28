@@ -483,6 +483,18 @@ test("malformed or escaping check payloads are rejected at load", () => {
   } finally {
     noCommand.cleanup();
   }
+  for (const [label, field] of [
+    ["non-integer priority", { priority: "high" }],
+    ["empty module boundary entry", { module_boundary: ["src/", ""] }],
+    ["non-string verify entry", { verify: [42] }],
+  ]) {
+    const bad = sandbox([makeItem(field)]);
+    try {
+      fails(bad.run("list"), `${label} must not load`);
+    } finally {
+      bad.cleanup();
+    }
+  }
 });
 
 test("dry-run exercises the full pipeline in a sandbox", () => {

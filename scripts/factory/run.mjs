@@ -291,9 +291,18 @@ function validateItems(backlog) {
     }
     assert(Number.isInteger(item.attempts) && item.attempts >= 0, `${item.id}: attempts must be an integer`);
     assert(Number.isInteger(item.max_attempts) && item.max_attempts >= 1, `${item.id}: max_attempts >= 1`);
+    assert(Number.isInteger(item.priority), `${item.id}: priority must be an integer`);
     assert(Array.isArray(item.module_boundary), `${item.id}: module_boundary must be an array`);
+    for (const entry of item.module_boundary) {
+      assert(typeof entry === "string" && entry.trim().length > 0,
+        `${item.id}: module_boundary entries must be non-empty strings`);
+    }
     item.verify ??= [];
     assert(Array.isArray(item.verify), `${item.id}: verify must be an array`);
+    for (const command of item.verify) {
+      assert(typeof command === "string" && command.trim().length > 0,
+        `${item.id}: verify entries must be non-empty command strings`);
+    }
   }
 }
 
