@@ -651,6 +651,50 @@ function cmdDeliver(backlog, id) {
   console.log(`delivered ${item.id} -> ${dir}`);
 }
 
+// Read-only integrity audit of a delivery bundle: required files present,
+// evidence parses, and the recorded item-log prefix hash still verifies.
+function cmdInspect(backlog, id) {
+  const item = findItem(backlog, id);
+  const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
+  const problems = [];
+  for (const file of ["change.patch", "bundle.json", "evidence.json", "summary.md"]) {
+    if (!existsSync(path.join(dir, file))) problems.push(`missing ${file}`);
+  }
+  let evidence = null;
+  if (existsSync(path.join(dir, "evidence.json"))) {
+    try {
+      evidence = readJson(path.join(dir, "evidence.json"));
+    } catch (error) {
+      problems.push(`evidence.json unparseable: ${error.message}`);
+    }
+  }
+  if (evidence) {
+    if (evidence.item !== item.id) problems.push(`evidence.item ${evidence.item} != ${item.id}`);
+    if (evidence.attempt !== item.attempts) problems.push(`evidence.attempt ${evidence.attempt} != ${item.attempts}`);
+    const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
+    if (evidence.item_log_sha256 && existsSync(itemLog)) {
+      if (Number.isInteger(evidence.item_log_bytes) && evidence.item_log_bytes > 0) {
+        const prefix = readFileSync(itemLog).subarray(0, evidence.item_log_bytes);
+        if (createHash("sha256").update(prefix).digest("hex") !== evidence.item_log_sha256) {
+          problems.push("item_log_sha256 does not verify against the recorded prefix");
+        }
+      } else {
+        console.warn(`inspect ${item.id}: note: item_log_sha256 predates item_log_bytes; cannot re-verify`);
+      }
+    }
+    if (Array.isArray(evidence.checks) && evidence.checks.some((check) => check.ok !== true)) {
+      problems.push("delivery contains a failed check result");
+    }
+  }
+  if (item.state !== "delivered") problems.push(`item state is ${item.state}, not delivered`);
+  if (problems.length === 0) {
+    console.log(`inspect ${item.id}: OK (${dir})`);
+    return;
+  }
+  for (const problem of problems) console.error(`inspect ${item.id}: ${problem}`);
+  process.exitCode = 1;
+}
+
 function cmdFail(backlog, id) {
   const item = findItem(backlog, id);
   if (["delivered", "cancelled"].includes(item.state)) fail(`${item.id}: already ${item.state}`);
@@ -840,6 +884,7 @@ commands:
   release <id>             claimed/implemented/failed -> ready
   block <id> / unblock <id>
   cancel <id> --reason ...
+  inspect <id>             audit a delivery bundle's integrity (read-only)
   record <id> --note ...   append a note to the item log
   status                   render status.md and list items
   dry-run                  full sandboxed pipeline self-test
@@ -871,6 +916,7 @@ async function main() {
     case "block": return cmdTransition(backlog, id ?? fail("block requires <id>"), "block", ["ready"], "blocked");
     case "unblock": return cmdTransition(backlog, id ?? fail("unblock requires <id>"), "unblock", ["blocked"], "ready");
     case "cancel": return cmdTransition(backlog, id ?? fail("cancel requires <id>"), "cancel", backlog.transitions?.cancel ?? ["ready", "claimed", "implemented", "verifying", "verified", "failed", "blocked"], "cancelled");
+    case "inspect": return cmdInspect(backlog, id ?? fail("inspect requires <id>"));
     case "record": return cmdRecord(backlog, id ?? fail("record requires <id>"));
     case "status": return cmdStatus(backlog);
     default: fail(`unknown command ${command}`);

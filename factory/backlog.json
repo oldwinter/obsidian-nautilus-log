@@ -985,6 +985,48 @@
       "verified_head": "7ed1d3cb99c362295c075c82379c11661b997b3f",
       "verified_contract": "7ed02e3fb0ec904edd61069a1b78fda9e5132afbfd8025780f3727c003e09b7c",
       "verified_work": "86bada9c0ecbb7e5931754f6babedcbcdda4a079584faf55eba8af3621f7ad5d"
+    },
+    {
+      "id": "FAC-127",
+      "title": "Add inspect command auditing delivery-bundle integrity",
+      "kind": "factory",
+      "priority": 27,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Read-only `inspect <id>` that verifies required bundle files exist, evidence parses, item/attempt fields match, the item-log prefix hash re-verifies (with an honest warning for bundles that predate item_log_bytes), no failed check results shipped, and the item is delivered.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "inspect passes on a live delivered bundle",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs inspect FAC-126"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Factory test lane passes including inspect coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "notes": "Operator-side integrity audit; warnings for historical bundles lacking item_log_bytes",
+      "claimed_head": "7d9833d75cce9debfb84e798eaba3eb896f350f0",
+      "verified_head": "7d9833d75cce9debfb84e798eaba3eb896f350f0",
+      "verified_contract": "c61fdd7d74de1ad5edeff40d9d64766480910826860c99ea5d1a0983b3498e3a",
+      "verified_work": "14616de308bb273479099490795f63713d4b16a20d922567ddd7cec928cf6aee"
     }
   ]
 }

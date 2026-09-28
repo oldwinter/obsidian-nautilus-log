@@ -517,6 +517,46 @@ test("delivery evidence embeds only the latest verify run's checks", () => {
   }
 });
 
+test("inspect audits a delivery bundle read-only", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    ok(box.run("deliver", "IT-001"), "deliver");
+    const bundle = path.join(box.dir, ".codex", "runtime", "devin-factory", "deliveries", "IT-001", "attempt-1");
+
+    const good = box.run("inspect", "IT-001");
+    ok(good, "inspect passes on a complete bundle");
+    assert.match(good.stdout, /inspect IT-001: OK/);
+
+    const corrupted = path.join(bundle, "evidence.json");
+    const original = readFileSync(corrupted, "utf8");
+    writeFileSync(corrupted, original.replace('"item": "IT-001"', '"item": "IT-999"'));
+    const tampered = box.run("inspect", "IT-001");
+    fails(tampered, "inspect must catch evidence/item mismatch");
+    assert.match(tampered.stderr + tampered.stdout, /evidence\.item/);
+    writeFileSync(corrupted, original);
+
+    const evidence = JSON.parse(original);
+    delete evidence.item_log_bytes;
+    writeFileSync(corrupted, JSON.stringify(evidence, null, 2));
+    const legacy = box.run("inspect", "IT-001");
+    ok(legacy, "bundles that predate item_log_bytes warn but do not fail");
+    assert.match(legacy.stderr + legacy.stdout, /predates item_log_bytes/);
+    writeFileSync(corrupted, original);
+
+    rmSync(path.join(bundle, "summary.md"));
+    const missing = box.run("inspect", "IT-001");
+    fails(missing, "inspect must catch a missing bundle file");
+    assert.match(missing.stderr + missing.stdout, /missing summary\.md/);
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);
