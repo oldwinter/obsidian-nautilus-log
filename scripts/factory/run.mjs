@@ -498,8 +498,9 @@ function writeDeliveryEvidence(dir, item) {
   const relevant = bundle.diff_paths;
   const untracked = bundle.untracked_files;
   const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
-  const checks = existsSync(itemLog)
-    ? readFileSync(itemLog, "utf8").trim().split("\n")
+  const logBytes = existsSync(itemLog) ? readFileSync(itemLog) : null;
+  const checks = logBytes
+    ? logBytes.toString("utf8").trim().split("\n")
       .filter(Boolean).map((line) => JSON.parse(line))
       .filter((row) => row.attempt === item.attempts
         && (row.event === "check" || row.event === "verify-command"))
@@ -525,9 +526,12 @@ function writeDeliveryEvidence(dir, item) {
     acceptance_criteria: item.acceptance_criteria.map((ac) => ac.id),
     verify_commands: item.verify,
     checks,
-    item_log_sha256: existsSync(itemLog)
-      ? createHash("sha256").update(readFileSync(itemLog)).digest("hex")
+    item_log_sha256: logBytes
+      ? createHash("sha256").update(logBytes).digest("hex")
       : null,
+    // The log is append-only: later notes/events extend the file, so the
+    // hash is verified against its first item_log_bytes bytes.
+    item_log_bytes: logBytes ? logBytes.length : null,
   };
   writeJsonAtomic(path.join(dir, "evidence.json"), evidence);
   const summary = [

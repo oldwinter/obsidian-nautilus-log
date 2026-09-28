@@ -559,6 +559,45 @@
       "verified_head": "e67f06c6b135138ce864d86707f6ee689d3654f8",
       "verified_contract": "481daaf85bad9681089b446530dd697af9d34d4f956d0b633cf3f11fb290cdd7",
       "verified_work": "95815e564f7c436db41a1362af91ed6d3a8d717f2c55230a9db65851edc46041"
+    },
+    {
+      "id": "FAC-115",
+      "title": "feat(factory): evidence.json records item_log_bytes so the log hash stays verifiable",
+      "kind": "code-change",
+      "priority": 63,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The item JSONL is append-only; a post-delivery note or event extends it and a naive recompute of item_log_sha256 then mismatches. evidence.json now records item_log_bytes so a reviewer can verify sha256(log.slice(0, bytes)).",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "ba8918368753ee7400007a3710efcfc7bd9e7f3e",
+      "verified_head": "ba8918368753ee7400007a3710efcfc7bd9e7f3e",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "73931d27cfa1aac6ba417c49e1ef814c10becd16cb42fb3adddbeb184e48b74a"
     }
   ]
 }
