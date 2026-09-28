@@ -442,6 +442,45 @@
       "verified_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf",
       "verified_contract": "ba78cc09228cfbc017eb6d013295d2aced8c2080d5a7a1eb6deef8680b6047d6",
       "verified_work": "147f0b59fafe61a1f16216a422c0ec63ab7df64a4eb280a23db3deccd98c9ccb"
+    },
+    {
+      "id": "FAC-112",
+      "title": "feat(factory): embed per-attempt check results in delivery evidence",
+      "kind": "code-change",
+      "priority": 60,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "evidence.json currently lists only AC ids; the actual check outcomes live in items/<id>.jsonl. cmdDeliver should embed the attempt's check + verify-command rows (criterion, command, ok, exit_code, duration_ms) into evidence.json and list them in summary.md so a delivery bundle is self-contained proof.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including evidence-checks coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "33f0a7cd05082c8db5d5f62a096678d2d21d9164",
+      "verified_head": "33f0a7cd05082c8db5d5f62a096678d2d21d9164",
+      "verified_contract": "d3d9c0e69698d4d6003612387ed899106daf6e5be303f92c2881105e2b5a8cc0",
+      "verified_work": "ea2a5b0c8689baf66f864a0357e0c3ffcf76d475e89e299c5de0b0d6e2c74094"
     }
   ]
 }

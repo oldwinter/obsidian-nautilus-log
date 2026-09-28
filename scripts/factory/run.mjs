@@ -517,6 +517,19 @@ function cmdDeliver(backlog, id) {
     copyFileSync(path.join(root, file), dest);
   }
   const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
+  const checks = existsSync(itemLog)
+    ? readFileSync(itemLog, "utf8").trim().split("\n")
+      .filter(Boolean).map((line) => JSON.parse(line))
+      .filter((row) => row.attempt === item.attempts
+        && (row.event === "check" || row.event === "verify-command"))
+      .map((row) => ({
+        criterion: row.criterion ?? null,
+        command: row.command ?? null,
+        ok: row.ok === true,
+        exit_code: row.exit_code ?? null,
+        duration_ms: row.duration_ms ?? null,
+      }))
+    : [];
   const evidence = {
     schema_version: 1,
     item: item.id,
@@ -530,6 +543,7 @@ function cmdDeliver(backlog, id) {
     untracked_files: untracked,
     acceptance_criteria: item.acceptance_criteria.map((ac) => ac.id),
     verify_commands: item.verify,
+    checks,
     item_log_sha256: existsSync(itemLog)
       ? createHash("sha256").update(readFileSync(itemLog)).digest("hex")
       : null,
@@ -544,6 +558,11 @@ function cmdDeliver(backlog, id) {
     `- diff paths: ${relevant.length === 0 ? "none (evidence-only delivery)" : relevant.join(", ")}`,
     `- acceptance criteria: ${evidence.acceptance_criteria.join(", ")}`,
     `- verify commands: ${item.verify.length === 0 ? "none" : item.verify.join(" ; ")}`,
+    "",
+    "## Check results",
+    "",
+    ...checks.map((check) =>
+      `- ${check.ok ? "PASS" : "FAIL"} ${check.criterion ?? "verify"} ${check.command ?? ""} (exit ${check.exit_code}, ${check.duration_ms} ms)`),
     "",
     "Evidence: change.patch, files/ (untracked copies), evidence.json, per-item JSONL log.",
   ].join("\n");

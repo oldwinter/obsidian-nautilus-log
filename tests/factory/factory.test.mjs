@@ -176,6 +176,14 @@ test("deliver is idempotent and produces a reviewable bundle", () => {
     assert(existsSync(path.join(bundle, "evidence.json")), "evidence.json written");
     assert(existsSync(path.join(bundle, "summary.md")), "summary.md written");
     assert(existsSync(path.join(bundle, "change.patch")), "change.patch written");
+    const evidence = JSON.parse(readFileSync(path.join(bundle, "evidence.json"), "utf8"));
+    assert(Array.isArray(evidence.checks), "evidence.json embeds check results");
+    assert.equal(evidence.checks.length, 2, "one acceptance check + one verify command");
+    assert(evidence.checks.every((row) => row.ok === true), "all recorded checks passed");
+    assert.equal(evidence.checks[0].criterion, "AC1");
+    assert.match(
+      readFileSync(path.join(bundle, "summary.md"), "utf8"),
+      /PASS AC1/, "summary.md lists per-check results");
     const before = readFileSync(path.join(bundle, "evidence.json"), "utf8");
     const again = box.run("deliver", "IT-001");
     ok(again, "re-deliver is an idempotent no-op");
