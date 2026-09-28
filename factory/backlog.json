@@ -1191,6 +1191,36 @@
       "verified_head": "dbb1be16d3fd7f2eafa043c202547087c68e8b10",
       "verified_contract": "7d276fadf57982af5dd1bce4e8dfdbc3e44d492738b22895aa9dd4d945b35e40",
       "verified_work": "2652ad142054d0446a5542407cac1e0fefea3ca5e89d162d530e1a1b36f78f2e"
+    },
+    {
+      "id": "FAC-132",
+      "title": "Cover manual fail and show commands in tests",
+      "kind": "factory",
+      "priority": 32,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Extend the control-recovery test to exercise fail --reason on a claimed item, rejection of failing a cancelled item, and show as a read-only command.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes with fail/show coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Last two unexercised commands in the runner surface",
+      "claimed_head": "c08788f5bc83e02c08f48fa16b25c20ad91c16e9",
+      "verified_head": "c08788f5bc83e02c08f48fa16b25c20ad91c16e9",
+      "verified_contract": "9641bb4129c79e8c28cc512a480a94fe1d38169974fb7d2b018e139c4272a76b",
+      "verified_work": "b35c93da6c58087b31277d572282835ad17e7322524b026034858ea123bbbb9f"
     }
   ]
 }

@@ -264,6 +264,13 @@ test("release, block, unblock, cancel, and record recover item control", () => {
     ok(box.run("record", "IT-001", "--note", "checkpointed as abc123"), "record");
     const notes = box.progress().filter((row) => row.event === "note");
     assert.equal(notes.at(-1).note, "checkpointed as abc123");
+    ok(box.run("claim", "IT-001"), "re-claim after release");
+    ok(box.run("fail", "IT-001", "--reason", "operator stop"), "manual fail");
+    assert.equal(box.item("IT-001").state, "failed");
+    fails(box.run("fail", "IT-003"), "cannot fail a cancelled item");
+    const shown = box.run("show", "IT-001");
+    ok(shown, "show is read-only");
+    assert.match(shown.stdout, /IT-001/, "show prints the item");
   } finally {
     box.cleanup();
   }
