@@ -450,6 +450,41 @@ test("backlog transitions drift fails closed", () => {
   }
 });
 
+test("malformed or escaping check payloads are rejected at load", () => {
+  const escaping = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "escape", check: { type: "file-exists", path: "../../outside.txt" } },
+    ],
+  })]);
+  try {
+    const result = escaping.run("list");
+    fails(result, "check path escaping the worktree must not load");
+    assert.match(result.stderr + result.stdout, /escapes the worktree/);
+  } finally {
+    escaping.cleanup();
+  }
+  const noField = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "no field", check: { type: "json-field", path: "src/report.json" } },
+    ],
+  })]);
+  try {
+    fails(noField.run("list"), "json-field without field must not load");
+  } finally {
+    noField.cleanup();
+  }
+  const noCommand = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "empty", check: { type: "command" } },
+    ],
+  })]);
+  try {
+    fails(noCommand.run("list"), "command check without command must not load");
+  } finally {
+    noCommand.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);

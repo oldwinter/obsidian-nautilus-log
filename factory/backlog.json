@@ -762,6 +762,45 @@
       "verified_head": "81477cf4e0a326242af546568d73308b69faa5f8",
       "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
       "verified_work": "1ebcfc89ad7c85b2554a62a3daf97a9cd91a493b68b880a341ff9eb6965d88e3"
+    },
+    {
+      "id": "FAC-121",
+      "title": "feat(factory): check paths confined to worktree; per-type required fields validated",
+      "kind": "code-change",
+      "priority": 69,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "file-exists/json-field check paths resolved against root but could escape it (e.g. /etc/hostname), and missing per-type fields (command, field) crashed or slipped through. loadBacklog now rejects escaping paths and missing fields; covered by malformed-payload tests.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "b019ef9ada80333255382430b8851553c4d9480a",
+      "verified_head": "b019ef9ada80333255382430b8851553c4d9480a",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "18256cec031fc0c0391da4e4c124348581fa004b80f17c21767956223b28a02a"
     }
   ]
 }

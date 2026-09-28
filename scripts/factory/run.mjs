@@ -274,6 +274,20 @@ function validateItems(backlog) {
       assert(ac.id && ac.description && ac.check?.type, `${item.id}: malformed acceptance criterion`);
       assert(["command", "file-exists", "json-field"].includes(ac.check.type),
         `${item.id}/${ac.id}: unknown check type ${ac.check.type}`);
+      if (ac.check.type === "command") {
+        assert(typeof ac.check.command === "string" && ac.check.command.length > 0,
+          `${item.id}/${ac.id}: command check needs a command string`);
+      } else {
+        assert(typeof ac.check.path === "string" && ac.check.path.length > 0,
+          `${item.id}/${ac.id}: ${ac.check.type} check needs a path`);
+        const resolved = path.resolve(root, ac.check.path);
+        assert(resolved === root || resolved.startsWith(`${root}${path.sep}`),
+          `${item.id}/${ac.id}: check path escapes the worktree`);
+        if (ac.check.type === "json-field") {
+          assert(typeof ac.check.field === "string" && ac.check.field.length > 0,
+            `${item.id}/${ac.id}: json-field check needs a field`);
+        }
+      }
     }
     assert(Number.isInteger(item.attempts) && item.attempts >= 0, `${item.id}: attempts must be an integer`);
     assert(Number.isInteger(item.max_attempts) && item.max_attempts >= 1, `${item.id}: max_attempts >= 1`);
