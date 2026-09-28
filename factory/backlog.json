@@ -1481,6 +1481,38 @@
       "verified_head": "0ef88b09ee3fb40b601344910de62a9512f3a2e0",
       "verified_contract": "96a0586036419eff3a971518a3e6bcb47fed5d47b69de48bf1bf847049f85e5d",
       "verified_work": "f05c95fe495ce792bcee88d79448ba54a3b987dab80bd9495d96e093d0e348e6"
+    },
+    {
+      "id": "FAC-140",
+      "title": "scheduled-interleaving lock regression via --require preload pause",
+      "kind": "factory",
+      "priority": 140,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs",
+        "tests/factory/lock-pause-preload.cjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "encode the coordinator's stronger scheduled-interleaving evidence in-repo: a --require preload blocks inside writeFileSync(owner.json) — a real mid-init owner (dir exists, payload absent) — while a contender claim must fail closed and leave the entry untouched; releasing lets the owner finish and free the lock",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scheduled-interleaving test passes deterministically (file rendezvous, no sleeps)",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'scheduled interleaving' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "d9c5ea6c3a5c23aafaf1305170f852ced6fbf1b4",
+      "verified_head": "d9c5ea6c3a5c23aafaf1305170f852ced6fbf1b4",
+      "verified_contract": "b64fc5e6b1efd05c1c29ee53734ce1566876d2d9dbaf16ca3bc4a55bf4a81096",
+      "verified_work": "6a0aa11a45abd426552345c52d27a6db11fb8ea84a8e5f116f354e6934111666"
     }
   ]
 }

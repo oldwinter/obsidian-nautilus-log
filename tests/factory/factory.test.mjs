@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -684,6 +684,50 @@ test("mutating commands serialize on the runtime lock", () => {
     ok(box.run("claim", "IT-001"), "claim succeeds after manual recovery");
     assert(!existsSync(lockPath), "lock released on process exit");
   } finally {
+    box.cleanup();
+  }
+});
+
+// Deterministic scheduling case (the coordinator's stronger evidence encoded
+// in-repo): an owner is held inside the initialization window — `run.lock/`
+// exists, owner.json not yet written. A contender must fail closed and leave
+// the half-made entry untouched; once released, the owner finishes normally.
+test("scheduled interleaving: a paused mid-init owner keeps the lock", async () => {
+  const box = sandbox([makeItem()]);
+  const lockPath = path.join(box.dir, ".codex", "runtime", "devin-factory", "run.lock");
+  const ownerPath = path.join(lockPath, "owner.json");
+  const pauseFlag = path.join(box.dir, "pause.flag");
+  const preload = path.join(repo, "tests", "factory", "lock-pause-preload.cjs");
+  const childA = spawn(process.execPath,
+    ["--require", preload, runner, "--root", box.dir, "claim", "IT-001"],
+    { env: { ...process.env, FACTORY_TEST_PAUSE_FLAG: pauseFlag }, stdio: ["ignore", "pipe", "pipe"] });
+  let childAOutput = "";
+  childA.stdout.on("data", (d) => { childAOutput += d; });
+  childA.stderr.on("data", (d) => { childAOutput += d; });
+  try {
+    // Rendezvous on the flag file — the child is blocked inside writeFileSync
+    // before owner.json exists. No timing guesswork.
+    const deadline = Date.now() + 20000;
+    while (!existsSync(pauseFlag)) {
+      assert(Date.now() < deadline, `initializer never reached the pause point: ${childAOutput}`);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+    }
+
+    // Contender B observes dir-without-owner: must fail closed, not steal.
+    const blocked = box.run("claim", "IT-001");
+    fails(blocked, "claim must fail closed against a paused mid-init owner");
+    assert.match(blocked.stderr + blocked.stdout, /stale or mid-initialization/);
+    assert(existsSync(lockPath), "paused owner's lock dir must be preserved");
+    assert(!existsSync(ownerPath), "owner.json still absent while the owner is held");
+
+    // Release A: it writes owner.json, completes its claim, frees the lock.
+    writeFileSync(`${pauseFlag}.release`, "go");
+    const exitCode = await new Promise((resolve) => childA.on("exit", resolve));
+    assert.equal(exitCode, 0, `initializer failed after release: ${childAOutput}`);
+    assert(!existsSync(lockPath), "lock released by the resuming owner");
+    assert.equal(box.item("IT-001").state, "claimed", "the paused owner's mutation must land");
+  } finally {
+    try { childA.kill("SIGKILL"); } catch { /* already exited */ }
     box.cleanup();
   }
 });
