@@ -801,6 +801,35 @@
       "verified_head": "b019ef9ada80333255382430b8851553c4d9480a",
       "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
       "verified_work": "18256cec031fc0c0391da4e4c124348581fa004b80f17c21767956223b28a02a"
+    },
+    {
+      "id": "FAC-122",
+      "title": "docs(factory): document the show command",
+      "kind": "code-change",
+      "priority": 70,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "README documented every runner command except `show <id>`; added it to the Run block.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3e09dd77d4a6ed4a05cb4927cd0ef991abfaafe5",
+      "verified_head": "3e09dd77d4a6ed4a05cb4927cd0ef991abfaafe5",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "e820f93742d6f5d5128f63b2beb1f2b82fcb5ce6e0843954d20a1b7a32e418ec"
     }
   ]
 }

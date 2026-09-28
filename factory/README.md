@@ -28,6 +28,7 @@ issue or active PR. See `factory/backlog.schema.md` for the item contract.
 ```sh
 node scripts/factory/run.mjs list           # queue overview
 node scripts/factory/run.mjs next           # next ready item (full spec)
+node scripts/factory/run.mjs show FAC-101   # one item's stored fields
 node scripts/factory/run.mjs add --file item.json   # append a ready item
 node scripts/factory/run.mjs claim FAC-101  # ready -> claimed (attempt +1)
 # ... do the item's `implementation` work inside its module_boundary ...
