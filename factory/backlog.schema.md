@@ -11,7 +11,9 @@ factory-chore and evidence items that do not duplicate an open issue or PR.
 - `states`: the ordered factory states. Order is normative for the forward
   path `ready -> claimed -> implemented -> verifying -> verified -> delivered`;
   `failed`, `blocked`, `cancelled` are non-forward states.
-- `transitions`: action -> source states; advisory mirror of the rules
+- `transitions`: action -> source states; a mirror of the runner's canonical
+  rules that `loadBacklog` validates — entries that widen a gate or name an
+  unknown action fail closed at load time.
   enforced by `scripts/factory/run.mjs` (the runner is authoritative).
 - `items`: array of work items.
 

@@ -733,6 +733,35 @@
       "verified_head": "3748f27237915fab5c2c7553ec4574fdc04cb5fb",
       "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
       "verified_work": "6155d985f75364a74336bcd56e53a7d846624d5f585d862b00072e56d5659000"
+    },
+    {
+      "id": "FAC-120",
+      "title": "docs(factory): schema describes validated transitions mirror",
+      "kind": "code-change",
+      "priority": 68,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "backlog.schema.md said transitions was an advisory mirror; FAC-119 made it load-time validated, so the wording is updated to describe the fail-closed check.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "81477cf4e0a326242af546568d73308b69faa5f8",
+      "verified_head": "81477cf4e0a326242af546568d73308b69faa5f8",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "1ebcfc89ad7c85b2554a62a3daf97a9cd91a493b68b880a341ff9eb6965d88e3"
     }
   ]
 }
