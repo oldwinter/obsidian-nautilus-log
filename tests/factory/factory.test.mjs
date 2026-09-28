@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -184,6 +185,22 @@ test("deliver is idempotent and produces a reviewable bundle", () => {
     assert.match(
       readFileSync(path.join(bundle, "summary.md"), "utf8"),
       /PASS AC1/, "summary.md lists per-check results");
+    assert(existsSync(path.join(bundle, "bundle.json")), "bundle.json captures diff paths");
+    const itemLogPath = path.join(box.dir, ".codex", "runtime", "devin-factory", "items", "IT-001.jsonl");
+    const logAtDelivery = readFileSync(itemLogPath).subarray(0, evidence.item_log_bytes);
+    assert.equal(
+      createHash("sha256").update(logAtDelivery).digest("hex"),
+      evidence.item_log_sha256, "item_log_sha256 binds the delivered attempt log prefix");
+
+    rmSync(path.join(bundle, "evidence.json"));
+    const rebuilt = box.run("deliver", "IT-001");
+    ok(rebuilt, "deliver rebuilds evidence lost to a mid-deliver crash");
+    assert.match(rebuilt.stdout, /rebuilt missing evidence/);
+    assert(existsSync(path.join(bundle, "evidence.json")), "evidence.json rebuilt");
+    assert.deepEqual(
+      JSON.parse(readFileSync(path.join(bundle, "evidence.json"), "utf8")).diff_paths,
+      evidence.diff_paths, "rebuilt evidence restores bundle.json's captured paths");
+
     const before = readFileSync(path.join(bundle, "evidence.json"), "utf8");
     const again = box.run("deliver", "IT-001");
     ok(again, "re-deliver is an idempotent no-op");

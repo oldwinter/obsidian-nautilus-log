@@ -664,6 +664,36 @@
       "verified_head": "3cecbe907794abc212227fccc2ae5735b317f95a",
       "verified_contract": "c510703c2dcd1171f11a02aeb7e78210eaf76125a97241dd0c9475442800fbc5",
       "verified_work": "a6900e7f89e06822f49c2a46d081ad441692625f65066d4e010849256f7c093b"
+    },
+    {
+      "id": "FAC-118",
+      "title": "test(factory): cover mid-deliver crash rebuild, bundle.json, and item_log prefix hash",
+      "kind": "code-change",
+      "priority": 66,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The idempotent-delivery test now also deletes evidence.json and asserts deliver rebuilds it from bundle.json (the crash path added in FAC-114), plus asserts bundle.json exists and item_log_sha256 verifies against the log's first item_log_bytes bytes.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "c530d816fc76a69d9e9d385a713dc77125c354e2",
+      "verified_head": "c530d816fc76a69d9e9d385a713dc77125c354e2",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "d502945f66f1ac1a5fa054bedca1b86131791643ce28e1792d3bd1d55e11e58b"
     }
   ]
 }
