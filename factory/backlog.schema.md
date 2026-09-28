@@ -43,10 +43,12 @@ rejects empty or wrong-typed values before any command runs.
   pass during `verify`. Check types:
   - `{ "type": "command", "command": "...", "timeout_ms"?: n }` runs via `sh -c`
     at the repo root with `FACTORY_ROOT`, `FACTORY_ITEM_ID`, and
-    `FACTORY_EVIDENCE_DIR` in the environment. `command` must be non-empty.
+    `FACTORY_EVIDENCE_DIR` in the environment. `command` must be non-empty;
+    `timeout_ms` when present must be a positive integer (default 600000).
   - `{ "type": "file-exists", "path": "..." }`.
   - `{ "type": "json-field", "path": "...", "field": "a.b", "equals": "..." }`.
-  `path` must resolve inside the worktree; `json-field` requires `field`.
+  `path` must resolve inside the worktree; `json-field` requires `field` and
+  `equals` (the assertion compares `String(actual)` against it).
 - `verify`: extra commands run only after all acceptance checks pass
   (heavier lanes; failures also mark the item failed).
 - `notes`: provenance/limitation notes.

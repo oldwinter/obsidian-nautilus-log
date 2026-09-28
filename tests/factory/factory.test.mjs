@@ -490,6 +490,26 @@ test("malformed or escaping check payloads are rejected at load", () => {
   } finally {
     noCommand.cleanup();
   }
+  const noEquals = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "no equals", check: { type: "json-field", path: "src/report.json", field: "result" } },
+    ],
+  })]);
+  try {
+    fails(noEquals.run("list"), "json-field without equals must not load");
+  } finally {
+    noEquals.cleanup();
+  }
+  const badTimeout = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "bad timeout", check: { type: "command", command: "exit 0", timeout_ms: -5 } },
+    ],
+  })]);
+  try {
+    fails(badTimeout.run("list"), "command check with non-positive timeout_ms must not load");
+  } finally {
+    badTimeout.cleanup();
+  }
   for (const [label, field] of [
     ["non-integer priority", { priority: "high" }],
     ["empty module boundary entry", { module_boundary: ["src/", ""] }],

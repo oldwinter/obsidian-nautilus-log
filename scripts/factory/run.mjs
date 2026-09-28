@@ -320,6 +320,10 @@ function validateItems(backlog) {
       if (ac.check.type === "command") {
         assert(typeof ac.check.command === "string" && ac.check.command.length > 0,
           `${item.id}/${ac.id}: command check needs a command string`);
+        if (ac.check.timeout_ms !== undefined) {
+          assert(Number.isInteger(ac.check.timeout_ms) && ac.check.timeout_ms > 0,
+            `${item.id}/${ac.id}: timeout_ms must be a positive integer`);
+        }
       } else {
         assert(typeof ac.check.path === "string" && ac.check.path.length > 0,
           `${item.id}/${ac.id}: ${ac.check.type} check needs a path`);
@@ -329,6 +333,8 @@ function validateItems(backlog) {
         if (ac.check.type === "json-field") {
           assert(typeof ac.check.field === "string" && ac.check.field.length > 0,
             `${item.id}/${ac.id}: json-field check needs a field`);
+          assert(ac.check.equals !== undefined,
+            `${item.id}/${ac.id}: json-field check needs an equals value`);
         }
       }
     }
