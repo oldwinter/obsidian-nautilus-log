@@ -1337,6 +1337,37 @@
       "verified_head": "f9bdbbc49a329b9a323ac7958a86dc852635b62c",
       "verified_contract": "154be4358c738df2aa2ca8c6309c7b695426ff58e0c200d08954de966a7cbaa5",
       "verified_work": "685a86db9171ede544b952238e9dd8b83d158d64c1e9c75433c189f1ffd4e9ac"
+    },
+    {
+      "id": "FAC-136",
+      "title": "dry-run walks the full operator command surface",
+      "kind": "factory",
+      "priority": 136,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "extend cmdDryRun with an IT-003/IT-004 operator-surface walkthrough: add --file, next, claim, manual fail, release, block, unblock, cancel, record, show, status; assert terminal states",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "dry-run completes with all control-surface steps exiting as expected",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs dry-run | tail -1 | grep -q 'dry-run: PASS'"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "2ffbacc8de4b4c9eab5c80a363d50c32e1885925",
+      "verified_head": "2ffbacc8de4b4c9eab5c80a363d50c32e1885925",
+      "verified_contract": "3bddda34851aed0ca91283da494204fbcce034b7ceff3f9b66efa638f2b9b3cb",
+      "verified_work": "213a00d1915a696b4ce44d920e16b64af8f3c28588ac493e2adbe6e38110b725"
     }
   ]
 }

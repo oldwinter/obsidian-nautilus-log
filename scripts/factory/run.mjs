@@ -891,6 +891,15 @@ function cmdDryRun() {
           ],
           verify: [],
         },
+        {
+          id: "IT-003", title: "operator-surface item", kind: "code-change", priority: 3, state: "ready",
+          attempts: 0, max_attempts: 2, module_boundary: ["src/"], allow_empty_diff: true,
+          implementation: "never reaches verify",
+          acceptance_criteria: [
+            { id: "AC1", description: "never checked", check: { type: "file-exists", path: "src/never-created.txt" } },
+          ],
+          verify: [],
+        },
       ],
     };
     writeJsonAtomic(path.join(sandbox, "factory", "backlog.json"), mini);
@@ -913,17 +922,43 @@ function cmdDryRun() {
     step(["implemented", "IT-002"]);
     step(["verify", "IT-002"], { expectExit: 1 });
     step(["claim", "IT-002", "--retry"], { expectExit: 1 });
+    // Operator control surface on IT-003: add a fourth item, then walk the
+    // non-forward transitions so the sandbox covers the whole command set.
+    const added = path.join(sandbox, "it-004.json");
+    writeJsonAtomic(added, {
+      id: "IT-004", title: "added via add", priority: 4,
+      implementation: "queued then cancelled",
+      acceptance_criteria: [
+        { id: "AC1", description: "never checked", check: { type: "command", command: "true" } },
+      ],
+    });
+    step(["add", "--file", added]);
+    step(["next"]);
+    step(["claim", "IT-003"]);
+    step(["fail", "IT-003", "--reason", "operator stop"]);
+    step(["release", "IT-003"]);
+    step(["block", "IT-003"]);
+    step(["unblock", "IT-003"]);
+    step(["cancel", "IT-003", "--reason", "dry-run walkthrough"]);
+    step(["cancel", "IT-004", "--reason", "dry-run walkthrough"]);
+    step(["record", "IT-001", "--note", "dry-run operator note"]);
+    step(["show", "IT-001"]);
+    step(["status"]);
     const final = readJson(path.join(sandbox, "factory", "backlog.json"));
     const it1 = final.items.find((i) => i.id === "IT-001");
     const it2 = final.items.find((i) => i.id === "IT-002");
+    const it3 = final.items.find((i) => i.id === "IT-003");
+    const it4 = final.items.find((i) => i.id === "IT-004");
     assert.equal(it1.state, "delivered", "IT-001 must be delivered");
     assert.equal(it1.attempts, 1);
     assert.equal(it2.state, "failed", "IT-002 must end failed");
     assert.equal(it2.attempts, 2, "IT-002 must have consumed one retry");
+    assert.equal(it3.state, "cancelled", "IT-003 must end cancelled");
+    assert.equal(it4.state, "cancelled", "IT-004 must end cancelled");
     assert(existsSync(path.join(sandbox, ".codex", "runtime", "devin-factory", "deliveries", "IT-001", "attempt-1", "evidence.json")));
     const progress = readFileSync(path.join(sandbox, ".codex", "runtime", "devin-factory", "progress.jsonl"), "utf8").trim().split("\n");
-    assert(progress.length >= 10, "progress.jsonl must record the pipeline");
-    console.log(`dry-run: PASS (${progress.length} progress rows, IT-001 delivered, IT-002 failed after retry)`);
+    assert(progress.length >= 20, "progress.jsonl must record the pipeline");
+    console.log(`dry-run: PASS (${progress.length} progress rows, IT-001 delivered, IT-002 failed after retry, IT-003/IT-004 cancelled)`);
   } finally {
     rmSync(sandbox, { recursive: true, force: true });
   }
