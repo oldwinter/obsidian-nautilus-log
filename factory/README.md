@@ -96,6 +96,9 @@ observe a long verify.
   JSONL logs.
 - Process died mid-`verify` → the item sits in `verifying`; rerun
   `verify <id>` to resume the same attempt.
+- Process killed mid-command → `run.lock/` may be left behind; mutating
+  commands fail closed ("stale or mid-initialization") until you confirm
+  the owner pid is gone and remove the directory manually.
 - Wrong claim → `release <id>` returns it to `ready`; `fail <id> --reason`
   records a terminal-for-this-attempt failure; `block`/`unblock` parks a
   `ready` item; `cancel <id> --reason` removes it from rotation.

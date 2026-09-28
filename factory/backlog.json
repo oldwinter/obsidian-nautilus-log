@@ -1513,6 +1513,37 @@
       "verified_head": "d9c5ea6c3a5c23aafaf1305170f852ced6fbf1b4",
       "verified_contract": "b64fc5e6b1efd05c1c29ee53734ce1566876d2d9dbaf16ca3bc4a55bf4a81096",
       "verified_work": "6a0aa11a45abd426552345c52d27a6db11fb8ea84a8e5f116f354e6934111666"
+    },
+    {
+      "id": "FAC-141",
+      "title": "README Recover: document stale run.lock after killed process",
+      "kind": "factory",
+      "priority": 141,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "post-FAC-139 the lock has no auto-reclaim, so a killed mutating command leaves run.lock/ and every mutation fails closed until manual removal — the Recover section now tells operators to confirm the owner pid is gone and remove the directory",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README documents the killed-process stale-lock recovery",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'stale or mid-initialization' factory/README.md && grep -q 'remove the directory manually' factory/README.md"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "89686f6cf729db321dc6589b2a500147018bd443",
+      "verified_head": "89686f6cf729db321dc6589b2a500147018bd443",
+      "verified_contract": "f9dcf5166b61dee12e9ad26454d3ae24409873f0950b8a516e454de872fd7ffa",
+      "verified_work": "7d6c4b0b2ea45a1a846e12bc8979a9c8c8423cf0998e997618ed03aca35e17dc"
     }
   ]
 }
