@@ -63,6 +63,8 @@ restamps cleanly.
 
 Volatile evidence never enters git: `.codex/runtime/devin-factory/` holds
 `progress.jsonl`, `status.md`, `items/<id>.jsonl`, `evidence/`, and
-`deliveries/<id>/attempt-<n>/` (change.patch, files/, evidence.json,
-summary.md). A delivery is reviewable on its own; commits on the factory
+`deliveries/<id>/attempt-<n>/` (change.patch, bundle.json, files/,
+evidence.json, summary.md). `evidence.json.checks` embeds the attempt's
+check outcomes and `item_log_sha256`/`item_log_bytes` bind the per-item
+JSONL prefix. A delivery is reviewable on its own; commits on the factory
 branch checkpoint `factory/backlog.json` state alongside the delivered diff.

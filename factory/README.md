@@ -42,9 +42,13 @@ the item with the HEAD, the acceptance-contract hash, and a worktree
 fingerprint; `deliver` refuses when any of them drifted since verify
 (`verification is stale`) — rerun `verify` to restamp. `deliver` writes
 `.codex/runtime/devin-factory/deliveries/<id>/attempt-<n>/` with
-`change.patch`, untracked-file copies, `evidence.json`, and `summary.md` —
-the reviewable artifact. `deliver` on an already-delivered item is an
-idempotent no-op that prints the existing bundle.
+`change.patch`, `bundle.json` (the captured diff file list), untracked-file
+copies, `evidence.json`, and `summary.md` — the reviewable artifact.
+`evidence.json` embeds the attempt's check results plus `item_log_sha256`
+and `item_log_bytes`, so a reviewer can re-hash the per-item JSONL prefix
+even after later events extend it. `deliver` on an already-delivered item
+is an idempotent no-op that prints the existing bundle (and rebuilds
+`evidence.json`/`summary.md` if a crash left them missing).
 
 `add` validates the payload (schema, unique id, acceptance criteria) and
 always appends at `ready` with a fresh attempt counter — later states are

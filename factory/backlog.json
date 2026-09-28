@@ -598,6 +598,35 @@
       "verified_head": "ba8918368753ee7400007a3710efcfc7bd9e7f3e",
       "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
       "verified_work": "73931d27cfa1aac6ba417c49e1ef814c10becd16cb42fb3adddbeb184e48b74a"
+    },
+    {
+      "id": "FAC-116",
+      "title": "docs(factory): sync bundle contents with FAC-112/114/115 evidence fields",
+      "kind": "code-change",
+      "priority": 64,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "README/schema now document bundle.json, evidence.json.checks, and the item_log_sha256/item_log_bytes prefix-hash semantics introduced by FAC-112/114/115.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane still passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "332d752f88bc67a045d37d13bd2a2b3ccdc3bdad",
+      "verified_head": "332d752f88bc67a045d37d13bd2a2b3ccdc3bdad",
+      "verified_contract": "f16e7465be28428a0570319eafc3b8c15f1f4e989caf19dfc98c5944e0053dff",
+      "verified_work": "a25b37e562a79b3dd7af456b09ed748b32454c94c5b22746b5d3ac5d1684d166"
     }
   ]
 }
