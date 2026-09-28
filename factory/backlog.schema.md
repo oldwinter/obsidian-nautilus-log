@@ -13,33 +13,40 @@ factory-chore and evidence items that do not duplicate an open issue or PR.
   `failed`, `blocked`, `cancelled` are non-forward states.
 - `transitions`: action -> source states; a mirror of the runner's canonical
   rules that `loadBacklog` validates — entries that widen a gate or name an
-  unknown action fail closed at load time.
-  enforced by `scripts/factory/run.mjs` (the runner is authoritative).
+  unknown action fail closed at load time. The runner is authoritative.
 - `items`: array of work items.
 
 ## Item
 
+`id`, `title`, `kind`, `priority`, `state`, `attempts`, `max_attempts`,
+`module_boundary`, `implementation`, and `acceptance_criteria` are required;
+the load-time validation in `run.mjs` enforces the types stated below and
+rejects empty or wrong-typed values before any command runs.
+
 - `id`: `FAC-NNN` (matches `^[A-Z]+-\d+$`, unique, never reused).
-- `title`: one line.
-- `kind`: `code-change`, `verification`, `audit`, or `docs`.
+- `title`: one non-empty line.
+- `kind`: non-empty free-form label; items so far use `code-change`,
+  `verification`, `audit`, or `factory`.
 - `priority`: integer; `next` picks lowest first.
 - `state`: one of `states`.
 - `attempts`, `max_attempts`: retry bookkeeping; a `failed` item may be
   re-claimed with `claim --retry` while `attempts < max_attempts`.
 - `module_boundary`: globs bounding the item's allowed diff (`*` = one path
-  segment, `**` = any depth, a trailing `/` = that directory prefix).
-  `implemented` fails when the working tree contains changes outside it.
+  segment, `**` = any depth, a trailing `/` = that directory prefix). Every
+  entry must be a non-empty string. `implemented` fails when the working
+  tree contains changes outside it.
   `factory/backlog.json` and `.codex/` are always exempt.
-- `allow_empty_diff`: when true, `implemented` accepts a clean tree
+- `allow_empty_diff`: boolean; when true, `implemented` accepts a clean tree
   (verification/audit items that produce evidence only).
-- `implementation`: what the operator/agent is expected to do.
+- `implementation`: non-empty string describing the expected work.
 - `acceptance_criteria`: `[{ id, description, check }]`; every check must
   pass during `verify`. Check types:
   - `{ "type": "command", "command": "...", "timeout_ms"?: n }` runs via `sh -c`
     at the repo root with `FACTORY_ROOT`, `FACTORY_ITEM_ID`, and
-    `FACTORY_EVIDENCE_DIR` in the environment.
+    `FACTORY_EVIDENCE_DIR` in the environment. `command` must be non-empty.
   - `{ "type": "file-exists", "path": "..." }`.
   - `{ "type": "json-field", "path": "...", "field": "a.b", "equals": "..." }`.
+  `path` must resolve inside the worktree; `json-field` requires `field`.
 - `verify`: extra commands run only after all acceptance checks pass
   (heavier lanes; failures also mark the item failed).
 - `notes`: provenance/limitation notes.

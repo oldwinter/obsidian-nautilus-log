@@ -1101,6 +1101,54 @@
       "verified_head": "d34d4cfb91b16d0614d0fc4195ffa8af0310f615",
       "verified_contract": "fd6a5d97c904821d6aad2102d7cdea58e636502d0a72015480e572bc93f2774d",
       "verified_work": "f4ff2d9c0a6e464997b84f42e6ff7269f9d7ac95d23b95fdcfdbd7de158eb6c5"
+    },
+    {
+      "id": "FAC-130",
+      "title": "Sync backlog schema doc with enforced validation",
+      "kind": "docs",
+      "priority": 30,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "factory/backlog.schema.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Document required fields, actual kind values (factory present, docs unused), per-check-type requirements, and fix the dangling transitions line.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "schema doc lists required fields",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'acceptance_criteria.* are required' factory/backlog.schema.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "kind values reflect the real queue",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'factory' factory/backlog.schema.md && ! grep -q 'or .docs.' factory/backlog.schema.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "factory lane still green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs list"
+      ],
+      "notes": "Doc-drift found during post-FAC-129 schema review",
+      "claimed_head": "19762583691650fcc8d89b7fe1ed1b1d8bfa7930",
+      "verified_head": "19762583691650fcc8d89b7fe1ed1b1d8bfa7930",
+      "verified_contract": "f8403abb7d30339264f17cb9d67fb4fb3307f90cb37bf6e4116b7adc05c984c0",
+      "verified_work": "80fa1e48048a2805970d18d57781aedfed2b1d6ca19c4d6f43c060b31a820fcc"
     }
   ]
 }
