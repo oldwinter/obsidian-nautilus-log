@@ -3,8 +3,10 @@
 // tests/host-matrix/run.mjs inside a disposable profile+vault, using a
 // borrowed Playwright module. Evidence lands in the factory evidence dir.
 //
-// Modes: --mode tooltip (FAC-102 short read-only probe) or --mode full
-// (FAC-103 lifecycle cycles + real CLOCK write).
+// Modes: --mode tooltip (FAC-102 short read-only probe), --mode full
+// (FAC-103 lifecycle cycles + real CLOCK write), --mode review (adds the
+// Review read/write scenario), --mode privacy (adds the local-only privacy
+// assertion scenario).
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -16,8 +18,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy" };
 function assertMode(mode) {
-  if (!["tooltip", "full"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -55,11 +58,11 @@ const args = [
   "--plugin-dir", pkgDir,
   "--output", output,
 ];
-if (values.mode === "tooltip") args.push("--planner-tooltip-only");
+if (SCENARIO_FLAGS[values.mode]) args.push(SCENARIO_FLAGS[values.mode]);
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: values.mode === "full" ? 600_000 : 240_000,
+  timeout: values.mode === "tooltip" ? 240_000 : 600_000,
   log: path.join(evidence, `run-${values.mode}.log`),
 });
 console.log(`host-probe(${values.mode}) exit ${result.status ?? "timeout"} -> ${output}`);
