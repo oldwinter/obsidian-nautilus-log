@@ -627,6 +627,43 @@
       "verified_head": "332d752f88bc67a045d37d13bd2a2b3ccdc3bdad",
       "verified_contract": "f16e7465be28428a0570319eafc3b8c15f1f4e989caf19dfc98c5944e0053dff",
       "verified_work": "a25b37e562a79b3dd7af456b09ed748b32454c94c5b22746b5d3ac5d1684d166"
+    },
+    {
+      "id": "FAC-117",
+      "title": "feat(factory): host-probe bound mode exercises version/candidate binding assertions",
+      "kind": "verification",
+      "priority": 65,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/checks/"
+      ],
+      "allow_empty_diff": true,
+      "implementation": "tests/host-matrix/run.mjs supports --expected-app-version/--expected-electron-version/--candidate-sha but no lane ever passed them, leaving expected-obsidian-version and expected-electron-version dead code. New --mode bound runs the tooltip scenario with both version bindings plus the worktree HEAD as candidate-sha.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Bound host probe passes in the real installed Obsidian",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode bound"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Report records both version-binding assertions passed",
+          "check": {
+            "type": "command",
+            "command": "node -e 'const fs=require(\"fs\");const r=JSON.parse(fs.readFileSync(process.env.FACTORY_EVIDENCE_DIR+\"/host-bound/evidence/report.json\"));const a=r.assertions.filter(x=>x.id.startsWith(\"expected-\"));if(a.length!==2||!a.every(x=>x.passed)){console.error(a);process.exit(1)}'"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3cecbe907794abc212227fccc2ae5735b317f95a",
+      "verified_head": "3cecbe907794abc212227fccc2ae5735b317f95a",
+      "verified_contract": "c510703c2dcd1171f11a02aeb7e78210eaf76125a97241dd0c9475442800fbc5",
+      "verified_work": "a6900e7f89e06822f49c2a46d081ad441692625f65066d4e010849256f7c093b"
     }
   ]
 }

@@ -6,9 +6,11 @@
 // Modes: --mode tooltip (FAC-102 short read-only probe), --mode full
 // (FAC-103 lifecycle cycles + real CLOCK write), --mode review (adds the
 // Review read/write scenario), --mode privacy (adds the local-only privacy
-// assertion scenario).
+// assertion scenario), --mode bound (tooltip scenario plus expected
+// app/Electron version and candidate-SHA binding assertions).
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import {
@@ -18,9 +20,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
-const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy" };
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only" };
 function assertMode(mode) {
-  if (!["tooltip", "full", "review", "privacy"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy", "bound"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -59,10 +61,18 @@ const args = [
   "--output", output,
 ];
 if (SCENARIO_FLAGS[values.mode]) args.push(SCENARIO_FLAGS[values.mode]);
+if (values.mode === "bound") {
+  const { OBSIDIAN_APP_VERSION = "1.13.7", OBSIDIAN_ELECTRON_VERSION = "43.3.0" } = process.env;
+  args.push(
+    "--expected-app-version", OBSIDIAN_APP_VERSION,
+    "--expected-electron-version", OBSIDIAN_ELECTRON_VERSION,
+    "--candidate-sha", execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim(),
+  );
+}
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: values.mode === "tooltip" ? 240_000 : 600_000,
+  timeout: ["tooltip", "bound"].includes(values.mode) ? 240_000 : 600_000,
   log: path.join(evidence, `run-${values.mode}.log`),
 });
 console.log(`host-probe(${values.mode}) exit ${result.status ?? "timeout"} -> ${output}`);
