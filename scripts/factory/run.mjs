@@ -607,7 +607,9 @@ function formatEvent(e) {
   return `${e.ts} ${(e.item ?? "-").padEnd(8)} ${e.event}${transition}`;
 }
 
-function renderStatus() {
+// deep=true runs the staleness gate per verified item (git subprocesses);
+// the appendProgress hot path calls this shallow on every event.
+function renderStatus({ deep = false } = {}) {
   if (!existsSync(backlogPath)) return;
   let backlog;
   try {
@@ -616,7 +618,14 @@ function renderStatus() {
     return;
   }
   const counts = {};
-  for (const item of backlog.items ?? []) counts[item.state] = (counts[item.state] ?? 0) + 1;
+  const staleMarks = {};
+  for (const item of backlog.items ?? []) {
+    counts[item.state] = (counts[item.state] ?? 0) + 1;
+    if (deep && item.state === "verified") {
+      const reason = verifyStaleReason(item);
+      if (reason) staleMarks[item.id] = reason;
+    }
+  }
   const recent = recentEvents();
   const lines = [
     "# devin-factory status",
@@ -631,7 +640,8 @@ function renderStatus() {
     "## Items",
     "",
     ...backlog.items.map((item) =>
-      `- **${item.id}** [${item.state}] (attempts ${item.attempts}/${item.max_attempts}) ${item.title}`),
+      `- **${item.id}** [${item.state}] (attempts ${item.attempts}/${item.max_attempts}) ${item.title}`
+        + (staleMarks[item.id] ? ` — STALE: ${staleMarks[item.id]}` : "")),
     "",
     "## Recent events",
     "",
@@ -643,8 +653,14 @@ function renderStatus() {
 }
 
 function cmdStatus(backlog) {
-  renderStatus();
+  renderStatus({ deep: true });
   cmdList(backlog);
+  const stale = backlog.items.filter((item) => item.state === "verified")
+    .map((item) => ({ item, reason: verifyStaleReason(item) }))
+    .filter(({ reason }) => reason);
+  for (const { item, reason } of stale) {
+    console.log(`${item.id}  STALE: ${reason} — rerun verify`);
+  }
   const recent = recentEvents(5);
   if (recent.length) {
     console.log("recent:");

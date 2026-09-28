@@ -345,6 +345,29 @@ test("deliver rejects stale verification after contract or source drift", () => 
   }
 });
 
+test("status surfaces stale verification on verified items", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "changed\n");
+    const rendered = box.run("status");
+    ok(rendered, "status");
+    assert.match(rendered.stdout, /IT-001\s+STALE: worktree changed/, "console flags stale stamp");
+    const status = readFileSync(path.join(box.dir, ".codex", "runtime", "devin-factory", "status.md"), "utf8");
+    assert.match(status, /STALE: worktree changed/, "status.md flags stale stamp");
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    const clean = box.run("status");
+    ok(clean, "status after revert");
+    assert.doesNotMatch(clean.stdout, /STALE/, "restored worktree clears the flag");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run exercises the full pipeline in a sandbox", () => {
   const result = spawnSync(process.execPath, [runner, "dry-run"], { cwd: repo, encoding: "utf8" });
   assert.equal(result.status, 0, `dry-run failed: ${result.stdout}\n${result.stderr}`);
