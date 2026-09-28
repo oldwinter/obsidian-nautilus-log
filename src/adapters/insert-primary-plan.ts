@@ -52,6 +52,19 @@ async function openDailyNote(app: App, file: TFile): Promise<void> {
   }
 }
 
+async function confirmInsertion(
+  dependencies: InsertPrimaryPlanDependencies,
+  file: TFile,
+  expectedText: string,
+  editor?: Pick<Editor, "getValue">,
+): Promise<void> {
+  // Confirm through the write primitive: newly opened editors normalize vault line endings.
+  const actualText = editor ? editor.getValue() : await dependencies.app.vault.read(file);
+  if (actualText !== expectedText) {
+    throw new Error("Primary Plan insertion could not be confirmed");
+  }
+}
+
 function writeEditor(
   editor: Pick<Editor, "getValue"> & Partial<Pick<Editor, "setValue">>,
   locale: string,
@@ -87,6 +100,7 @@ export async function insertPrimaryPlan(
     }
     const file = await dependencies.app.vault.create(path, prepared.nextText);
     await openDailyNote(dependencies.app, file);
+    await confirmInsertion(dependencies, file, prepared.nextText);
     return Object.freeze({ kind: "created", path });
   }
 
@@ -95,11 +109,15 @@ export async function insertPrimaryPlan(
   let prepared = fromEditor;
   if (!prepared) {
     let outcome: PrimaryPlanInsertion | undefined;
-    await dependencies.app.vault.process(existing, (current) => {
+    const result = await dependencies.app.vault.process(existing, (current) => {
       outcome = preparePrimaryPlanInsertion(current, locale);
       return outcome.kind === "create" || outcome.kind === "append" ? outcome.nextText : current;
     });
-    prepared = outcome ?? preparePrimaryPlanInsertion(undefined, locale);
+    if (!outcome) throw new Error("Primary Plan insertion transform did not run");
+    if ((outcome.kind === "create" || outcome.kind === "append") && result !== outcome.nextText) {
+      throw new Error("Primary Plan insertion returned unexpected text");
+    }
+    prepared = outcome;
   }
   if (prepared.kind === "already-present") {
     await openDailyNote(dependencies.app, existing);
@@ -110,6 +128,7 @@ export async function insertPrimaryPlan(
     return Object.freeze({ kind: "blocked", reason: prepared.reason });
   }
   await openDailyNote(dependencies.app, existing);
+  await confirmInsertion(dependencies, existing, prepared.nextText, fromEditor ? editor : undefined);
   return Object.freeze({ kind: prepared.kind === "create" ? "created" : "appended", path });
 }
 
