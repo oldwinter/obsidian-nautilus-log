@@ -75,6 +75,20 @@ test("non-button ribbon triggers expose keyboard activation and focus return", a
   assert.match(panel, /if \(restoreFocus\) trigger\.focus\(\)/);
 });
 
+test("Escape close restores trigger focus before hiding the popover and stops host Escape handling", async () => {
+  const panel = await readFile("src/ui/execution/panel.ts", "utf8");
+  const closeStart = panel.indexOf("close(restoreFocus = false) {");
+  const focusAt = panel.indexOf("if (restoreFocus) trigger.focus();", closeStart);
+  const hideAt = panel.indexOf("popover.hidden = true", closeStart);
+  assert(closeStart >= 0 && focusAt > closeStart && hideAt > focusAt,
+    "trigger.focus() must run before popover.hidden = true so focus leaves the popover before it can be reset");
+  const escapeHandler = panel.match(/const onDocumentKeyDown[\s\S]*?\}\s*;/)?.[0] ?? "";
+  assert.match(escapeHandler, /event\.preventDefault\(\);\s*event\.stopPropagation\(\);/s,
+    "a consumed Escape must not propagate to host window-level handlers");
+  assert.doesNotMatch(escapeHandler, /defaultPrevented/,
+    "the host may deliver Escape already preventDefaulted; our open dialog must still close");
+});
+
 test("active task surface distinguishes idle, standalone POMO, active, and unavailable", () => {
   assert.equal(activeTaskSurfaceMode(snapshot()), "idle");
   assert.equal(activeTaskSurfaceMode(snapshot({ standalonePomoStartEpochMs: 1_000 })), "pomo");

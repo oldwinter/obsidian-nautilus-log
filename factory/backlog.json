@@ -274,8 +274,8 @@
       "title": "fix(panel): restore trigger focus on Escape before hiding popover",
       "kind": "code-change",
       "priority": 35,
-      "state": "claimed",
-      "attempts": 1,
+      "state": "delivered",
+      "attempts": 2,
       "max_attempts": 3,
       "module_boundary": [
         "src/ui/execution/panel.ts",
@@ -312,7 +312,7 @@
       ],
       "verify": [],
       "notes": "Contract source: dossier Execution panel machine 'Escape and close restore focus'; OBS-A11Y. Fix preserves the contract — no deviation record needed.",
-      "claimed_head": "802fabe5edf6a2441183fb3062c467abcc9a59f8"
+      "claimed_head": "d00c72f1a8c8d18a6d6bff46737d444380fe5ae5"
     }
   ]
 }

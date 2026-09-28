@@ -404,8 +404,9 @@ export function mountExecutionPanel(
     surface.close(false);
   };
   const onDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!opened || event.key !== "Escape" || event.defaultPrevented) return;
+    if (!opened || event.key !== "Escape") return;
     event.preventDefault();
+    event.stopPropagation();
     surface.close(true);
   };
   const onResize = (): void => {
@@ -458,13 +459,13 @@ export function mountExecutionPanel(
       if (!opened) return;
       opened = false;
       review?.render(reviewPanel, false);
+      if (restoreFocus) trigger.focus();
       popover.hidden = true;
       if (timer !== undefined) {
         document.defaultView?.clearInterval(timer);
         timer = undefined;
       }
       updateTrigger();
-      if (restoreFocus) trigger.focus();
     },
     setLocale() {
       popover.setAttribute("aria-label", options.messages.t("execution", "surface.name"));
