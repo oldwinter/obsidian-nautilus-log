@@ -1625,6 +1625,46 @@
       "verified_head": "04b1f1413b401435a773dbbb96e97db601008170",
       "verified_contract": "adda5baac13407362af17ff60833d3e210c351646741141a232107c1115e281a",
       "verified_work": "7853e488374e84ce5653f3170014422f1c255ac9dcf8e0ed3dac3c53e69c0cfe"
+    },
+    {
+      "id": "FAC-144",
+      "title": "check evidence records kill signal; summary omits null duration",
+      "kind": "factory",
+      "priority": 144,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "pickResult now carries result.signal so a group-killed check is recorded as killed (SIGKILL), not just exit 1; writeDeliveryEvidence's checks mapping passes signal through and summary.md renders duration/signal conditionally — no more '(exit 0, null ms)' for file-exists/json-field checks.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "timed-out check row records signal SIGKILL (killed-vs-exited is distinguishable)",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'descendant process group' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "delivered summary.md never renders 'null ms' for untimed checks",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'reviewable bundle' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "947109e8ebfc951bf54b67bf4ae627fea055f153",
+      "verified_head": "947109e8ebfc951bf54b67bf4ae627fea055f153",
+      "verified_contract": "0c725031cc02775492007c2e3e1b8109eacebb0ea4d5d87f3baf8701192ec8d2",
+      "verified_work": "962ac926c57c024a9160be0f3dd6c9faadc45b7dba1616b97099d26dc894ac4e"
     }
   ]
 }

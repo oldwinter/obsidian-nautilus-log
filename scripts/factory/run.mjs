@@ -662,6 +662,7 @@ function pickResult(result) {
   return {
     command: result.command ?? result.check?.command ?? result.check?.path,
     exit_code: result.exit_code,
+    signal: result.signal,
     duration_ms: result.duration_ms,
     output_tail: result.output_tail ?? result.detail,
     timed_out: result.timed_out,
@@ -695,6 +696,7 @@ function writeDeliveryEvidence(dir, item) {
         command: row.command ?? null,
         ok: row.ok === true,
         exit_code: row.exit_code ?? null,
+        signal: row.signal ?? null,
         duration_ms: row.duration_ms ?? null,
       }));
   const evidence = {
@@ -732,7 +734,7 @@ function writeDeliveryEvidence(dir, item) {
     "## Check results",
     "",
     ...checks.map((check) =>
-      `- ${check.ok ? "PASS" : "FAIL"} ${check.criterion ?? "verify"} ${check.command ?? ""} (exit ${check.exit_code}, ${check.duration_ms} ms)`),
+      `- ${check.ok ? "PASS" : "FAIL"} ${check.criterion ?? "verify"} ${check.command ?? ""} (exit ${check.exit_code}${check.duration_ms == null ? "" : `, ${check.duration_ms} ms`}${check.signal ? `, signal ${check.signal}` : ""})`),
     "",
     "Evidence: change.patch, bundle.json, files/ (untracked copies), evidence.json, per-item JSONL log.",
   ].join("\n");

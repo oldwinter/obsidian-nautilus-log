@@ -181,6 +181,7 @@ test("timed-out command check reaps its descendant process group", async () => {
     fails(verified, "verify must fail on check timeout");
     const check = box.progress().find((row) => row.event === "check" && row.criterion === "AC1");
     assert.equal(check.timed_out, true, "check row records the timeout");
+    assert.equal(check.signal, "SIGKILL", "check row records the group kill signal");
     assert.equal(box.item("IT-001").state, "failed");
     // The backgrounded subshell was scheduled to write ~1s in; a live
     // descendant would land the marker after the check already failed.
@@ -229,6 +230,8 @@ test("deliver is idempotent and produces a reviewable bundle", () => {
     assert(existsSync(path.join(bundle, "change.patch")), "change.patch written");
     const evidence = JSON.parse(readFileSync(path.join(bundle, "evidence.json"), "utf8"));
     assert(Array.isArray(evidence.checks), "evidence.json embeds check results");
+    const summaryText = readFileSync(path.join(bundle, "summary.md"), "utf8");
+    assert(!summaryText.includes("null ms"), "summary omits duration for untimed checks");
     assert.equal(evidence.checks.length, 2, "one acceptance check + one verify command");
     assert(evidence.checks.every((row) => row.ok === true), "all recorded checks passed");
     assert.equal(evidence.checks[0].criterion, "AC1");
