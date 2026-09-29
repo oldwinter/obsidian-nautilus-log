@@ -57,6 +57,12 @@ type CompilationResult =
   | { readonly ok: true; readonly configuration: CompiledConfiguration }
   | { readonly ok: false; readonly reason: DailyNoteResolutionFailureReason; readonly message: string };
 
+const WINDOWS_DEVICE_NAME = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/iu;
+
+function isPortablePathSegment(segment: string): boolean {
+  return !/[ .]$/u.test(segment) && !WINDOWS_DEVICE_NAME.test(segment);
+}
+
 const TOKEN_PARTS: Readonly<Record<DateToken, Omit<TokenPart, "kind" | "token">>> = {
   YYYY: { component: "year", variableWidth: false },
   MM: { component: "month", variableWidth: false },
@@ -87,7 +93,11 @@ function normalizeFolder(folder: string): string | undefined {
   const segments: string[] = [];
   for (const segment of slashFolder.split("/")) {
     if (segment === "" || segment === ".") continue;
-    if (segment === ".." || /[<>:"|?*\u0000-\u001f]/.test(segment)) return undefined;
+    if (
+      segment === ".."
+      || /[<>:"|?*\u0000-\u001f]/.test(segment)
+      || !isPortablePathSegment(segment)
+    ) return undefined;
     segments.push(segment);
   }
   return segments.join("/");
@@ -248,7 +258,12 @@ function renderRelativePath(parts: readonly FormatPart[], date: LogicalDate): st
     return undefined;
   }
   const segments = rendered.split("/");
-  if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
+  if (segments.some((segment) => (
+    segment === ""
+    || segment === "."
+    || segment === ".."
+    || !isPortablePathSegment(segment)
+  ))) {
     return undefined;
   }
   return rendered;

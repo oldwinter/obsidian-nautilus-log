@@ -86,6 +86,11 @@ test("WSR-DN-004 rejects invalid dates, paths, formats, and duplicate extensions
     [date(2026, 8, 28), { folder: "Daily", format: "YYYY-MM-DD[.md]" }],
     [date(2026, 8, 28), { folder: "Daily", format: "YYYY-MM-dd" }],
     [date(2026, 8, 28), { folder: "Daily", format: "YYYY//MM/DD" }],
+    [date(2026, 8, 28), { folder: "CON", format: "YYYY-MM-DD" }],
+    [date(2026, 8, 28), { folder: "Daily.", format: "YYYY-MM-DD" }],
+    [date(2026, 8, 28), { folder: "Daily ", format: "YYYY-MM-DD" }],
+    [date(2026, 8, 28), { folder: "", format: "[NUL]/YYYY-MM-DD" }],
+    [date(2026, 8, 28), { folder: "", format: "YYYY-MM-DD[.]" }],
   ] as const;
 
   for (const [logicalDate, configuration] of invalidCases) {
@@ -124,6 +129,15 @@ test("WSR-DN-006 parsing rejects noncanonical and unrelated paths", () => {
   ]) {
     const result = parseDailyNotePath(path, configuration);
     assert.equal(result.ok, false, path);
+  }
+
+  for (const [path, portableConfiguration] of [
+    ["CON/2026-08-28.md", { folder: "CON", format: "YYYY-MM-DD" }],
+    ["2026-08-28..md", { folder: "", format: "YYYY-MM-DD[.]" }],
+  ] as const) {
+    const result = parseDailyNotePath(path, portableConfiguration);
+    assert.equal(result.ok, false, path);
+    if (!result.ok) assert.equal(result.reason, "invalid-config", path);
   }
 
   const anotherDate = parseDailyNotePath("Daily/2026/08/29.md", configuration);
