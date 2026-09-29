@@ -23,7 +23,8 @@ issue or active PR. See `factory/backlog.schema.md` for the item contract.
   `npm test` via `tests/**/*.test.mjs`).
 - `.codex/runtime/devin-factory/` — volatile runtime evidence, gitignored:
   `session.json`, `progress.jsonl`, `status.md`, `items/<id>.jsonl`,
-  `evidence/`, `deliveries/`.
+  `evidence/`, `deliveries/`, `run.lock/`, plus `queues/<token>/` subtrees
+  for non-default queues (see Global options).
 
 ## Run
 
@@ -119,6 +120,22 @@ Ctrl-C during `verify` kills the running check's process group and leaves
 the item in `verifying` (see Recover). No
 command ever pushes, merges, deploys, or approves anything — those stay
 manual gates.
+
+## Global options
+
+- `--root <dir>` — run against another checkout root (tests and `dry-run`
+  use this; `FACTORY_ROOT` is the env equivalent exported to checks).
+- `--backlog <file>` — queue file resolved against `--root` (default
+  `factory/backlog.json`; an absolute path still works). A non-default
+  queue gets an isolated evidence subtree
+  `.codex/runtime/devin-factory/queues/<token>/` — its own `progress.jsonl`,
+  `items/`, `evidence/`, `deliveries/`, and `status.md` — so a same-id item
+  in two queues never mingles logs or bundles. `run.lock/` stays at the
+  runtime root and serializes every queue (the worktree is shared).
+- `--json` — `list` prints the item rows as JSON instead of the table.
+- `--retry` — `claim` from `failed` consumes one attempt (bounded by
+  `max_attempts`); `--file <path>` (`add`), `--reason` (`fail`/`cancel`),
+  and `--note` (`record`) are shown with their commands above.
 
 ## Environment knobs
 

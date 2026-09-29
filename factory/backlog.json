@@ -2207,6 +2207,45 @@
       "verified_head": "819aa4039a59623775ed88d9d4d08ba3712cac2c",
       "verified_contract": "a4a7fbc230ca7926cea371bc87b0b8d3ef0aeca8ecec5b0aa094d16625a36188",
       "verified_work": "5ae623f3450cf04bff282ed560f4f8e0325befdd68c0ad74f70a34578e09613e"
+    },
+    {
+      "id": "FAC-159",
+      "title": "README documents global options and queue isolation",
+      "kind": "factory",
+      "priority": 159,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Doc-surface gap: --root, --backlog, and --json existed in HELP/options but had zero README coverage, and FAC-157's queues/<token>/ isolation was undocumented. Added a Global options section covering all four flags (command-scoped flags referenced), the isolated-subtree semantics, and the shared run.lock; Layout bullet now lists run.lock/ and queues/.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "every global option appears in the README",
+          "check": {
+            "type": "command",
+            "command": "for t in --root --backlog --json --retry 'queues/<token>'; do grep -q -- \"$t\" factory/README.md || exit 1; done"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "planning-doc check still passes",
+          "check": {
+            "type": "command",
+            "command": "node scripts/check-planning-docs.mjs --sha HEAD"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "5ac2780ae4176834f7930c4d4e5d9ac6bde91c45",
+      "verified_head": "5ac2780ae4176834f7930c4d4e5d9ac6bde91c45",
+      "verified_contract": "a2bb2a67a829fab156c2e1e0f77088094fd98084c58bec8de915067880a6d6bc",
+      "verified_work": "f0a820893107e7e49678873b3873152cd351724acb64732ac33df57c17c24408"
     }
   ]
 }
