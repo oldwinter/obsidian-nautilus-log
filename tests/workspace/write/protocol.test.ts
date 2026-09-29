@@ -5,6 +5,7 @@ import {
   ObsidianAtomicTextAccess,
   WorkspaceCommitter,
   legacyRunningClockKey,
+  type CommitContext,
 } from "../../../src/workspace/commit.ts";
 import { parseClockText } from "../../../src/workspace/clock-parser.ts";
 import {
@@ -4012,7 +4013,7 @@ test("one acknowledged preview cannot authorize target replacement timestamp or 
   const initializeExpectation = await mutationExpectation(initializeAccess, initialize, {});
   const { previewToken: _initializeToken, ...initializeInput } = initialize;
   const initializeOperation = initialize.stages[0]!.operations[0];
-  assert.equal(initializeOperation.kind, "initialize-plan");
+  assert.equal(initializeOperation?.kind, "initialize-plan");
   const initializeVariants = [
     createMutationPlan({ ...initializeInput, stages: [{ ...initialize.stages[0]!, path: "Daily/Other.md" }] }),
     createMutationPlan({
@@ -4065,7 +4066,7 @@ test("one acknowledged preview cannot authorize target replacement timestamp or 
   });
   const { previewToken: _normalizeToken, ...normalizeInput } = normalize;
   const normalizeOperation = normalize.stages[0]!.operations[0];
-  assert.equal(normalizeOperation.kind, "normalize-legacy-clock");
+  assert.equal(normalizeOperation?.kind, "normalize-legacy-clock");
   const normalizeVariants = [
     createMutationPlan({
       ...normalizeInput,
@@ -4103,7 +4104,7 @@ test("post-preview plan or expected-byte mutation is rejected before host entry"
   const plan = clockInPlan();
   const expectation = await mutationExpectation(access, plan, { planIds: [PLAN_B] });
   const operation = plan.stages[0]!.operations[0];
-  assert.equal(operation.kind, "clock-in");
+  assert.equal(operation?.kind, "clock-in");
   const mutated = {
     ...plan,
     stages: [{
@@ -4157,7 +4158,7 @@ test("callback-time context drift rejects before mutation bytes are applied", as
     const access = new MemoryAtomicTextAccess({ [PATH]: source });
     const mutation = clockInPlan();
     const expectation = await mutationExpectation(access, mutation, { planIds: [PLAN_B] });
-    let context = CONTEXT;
+    let context: CommitContext = CONTEXT;
     const writer = new WorkspaceCommitter(access, { readContext: () => context });
     const gate = access.pauseBeforeCallback(PATH);
     const pending = writer.commit(mutation, expectation);

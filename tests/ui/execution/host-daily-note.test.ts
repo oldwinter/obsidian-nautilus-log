@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { App } from "obsidian";
 
 import { readHostDailyNoteConfiguration } from "../../../src/adapters/host-daily-note";
 
@@ -21,7 +22,7 @@ test("host Daily Note config reads folder and format from daily-notes.json", asy
         },
       },
     },
-  };
+  } as Pick<App, "vault">;
   assert.deepEqual(await readHostDailyNoteConfiguration(app), {
     folder: "Daily",
     format: "YYYY-MM-DD",

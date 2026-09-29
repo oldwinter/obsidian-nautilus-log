@@ -9,7 +9,7 @@
     "clean": "node esbuild.config.mjs clean",
     "validate": "node esbuild.config.mjs validate",
     "validate:provenance": "node esbuild.config.mjs provenance",
-    "check": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs validate",
+    "check": "tsc --noEmit --skipLibCheck && tsc --project tsconfig.tests.json && node esbuild.config.mjs validate",
     "test": "node esbuild.config.mjs test",
     "build": "npm run check && node esbuild.config.mjs build",
     "verify": "npm run clean && npm run check && npm test && npm run build"
@@ -21,6 +21,7 @@
     "npm": "12.0.2"
   },
   "devDependencies": {
+    "@types/node": "24.13.6",
     "esbuild": "0.28.2",
     "obsidian": "1.13.1",
     "typescript": "7.0.2"

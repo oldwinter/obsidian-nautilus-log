@@ -49,7 +49,7 @@ function oneStage(
   action: MutationPlan["action"],
   operations: MutationPlan["stages"][number]["operations"],
   expectedRunningClockIds: readonly string[] = [],
-  zoneId = CONTEXT.zoneId,
+  zoneId: string = CONTEXT.zoneId,
 ): MutationPlan {
   const confirmationRequired = [
     "initialize-plan",

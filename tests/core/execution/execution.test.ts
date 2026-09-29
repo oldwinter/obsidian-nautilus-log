@@ -6,6 +6,7 @@ import {
   decideExecutionCommand,
   type ExecutionClockFact,
   type ExecutionDecisionContext,
+  type ExecutionProgressFact,
   type ExecutionTaskFact,
 } from "../../../src/core/execution.ts";
 
@@ -115,7 +116,7 @@ test("TC-UP-CLK-03-001 Clock Out closes the active CLOCK and Idle is a no-op", (
 });
 
 test("legacy idless CLOCK close requires and binds one generated identity", () => {
-  const legacy = clock({ clockId: undefined, legacyStartOffsetMinutes: 480 });
+  const { clockId: _legacyClockId, ...legacy } = clock({ legacyStartOffsetMinutes: 480 });
   const missing = decideExecutionCommand(
     { type: "clock-out" },
     context({ clocks: { kind: "active", clock: legacy }, generated: {} }),
@@ -130,7 +131,7 @@ test("legacy idless CLOCK close requires and binds one generated identity", () =
 });
 
 test("a switch cannot reuse one generated identity for close and open", () => {
-  const legacy = clock({ clockId: undefined });
+  const { clockId: _legacyClockId, ...legacy } = clock();
   const decision = decideExecutionCommand(
     { type: "clock-in", target: task({ ownerId: OWNER_B }) },
     context({
@@ -158,7 +159,7 @@ test("TC-UP-CLK-05-001..002 Complete closes only the focused task CLOCK", () => 
 });
 
 test("anonymous tasks require one generated owner identity", () => {
-  const anonymous = task({ ownerId: undefined });
+  const { ownerId: _anonymousOwnerId, ...anonymous } = task();
   const missing = decideExecutionCommand(
     { type: "clock-in", target: anonymous },
     context({ generated: { openedClockId: CLOCK_NEW } }),
@@ -276,7 +277,7 @@ test("decision inputs are copied and invalid time facts fail closed", () => {
     kind: "absent" | "known";
     percent?: number;
   };
-  const mutable = task({ progress: mutableProgress });
+  const mutable = task({ progress: mutableProgress as ExecutionProgressFact });
   const decision = decideExecutionCommand({ type: "clock-in", target: mutable }, context());
   mutableProgress.kind = "known";
   mutableProgress.percent = 70;

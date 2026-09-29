@@ -238,7 +238,7 @@ test("TC-UP-HIS-03-001..003 uses Planned only with an explicit anchor", () => {
     completionAnchorEpochMilliseconds: DAY_START + 4 * HOUR,
   });
   const noAnchor = task("none-2", { status: "done", plannedMinutes: 45 });
-  const malformed: ReviewClock = Object.freeze({ state: "malformed", ownerId: anchored.ownerId });
+  const malformed: ReviewClock = Object.freeze({ state: "malformed", ownerId: anchored.ownerId! });
   const slices = projectCompletedHistory([anchored, noAnchor], [malformed], day());
   assert.equal(slices.length, 1);
   assert.equal(slices[0]?.task.key, "planned-1");
@@ -324,8 +324,8 @@ test("malformed and potential running CLOCKs diagnose without fabricating Actual
   const projection = projectReview({
     tasks: [open],
     clocks: [
-      { state: "malformed", ownerId: open.ownerId },
-      { state: "potential-running", ownerId: open.ownerId },
+      { state: "malformed", ownerId: open.ownerId! },
+      { state: "potential-running", ownerId: open.ownerId! },
     ],
     day: day(),
     nowEpochMilliseconds: DAY_START + HOUR,

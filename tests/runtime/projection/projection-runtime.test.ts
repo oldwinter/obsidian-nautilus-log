@@ -466,9 +466,10 @@ test("TC-UP-EXE-01-003 missing, over-limit, read error, and stale states fail cl
   );
   assert.equal(overLimitSnapshots.at(-1)?.mutationCapability, null);
   assert.equal("projection" in overLimitSnapshots.at(-1)!, false);
-  if (overLimitSnapshots.at(-1)?.state === "over-limit") {
-    assert.equal(overLimitSnapshots.at(-1)!.overLimit.kind, "active-note-bytes");
-    assert.equal(overLimitSnapshots.at(-1)!.overLimit.limit, 2 * 1024 * 1024);
+  const overLimitSnapshot = overLimitSnapshots.at(-1);
+  if (overLimitSnapshot?.state === "over-limit") {
+    assert.equal(overLimitSnapshot.overLimit.kind, "active-note-bytes");
+    assert.equal(overLimitSnapshot.overLimit.limit, 2 * 1024 * 1024);
   }
   overLimitConnection.disconnect();
   await overLimitFixture.runtime.stop();

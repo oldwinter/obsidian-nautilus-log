@@ -17,8 +17,7 @@ const date = (year: number, month: number, day: number): LogicalDate => ({
 
 function resolvedPath(logicalDate: LogicalDate, configuration: DailyNoteConfiguration): string {
   const result = resolveDailyNotePath(logicalDate, configuration);
-  assert.equal(result.ok, true, JSON.stringify(result));
-  if (!result.ok) throw new Error(result.message);
+  if (!result.ok) assert.fail(JSON.stringify(result));
   return result.path;
 }
 

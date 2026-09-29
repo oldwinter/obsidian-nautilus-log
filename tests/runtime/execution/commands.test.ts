@@ -234,7 +234,7 @@ function mutation(intentId: string, action: MutationAction): ExecutionMutationIn
   return Object.freeze({
     intentId,
     action,
-    prepare: () => ({ kind: "prepared", mutation: { plan, expectation } }),
+    prepare: () => ({ kind: "prepared" as const, mutation: { plan, expectation } }),
   });
 }
 

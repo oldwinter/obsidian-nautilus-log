@@ -47,7 +47,7 @@ interface AdapterSeam {
   readonly mounts: CapturedMount[];
   mountFailure?: Error;
   readonly surface: AdapterSurface;
-  readonly createSurface?: (mount: CapturedMount) => AdapterSurface;
+  createSurface?: (mount: CapturedMount) => AdapterSurface;
 }
 
 test("TC-UP-CTL-01-007 setState commits date and identity only after context and remount succeed", async () => {
@@ -257,7 +257,7 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   const dependencies: PlannerItemViewDependencies = {
     runtime: runtime as PlannerItemViewDependencies["runtime"],
     defaultLogicalDate: () => ({ year: 2026, month: 8, day: 28 }),
-    copySummary: async (summary) => {
+    copySummary: async (summary): Promise<PlannerSummaryCopyOutcome> => {
       summaryCalls.push(summary);
       return "copied";
     },

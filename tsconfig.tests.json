@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "lib": ["DOM", "ES2024"],
+    "paths": {
+      "@review-source/*": ["./src/*"]
+    },
+    "types": ["node"]
+  },
+  "include": ["tests/**/*.ts", "scripts/**/*.ts"]
+}

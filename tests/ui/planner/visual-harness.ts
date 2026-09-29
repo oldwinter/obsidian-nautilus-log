@@ -88,14 +88,16 @@ function viewContext(): PlannerViewContext {
 
 const icons = {
   collapse: "^",
+  copy: "c",
+  debug: "b",
   expand: "v",
   "hide-completed": "o",
   "show-completed": "x",
   play: ">",
+  refresh: "r",
 } as const;
 
 const surface = mountPlannerSurface(surfaceRoot, runtime, viewContext(), {
-  now: () => Date.now(),
   renderIcon: (button, icon) => {
     const glyph = document.createElement("span");
     glyph.className = "harness-icon";
