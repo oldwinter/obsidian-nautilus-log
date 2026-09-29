@@ -1125,6 +1125,18 @@ async function main() {
     return;
   }
   const [command, id] = positionals;
+  // Exact positional arity per command: silently dropping `positionals[2+]`
+  // let `claim IT-001 IT-002` mutate one item while the operator believed two
+  // were targeted, and `status junk` ran the command anyway.
+  const ARITY = new Map([["list", 0], ["show", 1], ["next", 0], ["add", 0],
+    ["claim", 1], ["implemented", 1], ["verify", 1], ["deliver", 1], ["fail", 1],
+    ["release", 1], ["block", 1], ["unblock", 1], ["cancel", 1], ["inspect", 1],
+    ["record", 1], ["status", 0], ["dry-run", 0]]);
+  if (!ARITY.has(command)) fail(`unknown command ${command}`);
+  const extra = positionals.slice(1 + ARITY.get(command));
+  if (extra.length > 0) {
+    fail(`${command} takes ${ARITY.get(command) ? "exactly one <id>" : "no positional arguments"}; unexpected: ${extra.join(" ")}`);
+  }
   if (command === "dry-run") {
     cmdDryRun();
     return;

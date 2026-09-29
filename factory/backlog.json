@@ -1919,6 +1919,46 @@
       "verified_head": "55da905209884072f1e50f7a7de000328227e70c",
       "verified_contract": "4ef3297dedea9148644ace641740cbb9074448acbfd2a9f90387c20610502440",
       "verified_work": "2abb0f6a09cd7a2a0f645a78dc2b4ed030e363bb0ec1ead168a6ba6c0e7ba88a"
+    },
+    {
+      "id": "FAC-152",
+      "title": "commands reject unexpected extra positional arguments",
+      "kind": "factory",
+      "priority": 152,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "main() destructured [command, id] and silently dropped positionals[2+]: `claim IT-001 IT-002` claimed only the first id with no signal - a mutating action under a false sense of scope - and `status junk` ran anyway. Validate exact arity per command before dispatch so stray arguments fail loudly before any lock or mutation.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "claim with two ids fails naming the extra and mutates nothing; zero-arity commands reject stray args; unknown commands still report the command",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'extra positional' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "6bf2ec9a2d8c395892f2c035af1516b51224c1b9",
+      "verified_head": "6bf2ec9a2d8c395892f2c035af1516b51224c1b9",
+      "verified_contract": "fcab45cbcf1d08ee07f94663315b841159946216a1633bddc000c2b327796a94",
+      "verified_work": "d737292960a0c802c76b55c072208f7a1325d77d6d4ca6133a72d97218ad5c08"
     }
   ]
 }

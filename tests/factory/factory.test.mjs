@@ -246,6 +246,28 @@ test("a hung git is cut by a bounded git timeout instead of pinning the lock", (
   }
 });
 
+test("commands reject unexpected extra positional arguments", () => {
+  const box = sandbox([makeItem(), makeItem({ id: "IT-002", priority: 2 })]);
+  try {
+    // claim IT-001 IT-002 must not silently claim only the first id.
+    const twoIds = box.run("claim", "IT-001", "IT-002");
+    fails(twoIds, "two ids must fail loudly");
+    assert.match(`${twoIds.stdout}${twoIds.stderr}`, /unexpected: IT-002/);
+    assert.equal(box.item("IT-001").state, "ready", "nothing was mutated");
+    // Zero-arity commands reject stray positionals too.
+    fails(box.run("status", "junk"), "status with a stray arg must fail");
+    fails(box.run("dry-run", "extra"), "dry-run with a stray arg must fail");
+    // Unknown commands still report the command, not the arity.
+    const unknown = box.run("frobnicate", "x", "y");
+    fails(unknown, "unknown command must fail");
+    assert.match(`${unknown.stdout}${unknown.stderr}`, /unknown command frobnicate/);
+    // Valid invocations unchanged.
+    ok(box.run("claim", "IT-001"), "plain claim still works");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("retry consumes attempts and rejects claim past max_attempts", () => {
   const box = sandbox([makeItem({
     max_attempts: 2,
