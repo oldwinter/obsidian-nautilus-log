@@ -1888,6 +1888,37 @@
       "verified_head": "bd11121b9dae7a90be2653d700551d80dbfd79e7",
       "verified_contract": "d9601eb4ed78a7fdc16f4080d2695dc3c8630e892c5b94a83937fc7eec2c7ae3",
       "verified_work": "78195ad666597a0d88d917f994e6209afcb2e2fb05c456161cda98c1076ee533"
+    },
+    {
+      "id": "FAC-151",
+      "title": "AGENTS.md points at the factory queue tooling",
+      "kind": "docs",
+      "priority": 151,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "AGENTS.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "No repo entry document (README.md, AGENTS.md, CONTEXT.md) mentions the factory: a new agent or reviewer cannot discover the durable queue, its runner entry point, or the gitignored evidence root without already knowing they exist. Add one bullet to AGENTS.md naming backlog.json, the runner entry, operator docs, and the runtime evidence root.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "AGENTS.md names the queue file, the runner entry, and the evidence root",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'factory/backlog.json' AGENTS.md && grep -q 'scripts/factory/run.mjs' AGENTS.md && grep -q '.codex/runtime/devin-factory' AGENTS.md"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "claimed_head": "55da905209884072f1e50f7a7de000328227e70c",
+      "verified_head": "55da905209884072f1e50f7a7de000328227e70c",
+      "verified_contract": "4ef3297dedea9148644ace641740cbb9074448acbfd2a9f90387c20610502440",
+      "verified_work": "2abb0f6a09cd7a2a0f645a78dc2b4ed030e363bb0ec1ead168a6ba6c0e7ba88a"
     }
   ]
 }
