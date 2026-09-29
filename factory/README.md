@@ -127,6 +127,9 @@ manual gates.
 - `FACTORY_GIT_TIMEOUT_MS` — deadline for every `git` call the runner makes
   (default `60000`). A hung git fails the command and releases the lock
   instead of pinning the queue.
+- `FACTORY_DRY_RUN_STEP_TIMEOUT_MS` — deadline for each inner `dry-run` step
+  (default `120000`). A step that exceeds it is killed and the dry-run fails
+  with `step timed out`, so a wedged inner run cannot pin the terminal.
 - `FACTORY_NODE24` — path to a Node 24.20.0 binary for pinned lanes
   (defaults to the mise install).
 - `OBSIDIAN_EXECUTABLE` — host probe target (default `/Applications/Obsidian.app`).

@@ -1123,11 +1123,17 @@ function cmdDryRun() {
   }
 
   function run(argv, { expectExit = 0 } = {}) {
-    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", sandbox, ...argv], { encoding: "utf8" });
+    const result = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", sandbox, ...argv], {
+      encoding: "utf8",
+      // Every other spawned child carries a deadline; the inner runner is the
+      // last unbounded one. A wedged step must fail, not pin the terminal.
+      timeout: Number(process.env.FACTORY_DRY_RUN_STEP_TIMEOUT_MS ?? 120_000),
+    });
     const code = result.status ?? 1;
     if (code !== expectExit) {
       console.error(result.stdout, result.stderr);
-      fail(`dry-run ${argv.join(" ")}: expected exit ${expectExit}, got ${code}`);
+      const how = result.error?.code === "ETIMEDOUT" ? " (step timed out)" : "";
+      fail(`dry-run ${argv.join(" ")}: expected exit ${expectExit}, got ${code}${how}`);
     }
     console.log(`  $ run.mjs ${argv.join(" ")} -> exit ${code}`);
   }

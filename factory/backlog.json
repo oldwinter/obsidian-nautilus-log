@@ -2158,6 +2158,55 @@
       "verified_head": "deb43ad8034f72b5ab140e69a2c741ad481106c0",
       "verified_contract": "9e6b97eb175e0e3a8410fdb24b3624da671d41adf7331c71dfc69a78bba41177",
       "verified_work": "96c42a86e0511189edd9b69651c5e4c07e71013eeedcba6ebd398ac488d96552"
+    },
+    {
+      "id": "FAC-158",
+      "title": "dry-run inner steps carry a deadline",
+      "kind": "factory",
+      "priority": 158,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The last unbounded spawned child: dry-run's inner spawnSync had no timeout, so a wedged inner step could pin the operator terminal forever. Now FACTORY_DRY_RUN_STEP_TIMEOUT_MS (default 120s) bounds each inner step; ETIMEDOUT is surfaced as 'step timed out' in the failure. README env-knob list updated.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "1ms budget kills the first inner step with 'step timed out'; default deadline keeps dry-run green",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'dry-run inner steps' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "knob documented in the operator env list",
+          "check": {
+            "type": "command",
+            "command": "grep -n FACTORY_DRY_RUN_STEP_TIMEOUT_MS factory/README.md"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "819aa4039a59623775ed88d9d4d08ba3712cac2c",
+      "verified_head": "819aa4039a59623775ed88d9d4d08ba3712cac2c",
+      "verified_contract": "a4a7fbc230ca7926cea371bc87b0b8d3ef0aeca8ecec5b0aa094d16625a36188",
+      "verified_work": "5ae623f3450cf04bff282ed560f4f8e0325befdd68c0ad74f70a34578e09613e"
     }
   ]
 }

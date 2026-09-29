@@ -307,6 +307,28 @@ test("check rows record whether the process group outlived the command", () => {
   }
 });
 
+test("dry-run inner steps carry a deadline", () => {
+  const box = sandbox();
+  try {
+    // A 1 ms step budget kills the first inner runner spawn: dry-run must
+    // fail honestly with the timeout reported, not hang or pass.
+    const wedged = spawnSync(process.execPath, [runner, "dry-run"], {
+      cwd: box.dir, encoding: "utf8", timeout: 60_000,
+      env: { ...process.env, FACTORY_DRY_RUN_STEP_TIMEOUT_MS: "1" },
+    });
+    assert.notEqual(wedged.status, 0, "wedged dry-run must exit nonzero");
+    assert((wedged.stderr + wedged.stdout).includes("step timed out"),
+      "failure names the step timeout");
+    const normal = spawnSync(process.execPath, [runner, "dry-run"], {
+      cwd: box.dir, encoding: "utf8", timeout: 120_000,
+    });
+    assert.equal(normal.status, 0, normal.stderr);
+    assert(normal.stdout.includes("dry-run: PASS"), "default deadline keeps dry-run green");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("alternate queues get isolated evidence subtrees under one root", () => {
   const box = sandbox([makeItem()]);
   try {
