@@ -10,9 +10,22 @@ import type { RuntimePlanProjection } from "../../../src/runtime/projection-runt
 import type { RuntimeSnapshot } from "../../../src/runtime/snapshots";
 
 test("Settings onboarding offers Insert only while the Primary Plan is missing", () => {
-  assert.equal(settingsOnboardingKind(undefined), "missing");
+  assert.equal(settingsOnboardingKind(undefined), "loading");
   assert.equal(settingsOnboardingKind({ state: "missing" } as RuntimeSnapshot<RuntimePlanProjection>), "missing");
-  assert.equal(settingsOnboardingKind({ state: "loading" } as RuntimeSnapshot<RuntimePlanProjection>), "missing");
+  for (const state of ["loading", "stale", "hidden"] as const) {
+    assert.equal(
+      settingsOnboardingKind({ state } as RuntimeSnapshot<RuntimePlanProjection>),
+      "loading",
+      state,
+    );
+  }
+  for (const state of ["error", "over-limit"] as const) {
+    assert.equal(
+      settingsOnboardingKind({ state } as RuntimeSnapshot<RuntimePlanProjection>),
+      "unavailable",
+      state,
+    );
+  }
   assert.equal(
     settingsOnboardingKind({
       state: "confirmed",
@@ -36,6 +49,14 @@ test("Settings onboarding remounts only when the plan kind changes", () => {
   } as unknown as RuntimeSnapshot<RuntimePlanProjection>;
   assert.equal(settingsOnboardingChanged("missing", ready), true);
   assert.equal(settingsOnboardingChanged("ready", ready), false);
+  assert.equal(
+    settingsOnboardingChanged("loading", { state: "stale" } as RuntimeSnapshot<RuntimePlanProjection>),
+    false,
+  );
+  assert.equal(
+    settingsOnboardingChanged("loading", { state: "error" } as RuntimeSnapshot<RuntimePlanProjection>),
+    true,
+  );
   assert.equal(settingsOnboardingChanged("empty", {
     state: "confirmed",
     projection: { items: [] },
