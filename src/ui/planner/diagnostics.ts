@@ -56,6 +56,7 @@ export function formatDuration(minutes: number): string {
 }
 
 export function formatClockMinute(minutes: number): string {
+  if (!Number.isFinite(minutes)) return "-";
   const bounded = Math.max(0, Math.min(24 * 60, Math.round(minutes)));
   if (bounded === 24 * 60) return "24:00";
   return `${String(Math.floor(bounded / 60)).padStart(2, "0")}`

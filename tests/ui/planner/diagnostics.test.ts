@@ -28,6 +28,9 @@ test("TC-UP-ERR-02-001 overflow keeps titles and durations while conflicts remai
 });
 
 test("planner time and duration copy preserves 24:00", () => {
+  assert.equal(formatClockMinute(Number.NaN), "-");
+  assert.equal(formatClockMinute(Number.POSITIVE_INFINITY), "-");
+  assert.equal(formatClockMinute(Number.NEGATIVE_INFINITY), "-");
   assert.equal(formatClockMinute(24 * 60), "24:00");
   assert.equal(formatDuration(135), "2h 15m");
 });
