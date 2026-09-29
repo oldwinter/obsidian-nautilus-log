@@ -2385,6 +2385,56 @@
       "verified_head": "64d27e6d69768fc301e46c02a93e18d0615f3de8",
       "verified_contract": "8860fbabcc0f1a8f354297e8fb532d2e8b750481400cd8818d969eeaced265f5",
       "verified_work": "9f916f6d2ba2c3d71bf4eb5fb7238feacb07a41c5ae0ae3789c3f8150201c986"
+    },
+    {
+      "id": "FAC-163",
+      "title": "feat(host-matrix): --external-edit scenario pins vault authority under concurrent edits",
+      "kind": "code",
+      "priority": 53,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/external-edit.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable probe proved the concurrent-edit contract correct end-to-end: with a running CLOCK in today's note, an external append (user editing elsewhere) stays byte-identical across the re-index window, the clock survives re-resolution (panel still active), and Clock Out composes the close preserving the external bytes. Markdown-as-authority under concurrent edits is the project's core safety claim and had zero host coverage. New tests/host-matrix/external-edit.mjs exports seedExternalEdit (no-op placeholder kept minimal — the scenario clocks in live via the Plan tab instead of seeding) — actually keep it simple: single runExternalEdit export driving clock-in, external append, byte sampling over the re-index window, panel-state assertion, and Clock Out composition check. run.mjs gains exclusive --external-edit mode; host-probe.mjs gains --mode external-edit; README documents the contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/external-edit.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/external-edit.mjs && grep -q 'export async function runExternalEdit' tests/host-matrix/external-edit.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --external-edit flag, scenario registration, host-probe --mode external-edit, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'external-edit' tests/host-matrix/run.mjs && grep -q '\"external-edit\": \"--external-edit\"' scripts/factory/checks/host-probe.mjs && grep -q 'external-edit' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode external-edit exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode external-edit",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe runs 1-2 evidence: .codex/runtime/devin-factory/probes/external-edit.mjs; 6/6 assertions PASS on installed Obsidian. Byte sampling across the re-index window (500ms x 10s) guards against async rewrite races, unlike the probe's fixed sleep. Contract-correct today; the pin guards regression.",
+      "claimed_head": "98d37998837f1aca20145b7c2a4de5f7d6bff910",
+      "verified_head": "98d37998837f1aca20145b7c2a4de5f7d6bff910",
+      "verified_contract": "1b077839da043b0eeb4a9ccc8aeedabdf49d1fedb0ddb9df9c0a5bf794ac007f",
+      "verified_work": "adc80c7e81780d51212ea82839e890b91f557d1c4507ff2f88ccbbee2e01648e"
     }
   ]
 }

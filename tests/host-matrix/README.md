@@ -34,6 +34,16 @@ surfaces plus a retry writes no markdown at all (byte-identical). It cannot
 be combined with `--review`, `--privacy`, `--planner-tooltip-only`, or
 `--forgotten`.
 
+Add `--external-edit` for the concurrent-edit authority pin instead of the
+standard lane. The scenario clocks in Alpha from the Plan tab, then appends a
+line to today's note externally while the CLOCK runs. The vault modify event
+re-indexes the workspace; every byte sample across the window must preserve
+both the running record and the appended line (no clobber, no rewrite of user
+text), the panel must still project the active clock, and Clock Out must
+compose the close keeping the external bytes. It cannot be combined with
+`--review`, `--privacy`, `--planner-tooltip-only`, `--forgotten`, or
+`--degraded`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \
