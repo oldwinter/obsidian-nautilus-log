@@ -246,6 +246,38 @@ test("a hung git is cut by a bounded git timeout instead of pinning the lock", (
   }
 });
 
+test("a throwing check fails the item instead of stranding it verifying", () => {
+  const box = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "malformed json target", check: {
+        type: "json-field", path: "src/data.json", field: "a.b", equals: "1",
+      } },
+      { id: "AC2", description: "reached after the throw", check: {
+        type: "command", command: "echo AC2-ran",
+      } },
+    ],
+  })]);
+  try {
+    ok(box.run("claim", "IT-001"), "claim");
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "data.json"), "not-json{{{\n");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    fails(box.run("verify", "IT-001"), "verify must report the failed check");
+    assert.equal(box.item("IT-001").state, "failed", "item failed, not stranded in verifying");
+    const rows = box.progress();
+    const check = rows.find((row) => row.event === "check" && row.criterion === "AC1");
+    assert.equal(check.ok, false, "throwing check recorded as failed");
+    assert.match(check.output_tail, /check error:.*not valid JSON|Unexpected token/s,
+      `evidence names the parse error: ${check.output_tail}`);
+    assert(rows.some((row) => row.event === "check" && row.criterion === "AC2"),
+      "later criteria still ran");
+    assert(rows.some((row) => row.event === "verify-end" && row.ok === false),
+      "verify-end written, not a stranded verify-start");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("check rows record whether the process group outlived the command", () => {
   const box = sandbox([makeItem({
     acceptance_criteria: [

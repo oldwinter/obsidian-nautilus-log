@@ -652,14 +652,27 @@ async function cmdVerify(backlog, id) {
   const results = [];
   let ok = true;
   for (const ac of item.acceptance_criteria) {
-    const result = await runCheck(ac.check, env);
+    // A check that throws (json-field on malformed JSON, unreadable target)
+    // must not abort the transition mid-verify and leave the item stranded:
+    // record the error as a failed check like any other.
+    let result;
+    try {
+      result = await runCheck(ac.check, env);
+    } catch (error) {
+      result = { check: ac.check, exit_code: 1, detail: `check error: ${error.message}` };
+    }
     results.push({ criterion: ac.id, description: ac.description, ...result });
     if (result.exit_code !== 0) ok = false;
     appendProgress({ event: "check", item: item.id, attempt: item.attempts, criterion: ac.id, ok: result.exit_code === 0, ...pickResult(result) });
   }
   if (ok) {
     for (const command of item.verify) {
-      const result = await runCheckCommand(command, env, 600_000);
+      let result;
+      try {
+        result = await runCheckCommand(command, env, 600_000);
+      } catch (error) {
+        result = { command, exit_code: 1, detail: `check error: ${error.message}` };
+      }
       results.push({ verify: command, ...result });
       if (result.exit_code !== 0) ok = false;
       appendProgress({ event: "verify-command", item: item.id, attempt: item.attempts, ok: result.exit_code === 0, ...pickResult(result) });

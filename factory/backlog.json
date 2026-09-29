@@ -2039,6 +2039,46 @@
       "verified_head": "37dc697097e722d0ece7e2da084e39a346c181be",
       "verified_contract": "91c3821731759f4ae25780d8fc01d2430dabe40760d47726a682b9f573f4ba97",
       "verified_work": "83613498911dd93919ad8847610ff6276126d60cc6eb9f7af9ef000de8a4f6d2"
+    },
+    {
+      "id": "FAC-155",
+      "title": "a throwing check fails the item instead of stranding it verifying",
+      "kind": "factory",
+      "priority": 155,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real-CLI reproduction: a json-field check on a malformed target makes readJson throw, escaping cmdVerify entirely - the item stays 'verifying' with a bare verify-start, no check row, no verify-end, and later criteria never run, while a command-check failure records honest evidence and marks failed. Catch per-check exceptions and record them as failed check results so the transition completes.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "a malformed-JSON json-field check records a failed check row naming the parse error, marks the item failed, runs later criteria, and writes verify-end ok=false",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'throwing check' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "2e18639a50e53beb81127d3272d7c8c32b26c182",
+      "verified_head": "2e18639a50e53beb81127d3272d7c8c32b26c182",
+      "verified_contract": "adbe1ea28c0857778a27b471a99b1d46cbbfb5a98a1605775eba239195709391",
+      "verified_work": "366adedafa2e5d6ed0f34a3029fceef53487d3ac1f442a7856ad92c07bfc0d11"
     }
   ]
 }
