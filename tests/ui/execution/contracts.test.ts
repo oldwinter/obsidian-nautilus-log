@@ -57,6 +57,19 @@ test("locale refresh updates static execution panel controls", async () => {
   assert.match(panel, /if \(opened\) place\(\)/);
 });
 
+test("settings save refreshes execution once and locale work only after language succeeds", async () => {
+  const [settings, main] = await Promise.all([
+    readFile("src/adapters/settings.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(settings, /await this\.#dependencies\.update\(\{ language:[\s\S]*?this\.#dependencies\.onLocaleChanged\(\)/);
+  assert.doesNotMatch(settings, /finally\(\(\) => \{[\s\S]*?onLocaleChanged/);
+  const localeHandler = main.match(/#onLocaleChanged\(\): void \{([\s\S]*?)\n  \}/)?.[1] ?? "";
+  assert.match(localeHandler, /#executionEntry\?\.setLocale\(\)/);
+  assert.match(localeHandler, /#syncHostChrome\(\)/);
+  assert.doesNotMatch(localeHandler, /refresh\(/);
+});
+
 test("execution panel remembers the last tab while preserving explicit opens", async () => {
   const panel = await readFile("src/ui/execution/panel.ts", "utf8");
   assert.match(panel, /let lastTab: ExecutionPanelTab = options\.initialTab \?\? "timing"/);

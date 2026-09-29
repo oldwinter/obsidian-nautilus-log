@@ -183,8 +183,7 @@ function reviewRow<TTask extends ReviewTask>(
     : closedMilliseconds + runningMilliseconds;
   const actualMinutes = Math.floor(actualMilliseconds / MINUTE_MILLISECONDS);
   const hasRunning = task.status === "open"
-    && actualMinutes > 0
-    && ownerClocks.some((clock) => clock.state === "running");
+    && runningMilliseconds > 0;
   const state: ReviewRowState = task.status === "done"
     ? actualMinutes > 0 ? "compared" : "not-tracked"
     : hasRunning

@@ -164,6 +164,34 @@ test("Review classifies from the once-floored task total and the presence of a r
   assert.equal(projection.rows[1]?.actualMinutes, 1);
 });
 
+test("Review marks a valid sub-minute running CLOCK live only on its selected day", () => {
+  const justStarted = task("just-started-1");
+  const projection = projectReview({
+    tasks: [justStarted],
+    clocks: [running(justStarted.ownerId!, DAY_START + HOUR)],
+    day: day(),
+    nowEpochMilliseconds: DAY_START + HOUR + 30_000,
+  });
+  assert.equal(projection.rows[0]?.state, "live");
+  assert.equal(projection.rows[0]?.actualMinutes, null);
+  assert.equal(projection.rows[0]?.actualMilliseconds, 30_000);
+
+  const previousDay = Object.freeze({
+    ...day(),
+    date: Object.freeze({ year: 2026, month: 3, day: 7 }),
+    startEpochMilliseconds: DAY_START - 24 * HOUR,
+    endEpochMilliseconds: DAY_START,
+  });
+  const historical = projectReview({
+    tasks: [justStarted],
+    clocks: [running(justStarted.ownerId!, DAY_START + HOUR)],
+    day: previousDay,
+    nowEpochMilliseconds: DAY_START + HOUR + 30_000,
+  });
+  assert.equal(historical.rows[0]?.state, "not-started");
+  assert.equal(historical.rows[0]?.actualMilliseconds, 0);
+});
+
 test("distinct valid sessions are retained even when an external edit reuses a CLOCK ID", () => {
   const done = task("duplicate-id-1", { status: "done" });
   const clocks = [

@@ -163,7 +163,12 @@ export async function openActiveTaskView(app: App): Promise<{ readonly leaf: Wor
     split: false,
   });
   for (const duplicate of app.workspace.getLeavesOfType(ACTIVE_TASK_VIEW_TYPE)) {
-    if (duplicate !== leaf) duplicate.detach();
+    if (duplicate === leaf) continue;
+    try {
+      duplicate.detach();
+    } catch {
+      // A stale duplicate must not prevent the canonical leaf from opening.
+    }
   }
   await app.workspace.revealLeaf(leaf);
   app.workspace.setActiveLeaf(leaf, { focus: true });
