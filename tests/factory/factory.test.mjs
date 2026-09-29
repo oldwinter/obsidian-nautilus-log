@@ -307,6 +307,55 @@ test("check rows record whether the process group outlived the command", () => {
   }
 });
 
+test("a check exceeding the output cap is group-killed with the marker recorded", () => {
+  const box = sandbox([makeItem({
+    acceptance_criteria: [{
+      id: "AC1", description: "writes past the 8MB cap",
+      check: { type: "command", timeout_ms: 60_000,
+        command: `${JSON.stringify(process.execPath)} -e 'process.stdout.write("x".repeat(9*1024*1024))'` },
+    }],
+  })]);
+  try {
+    ok(box.run("claim", "IT-001"));
+    ok(box.run("implemented", "IT-001"), "implemented");
+    const verify = box.run("verify", "IT-001");
+    fails(verify, "over-cap check must fail the verify");
+    assert.equal(box.item("IT-001").state, "failed");
+    const rows = box.progress().filter((r) => r.item === "IT-001" && r.exit_code !== undefined);
+    const row = rows[rows.length - 1];
+    assert.equal(row.signal, "SIGKILL", "cap violation kills the group");
+    assert.equal(row.timed_out, false, "cap kill is not reported as a deadline timeout");
+    assert((row.output_tail ?? "").includes("output exceeded"), "marker recorded in evidence");
+  } finally {
+    box.cleanup();
+  }
+});
+
+test("a check whose shell cannot spawn records an honest failure", () => {
+  const box = sandbox([makeItem({
+    acceptance_criteria: [{
+      id: "AC1", description: "unspawnable shell",
+      check: { type: "command", timeout_ms: 5_000, command: "echo never" },
+    }],
+  })]);
+  try {
+    // git degrades to its no-repo path under a stripped PATH, then the check
+    // spawn itself fails ENOENT — the row must say so, not hang.
+    const env = { ...process.env, PATH: "/nonexistent-fac160" };
+    ok(box.run("claim", "IT-001", { env }));
+    ok(box.run("implemented", "IT-001", { env }), "implemented without git");
+    const verify = box.run("verify", "IT-001", { env });
+    fails(verify, "spawn failure must fail the verify");
+    const rows = box.progress().filter((r) => r.item === "IT-001" && r.exit_code !== undefined);
+    const row = rows[rows.length - 1];
+    assert.equal(row.exit_code, 1);
+    assert((row.output_tail ?? "").includes("spawn failed"), "row names the spawn failure");
+    assert.equal(box.item("IT-001").state, "failed");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("dry-run inner steps carry a deadline", () => {
   const box = sandbox();
   try {

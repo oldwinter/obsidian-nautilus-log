@@ -2246,6 +2246,45 @@
       "verified_head": "5ac2780ae4176834f7930c4d4e5d9ac6bde91c45",
       "verified_contract": "a2bb2a67a829fab156c2e1e0f77088094fd98084c58bec8de915067880a6d6bc",
       "verified_work": "f0a820893107e7e49678873b3873152cd351724acb64732ac33df57c17c24408"
+    },
+    {
+      "id": "FAC-160",
+      "title": "pin output-cap and spawn-failure evidence paths in the suite",
+      "kind": "factory",
+      "priority": 160,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Two evidence paths from the coordinator async-runner audit had fixture-only coverage: (a) a check writing past the 8MB cap is group-SIGKILLed and records the overflow marker with timed_out=false, (b) an unspawnable check shell records 'spawn failed' with exit 1 instead of hanging. Both now have permanent suite regressions.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "cap kill + marker and spawn-failure rows pinned",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'output cap|shell cannot spawn' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "918ef086bfd2cb947bfa1bd4ec3fc59a9918ccd2",
+      "verified_head": "918ef086bfd2cb947bfa1bd4ec3fc59a9918ccd2",
+      "verified_contract": "6fb5d555a5ca1706be850bbbf9d545725cd228b59ed5fd469ab66c51a3f484f0",
+      "verified_work": "211612deba8e7b21b75250a8db3b51f2e332a7e0d0aec57b38ad62d1b9a28fc5"
     }
   ]
 }
