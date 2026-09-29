@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -302,6 +302,36 @@ test("check rows record whether the process group outlived the command", () => {
       "a group surviving the leader must be recorded, not dropped silently");
     assert.equal(clean.group_alive, false, "a fully-exited group records false");
     assert.equal(withDescendant.timed_out, false, "held pipes do not mark a timeout");
+  } finally {
+    box.cleanup();
+  }
+});
+
+test("alternate queues get isolated evidence subtrees under one root", () => {
+  const box = sandbox([makeItem()]);
+  try {
+    // A second queue under the same root with the same item id.
+    mkdirSync(path.join(box.dir, "alt"), { recursive: true });
+    writeFileSync(
+      path.join(box.dir, "alt", "queue.json"),
+      `${JSON.stringify({ schema_version: 1, states: STATES, transitions: {}, items: [makeItem()] }, null, 2)}\n`,
+    );
+    ok(box.run("record", "IT-001", "--note", "default queue note"), "record on default queue");
+    ok(box.run("--backlog", "alt/queue.json", "record", "IT-001", "--note", "alt queue note"), "record on alt queue");
+    const defaultLog = readFileSync(
+      path.join(box.dir, ".codex", "runtime", "devin-factory", "items", "IT-001.jsonl"), "utf8");
+    assert(defaultLog.includes("default queue note"), "default note in default log");
+    assert(!defaultLog.includes("alt queue note"), "alt note must not pollute the default log");
+    const queuesDir = path.join(box.dir, ".codex", "runtime", "devin-factory", "queues");
+    const subtrees = readdirSync(queuesDir);
+    assert.equal(subtrees.length, 1, "one queue subtree");
+    const altLog = readFileSync(
+      path.join(queuesDir, subtrees[0], "items", "IT-001.jsonl"), "utf8");
+    assert(altLog.includes("alt queue note"), "alt note in the queue subtree log");
+    assert(!altLog.includes("default queue note"), "default note must not pollute the alt log");
+    // The shared lock still lives at the runtime root.
+    assert(!existsSync(path.join(queuesDir, subtrees[0], "run.lock")),
+      "lock stays at the root, not per queue");
   } finally {
     box.cleanup();
   }

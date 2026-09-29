@@ -2118,6 +2118,46 @@
       "verified_head": "037106a17d9d8dff0e4efc4c33b8fcc6da128676",
       "verified_contract": "2da899756a16bf5cd1e95fa3a7215c47bee7e91fe2c2a0b6d8962ecfb125739c",
       "verified_work": "38272370b511c1947385f98f77fb15f7159737adf131493f0539dbdab356f50b"
+    },
+    {
+      "id": "FAC-157",
+      "title": "alternate queues get isolated evidence subtrees under one root",
+      "kind": "factory",
+      "priority": 157,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real-CLI reproduction: items/<id>.jsonl, evidence/, and deliveries/ were keyed by item id only, so two queues under one root with a same-id item silently mingled notes, checks, and bundles (both queues' IT-001 notes landed in one log). Non-default queues now get a self-contained runtime subtree queues/<token>/ (path-derived + hash suffix); the default queue keeps the root layout so all existing deliveries stay put, and run.lock stays global since it serializes the shared worktree too.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "same-id items in default and --backlog queues write separate item logs; alt evidence lands in one queues/ subtree; lock stays at root",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'isolated evidence subtrees' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green (default-queue layout unchanged)",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "deb43ad8034f72b5ab140e69a2c741ad481106c0",
+      "verified_head": "deb43ad8034f72b5ab140e69a2c741ad481106c0",
+      "verified_contract": "9e6b97eb175e0e3a8410fdb24b3624da671d41adf7331c71dfc69a78bba41177",
+      "verified_work": "96c42a86e0511189edd9b69651c5e4c07e71013eeedcba6ebd398ac488d96552"
     }
   ]
 }

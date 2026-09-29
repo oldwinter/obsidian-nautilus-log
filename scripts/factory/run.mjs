@@ -44,6 +44,19 @@ const root = path.resolve(opts.root);
 // absolute path still works for queues outside the root.
 const backlogPath = opts.backlog ? path.resolve(root, opts.backlog) : path.join(root, "factory", "backlog.json");
 const runtimeDir = path.join(root, ".codex", "runtime", "devin-factory");
+// Two queues under one root used to collide: items/<id>.jsonl, evidence/,
+// and deliveries/ were keyed by item id only, so a same-id item in a second
+// queue polluted the first queue's evidence. Non-default queues now get a
+// self-contained subtree; the default queue keeps the root layout so every
+// existing delivery stays where it is. run.lock stays at the root: the lock
+// also serializes access to the shared worktree.
+const queueDir = (() => {
+  const rel = path.relative(root, backlogPath).split(path.sep).join("/");
+  if (rel === "factory/backlog.json") return runtimeDir;
+  const token = rel.replace(/[^a-zA-Z0-9_-]+/g, "_")
+    + `-${createHash("sha256").update(backlogPath).digest("hex").slice(0, 8)}`;
+  return path.join(runtimeDir, "queues", token);
+})();
 const lockFile = path.join(runtimeDir, "run.lock");
 // Commands that mutate backlog/progress state. Concurrent mutations could lose
 // each other's writes (last-writer-wins on backlog.json), so they serialize on
@@ -408,7 +421,7 @@ function findItem(backlog, id) {
 }
 
 function ensureRuntime() {
-  for (const dir of [runtimeDir, path.join(runtimeDir, "items"), path.join(runtimeDir, "deliveries"), path.join(runtimeDir, "evidence")]) {
+  for (const dir of [queueDir, path.join(queueDir, "items"), path.join(queueDir, "deliveries"), path.join(queueDir, "evidence")]) {
     mkdirSync(dir, { recursive: true });
   }
 }
@@ -416,9 +429,9 @@ function ensureRuntime() {
 function appendProgress(entry) {
   ensureRuntime();
   const row = { ts: utc(), head: headSha(), ...entry };
-  appendFileSync(path.join(runtimeDir, "progress.jsonl"), `${JSON.stringify(row)}\n`);
+  appendFileSync(path.join(queueDir, "progress.jsonl"), `${JSON.stringify(row)}\n`);
   if (entry.item) {
-    appendFileSync(path.join(runtimeDir, "items", `${entry.item}.jsonl`), `${JSON.stringify(row)}\n`);
+    appendFileSync(path.join(queueDir, "items", `${entry.item}.jsonl`), `${JSON.stringify(row)}\n`);
   }
   renderStatus();
   return row;
@@ -534,7 +547,7 @@ function commandEnv(item) {
   return {
     FACTORY_ROOT: root,
     FACTORY_ITEM_ID: item.id,
-    FACTORY_EVIDENCE_DIR: path.join(runtimeDir, "evidence", item.id, `attempt-${item.attempts}`),
+    FACTORY_EVIDENCE_DIR: path.join(queueDir, "evidence", item.id, `attempt-${item.attempts}`),
   };
 }
 
@@ -718,7 +731,7 @@ function writeDeliveryEvidence(dir, item) {
   const bundle = JSON.parse(readFileSync(path.join(dir, "bundle.json"), "utf8"));
   const relevant = bundle.diff_paths;
   const untracked = bundle.untracked_files;
-  const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
+  const itemLog = path.join(queueDir, "items", `${item.id}.jsonl`);
   const logBytes = existsSync(itemLog) ? readFileSync(itemLog) : null;
   // Only the rows that produced the current verification: a re-verify on the
   // same attempt appends fresh check rows, so take everything after the last
@@ -785,7 +798,7 @@ function writeDeliveryEvidence(dir, item) {
 
 function cmdDeliver(backlog, id) {
   const item = findItem(backlog, id);
-  const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
+  const dir = path.join(queueDir, "deliveries", item.id, `attempt-${item.attempts}`);
   if (item.state === "delivered") {
     const rebuildable = existsSync(dir)
       ? ["evidence.json", "summary.md"].filter((f) => !existsSync(path.join(dir, f)))
@@ -841,7 +854,7 @@ function cmdDeliver(backlog, id) {
 // evidence parses, and the recorded item-log prefix hash still verifies.
 function cmdInspect(backlog, id) {
   const item = findItem(backlog, id);
-  const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
+  const dir = path.join(queueDir, "deliveries", item.id, `attempt-${item.attempts}`);
   const problems = [];
   for (const file of ["change.patch", "bundle.json", "evidence.json", "summary.md"]) {
     if (!existsSync(path.join(dir, file))) problems.push(`missing ${file}`);
@@ -886,7 +899,7 @@ function cmdInspect(backlog, id) {
   if (evidence) {
     if (evidence.item !== item.id) problems.push(`evidence.item ${evidence.item} != ${item.id}`);
     if (evidence.attempt !== item.attempts) problems.push(`evidence.attempt ${evidence.attempt} != ${item.attempts}`);
-    const itemLog = path.join(runtimeDir, "items", `${item.id}.jsonl`);
+    const itemLog = path.join(queueDir, "items", `${item.id}.jsonl`);
     if (evidence.item_log_sha256 && existsSync(itemLog)) {
       if (Number.isInteger(evidence.item_log_bytes) && evidence.item_log_bytes > 0) {
         const prefix = readFileSync(itemLog).subarray(0, evidence.item_log_bytes);
@@ -931,7 +944,7 @@ function cmdRecord(backlog, id) {
 }
 
 function recentEvents(limit = 12) {
-  const file = path.join(runtimeDir, "progress.jsonl");
+  const file = path.join(queueDir, "progress.jsonl");
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf8").trim().split("\n")
     .filter(Boolean).slice(-limit)
@@ -988,7 +1001,7 @@ function renderStatus({ deep = false } = {}) {
     "",
   ];
   ensureRuntime();
-  writeFileSync(path.join(runtimeDir, "status.md"), `${lines.join("\n")}\n`);
+  writeFileSync(path.join(queueDir, "status.md"), `${lines.join("\n")}\n`);
 }
 
 function cmdStatus(backlog) {
