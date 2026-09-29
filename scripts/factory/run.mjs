@@ -489,6 +489,14 @@ async function runCheckCommand(command, env, timeoutMs) {
   });
   const duration = Date.now() - started;
   if (child.pid !== undefined) activeCheckGroups.delete(child.pid);
+  // The leader exited but the process group may still hold detached
+  // descendants (e.g. a backgrounded helper). They are deliberately not
+  // killed — checks may legitimately start helpers for later checks — but
+  // the row records their survival instead of dropping it silently.
+  let groupAlive = false;
+  if (child.pid !== undefined) {
+    try { process.kill(-child.pid, 0); groupAlive = true; } catch { /* group gone */ }
+  }
   child.stdout.destroy();
   child.stderr.destroy();
   const stdout = Buffer.concat(stdoutChunks).toString("utf8");
@@ -500,6 +508,7 @@ async function runCheckCommand(command, env, timeoutMs) {
     command, exit_code: result.exit_code, signal: result.signal, duration_ms: duration,
     output_tail: outputTail.trim(),
     timed_out: result.timed_out,
+    group_alive: groupAlive,
   };
 }
 
@@ -685,6 +694,7 @@ function pickResult(result) {
     duration_ms: result.duration_ms,
     output_tail: result.output_tail ?? result.detail,
     timed_out: result.timed_out,
+    group_alive: result.group_alive,
   };
 }
 

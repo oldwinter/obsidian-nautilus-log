@@ -246,6 +246,35 @@ test("a hung git is cut by a bounded git timeout instead of pinning the lock", (
   }
 });
 
+test("check rows record whether the process group outlived the command", () => {
+  const box = sandbox([makeItem({
+    acceptance_criteria: [
+      { id: "AC1", description: "leaves a detached descendant", check: {
+        type: "command", command: "( sleep 2 ) & echo done",
+      } },
+      { id: "AC2", description: "clean check", check: {
+        type: "command", command: "echo ok",
+      } },
+    ],
+  })]);
+  try {
+    ok(box.run("claim", "IT-001"), "claim");
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    const rows = box.progress().filter((row) => row.event === "check");
+    const withDescendant = rows.find((row) => row.criterion === "AC1");
+    const clean = rows.find((row) => row.criterion === "AC2");
+    assert.equal(withDescendant.group_alive, true,
+      "a group surviving the leader must be recorded, not dropped silently");
+    assert.equal(clean.group_alive, false, "a fully-exited group records false");
+    assert.equal(withDescendant.timed_out, false, "held pipes do not mark a timeout");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("commands reject unexpected extra positional arguments", () => {
   const box = sandbox([makeItem(), makeItem({ id: "IT-002", priority: 2 })]);
   try {
