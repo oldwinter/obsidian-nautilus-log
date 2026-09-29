@@ -1849,6 +1849,45 @@
       "verified_head": "8a67811157884bd74aeb84b9c1c36c25627dcb83",
       "verified_contract": "2fbc56ca618cc537bf1e8418c0b0fb4567f12dde2cb9f86d0316f9924b877d1f",
       "verified_work": "34db890af902d0861a0b56b13f671fdc3be128b25f474bed6f472ba9f551c4cf"
+    },
+    {
+      "id": "FAC-150",
+      "title": "README documents FACTORY_GIT_TIMEOUT_MS env knob",
+      "kind": "docs",
+      "priority": 150,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "FAC-148 added a new runner knob (FACTORY_GIT_TIMEOUT_MS, default 60000, bounding every git call) but the operator-facing Environment knobs section never listed it - the only undocumented knob in the section. Add the entry next to the check-command exports.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README env knobs section names FACTORY_GIT_TIMEOUT_MS with its bound and default",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'FACTORY_GIT_TIMEOUT_MS' factory/README.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "factory suite unaffected by the doc-only change",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "bd11121b9dae7a90be2653d700551d80dbfd79e7",
+      "verified_head": "bd11121b9dae7a90be2653d700551d80dbfd79e7",
+      "verified_contract": "d9601eb4ed78a7fdc16f4080d2695dc3c8630e892c5b94a83937fc7eec2c7ae3",
+      "verified_work": "78195ad666597a0d88d917f994e6209afcb2e2fb05c456161cda98c1076ee533"
     }
   ]
 }
