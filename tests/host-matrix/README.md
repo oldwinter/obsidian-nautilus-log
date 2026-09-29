@@ -99,6 +99,19 @@ asserted unchanged throughout. It cannot be combined with `--review`,
 `--privacy`, `--planner-tooltip-only`, `--forgotten`, `--degraded`,
 `--external-edit`, `--pomo`, `--write-failure`, or `--plugin-data-failure`.
 
+Add `--ambiguous-owner` for the identity-collision fail-closed path instead
+of the standard lane. The scenario clocks in Alpha, extracts its real
+`^nl-…` owner id from the persisted note, then creates a decoy note carrying
+the same terminal block-id — an ambiguous target under the vault-authority
+contract. The execution surface must degrade honestly (`Timing unavailable`
++ `Try again`, no Clock Out affordance, Active Task `unavailable`) and
+write nothing to either note while the owner is ambiguous — the running
+CLOCK record stays open, untouched. Rewriting the decoy's block-id to a
+different value resolves the collision: the same running clock must project
+again and Clock Out must compose the close in today's note only, leaving
+the decoy byte-exact. The decoy note is deleted in a `finally`. It cannot
+be combined with any other exclusive flag.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

@@ -2656,6 +2656,66 @@
       "verified_head": "fc67e13277df08631e007493b94b9ab29a26df52",
       "verified_contract": "2ef1e0b3b42c2c461252ea50bfe440e64d5c5f468848c09af8cd70228abd7de4",
       "verified_work": "33de420d9882369c0437ba63fca1fe5de917e086f6c05013e120ae63f3b7a9b4"
+    },
+    {
+      "id": "FAC-168",
+      "title": "test(host-matrix): --ambiguous-owner scenario pins identity-collision fail-closed + resolution recovery",
+      "kind": "code",
+      "priority": 54,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/ambiguous-owner.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json",
+        "tests/ui/execution/application.test.ts"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/ambiguous-owner.mjs: exclusive --ambiguous-owner scenario. Clock in Alpha from the Plan tab; extract Alpha's real ^nl- block-id from today's note; create a second note containing the SAME block-id (terminal ^id on a decoy task line) so the workspace index reports the owner identity as a collision. Assert the execution surface fails closed honestly (Timing 'unavailable' + Try again, no Clock Out affordance, Active Task unavailable) while the CLOCK record still exists in the file, and no bytes are written to either note during the collision window. Then resolve the ambiguity by rewriting the decoy note's block-id to a different id: the running clock must project again (Timing shows the active Alpha clock), and Clock Out must compose the close in today's note only with the clock id preserved. Wire --ambiguous-owner flag + exclusivity + driver hash + screenshot name in run.mjs; --mode ambiguous-owner in host-probe.mjs incl. assertion-prefix guard (ao-); document in tests/host-matrix/README.md.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring present",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/ambiguous-owner.mjs && grep -q 'ambiguous-owner' tests/host-matrix/run.mjs && grep -q 'ambiguous-owner.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode ambiguous-owner wired incl. prefix guard",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'ambiguous-owner' scripts/factory/checks/host-probe.mjs && grep -q '\"ambiguous-owner\": \"ao-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'ambiguous-owner' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with ao-* assertions",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode ambiguous-owner",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: 'fail closed if the target is ambiguous'. identity-index identityLookup -> {kind:'collision'} for duplicate terminal ^block-id; application #resolveOwnerTask returns undefined on non-unique -> projectClockIndex degraded 'clock-owner-invalid'; commit.ts maps identity collision to conflict('identity-collision'). Distinct from FAC-162 (done owner): exercises the collision code path AND ambiguity resolution -> running-clock recovery, untested end-to-end.",
+      "claimed_head": "9ff7951ea17dc745c9aa1f01ad8fd41da29893ed",
+      "verified_head": "9ff7951ea17dc745c9aa1f01ad8fd41da29893ed",
+      "verified_contract": "f47ac22d0959175e3f2dbf18d48079cd6a8779db41aef04dac3e6fc1ce9800ef",
+      "verified_work": "69205ea53cf99d5c1c9c57d428591b897123047848c7c60827841b9bed90ba32"
     }
   ]
 }
