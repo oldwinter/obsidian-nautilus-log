@@ -35,13 +35,17 @@ async function openLeaf(
   app: App,
   file: TFile,
   location: "main" | "sidebar",
+  active: () => boolean,
 ): Promise<WorkspaceLeaf | undefined> {
+  if (!active()) return undefined;
   const leaf = location === "sidebar"
     ? app.workspace.getRightLeaf(false) ?? app.workspace.getRightLeaf(true)
     : app.workspace.getLeaf(false);
-  if (!leaf) return undefined;
+  if (!leaf || !active()) return undefined;
   await leaf.openFile(file, { active: true });
+  if (!active()) return undefined;
   await app.workspace.revealLeaf(leaf);
+  if (!active()) return undefined;
   app.workspace.setActiveLeaf(leaf, { focus: true });
   return leaf;
 }
@@ -59,11 +63,14 @@ export class ObsidianSourceNavigator {
     target: SourceTaskReference,
     location: "main" | "sidebar" = "main",
   ): Promise<SourceNavigationResult> {
+    if (this.#disposed) return this.#cancelled();
     const resolved = await this.#dependencies.locateTask(target);
+    if (this.#disposed) return this.#cancelled();
     if (resolved.kind === "unavailable") return this.#unavailable(resolved.code);
     const file = markdownFile(this.#dependencies.app, resolved.path);
     if (!file) return this.#unavailable("source-file-missing");
-    const leaf = await openLeaf(this.#dependencies.app, file, location);
+    const leaf = await openLeaf(this.#dependencies.app, file, location, () => !this.#disposed);
+    if (this.#disposed) return this.#cancelled();
     if (!leaf) return this.#unavailable("workspace-unavailable");
     const view = leaf.view;
     let openedLine = Math.max(0, Math.floor(resolved.line));
@@ -84,10 +91,12 @@ export class ObsidianSourceNavigator {
   }
 
   async openPrimary(path: string | null): Promise<SourceNavigationResult> {
+    if (this.#disposed) return this.#cancelled();
     if (!path) return this.#unavailable("primary-plan-missing");
     const file = markdownFile(this.#dependencies.app, path);
     if (!file) return this.#unavailable("primary-source-missing");
-    const leaf = await openLeaf(this.#dependencies.app, file, "main");
+    const leaf = await openLeaf(this.#dependencies.app, file, "main", () => !this.#disposed);
+    if (this.#disposed) return this.#cancelled();
     if (!leaf) return this.#unavailable("workspace-unavailable");
     if (leaf.view instanceof MarkdownView) {
       leaf.view.editor.setCursor({ line: 0, ch: 0 });
@@ -99,8 +108,13 @@ export class ObsidianSourceNavigator {
   }
 
   #unavailable(code: string): SourceNavigationResult {
+    if (this.#disposed) return this.#cancelled();
     new Notice(this.#dependencies.unavailableMessage(code), 5_000);
     return Object.freeze({ kind: "unavailable", code });
+  }
+
+  #cancelled(): SourceNavigationResult {
+    return Object.freeze({ kind: "unavailable", code: "navigation-disposed" });
   }
 
   dispose(): void {

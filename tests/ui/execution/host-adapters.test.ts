@@ -220,3 +220,67 @@ test("TC-UP-EXE-05 source navigation reports the clamped line it actually opened
   assert.deepEqual(result, { kind: "opened", path: file.path, line: 0, location: "main" });
   assert.deepEqual(cursorCalls[0], { line: 0, ch: 0 });
 });
+
+test("source navigation disposal cancels pending task lookup before host UI work", async () => {
+  let resolveLocation!: (value: { kind: "available"; path: string; line: number }) => void;
+  const location = new Promise<{ kind: "available"; path: string; line: number }>((resolve) => {
+    resolveLocation = resolve;
+  });
+  let leafRequests = 0;
+  const navigator = new ObsidianSourceNavigator({
+    app: {
+      vault: { getAbstractFileByPath: () => { throw new Error("vault lookup after disposal"); } },
+      workspace: { getLeaf: () => { leafRequests += 1; throw new Error("leaf after disposal"); } },
+    } as never,
+    locateTask: () => location,
+    unavailableMessage: () => { throw new Error("notice after disposal"); },
+  });
+
+  const opening = navigator.openTask({ path: "Daily/2026-08-29.md", ownerId: "nl-id", sourceOrder: 0 });
+  navigator.dispose();
+  resolveLocation({ kind: "available", path: "Daily/2026-08-29.md", line: 2 });
+
+  assert.deepEqual(await opening, { kind: "unavailable", code: "navigation-disposed" });
+  assert.equal(leafRequests, 0);
+});
+
+test("source navigation disposal during openFile prevents reveal and focus", async () => {
+  let finishOpen!: () => void;
+  const opened = new Promise<void>((resolve) => { finishOpen = resolve; });
+  let openStarted!: () => void;
+  const started = new Promise<void>((resolve) => { openStarted = resolve; });
+  let reveals = 0;
+  let focuses = 0;
+  const file = Object.assign(Object.create(TFile.prototype), {
+    path: "Daily/2026-08-29.md",
+    extension: "md",
+  }) as TFile;
+  const leaf = {
+    view: {},
+    async openFile() {
+      openStarted();
+      await opened;
+    },
+  };
+  const navigator = new ObsidianSourceNavigator({
+    app: {
+      vault: { getAbstractFileByPath: () => file },
+      workspace: {
+        getLeaf: () => leaf,
+        async revealLeaf() { reveals += 1; },
+        setActiveLeaf() { focuses += 1; },
+      },
+    } as never,
+    locateTask: () => ({ kind: "available", path: file.path, line: 0 }),
+    unavailableMessage: (code) => code,
+  });
+
+  const opening = navigator.openPrimary(file.path);
+  await started;
+  navigator.dispose();
+  finishOpen();
+
+  assert.deepEqual(await opening, { kind: "unavailable", code: "navigation-disposed" });
+  assert.equal(reveals, 0);
+  assert.equal(focuses, 0);
+});
