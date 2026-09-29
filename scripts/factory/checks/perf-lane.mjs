@@ -19,8 +19,10 @@ const node24 = findNode24();
 const external = mkdtempSync(path.join(tmpdir(), "spiral-day-perf-"));
 const output = path.join(external, "out");
 
+// The log lives inside the versioned dir: writing it at the shared evidence
+// root silently overwrote the previous run's log on a same-attempt re-verify.
 const result = runLogged(node24, ["tests/performance/run.mjs", "--output", output], {
-  log: path.join(evidence, "run.log"),
+  log: path.join(staged, "run.log"),
 });
 
 // Copy report artifacts into the factory evidence dir; keep the external

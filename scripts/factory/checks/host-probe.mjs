@@ -34,7 +34,8 @@ const pkgDir = path.join(evidence, "plugin-pkg");
 mkdirSync(pkgDir, { recursive: true });
 for (const asset of ["main.js", "styles.css"]) {
   if (!existsSync(path.join(REPO_ROOT, asset))) {
-    runLogged(process.execPath, ["esbuild.config.mjs", "build"], { log: path.join(evidence, "build.log") });
+    // Scoped inside pkgDir so the log always describes the pkg currently there.
+    runLogged(process.execPath, ["esbuild.config.mjs", "build"], { log: path.join(pkgDir, "build.log") });
     break;
   }
 }
@@ -72,7 +73,9 @@ if (values.mode === "bound") {
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
   timeout: ["tooltip", "bound"].includes(values.mode) ? 240_000 : 600_000,
-  log: path.join(evidence, `run-${values.mode}.log`),
+  // Versioned sibling of the output dir; a fixed name at the evidence root
+  // silently overwrote the previous run's log on a same-attempt re-verify.
+  log: `${output}.log`,
 });
 console.log(`host-probe(${values.mode}) exit ${result.status ?? "timeout"} -> ${output}`);
 process.exitCode = result.status ?? 1;

@@ -1959,6 +1959,46 @@
       "verified_head": "6bf2ec9a2d8c395892f2c035af1516b51224c1b9",
       "verified_contract": "fcab45cbcf1d08ee07f94663315b841159946216a1633bddc000c2b327796a94",
       "verified_work": "d737292960a0c802c76b55c072208f7a1325d77d6d4ca6133a72d97218ad5c08"
+    },
+    {
+      "id": "FAC-153",
+      "title": "lane run logs stop clobbering the previous run's evidence",
+      "kind": "factory",
+      "priority": 153,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/checks/perf-lane.mjs",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "FAC-125 versioned per-run evidence dirs so a same-attempt re-verify never silently overwrites earlier evidence - but both lanes still wrote their run logs to fixed names at the shared evidence root (perf-lane run.log, host-probe run-<mode>.log and build.log). Move each log next to the versioned artifact it describes: staged/run.log, <output>.log sibling, and pkgDir/build.log scoped to the pkg it produced.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "perf-lane logs into the versioned staged dir; host-probe mode log is a versioned sibling; build.log lives in pkgDir",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'path.join(staged, \"run.log\")' scripts/factory/checks/perf-lane.mjs && grep -Fq 'log: `${output}.log`' scripts/factory/checks/host-probe.mjs && grep -q 'path.join(pkgDir, \"build.log\")' scripts/factory/checks/host-probe.mjs && ! grep -q 'path.join(evidence, \"run.log\")\\|path.join(evidence, \"build.log\")\\|run-\\${values.mode}.log' scripts/factory/checks/perf-lane.mjs scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "factory suite unaffected",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "304a3598966908eb0ad65a7527641a266420ab01",
+      "verified_head": "304a3598966908eb0ad65a7527641a266420ab01",
+      "verified_contract": "82073b5c2eeecb59c09d4517f06ecf8fd3835b7b62b9ea16dbd05e221ed625d2",
+      "verified_work": "32aea8040391710f0b300bd0cfd4e4a506f3feb8073ad68a53252c2db5e133fd"
     }
   ]
 }
