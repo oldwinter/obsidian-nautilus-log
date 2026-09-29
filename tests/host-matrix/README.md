@@ -25,6 +25,15 @@ close record in the prior-day owner note only — every other note stays
 byte-identical — and the record keeps its clock id with `--[end] => duration`.
 It cannot be combined with `--review`, `--privacy`, or `--planner-tooltip-only`.
 
+Add `--degraded` for the fail-closed boundary instead of the standard lane.
+Before launch, a running CLOCK is injected under the DONE "Complete" task's
+LOGBOOK in the prior-day note. The host must fail closed: the Timing tab
+renders the degraded empty-state with a retry affordance, the Active Task
+view renders `unavailable` with the mapped diagnostic, and opening the
+surfaces plus a retry writes no markdown at all (byte-identical). It cannot
+be combined with `--review`, `--privacy`, `--planner-tooltip-only`, or
+`--forgotten`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \
