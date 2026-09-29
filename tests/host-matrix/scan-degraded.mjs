@@ -51,6 +51,7 @@ export async function runScanDegraded({ page, vault, openExecution, check, scree
     const root = document.querySelector(".spiral-day-execution");
     const empty = root?.querySelector(".spiral-day-execution__empty");
     const buttons = [...(root?.querySelectorAll("button") ?? [])];
+    const feedback = root?.querySelector(".spiral-day-execution__feedback");
     return {
       currentPresent: Boolean(root?.querySelector(".spiral-day-execution__current")),
       emptyHeading: empty?.querySelector("strong")?.textContent ?? null,
@@ -58,6 +59,11 @@ export async function runScanDegraded({ page, vault, openExecution, check, scree
       retryLabel: empty?.querySelector("button")?.getAttribute("aria-label") ?? null,
       startPomoVisible: Boolean(buttons.find((button) => button.getAttribute("aria-label") === "Start POMO")),
       busyButtons: root?.querySelectorAll("button[aria-busy=true]").length ?? 0,
+      feedback: {
+        visible: Boolean(feedback && !feedback.hidden && (feedback.textContent?.length ?? 0) > 0),
+        kind: feedback?.dataset?.kind ?? null,
+        level: feedback?.dataset?.level ?? null,
+      },
     };
   });
   const openActiveTaskLeaf = async () => {
@@ -121,6 +127,15 @@ export async function runScanDegraded({ page, vault, openExecution, check, scree
     report.stillDegraded = await degradedSurface();
     check("sd-retry-stays-degraded-while-unreadable", report.stillDegraded !== null
       && report.stillDegraded.startPomoVisible === false, report.stillDegraded);
+
+    // The failed retry leaves refresh-owned feedback asynchronously; pinning
+    // it here makes the post-recovery clear assertion non-vacuous.
+    report.degradedFeedback = await poll(10_000, async () => {
+      const surface = await timingSurface();
+      return surface.feedback?.visible === true ? surface.feedback : null;
+    });
+    check("sd-degraded-refresh-warning-shown", report.degradedFeedback !== null
+      && report.degradedFeedback.level === "warning", report.degradedFeedback);
     await screenshot("execution-scan-degraded");
 
     // Revealing the leaf closes the execution popover, so this runs last in
@@ -156,6 +171,15 @@ export async function runScanDegraded({ page, vault, openExecution, check, scree
     return surface.emptyHeading === "Idle" && surface.startPomoVisible === true ? surface : null;
   });
   check("sd-delete-heals-surface", report.recoveredTiming !== null, report.recoveredTiming);
+
+  // The refresh-owned warning from the faulted retry must not survive a
+  // confirmed-healthy snapshot — the recovery is driven by vault events, not
+  // a panel gesture, so nothing else would clear the banner.
+  report.recoveredFeedback = await poll(10_000, async () => {
+    const surface = await timingSurface();
+    return surface.feedback?.visible === false ? surface.feedback : null;
+  });
+  check("sd-recovered-warning-cleared", report.recoveredFeedback !== null, report.recoveredFeedback);
   report.recoveredActiveTask = await poll(10_000, async () => {
     const surface = await activeTaskSurface();
     return surface.state === "idle" ? surface : null;

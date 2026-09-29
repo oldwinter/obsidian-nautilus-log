@@ -289,12 +289,12 @@ export function mountExecutionPanel(
       showFeedback({
         message: options.messages.t("execution", recovered ? "notice.refreshed" : "error.refresh"),
         level: recovered ? "info" : "warning",
-      });
+      }, "refresh");
     }, (error: unknown) => {
       showFeedback({
         message: options.messages.t("execution", "error.refresh"),
         level: "warning",
-      });
+      }, "refresh");
       options.onError?.(error);
     }).finally(() => {
       pending.delete("refresh");
@@ -426,6 +426,11 @@ export function mountExecutionPanel(
 
   const unsubscribeExecution = port.subscribeExecution((snapshot) => {
     execution = snapshot;
+    if (feedback.dataset.kind === "refresh" && snapshot.status === "ready") {
+      feedback.hidden = true;
+      feedback.textContent = "";
+      delete feedback.dataset.kind;
+    }
     render();
   });
   const unsubscribePlan = port.subscribePlan((snapshot) => {

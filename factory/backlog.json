@@ -2776,6 +2776,64 @@
       "verified_head": "cc752693fb7a5b5f5bf7c7a58440de233f14ae5c",
       "verified_contract": "6cfda40496f31dd415f3c793a676ef264aed4a845deee8485222055c1221280a",
       "verified_work": "98c9f43ce27d03b9b3be1963c099e7793cb45f12fd89e73f15fc69484c3ecefd"
+    },
+    {
+      "id": "FAC-170",
+      "title": "fix(execution): clear refresh-owned feedback when a confirmed-healthy snapshot lands",
+      "kind": "code",
+      "priority": 60,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/ui/execution/panel.ts",
+        "tests/ui/execution/contracts.test.ts",
+        "tests/host-matrix/scan-degraded.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Root finding obsidian-refresh-warning-survives-auto-recovery (msg_ffb7056a670b): FAC-167's recovered screenshot showed the amber 'Timing data could not be refreshed' warning still rendered above a healthy Idle + Start POMO surface. panel.ts refreshExecution shows error.refresh feedback but a ready publish that arrives via vault-event auto-refresh (not a panel gesture) never clears the banner. Fix: tag refresh outcomes as kind 'refresh' via the existing showFeedback kind channel, and in the subscribeExecution listener clear the banner when it is refresh-owned and the new snapshot's status is 'ready'. Untagged action feedback (mutation outcomes, delete-confirmation) is preserved. Tests: contracts.test.ts pins the kind tag + ready-clear + delete-confirmation preservation; scan-degraded.mjs adds sd-degraded-refresh-warning-shown (non-vacuous) and sd-recovered-warning-cleared native assertions via a .spiral-day-execution__feedback probe.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "refresh feedback tagged kind=refresh and cleared on ready snapshot; action/delete-confirmation feedback untouched",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'feedback.dataset.kind === \"refresh\" && snapshot.status === \"ready\"' src/ui/execution/panel.ts && grep -c '}, \"refresh\")' src/ui/execution/panel.ts | grep -q '^2$' && grep -q 'kind === \"delete-confirmation\"' src/ui/execution/panel.ts"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "contract test pins the mechanism",
+          "check": {
+            "type": "command",
+            "command": "grep -q \"refresh-owned feedback clears on a confirmed-healthy snapshot\" tests/ui/execution/contracts.test.ts && node tests/ui/execution/run.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "native banner assertions present in scan-degraded scenario",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'sd-degraded-refresh-warning-shown' tests/host-matrix/scan-degraded.mjs && grep -q 'sd-recovered-warning-cleared' tests/host-matrix/scan-degraded.mjs"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with sd-* assertions including the new banner checks",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode scan-degraded",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Mechanism: showFeedback(next, kind?) already had a kind channel (used by delete-confirmation); refresh outcomes were untagged so a subscription-driven render could not distinguish them from action feedback. Clearing only kind==='refresh' on status==='ready' keeps mutation-outcome and delete-confirmation banners intact. Root report: obsidian-scan-degraded-inspected-0353.json. Evidence screenshot: FAC-167 attempt-2 execution-scan-degraded-recovered.png.",
+      "claimed_head": "c50ed739d0d63b7db02e8d3134ab3e405c61fe78",
+      "verified_head": "c50ed739d0d63b7db02e8d3134ab3e405c61fe78",
+      "verified_contract": "7f32c8c7c36dd220f40544b95c5c97a405ad36461dfa6c09ae8763f75bbe8545",
+      "verified_work": "5d85d9e7f56a6ae0b8f13cb4c3e759e16ac06a458c1066de449ed913b9cd83d4"
     }
   ]
 }

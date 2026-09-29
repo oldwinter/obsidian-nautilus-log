@@ -221,6 +221,13 @@ test("timing recovery exposes a guarded localized retry without a mutation inten
   assert.match(execution, /"notice\.refreshed": string/);
 });
 
+test("refresh-owned feedback clears on a confirmed-healthy snapshot while preserving action feedback", async () => {
+  const panel = await readFile("src/ui/execution/panel.ts", "utf8");
+  assert.equal(panel.match(/\}, "refresh"\)/g)?.length, 2);
+  assert.match(panel, /feedback\.dataset\.kind === "refresh" && snapshot\.status === "ready"/);
+  assert.match(panel, /if \(clearFeedback && feedback\.dataset\.kind === "delete-confirmation"\)/);
+});
+
 test("active Timing exposes the singleton Active Task view without coupling it to a mutation", async () => {
   const [panel, timingView, main] = await Promise.all([
     readFile("src/ui/execution/panel.ts", "utf8"),
