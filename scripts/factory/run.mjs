@@ -12,7 +12,7 @@
 // fail, release, block, unblock, cancel, record, status, dry-run.
 
 import assert from "node:assert/strict";
-import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync,

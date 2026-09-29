@@ -41,7 +41,10 @@ node scripts/factory/run.mjs deliver FAC-101       # verified -> delivered
 ```
 
 `verify` exits nonzero and marks the item `failed` on the first failing
-check; it never records success after a failure. A successful `verify` stamps
+check; it never records success after a failure. Command checks run in
+their own process group, so a `timeout_ms` deadline (or a runner signal)
+SIGKILLs every descendant — backgrounded work cannot write after
+cancellation. A successful `verify` stamps
 the item with the HEAD, the acceptance-contract hash, and a worktree
 fingerprint; `deliver` refuses when any of them drifted since verify
 (`verification is stale`) — rerun `verify` to restamp. `deliver` writes
@@ -76,7 +79,8 @@ cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
 ```
 
 Each progress row carries timestamp, event, item, attempt, prior/next state,
-check exit codes, durations, output tails, and the current git HEAD.
+check exit codes, kill signal, durations, output tails, and the current
+git HEAD.
 
 Mutating commands serialize on `.codex/runtime/devin-factory/run.lock/`
 — a lock *directory* (`mkdir` is atomic) holding `owner.json` with the
@@ -109,7 +113,8 @@ observe a long verify.
 
 The factory is not a daemon: each command is one short process. Nothing keeps
 running between commands, so "stop" is simply not invoking the next command.
-Ctrl-C during `verify` leaves the item in `verifying` (see Recover). No
+Ctrl-C during `verify` kills the running check's process group and leaves
+the item in `verifying` (see Recover). No
 command ever pushes, merges, deploys, or approves anything — those stay
 manual gates.
 

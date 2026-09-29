@@ -1665,6 +1665,46 @@
       "verified_head": "947109e8ebfc951bf54b67bf4ae627fea055f153",
       "verified_contract": "0c725031cc02775492007c2e3e1b8109eacebb0ea4d5d87f3baf8701192ec8d2",
       "verified_work": "962ac926c57c024a9160be0f3dd6c9faadc45b7dba1616b97099d26dc894ac4e"
+    },
+    {
+      "id": "FAC-145",
+      "title": "README documents check process-group semantics; drop dead execFileSync import",
+      "kind": "factory",
+      "priority": 145,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md",
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Doc-sync for FAC-143/144: README states checks run in their own process group (timeout or runner signal SIGKILLs descendants), progress rows carry the kill signal, and Ctrl-C during verify kills the check group; also removes the unused execFileSync import left behind by the async conversion.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README states the process-group timeout/signal semantics",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'process group' factory/README.md && grep -q 'kill signal' factory/README.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner parses and the dead execFileSync import is gone",
+          "check": {
+            "type": "command",
+            "command": "node --check scripts/factory/run.mjs && ! grep -q execFileSync scripts/factory/run.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "683e8ee15483cb5bf8d173756d965ee4c51d6460",
+      "verified_head": "683e8ee15483cb5bf8d173756d965ee4c51d6460",
+      "verified_contract": "9dc986cb94d93aa0c980d59261c1a35b9354d323e2545c474dc1da9abb824d83",
+      "verified_work": "7500e1d32d1237aa0efef161b6f2e99d6767687ea138000e4b1331254ba4f767"
     }
   ]
 }
