@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { ExecutionCommandRegistry } from "../../../src/adapters/commands";
 import { registerExecutionEditorMenu } from "../../../src/adapters/editor-menu";
+import { ExecutionEntryAdapter } from "../../../src/adapters/execution-entry";
 import { executionFeedbackKey } from "../../../src/adapters/execution-feedback";
 import { executionOutcomeNotice } from "../../../src/adapters/notices";
 import { enExecution } from "../../../src/i18n/locales/en/execution";
@@ -19,6 +20,32 @@ const chineseTitles = {
   clockOut: zhCNExecution["command.clockOut"],
   locatePrimary: zhCNExecution["command.locatePrimary"],
 };
+
+test("Execution entry rolls back a ribbon acquired before startup fails", () => {
+  let calls = 0;
+  let removed = 0;
+  const trigger = {
+    classList: { add() {} },
+    setAttribute() {},
+    remove() { removed += 1; },
+  };
+  const plugin = {
+    addRibbonIcon() {
+      calls += 1;
+      if (calls === 2) throw new Error("second ribbon failed");
+      return trigger;
+    },
+  };
+  const entry = new ExecutionEntryAdapter({
+    plugin: plugin as never,
+    port: {} as never,
+    messages: { t: () => "label" } as never,
+  });
+
+  assert.throws(() => entry.start(), /second ribbon failed/);
+  assert.equal(removed, 1);
+  assert.equal(entry.active, false);
+});
 
 test("TC-UP-CMD-01-001..003 registers exactly three no-hotkey commands and removes them", async () => {
   const registered: Array<Record<string, unknown>> = [];

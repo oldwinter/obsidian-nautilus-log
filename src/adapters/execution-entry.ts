@@ -50,41 +50,73 @@ export class ExecutionEntryAdapter {
 
   start(): void {
     if (this.#surface) return;
-    const trigger = this.#dependencies.plugin.addRibbonIcon(
-      "timer",
-      this.#dependencies.messages.t("execution", "surface.name"),
-      () => {},
-    );
-    trigger.classList.add("spiral-day-execution-trigger");
-    trigger.setAttribute("aria-haspopup", "dialog");
-    this.#trigger = trigger;
-    const stopPomo = this.#dependencies.plugin.addRibbonIcon(
-      "x",
-      this.#dependencies.messages.t("execution", "action.stopPomo"),
-      () => this.#stopStandalonePomo(),
-    );
-    stopPomo.classList.add("spiral-day-execution-pomo-stop");
-    stopPomo.hidden = true;
-    this.#pomoStop = stopPomo;
-    this.#surface = mountExecutionPanel(this.#dependencies.port, {
-      trigger,
-      messages: this.#dependencies.messages,
-      renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
-      ...(this.#dependencies.onError ? { onError: this.#dependencies.onError } : {}),
-    });
-    this.#unsubscribe = this.#dependencies.port.subscribeExecution((snapshot) => this.#syncPomoStop(snapshot));
+    try {
+      const trigger = this.#dependencies.plugin.addRibbonIcon(
+        "timer",
+        this.#dependencies.messages.t("execution", "surface.name"),
+        () => {},
+      );
+      trigger.classList.add("spiral-day-execution-trigger");
+      trigger.setAttribute("aria-haspopup", "dialog");
+      this.#trigger = trigger;
+      const stopPomo = this.#dependencies.plugin.addRibbonIcon(
+        "x",
+        this.#dependencies.messages.t("execution", "action.stopPomo"),
+        () => this.#stopStandalonePomo(),
+      );
+      stopPomo.classList.add("spiral-day-execution-pomo-stop");
+      stopPomo.hidden = true;
+      this.#pomoStop = stopPomo;
+      this.#surface = mountExecutionPanel(this.#dependencies.port, {
+        trigger,
+        messages: this.#dependencies.messages,
+        renderIcon: (element, icon) => setIcon(element, ICONS[icon]),
+        ...(this.#dependencies.onError ? { onError: this.#dependencies.onError } : {}),
+      });
+      this.#unsubscribe = this.#dependencies.port.subscribeExecution((snapshot) => this.#syncPomoStop(snapshot));
+    } catch (error) {
+      try {
+        this.stop();
+      } catch (cleanupError) {
+        throw new AggregateError([error, cleanupError], "Execution entry startup rollback failed");
+      }
+      throw error;
+    }
   }
 
   stop(): void {
-    this.#surface?.destroy();
+    const errors: unknown[] = [];
+    const surface = this.#surface;
     this.#surface = undefined;
-    this.#unsubscribe?.();
+    try {
+      surface?.destroy();
+    } catch (error) {
+      errors.push(error);
+    }
+    const unsubscribe = this.#unsubscribe;
     this.#unsubscribe = undefined;
-    this.#pomoStop?.remove();
+    try {
+      unsubscribe?.();
+    } catch (error) {
+      errors.push(error);
+    }
+    const pomoStop = this.#pomoStop;
     this.#pomoStop = undefined;
+    try {
+      pomoStop?.remove();
+    } catch (error) {
+      errors.push(error);
+    }
     this.#pomoStopPending = false;
-    this.#trigger?.remove();
+    const trigger = this.#trigger;
     this.#trigger = undefined;
+    try {
+      trigger?.remove();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) throw new AggregateError(errors, "Execution entry cleanup failed");
   }
 
   open(): void {
