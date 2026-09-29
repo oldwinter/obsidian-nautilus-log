@@ -121,6 +121,30 @@ test("TC-UP-CLK-10 singleton Active Task reuses the right leaf and removes dupli
   assert.deepEqual(focused, [[primary, { focus: true }]]);
 });
 
+test("TC-UP-CLK-10 duplicate cleanup failure does not block the canonical Active Task leaf", async () => {
+  const primary = { detach() { throw new Error("canonical leaf detached"); } };
+  let laterDuplicateDetached = 0;
+  const workspace = {
+    getLeavesOfType: () => [
+      primary,
+      { detach() { throw new Error("stale duplicate detach failed"); } },
+      { detach() { laterDuplicateDetached += 1; } },
+    ],
+    ensureSideLeaf: async () => primary,
+    revealed: [] as unknown[],
+    focused: [] as unknown[],
+    async revealLeaf(leaf: unknown) { this.revealed.push(leaf); },
+    setActiveLeaf(leaf: unknown, options: unknown) { this.focused.push([leaf, options]); },
+  };
+
+  const result = await openActiveTaskView({ workspace } as never);
+  assert.equal(result.leaf, primary);
+  assert.equal(result.reused, true);
+  assert.equal(laterDuplicateDetached, 1, "cleanup continues after one stale duplicate throws");
+  assert.deepEqual(workspace.revealed, [primary]);
+  assert.deepEqual(workspace.focused, [[primary, { focus: true }]]);
+});
+
 test("TC-UP-EXE-05/12 source navigation selects the fresh line briefly and disposes timers", async () => {
   const source = ["heading", "", "- [ ] Focus me ^nl-id"];
   let selection = { from: { line: 0, ch: 0 }, to: { line: 0, ch: 0 } };
@@ -213,6 +237,43 @@ test("TC-UP-EXE-05 source navigation reports the clamped line it actually opened
       },
     } as never,
     locateTask: () => ({ kind: "available", path: file.path, line: 99 }),
+    unavailableMessage: (code) => code,
+  });
+
+  const result = await navigator.openTask({ path: file.path, ownerId: "nl-id", sourceOrder: 0 });
+  assert.deepEqual(result, { kind: "opened", path: file.path, line: 0, location: "main" });
+  assert.deepEqual(cursorCalls[0], { line: 0, ch: 0 });
+});
+
+test("TC-UP-EXE-05 source navigation normalizes a NaN locator line before host editor calls", async () => {
+  const cursorCalls: Array<{ line: number; ch: number }> = [];
+  const editor = {
+    lineCount: () => 1,
+    getLine: () => "only line",
+    setCursor(position: { line: number; ch: number }) { cursorCalls.push(position); },
+    setSelection() {},
+    getCursor: () => ({ line: 0, ch: 0 }),
+    scrollIntoView() {},
+    focus() {},
+  };
+  const view = Object.assign(Object.create(MarkdownView.prototype), {
+    editor,
+    containerEl: { ownerDocument: { defaultView: undefined } },
+  }) as MarkdownView;
+  const file = Object.assign(Object.create(TFile.prototype), {
+    path: "Daily/2026-08-29.md",
+    extension: "md",
+  }) as TFile;
+  const navigator = new ObsidianSourceNavigator({
+    app: {
+      vault: { getAbstractFileByPath: () => file },
+      workspace: {
+        getLeaf: () => ({ view, async openFile() {} }),
+        async revealLeaf() {},
+        setActiveLeaf() {},
+      },
+    } as never,
+    locateTask: () => ({ kind: "available", path: file.path, line: Number.NaN }),
     unavailableMessage: (code) => code,
   });
 

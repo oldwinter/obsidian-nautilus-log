@@ -166,6 +166,19 @@ function runningIntervals(
   }));
 }
 
+function hasRunningClockOnDay(
+  clocks: readonly ReviewClock[],
+  day: CalendarDayBounds,
+  nowEpochMilliseconds: number,
+): boolean {
+  if (!Number.isFinite(nowEpochMilliseconds)) return false;
+  return clocks.some((clock) => clock.state === "running"
+    && Number.isFinite(clock.startEpochMilliseconds)
+    && clock.startEpochMilliseconds <= nowEpochMilliseconds
+    && clock.startEpochMilliseconds < day.endEpochMilliseconds
+    && nowEpochMilliseconds >= day.startEpochMilliseconds);
+}
+
 function reviewRow<TTask extends ReviewTask>(
   task: TTask,
   clocks: readonly ReviewClock[],
@@ -183,8 +196,7 @@ function reviewRow<TTask extends ReviewTask>(
     : closedMilliseconds + runningMilliseconds;
   const actualMinutes = Math.floor(actualMilliseconds / MINUTE_MILLISECONDS);
   const hasRunning = task.status === "open"
-    && actualMinutes > 0
-    && ownerClocks.some((clock) => clock.state === "running");
+    && hasRunningClockOnDay(ownerClocks, day, nowEpochMilliseconds);
   const state: ReviewRowState = task.status === "done"
     ? actualMinutes > 0 ? "compared" : "not-tracked"
     : hasRunning

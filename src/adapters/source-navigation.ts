@@ -73,7 +73,9 @@ export class ObsidianSourceNavigator {
     if (this.#disposed) return this.#cancelled();
     if (!leaf) return this.#unavailable("workspace-unavailable");
     const view = leaf.view;
-    let openedLine = Math.max(0, Math.floor(resolved.line));
+    let openedLine = Number.isFinite(resolved.line)
+      ? Math.max(0, Math.floor(resolved.line))
+      : 0;
     if (view instanceof MarkdownView) {
       openedLine = Math.min(
         openedLine,

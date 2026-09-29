@@ -381,6 +381,14 @@ export async function openPlannerView(
   const existing = app.workspace.getLeavesOfType(PLANNER_VIEW_TYPE);
   if (existing.length >= MAX_PLANNER_LEAVES) {
     const leaf = chooseExistingLeaf(existing, validatedDate);
+    const selectedDate = leafDate(leaf);
+    if (!selectedDate || dateKey(selectedDate) !== dateKey(validatedDate)) {
+      await leaf.setViewState({
+        type: PLANNER_VIEW_TYPE,
+        active: true,
+        state: { logicalDate: { ...validatedDate } },
+      });
+    }
     await app.workspace.revealLeaf(leaf);
     app.workspace.setActiveLeaf(leaf, { focus: true });
     return Object.freeze({ leaf, reused: true });

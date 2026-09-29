@@ -41,6 +41,29 @@ test("UP-INS-03 four leaves are allowed and a fifth reveals an existing leaf", a
   assert.deepEqual(calls.active, [leaves[2]]);
 });
 
+test("UP-INS-03 a fifth distinct date retargets the chosen capped leaf", async () => {
+  const leaves = Array.from({ length: MAX_PLANNER_LEAVES }, (_, index) =>
+    fakeLeaf({ year: 2026, month: 8, day: 25 + index }));
+  const app = {
+    workspace: {
+      getLeavesOfType: () => leaves,
+      getLeaf: () => { throw new Error("must not create a fifth leaf"); },
+      revealLeaf: async () => {},
+      setActiveLeaf: () => {},
+    },
+  };
+  const logicalDate = { year: 2026, month: 8, day: 30 };
+  const result = await openPlannerView(app as never, logicalDate);
+  assert.equal(result.reused, true);
+  assert.equal(result.leaf, leaves[0]);
+  assert.deepEqual(leaves[0]?.setViewStateCalls, [{
+    type: PLANNER_VIEW_TYPE,
+    active: true,
+    state: { logicalDate },
+  }]);
+  assert.deepEqual(leaves.slice(1).map((leaf) => leaf.setViewStateCalls), [[], [], []]);
+});
+
 test("UP-INS-03 invalid restored and default dates fail closed to a valid fallback", async () => {
   const leaf = fakeLeaf({ year: 2026, month: 8, day: 28 });
   let resolvedDate: unknown;

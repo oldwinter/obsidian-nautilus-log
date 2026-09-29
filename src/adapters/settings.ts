@@ -309,9 +309,7 @@ export class SpiralDaySettingTab extends PluginSettingTab {
         }));
   }
 
-  #run(generation: number, operation: () => void | Promise<void>): void {
-    void Promise.resolve().then(operation).catch(this.#dependencies.onError).finally(() => {
-      if (generation === this.#displayGeneration) this.#dependencies.onLocaleChanged();
-    });
+  #run(_generation: number, operation: () => void | Promise<void>): void {
+    void Promise.resolve().then(operation).catch(this.#dependencies.onError);
   }
 }

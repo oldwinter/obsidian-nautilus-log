@@ -178,7 +178,7 @@ class CountingAccess extends MemoryTextAccess {
   }
 }
 
-test("live Review floors accumulated time once without IO and preserves non-live rows and summary", async () => {
+test("live Review floors accumulated time once without IO and preserves completed rows and summary", async () => {
   const access = new CountingAccess({ [path]: source });
   const coordinator = new ReviewCoordinator(new HistoryIndex(access));
   const noon = request.nowEpochMilliseconds;
@@ -192,7 +192,7 @@ test("live Review floors accumulated time once without IO and preserves non-live
     });
     if (initial.state !== "ready") throw new Error("Review did not become ready");
     assert.equal(initial.projection.rows[1]?.actualMinutes, null);
-    assert.equal(initial.projection.rows[1]?.state, "not-started");
+    assert.equal(initial.projection.rows[1]?.state, "live");
     const reads = access.reads;
     coordinator.advance({
       nowEpochMilliseconds: noon + 1,

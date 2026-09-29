@@ -670,7 +670,6 @@ export default class SpiralDayPlugin extends Plugin {
   #onLocaleChanged(): void {
     this.#executionEntry?.setLocale();
     this.#syncHostChrome();
-    void this.#execution?.refresh();
   }
 
   #commandTitles(): {
