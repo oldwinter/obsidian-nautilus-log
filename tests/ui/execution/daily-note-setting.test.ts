@@ -30,10 +30,16 @@ test("accepted Daily Note folder and format keep valid edits and drop weekday to
   assert.equal(acceptedDailyNoteFolder("Journal\\Daily//"), "Journal/Daily");
   assert.equal(acceptedDailyNoteFolder("../outside"), undefined);
   assert.equal(acceptedDailyNoteFolder("/Daily"), undefined);
+  assert.equal(acceptedDailyNoteFolder("con"), undefined);
+  assert.equal(acceptedDailyNoteFolder("COM1.txt"), undefined);
+  assert.equal(acceptedDailyNoteFolder("Daily."), undefined);
+  assert.equal(acceptedDailyNoteFolder("Daily "), undefined);
   assert.equal(acceptedDailyNoteFormat("YYYY/MM/DD"), "YYYY/MM/DD");
   assert.equal(acceptedDailyNoteFormat(" YYYY-MM-DD "), "YYYY-MM-DD");
   assert.equal(acceptedDailyNoteFormat("YYYY-MM-DD dddd"), undefined);
   assert.equal(acceptedDailyNoteFormat("dddd"), undefined);
+  assert.equal(acceptedDailyNoteFormat("[LPT9]/YYYY-MM-DD"), undefined);
+  assert.equal(acceptedDailyNoteFormat("YYYY-MM-DD[.]"), undefined);
 });
 
 test("Settings Daily Note edits reject unsupported values instead of resetting to defaults", () => {

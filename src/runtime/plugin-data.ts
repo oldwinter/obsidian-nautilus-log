@@ -73,6 +73,11 @@ const LEGEND_MAX_LENGTHS = Object.freeze([14, 16, 18, 20, 22, 24, 26, 28] as con
 const DEFAULT_DURATIONS = Object.freeze([5, 10, 15, 20, 25, 30, 45, 60] as const);
 const POMO_THRESHOLDS = Object.freeze([15, 20, 25, 30, 45, 50, 60, 90] as const);
 const MAX_DATE_EPOCH_MS = 8_640_000_000_000_000;
+const WINDOWS_DEVICE_NAME = /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)/iu;
+
+function isPortablePathSegment(segment: string): boolean {
+  return !/[ .]$/u.test(segment) && !WINDOWS_DEVICE_NAME.test(segment);
+}
 
 export const DEFAULT_PLUGIN_SETTINGS: Readonly<PluginSettings> = Object.freeze({
   language: "en",
@@ -167,7 +172,11 @@ function normalizeFolder(value: string): string | undefined {
   const segments: string[] = [];
   for (const segment of slashFolder.split("/")) {
     if (segment === "" || segment === ".") continue;
-    if (segment === ".." || /[<>:"|?*\u0000-\u001f]/.test(segment)) return undefined;
+    if (
+      segment === ".."
+      || /[<>:"|?*\u0000-\u001f]/.test(segment)
+      || !isPortablePathSegment(segment)
+    ) return undefined;
     segments.push(segment);
   }
   return segments.join("/");
@@ -233,7 +242,12 @@ function validDailyNoteFormat(value: string): boolean {
     || rendered.includes("//")
     || rendered.toLowerCase().endsWith(".md")
     || /[<>:"|?*\u0000-\u001f]/.test(rendered)
-    || rendered.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+    || rendered.split("/").some((segment) => (
+      segment === ""
+      || segment === "."
+      || segment === ".."
+      || !isPortablePathSegment(segment)
+    ))
   ) return false;
   return true;
 }
