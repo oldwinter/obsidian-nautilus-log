@@ -16,6 +16,15 @@ required. Add `--planner-tooltip-only` for this short read-only probe without
 Execution, lifecycle, or CLOCK scenarios; it cannot be combined with `--review`.
 The same isolated launcher, version guards, package hashes, and cleanup apply.
 
+Add `--forgotten` for the stale running-CLOCK recovery scenario instead of the
+standard lane. Before launch, the fixture's prior-day note gains a LOGBOOK
+holding one running CLOCK under the open Alpha task (~24h stale). The host must
+project `forgotten` on both the Timing tab and the Active Task view with an
+actionable warning and day-scale elapsed text. Clock Out then composes the
+close record in the prior-day owner note only — every other note stays
+byte-identical — and the record keeps its clock id with `--[end] => duration`.
+It cannot be combined with `--review`, `--privacy`, or `--planner-tooltip-only`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

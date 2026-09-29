@@ -12,20 +12,23 @@ import { runReviewReadOnly, runReviewWrites } from "./review.mjs";
 import { beginHostPrivacy, finishHostPrivacy } from "../privacy/host.mjs";
 import { finalizeOwnedHost } from "../lifecycle/cleanup.mjs";
 import { observePlannerTooltip } from "./planner-tooltip.mjs";
+import { seedForgottenClock, runForgottenClock } from "./forgotten-clock.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
   "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
-  privacy: { type: "boolean" },
+  privacy: { type: "boolean" }, forgotten: { type: "boolean" },
   "planner-tooltip-only": { type: "boolean" },
   "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--forgotten] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
 assert(!values["planner-tooltip-only"] || !values.review, "--planner-tooltip-only cannot be combined with --review");
+assert(!values.forgotten || (!values.review && !values.privacy && !values["planner-tooltip-only"]),
+  "--forgotten cannot be combined with --review, --privacy, or --planner-tooltip-only");
 assert(!values["candidate-sha"] || /^[a-f0-9]{40}$/.test(values["candidate-sha"]), "Candidate SHA must have 40 lowercase hex characters");
 for (const name of ["expected-app-version", "expected-electron-version"]) {
   assert(!values[name] || /^\d+\.\d+\.\d+$/.test(values[name]), `Invalid --${name}`);
@@ -65,6 +68,7 @@ for (const file of packageFiles) await copyFile(join(pluginDir, file), join(inst
 const installedPackage = await fileHashes(installedPlugin, packageFiles);
 assert.deepEqual(installedPackage, sourcePackage, "Installed plugin bytes differ from supplied package");
 const fixture = syntheticFixture();
+const forgottenSeed = values.forgotten ? seedForgottenClock(fixture) : null;
 for (const day of fixture.days) await writeFile(join(vault, day.path), day.source);
 await json(join(installedPlugin, "data.json"), fixture.pluginData);
 await json(join(vault, ".obsidian", "community-plugins.json"), []);
@@ -81,10 +85,10 @@ const report = {
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
   expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
-  scenarios: [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
+  scenarios: values.forgotten ? ["forgotten-clock"] : [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "host-matrix/forgotten-clock.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
     persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
@@ -263,15 +267,17 @@ try {
   check("activation-preserves-all-markdown", JSON.stringify(report.fixture.files) === JSON.stringify(beforeNavigation), beforeNavigation);
   await openPlanner();
   await screenshot("planner");
-  report.plannerTooltip = await observePlannerTooltip({ page, pageErrors: report.pageErrors, screenshot });
-  await json(join(evidence, "planner-tooltip.json"), report.plannerTooltip);
-  const svgName = report.plannerTooltip.target.ariaLabel ?? report.plannerTooltip.target.title;
-  check("planner-svg-accessible-name", svgName?.includes("Host fixture Alpha")
-    && report.plannerTooltip.accessibleTree.includes(`img ${JSON.stringify(svgName)}`), report.plannerTooltip.accessibleTree);
-  check("planner-svg-real-hover", report.plannerTooltip.hovered.some((element) => element.class?.includes("spiral-day-planner__external-label")), report.plannerTooltip.hovered);
-  check("planner-svg-tooltip-delay-observed", report.plannerTooltip.elapsedMilliseconds >= 900, report.plannerTooltip.elapsedMilliseconds);
-  check("planner-svg-hover-no-page-errors", report.plannerTooltip.newPageErrors.length === 0, report.plannerTooltip.newPageErrors);
-  if (!values["planner-tooltip-only"]) {
+  if (!values.forgotten) {
+    report.plannerTooltip = await observePlannerTooltip({ page, pageErrors: report.pageErrors, screenshot });
+    await json(join(evidence, "planner-tooltip.json"), report.plannerTooltip);
+    const svgName = report.plannerTooltip.target.ariaLabel ?? report.plannerTooltip.target.title;
+    check("planner-svg-accessible-name", svgName?.includes("Host fixture Alpha")
+      && report.plannerTooltip.accessibleTree.includes(`img ${JSON.stringify(svgName)}`), report.plannerTooltip.accessibleTree);
+    check("planner-svg-real-hover", report.plannerTooltip.hovered.some((element) => element.class?.includes("spiral-day-planner__external-label")), report.plannerTooltip.hovered);
+    check("planner-svg-tooltip-delay-observed", report.plannerTooltip.elapsedMilliseconds >= 900, report.plannerTooltip.elapsedMilliseconds);
+    check("planner-svg-hover-no-page-errors", report.plannerTooltip.newPageErrors.length === 0, report.plannerTooltip.newPageErrors);
+  }
+  if (!values["planner-tooltip-only"] && !values.forgotten) {
     for (const [name, expected] of [["Collapse planner", "Expand planner"], ["Expand planner", "Collapse planner"],
       ["Hide completed items", "Show completed items"], ["Show completed items", "Hide completed items"]]) {
       await page.getByRole("button", { name, exact: true }).click();
@@ -329,6 +335,10 @@ try {
       === fixture.today.source.split("<!-- nautilus-log:plan/v1 -->")[0], fixture.today.path);
     check("clock-preserves-all-other-note-bytes", clock.clockOutSource
       .replace(/^  - LOGBOOK::\n    - CLOCK:.*\n/m, "") === clock.beforeSource, fixture.today.path);
+  } else if (values.forgotten) {
+    report.forgottenClock = await runForgottenClock({ page, seed: forgottenSeed, vault,
+      openExecution, check, screenshot, markdownHashes });
+    await json(join(evidence, "forgotten-clock.json"), report.forgottenClock);
   } else {
     check("planner-tooltip-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(await markdownHashes()), beforeNavigation);
   }
@@ -336,7 +346,7 @@ try {
   check("plugin-bytes-unchanged", JSON.stringify(sourcePackage) === JSON.stringify(report.package.afterRun), report.package.afterRun);
   await page.keyboard.press("Escape");
   await openPlanner();
-  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : "planner-after-ten-cycles");
+  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : values.forgotten ? "planner-after-forgotten" : "planner-after-ten-cycles");
   check("no-renderer-page-errors", report.pageErrors.length === 0, report.pageErrors);
   const errors = report.console.filter((event) => event.type === "error");
   check("no-renderer-console-errors", errors.length === 0, errors);

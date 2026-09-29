@@ -2285,6 +2285,56 @@
       "verified_head": "918ef086bfd2cb947bfa1bd4ec3fc59a9918ccd2",
       "verified_contract": "6fb5d555a5ca1706be850bbbf9d545725cd228b59ed5fd469ab66c51a3f484f0",
       "verified_work": "211612deba8e7b21b75250a8db3b51f2e332a7e0d0aec57b38ad62d1b9a28fc5"
+    },
+    {
+      "id": "FAC-161",
+      "title": "feat(host-matrix): --forgotten scenario pins stale running-CLOCK recovery",
+      "kind": "code",
+      "priority": 55,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/forgotten-clock.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable-vault probe proved the forgotten-CLOCK workflow contract-correct (stale running CLOCK under an open prior-day task projects `forgotten` on Timing + Active Task surfaces; Clock Out composes the close in the owner note only; all other notes byte-identical) but the state has zero permanent host coverage. Promote the probe: new tests/host-matrix/forgotten-clock.mjs exports seedForgottenClock(fixture) + runForgottenClock; run.mjs gains an exclusive --forgotten mode (seeds fixture pre-launch, runs the scenario, records forgotten-clock.json); host-probe.mjs gains --mode forgotten; README documents it.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/forgotten-clock.mjs exists and exports the seed and phase functions",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/forgotten-clock.mjs && grep -q 'export function seedForgottenClock' tests/host-matrix/forgotten-clock.mjs && grep -q 'export async function runForgottenClock' tests/host-matrix/forgotten-clock.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --forgotten flag, scenario registration, host-probe --mode forgotten",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'forgotten' tests/host-matrix/run.mjs && grep -q 'forgotten: \"--forgotten\"' scripts/factory/checks/host-probe.mjs && grep -q 'forgotten' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode forgotten exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode forgotten",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/forgotten-clock.mjs runs 4+5; 9/9 assertions PASS on installed Obsidian. Done-owner running CLOCK correctly degrades clock-owner-invalid (contract, not a defect). Native limits per tests/host-matrix/README.md.",
+      "claimed_head": "ad3f6858328a203620761770cbf384193b62bcae",
+      "verified_head": "ad3f6858328a203620761770cbf384193b62bcae",
+      "verified_contract": "6dad27036e349ec34879e28eaabebaf2e45f32a159ec175ba7d5b6980e51725c",
+      "verified_work": "36bfe6359ac5d38473037d107c0282169ace9920e78c29d3ad1ec0b8a4cac8e1"
     }
   ]
 }

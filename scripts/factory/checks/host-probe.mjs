@@ -7,7 +7,8 @@
 // (FAC-103 lifecycle cycles + real CLOCK write), --mode review (adds the
 // Review read/write scenario), --mode privacy (adds the local-only privacy
 // assertion scenario), --mode bound (tooltip scenario plus expected
-// app/Electron version and candidate-SHA binding assertions).
+// app/Electron version and candidate-SHA binding assertions), --mode
+// forgotten (FAC-161 stale running-CLOCK recovery scenario).
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -20,9 +21,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
-const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only" };
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten" };
 function assertMode(mode) {
-  if (!["tooltip", "full", "review", "privacy", "bound"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -72,7 +73,7 @@ if (values.mode === "bound") {
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: ["tooltip", "bound"].includes(values.mode) ? 240_000 : 600_000,
+  timeout: ["tooltip", "bound", "forgotten"].includes(values.mode) ? 240_000 : 600_000,
   // Versioned sibling of the output dir; a fixed name at the evidence root
   // silently overwrote the previous run's log on a same-attempt re-verify.
   log: `${output}.log`,
