@@ -1,0 +1,2839 @@
+{
+  "$schema": "./backlog.schema.md",
+  "schema_version": 1,
+  "queue": "spiral-day devin-factory local work queue",
+  "note": "Canonical local queue for bounded factory work items. GitHub issues remain the canonical product queue; this file covers factory-chore and evidence items that do not duplicate any open issue or PR. Item state on disk is authoritative; .codex/runtime/devin-factory/ holds volatile evidence only.",
+  "states": [
+    "ready",
+    "claimed",
+    "implemented",
+    "verifying",
+    "verified",
+    "delivered",
+    "failed",
+    "blocked",
+    "cancelled"
+  ],
+  "transitions": {
+    "claim": [
+      "ready"
+    ],
+    "retry": [
+      "failed"
+    ],
+    "implemented": [
+      "claimed"
+    ],
+    "verify": [
+      "implemented",
+      "verified",
+      "verifying"
+    ],
+    "deliver": [
+      "verified",
+      "delivered"
+    ],
+    "release": [
+      "claimed",
+      "implemented",
+      "verifying",
+      "failed"
+    ],
+    "block": [
+      "ready"
+    ],
+    "unblock": [
+      "blocked"
+    ],
+    "cancel": [
+      "ready",
+      "claimed",
+      "implemented",
+      "verifying",
+      "verified",
+      "failed",
+      "blocked"
+    ]
+  },
+  "items": [
+    {
+      "id": "FAC-101",
+      "title": "Performance lane evidence: run tests/performance/run.mjs under pinned Node 24.20.0",
+      "kind": "verification",
+      "priority": 10,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the pinned-Node performance lane and store its output under .codex/runtime/devin-factory/evidence/performance-<utc>/. The lane is an ENV-PURE contribution only and never counts as a release gate.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/performance/run.mjs exits 0 under Node 24.20.0 and writes evidence into a fresh output directory",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/perf-lane.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Report records a terminal result and retains its stated limitations",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/perf-report.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Manual-only lane: npm test does not run it and CI has no job for it.",
+      "claimed_head": "d8ad222377d68b84736eba1408f29611f132e5bb"
+    },
+    {
+      "id": "FAC-102",
+      "title": "Real host probe: planner tooltip accessibility against installed Obsidian",
+      "kind": "verification",
+      "priority": 20,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run tests/host-matrix/run.mjs --planner-tooltip-only with the installed Obsidian.app and a borrowed Playwright module. Output goes to a fresh directory under .codex/runtime/devin-factory/evidence/host-probe-<utc>/. Disposable profile and vault only; the runner must prove isolation before touching the plugin.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Host probe exits 0 and writes evidence/report.json plus evidence/planner-tooltip.json",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Tooltip evidence records an accessible Alpha label and zero page errors",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-tooltip-report.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Single macOS host; not a release-gate lane. Limitations from tests/host-matrix/README.md apply.",
+      "claimed_head": "c3fc440ea89877780426703943b2f0fb91dd958d"
+    },
+    {
+      "id": "FAC-103",
+      "title": "Real host smoke: full lifecycle + CLOCK write in disposable vault",
+      "kind": "verification",
+      "priority": 30,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the complete tests/host-matrix/run.mjs scenario (no --review, no --privacy) against the built package inside a disposable vault. It performs ten clean open-close-disable-enable cycles plus one real CLOCK write/reload/clock-out round trip.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Full host run exits 0 and report.json records all assertions passing",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode full"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Depends on FAC-102 succeeding first; same disposable-vault isolation rules.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
+    },
+    {
+      "id": "FAC-104",
+      "title": "Release lane local evidence: release tests, dry-run, provenance, planning audit",
+      "kind": "verification",
+      "priority": 40,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run the release CI job's non-browser steps locally and record each command and exit code.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "node --test tests/release/*.test.mjs passes",
+          "check": {
+            "type": "command",
+            "command": "node --test \"tests/release/evidence-harness.test.mjs\" \"tests/release/release-gates.test.mjs\" \"tests/release/requirements-contract.test.mjs\""
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "node scripts/release/dry-run.mjs exits 0",
+          "check": {
+            "type": "command",
+            "command": "node scripts/release/dry-run.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "node scripts/check-planning-docs.mjs --sha HEAD passes offline",
+          "check": {
+            "type": "command",
+            "command": "node scripts/check-planning-docs.mjs --sha HEAD"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "npm run validate:provenance exits 0",
+          "check": {
+            "type": "command",
+            "command": "npm run validate:provenance"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Mirrors the release-evidence CI job minus the two browser lanes.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
+    },
+    {
+      "id": "FAC-105",
+      "title": "Audit docs against live command/error surface and fix drift",
+      "kind": "audit",
+      "priority": 50,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/audits/",
+        "docs/",
+        "README.md"
+      ],
+      "allow_empty_diff": true,
+      "implementation": "Add scripts/factory/audits/doc-surface.mjs which extracts the command titles, settings labels, and documented error codes from source and checks that docs/user-guide.md, docs/user-guide.zh.md, docs/reference/settings.md, docs/troubleshooting.md, and README.md name them consistently. Fix any drift it finds inside the declared boundary.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Audit script exits 0 (no undocumented drift remains)",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/audits/doc-surface.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [
+        "node tests/ui/planner-controls/run.mjs"
+      ],
+      "notes": "Audit first; only bounded doc fixes inside docs/ and README.md.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
+    },
+    {
+      "id": "FAC-106",
+      "title": "Self-maintenance: extend factory with item append + JSONL status rendering if gaps appear",
+      "kind": "code-change",
+      "priority": 90,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": true,
+      "implementation": "Reserved maintenance item. Only claim when an earlier iteration identifies a concrete factory gap (for example: missing retry backoff record, missing status rendering). Implement the narrow fix inside the factory boundary and extend tests/factory/.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Placeholder that becomes concrete only with a recorded finding.",
+      "claimed_head": "ad30c74b54082aea2ca5d2de9a0494260a46c4b3"
+    },
+    {
+      "id": "FAC-107",
+      "title": "fix(panel): restore trigger focus on Escape before hiding popover",
+      "kind": "code-change",
+      "priority": 35,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/ui/execution/panel.ts",
+        "tests/ui/execution/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Found by FAC-103 host run: execution-escape-restores-trigger failed on real Obsidian 1.13.7. In close(), move trigger.focus() before popover.hidden=true so focus leaves the popover before Blink can reset activeElement, and stopPropagation() the consumed Escape so the host's window-level Escape handling cannot steal the restored focus. Add a source-contract assertion in tests/ui/execution/contracts.test.ts pinning focus-before-hide ordering, matching the lane's existing style.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Focused execution lane passes including the new ordering assertion",
+          "check": {
+            "type": "command",
+            "command": "node tests/ui/execution/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "Real host full probe passes all assertions after rebuild (execution-escape-restores-trigger included)",
+          "check": {
+            "type": "command",
+            "command": "node esbuild.config.mjs build && node scripts/factory/checks/host-probe.mjs --mode full",
+            "timeout_ms": 900000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract source: dossier Execution panel machine 'Escape and close restore focus'; OBS-A11Y. Fix preserves the contract — no deviation record needed.",
+      "claimed_head": "d00c72f1a8c8d18a6d6bff46737d444380fe5ae5"
+    },
+    {
+      "id": "FAC-108",
+      "title": "Real host probe: Review scenario read+write in disposable vault",
+      "kind": "verification",
+      "priority": 36,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run tests/host-matrix/run.mjs --review (standard scenarios plus Review read-only and Review write paths) against the built package inside a disposable vault via scripts/factory/checks/host-probe.mjs --mode review.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "host-probe --mode review exits 0 and its report.json records all assertions passing",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode review"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Extends FAC-103 host smoke with the optional Review scenario; same disposable-vault isolation.",
+      "claimed_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_contract": "fb539f2a0e800ea20d483f46d6b60dc07195f4ea205fefac5c8adfe85761dd7b",
+      "verified_work": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "FAC-109",
+      "title": "Real host probe: privacy scenario asserts local-only operation",
+      "kind": "verification",
+      "priority": 37,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [],
+      "allow_empty_diff": true,
+      "implementation": "Run tests/host-matrix/run.mjs --privacy (standard scenarios plus the network/telemetry privacy assertion) against the built package inside a disposable vault via scripts/factory/checks/host-probe.mjs --mode privacy.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "host-probe --mode privacy exits 0 and its report.json records all assertions passing",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode privacy"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Asserts the local-only contract in a live host session; extends FAC-103 coverage.",
+      "claimed_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_head": "ef3bc2aad4ece8425e48321cbbd86f73f69e3d80",
+      "verified_contract": "74914061776880a556bc7739c5f531127f34452d44a8382e3a2fb3e0d0ac193d",
+      "verified_work": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "id": "FAC-110",
+      "title": "fix(host-matrix): bound tooltip-delay assertion above timer granularity",
+      "kind": "code-change",
+      "priority": 38,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "tests/host-matrix/planner-tooltip.mjs sleeps setTimeout(900) then asserts elapsedMilliseconds >= 900; Node timers may resolve ~1ms early, flooring to 899 under load. Wait 1000ms so the >= 900 setup invariant has headroom.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "host-probe --mode tooltip exits 0 and its report.json records all assertions passing",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode tooltip"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Found by FAC-108 attempt 1: planner-svg-tooltip-delay-observed recorded 899.",
+      "claimed_head": "9e2af6094fae1976e7b57f9c16831b0be59081c7",
+      "verified_head": "9e2af6094fae1976e7b57f9c16831b0be59081c7",
+      "verified_contract": "546c33c4dab75bf3f3131a94724e3654bd465822a28ef56b16e5c14b6c4b8ce0",
+      "verified_work": "c4042f927007cbb1c3f1d571bd037daf88cfa89b01b698029097543c676aeef9"
+    },
+    {
+      "id": "FAC-111",
+      "title": "fix(factory): deliver must reject stale verification (contract or worktree drift)",
+      "kind": "code-change",
+      "priority": 34,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Reproduced defect: verify->mutate acceptance command or tested source->deliver still exits 0. Stamp verified items with verified_head, verified_contract (sha256 of acceptance criteria + verify commands), and verified_work (sha256 of non-exempt worktree); deliver refuses when any drift is detected; backlog/.codex bookkeeping stays exempt.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including stale-delivery regressions",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Coordinator reproduction at general-tasks/.codex/runtime/devin-factory-10h-20260929/reviews/boundary-20260928T190712.598065Z/results.json: acceptance and dirty_source cases both incorrectly_delivered.",
+      "claimed_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf",
+      "verified_head": "0945ffa520c7eb6cb2cc0b85e0bfdc65682f06cf",
+      "verified_contract": "ba78cc09228cfbc017eb6d013295d2aced8c2080d5a7a1eb6deef8680b6047d6",
+      "verified_work": "147f0b59fafe61a1f16216a422c0ec63ab7df64a4eb280a23db3deccd98c9ccb"
+    },
+    {
+      "id": "FAC-112",
+      "title": "feat(factory): embed per-attempt check results in delivery evidence",
+      "kind": "code-change",
+      "priority": 60,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "evidence.json currently lists only AC ids; the actual check outcomes live in items/<id>.jsonl. cmdDeliver should embed the attempt's check + verify-command rows (criterion, command, ok, exit_code, duration_ms) into evidence.json and list them in summary.md so a delivery bundle is self-contained proof.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including evidence-checks coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "33f0a7cd05082c8db5d5f62a096678d2d21d9164",
+      "verified_head": "33f0a7cd05082c8db5d5f62a096678d2d21d9164",
+      "verified_contract": "d3d9c0e69698d4d6003612387ed899106daf6e5be303f92c2881105e2b5a8cc0",
+      "verified_work": "ea2a5b0c8689baf66f864a0357e0c3ffcf76d475e89e299c5de0b0d6e2c74094"
+    },
+    {
+      "id": "FAC-113",
+      "title": "feat(factory): status surfaces stale verification on verified items",
+      "kind": "code-change",
+      "priority": 61,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "A verified item whose stamp goes stale is invisible until deliver fails. renderStatus gains a deep mode (cmdStatus only, not the appendProgress hot path) that marks verified items STALE with the reason; console status prints the same.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including staleness surfacing",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "30ab344d4c8ea05dafddf39e8bdbecde69a7897f",
+      "verified_head": "30ab344d4c8ea05dafddf39e8bdbecde69a7897f",
+      "verified_contract": "365a368731253b96232dd50e43390452d494edd5c6e34254c2d9d57ddc85f5cf",
+      "verified_work": "89e34087134397d8e01f9ff797a8b5d1bc9e45c4e21e6702c90c01c20f107dc6"
+    },
+    {
+      "id": "FAC-114",
+      "title": "feat(factory): verification-hardening — no-git fingerprint coverage, mid-verify resume test, delivery-bound log hash",
+      "kind": "code-change",
+      "priority": 62,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Three bounded gaps: (a) stale-verification regression covered only the git fingerprint; add the no-git walk path variant. (b) README documents 'process died mid-verify -> rerun verify resumes' but no test covers it. (c) evidence.json item_log_sha256 misses the delivered row because it is computed before setState; reorder so the hash binds the complete attempt log.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including no-git stale and verifying-resume coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "e67f06c6b135138ce864d86707f6ee689d3654f8",
+      "verified_head": "e67f06c6b135138ce864d86707f6ee689d3654f8",
+      "verified_contract": "481daaf85bad9681089b446530dd697af9d34d4f956d0b633cf3f11fb290cdd7",
+      "verified_work": "95815e564f7c436db41a1362af91ed6d3a8d717f2c55230a9db65851edc46041"
+    },
+    {
+      "id": "FAC-115",
+      "title": "feat(factory): evidence.json records item_log_bytes so the log hash stays verifiable",
+      "kind": "code-change",
+      "priority": 63,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The item JSONL is append-only; a post-delivery note or event extends it and a naive recompute of item_log_sha256 then mismatches. evidence.json now records item_log_bytes so a reviewer can verify sha256(log.slice(0, bytes)).",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "ba8918368753ee7400007a3710efcfc7bd9e7f3e",
+      "verified_head": "ba8918368753ee7400007a3710efcfc7bd9e7f3e",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "73931d27cfa1aac6ba417c49e1ef814c10becd16cb42fb3adddbeb184e48b74a"
+    },
+    {
+      "id": "FAC-116",
+      "title": "docs(factory): sync bundle contents with FAC-112/114/115 evidence fields",
+      "kind": "code-change",
+      "priority": 64,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "README/schema now document bundle.json, evidence.json.checks, and the item_log_sha256/item_log_bytes prefix-hash semantics introduced by FAC-112/114/115.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane still passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "332d752f88bc67a045d37d13bd2a2b3ccdc3bdad",
+      "verified_head": "332d752f88bc67a045d37d13bd2a2b3ccdc3bdad",
+      "verified_contract": "f16e7465be28428a0570319eafc3b8c15f1f4e989caf19dfc98c5944e0053dff",
+      "verified_work": "a25b37e562a79b3dd7af456b09ed748b32454c94c5b22746b5d3ac5d1684d166"
+    },
+    {
+      "id": "FAC-117",
+      "title": "feat(factory): host-probe bound mode exercises version/candidate binding assertions",
+      "kind": "verification",
+      "priority": 65,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/checks/"
+      ],
+      "allow_empty_diff": true,
+      "implementation": "tests/host-matrix/run.mjs supports --expected-app-version/--expected-electron-version/--candidate-sha but no lane ever passed them, leaving expected-obsidian-version and expected-electron-version dead code. New --mode bound runs the tooltip scenario with both version bindings plus the worktree HEAD as candidate-sha.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Bound host probe passes in the real installed Obsidian",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode bound"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Report records both version-binding assertions passed",
+          "check": {
+            "type": "command",
+            "command": "node -e 'const fs=require(\"fs\");const r=JSON.parse(fs.readFileSync(process.env.FACTORY_EVIDENCE_DIR+\"/host-bound/evidence/report.json\"));const a=r.assertions.filter(x=>x.id.startsWith(\"expected-\"));if(a.length!==2||!a.every(x=>x.passed)){console.error(a);process.exit(1)}'"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3cecbe907794abc212227fccc2ae5735b317f95a",
+      "verified_head": "3cecbe907794abc212227fccc2ae5735b317f95a",
+      "verified_contract": "c510703c2dcd1171f11a02aeb7e78210eaf76125a97241dd0c9475442800fbc5",
+      "verified_work": "a6900e7f89e06822f49c2a46d081ad441692625f65066d4e010849256f7c093b"
+    },
+    {
+      "id": "FAC-118",
+      "title": "test(factory): cover mid-deliver crash rebuild, bundle.json, and item_log prefix hash",
+      "kind": "code-change",
+      "priority": 66,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The idempotent-delivery test now also deletes evidence.json and asserts deliver rebuilds it from bundle.json (the crash path added in FAC-114), plus asserts bundle.json exists and item_log_sha256 verifies against the log's first item_log_bytes bytes.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "c530d816fc76a69d9e9d385a713dc77125c354e2",
+      "verified_head": "c530d816fc76a69d9e9d385a713dc77125c354e2",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "d502945f66f1ac1a5fa054bedca1b86131791643ce28e1792d3bd1d55e11e58b"
+    },
+    {
+      "id": "FAC-119",
+      "title": "feat(factory): transitions map validated against canonical rules at load",
+      "kind": "code-change",
+      "priority": 67,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "release/cancel consume backlog.transitions, so a hand edit could widen a gate. loadBacklog now rejects any transitions entry that diverges from the canonical runner rules or names an unknown action; a missing map still loads. Covered by a tamper test.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3748f27237915fab5c2c7553ec4574fdc04cb5fb",
+      "verified_head": "3748f27237915fab5c2c7553ec4574fdc04cb5fb",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "6155d985f75364a74336bcd56e53a7d846624d5f585d862b00072e56d5659000"
+    },
+    {
+      "id": "FAC-120",
+      "title": "docs(factory): schema describes validated transitions mirror",
+      "kind": "code-change",
+      "priority": 68,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "backlog.schema.md said transitions was an advisory mirror; FAC-119 made it load-time validated, so the wording is updated to describe the fail-closed check.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "81477cf4e0a326242af546568d73308b69faa5f8",
+      "verified_head": "81477cf4e0a326242af546568d73308b69faa5f8",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "1ebcfc89ad7c85b2554a62a3daf97a9cd91a493b68b880a341ff9eb6965d88e3"
+    },
+    {
+      "id": "FAC-121",
+      "title": "feat(factory): check paths confined to worktree; per-type required fields validated",
+      "kind": "code-change",
+      "priority": 69,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "file-exists/json-field check paths resolved against root but could escape it (e.g. /etc/hostname), and missing per-type fields (command, field) crashed or slipped through. loadBacklog now rejects escaping paths and missing fields; covered by malformed-payload tests.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "b019ef9ada80333255382430b8851553c4d9480a",
+      "verified_head": "b019ef9ada80333255382430b8851553c4d9480a",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "18256cec031fc0c0391da4e4c124348581fa004b80f17c21767956223b28a02a"
+    },
+    {
+      "id": "FAC-122",
+      "title": "docs(factory): document the show command",
+      "kind": "code-change",
+      "priority": 70,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "README documented every runner command except `show <id>`; added it to the Run block.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "3e09dd77d4a6ed4a05cb4927cd0ef991abfaafe5",
+      "verified_head": "3e09dd77d4a6ed4a05cb4927cd0ef991abfaafe5",
+      "verified_contract": "1eb7f6cbbfca6a7c5de8ddd0a3ce046b1e83d7736ee43ec83ac7317852c27d35",
+      "verified_work": "e820f93742d6f5d5128f63b2beb1f2b82fcb5ce6e0843954d20a1b7a32e418ec"
+    },
+    {
+      "id": "FAC-123",
+      "title": "feat(factory): audit:docs npm script exposes the doc-surface audit",
+      "kind": "code-change",
+      "priority": 71,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "package.json",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The doc-surface audit existed only as a FAC-105 acceptance command — nothing named it for operators. Adds an additive npm run audit:docs script (no change to check/test/verify gates) and a README pointer.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "audit:docs passes",
+          "check": {
+            "type": "command",
+            "command": "npm run audit:docs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "bf1cf85941a71cb08ec10d29fb0d9c32162c39ae",
+      "verified_head": "bf1cf85941a71cb08ec10d29fb0d9c32162c39ae",
+      "verified_contract": "1c9e3157bf32294961cb06cc71c50b2b92d89b9f6276f6ba2811ba194eddf3d2",
+      "verified_work": "8d5d5d828bcf60744adf9f98dc029313e65fab55714c9c29c9df6c7347962b55"
+    },
+    {
+      "id": "FAC-124",
+      "title": "feat(factory): validate priority, module_boundary, and verify payload types",
+      "kind": "code-change",
+      "priority": 72,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Non-integer priority silently broke `next` ordering, and empty module_boundary/verify entries slipped validation. loadBacklog now rejects all three; covered by the malformed-payload test family.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "77dce8fb69b3e93980b4e2c8d7d6686f4e402ad2",
+      "verified_head": "77dce8fb69b3e93980b4e2c8d7d6686f4e402ad2",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "70f2b5eb0bdc3cd0311d3ed3bfee07b657ca0981ec6947f7b99f8ad66d293247"
+    },
+    {
+      "id": "FAC-125",
+      "title": "fix(factory): versioned evidence dirs let a same-attempt re-verify run the lanes",
+      "kind": "code-change",
+      "priority": 73,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The pipeline allows verify on a verified item, but host-probe and perf-lane refused because their evidence dir already existed — a same-attempt re-verify would false-fail. Lanes now take the first free name-N slot (no overwrite), and readers (perf-report, host-tooltip-report) resolve the newest matching dir.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "5e9caccdd07d8ffc1e04a0e4a480968fd07d607e",
+      "verified_head": "5e9caccdd07d8ffc1e04a0e4a480968fd07d607e",
+      "verified_contract": "d1b96da15fff41fe398a38a079e1eb9476f9c904ec5dd60ae491d4e5fe2ac916",
+      "verified_work": "38a9e5f7c292534890837163fdc2542fb3d57f5e80ca63ccf27531901ff38847"
+    },
+    {
+      "id": "FAC-126",
+      "title": "fix(factory): delivery checks bind the verify run that produced the current state",
+      "kind": "code-change",
+      "priority": 74,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/",
+        "tests/factory/",
+        "factory/"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "A re-verify on a verified item appends a second run's check rows for the same attempt; evidence.checks then mixed superseded results. writeDeliveryEvidence now takes only rows after the last verify-start for the attempt.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "Factory self-test lane passes including latest-run binding",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "npm run check still passes",
+          "check": {
+            "type": "command",
+            "command": "npm run check"
+          }
+        }
+      ],
+      "verify": [],
+      "claimed_head": "7ed1d3cb99c362295c075c82379c11661b997b3f",
+      "verified_head": "7ed1d3cb99c362295c075c82379c11661b997b3f",
+      "verified_contract": "7ed02e3fb0ec904edd61069a1b78fda9e5132afbfd8025780f3727c003e09b7c",
+      "verified_work": "86bada9c0ecbb7e5931754f6babedcbcdda4a079584faf55eba8af3621f7ad5d"
+    },
+    {
+      "id": "FAC-127",
+      "title": "Add inspect command auditing delivery-bundle integrity",
+      "kind": "factory",
+      "priority": 27,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Read-only `inspect <id>` that verifies required bundle files exist, evidence parses, item/attempt fields match, the item-log prefix hash re-verifies (with an honest warning for bundles that predate item_log_bytes), no failed check results shipped, and the item is delivered.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "inspect passes on a live delivered bundle",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs inspect FAC-126"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "Factory test lane passes including inspect coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "notes": "Operator-side integrity audit; warnings for historical bundles lacking item_log_bytes",
+      "claimed_head": "7d9833d75cce9debfb84e798eaba3eb896f350f0",
+      "verified_head": "7d9833d75cce9debfb84e798eaba3eb896f350f0",
+      "verified_contract": "c61fdd7d74de1ad5edeff40d9d64766480910826860c99ea5d1a0983b3498e3a",
+      "verified_work": "14616de308bb273479099490795f63713d4b16a20d922567ddd7cec928cf6aee"
+    },
+    {
+      "id": "FAC-128",
+      "title": "Exercise inspect in dry-run pipeline smoke",
+      "kind": "factory",
+      "priority": 28,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "dry-run now runs inspect on the delivered sandbox item so the audit path is covered by the pipeline smoke test.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "dry-run passes including the inspect step",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs dry-run"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run",
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "notes": "Keeps the operator smoke test honest about the inspect command",
+      "claimed_head": "9a7dc6ad2c62baf13cb30ba0a3e94abedb96f88d",
+      "verified_head": "9a7dc6ad2c62baf13cb30ba0a3e94abedb96f88d",
+      "verified_contract": "c509083372763eb0d08069ab32bcf2552b90f8d569ae95761ad973526f9d071b",
+      "verified_work": "aacd04d64c8850ab906cba9c45a340d3c2db39ffcc356bd85951928d6e4b2c02"
+    },
+    {
+      "id": "FAC-129",
+      "title": "Validate required descriptive fields and allow_empty_diff type",
+      "kind": "factory",
+      "priority": 29,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Backlog load requires non-empty title/kind/implementation strings and a boolean allow_empty_diff when present, so hand-edited or generated malformed items fail closed at load.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes including new malformed-payload cases",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "committed backlog still validates",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs list"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "notes": "Extends FAC-124 payload validation to descriptive fields",
+      "claimed_head": "d34d4cfb91b16d0614d0fc4195ffa8af0310f615",
+      "verified_head": "d34d4cfb91b16d0614d0fc4195ffa8af0310f615",
+      "verified_contract": "fd6a5d97c904821d6aad2102d7cdea58e636502d0a72015480e572bc93f2774d",
+      "verified_work": "f4ff2d9c0a6e464997b84f42e6ff7269f9d7ac95d23b95fdcfdbd7de158eb6c5"
+    },
+    {
+      "id": "FAC-130",
+      "title": "Sync backlog schema doc with enforced validation",
+      "kind": "docs",
+      "priority": 30,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "factory/backlog.schema.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Document required fields, actual kind values (factory present, docs unused), per-check-type requirements, and fix the dangling transitions line.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "schema doc lists required fields",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'acceptance_criteria.* are required' factory/backlog.schema.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "kind values reflect the real queue",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'factory' factory/backlog.schema.md && ! grep -q 'or .docs.' factory/backlog.schema.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "factory lane still green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs list"
+      ],
+      "notes": "Doc-drift found during post-FAC-129 schema review",
+      "claimed_head": "19762583691650fcc8d89b7fe1ed1b1d8bfa7930",
+      "verified_head": "19762583691650fcc8d89b7fe1ed1b1d8bfa7930",
+      "verified_contract": "f8403abb7d30339264f17cb9d67fb4fb3307f90cb37bf6e4116b7adc05c984c0",
+      "verified_work": "80fa1e48048a2805970d18d57781aedfed2b1d6ca19c4d6f43c060b31a820fcc"
+    },
+    {
+      "id": "FAC-131",
+      "title": "Serialize mutating commands on a runtime lockfile",
+      "kind": "factory",
+      "priority": 31,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Mutating commands acquire .codex/runtime/devin-factory/run.lock atomically; a live foreign pid fails them, a dead pid's lock is reclaimed, and the lock is removed on exit. Read-only commands stay lock-free.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. lock coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "live pipeline unaffected",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs status > /dev/null"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "Prevents last-writer-wins backlog corruption from concurrent invocations",
+      "claimed_head": "dbb1be16d3fd7f2eafa043c202547087c68e8b10",
+      "verified_head": "dbb1be16d3fd7f2eafa043c202547087c68e8b10",
+      "verified_contract": "7d276fadf57982af5dd1bce4e8dfdbc3e44d492738b22895aa9dd4d945b35e40",
+      "verified_work": "2652ad142054d0446a5542407cac1e0fefea3ca5e89d162d530e1a1b36f78f2e"
+    },
+    {
+      "id": "FAC-132",
+      "title": "Cover manual fail and show commands in tests",
+      "kind": "factory",
+      "priority": 32,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Extend the control-recovery test to exercise fail --reason on a claimed item, rejection of failing a cancelled item, and show as a read-only command.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes with fail/show coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Last two unexercised commands in the runner surface",
+      "claimed_head": "c08788f5bc83e02c08f48fa16b25c20ad91c16e9",
+      "verified_head": "c08788f5bc83e02c08f48fa16b25c20ad91c16e9",
+      "verified_contract": "9641bb4129c79e8c28cc512a480a94fe1d38169974fb7d2b018e139c4272a76b",
+      "verified_work": "b35c93da6c58087b31277d572282835ad17e7322524b026034858ea123bbbb9f"
+    },
+    {
+      "id": "FAC-133",
+      "title": "Fix delivery bundles dropping files inside new directories",
+      "kind": "factory",
+      "priority": 33,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "git status collapses fully-untracked dirs to '?? dir/' so files inside new directories were neither copied into files/ nor listed. Expand collapsed entries via git ls-files -o, and make inspect verify every listed untracked file exists in the bundle.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. collapsed-dir regression",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "FAC-105's historical bundle defect reproduced and documented",
+          "check": {
+            "type": "command",
+            "command": "test -f .codex/runtime/devin-factory/deliveries/FAC-105/attempt-1/evidence.json"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "False-completeness defect: FAC-105's bundle shipped zero bytes of doc-surface.mjs (collapsed '?? scripts/factory/audits/'). Historical bundles stay immutable; this fix prevents future loss.",
+      "claimed_head": "c5439cc85f58632594bb52b0cf3dcf8e75f6dc71",
+      "verified_head": "c5439cc85f58632594bb52b0cf3dcf8e75f6dc71",
+      "verified_contract": "961ad318513e6b91c9b23375ba9df456ca5f15d4c6e92613792c685d03250b56",
+      "verified_work": "fb1bd5d127b50970afcda9394985f0f74e6be990acd49a89fa949567d2977cb0"
+    },
+    {
+      "id": "FAC-134",
+      "title": "Validate timeout_ms and json-field equals at load",
+      "kind": "factory",
+      "priority": 34,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/backlog.schema.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "timeout_ms now must be a positive integer when present (non-integer or non-positive values crashed spawnSync uncleanly), and json-field checks require an equals value (absent equals silently asserted the field was undefined).",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. new malformed cases",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "committed backlog still validates",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs list"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "Completes per-field check payload validation started in FAC-121/124/129",
+      "claimed_head": "dce7a241734d4793104ef841f0d26d6af737400c",
+      "verified_head": "dce7a241734d4793104ef841f0d26d6af737400c",
+      "verified_contract": "450112ec3f4791291dc8c17f7e14ef30805fc6030fa18a509cbf2cfa4b9ca00a",
+      "verified_work": "0bb882e95f5b12fd16666041d3a354f4336c65f88c64b58c37c617e0e306af05"
+    },
+    {
+      "id": "FAC-135",
+      "title": "Fix --backlog resolving against cwd instead of --root",
+      "kind": "factory",
+      "priority": 35,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 2,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Relative --backlog paths resolved against process cwd while every other runner path is root-relative, silently selecting a different queue under --root. Now resolves against root; absolute paths still work. Sandbox git fixture now commits the queue file to mirror production, and the alternate-queue directory exemption is covered.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "factory lane passes incl. --backlog coverage",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "notes": "Test caught the cwd-resolution defect plus a fixture fidelity gap",
+      "claimed_head": "f9bdbbc49a329b9a323ac7958a86dc852635b62c",
+      "verified_head": "f9bdbbc49a329b9a323ac7958a86dc852635b62c",
+      "verified_contract": "154be4358c738df2aa2ca8c6309c7b695426ff58e0c200d08954de966a7cbaa5",
+      "verified_work": "685a86db9171ede544b952238e9dd8b83d158d64c1e9c75433c189f1ffd4e9ac"
+    },
+    {
+      "id": "FAC-136",
+      "title": "dry-run walks the full operator command surface",
+      "kind": "factory",
+      "priority": 136,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "extend cmdDryRun with an IT-003/IT-004 operator-surface walkthrough: add --file, next, claim, manual fail, release, block, unblock, cancel, record, show, status; assert terminal states",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "dry-run completes with all control-surface steps exiting as expected",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/run.mjs dry-run | tail -1 | grep -q 'dry-run: PASS'"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "2ffbacc8de4b4c9eab5c80a363d50c32e1885925",
+      "verified_head": "2ffbacc8de4b4c9eab5c80a363d50c32e1885925",
+      "verified_contract": "3bddda34851aed0ca91283da494204fbcce034b7ceff3f9b66efa638f2b9b3cb",
+      "verified_work": "213a00d1915a696b4ce44d920e16b64af8f3c28588ac493e2adbe6e38110b725"
+    },
+    {
+      "id": "FAC-137",
+      "title": "fix lock init-window theft and stale-reclaim TOCTOU (coordinator P1)",
+      "kind": "factory",
+      "priority": 137,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "replace file-based run.lock with a directory lock (mkdir atomic create + owner.json): unreadable/invalid owner metadata fails closed instead of being reclaimed; stale locks are reclaimed by renaming the whole entry aside and deleting only on byte-identical match, renamed back otherwise — a new live owner can never be unlinked",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "lock serialization test covers live-owner preservation, init-window fail-closed, invalid-metadata fail-closed, and dead-pid reclaim",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'serialize on the runtime lock' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "concurrent mutating calls serialize: every lock acquisition succeeds and no note row is lost; lock released afterward",
+          "check": {
+            "type": "command",
+            "command": "T=$(mktemp -d) && mkdir -p \"$T/factory\" && cp factory/backlog.json \"$T/factory/backlog.json\" && for i in 1 2 3 4 5 6 7 8; do node scripts/factory/run.mjs --root \"$T\" record FAC-101 --note \"c-$i\" >\"$T/o.$i\" 2>&1 & done; wait; S=$(grep -l \"recorded note\" \"$T\"/o.* | wc -l | tr -d \" \"); N=$(grep -c \"note\" \"$T/.codex/runtime/devin-factory/items/FAC-101.jsonl\"); test \"$S\" -ge 1 && test \"$S\" -eq \"$N\" && test ! -e \"$T/.codex/runtime/devin-factory/run.lock\"; R=$?; rm -rf \"$T\"; exit $R"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "5773e92a17633fa3554f2db9b3cd3df55e0cf580",
+      "verified_head": "5773e92a17633fa3554f2db9b3cd3df55e0cf580",
+      "verified_contract": "a0b865d1edb51bb9963d926a3b794caba059f4c7452922cf72f44fa2de148e4a",
+      "verified_work": "108ae9dfd2ea07d0be2821c14c4c7fc0fe5e4fc5a9f7d142a7250d936b097da3"
+    },
+    {
+      "id": "FAC-138",
+      "title": "lock init write uses wx so a replaced lock dir is never clobbered",
+      "kind": "factory",
+      "priority": 138,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "writeFileSync(owner.json) gains flag wx: if the freshly created lock dir was replaced between mkdir and write (manual recovery raced a paused initializer), the init write fails closed instead of overwriting a foreign owner",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "lock serialization + dry-run tests still pass",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'serialize on the runtime lock|dry-run' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "16cf257d65631e53580076955114dfd8e00d4346",
+      "verified_head": "16cf257d65631e53580076955114dfd8e00d4346",
+      "verified_contract": "55b25fd6b756847b608cdf1e7b8abebfa7babc3a77e9eca9d26a678311555def",
+      "verified_work": "98488a7dbdba3f3d2ba82321f17316f5e7983753c0697a160bacaa4cf34183da"
+    },
+    {
+      "id": "FAC-139",
+      "title": "remove unsafe lock auto-reclaim; fail closed on all stale state (coordinator P1-2)",
+      "kind": "factory",
+      "priority": 139,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "rename-aside reclaim opens the canonical slot to a third writer before byte-comparison runs — reproduced lost-update (B holds verify, A renames B live dir away, C claims, B overwrites C). Remove auto-reclaim entirely: live pid busy-fails; dead pid, missing or invalid owner.json all fail closed for manual recovery. Only our own payload-verified dir is ever deleted at exit",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "deterministic interleaving regression: live-owner preservation, dead-pid fail-closed with preserved dir, init-window fail-closed, invalid metadata fail-closed, manual-recovery path",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'serialize on the runtime lock' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "concurrent mutating calls still serialize: every lock acquisition succeeds and no note row is lost",
+          "check": {
+            "type": "command",
+            "command": "T=$(mktemp -d) && mkdir -p \"$T/factory\" && cp factory/backlog.json \"$T/factory/backlog.json\" && for i in 1 2 3 4 5 6 7 8; do node scripts/factory/run.mjs --root \"$T\" record FAC-101 --note \"c-$i\" >\"$T/o.$i\" 2>&1 & done; wait; S=$(grep -l \"recorded note\" \"$T\"/o.* | wc -l | tr -d \" \"); N=$(grep -c \"note\" \"$T/.codex/runtime/devin-factory/items/FAC-101.jsonl\"); test \"$S\" -ge 1 && test \"$S\" -eq \"$N\" && test ! -e \"$T/.codex/runtime/devin-factory/run.lock\"; R=$?; rm -rf \"$T\"; exit $R"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "0ef88b09ee3fb40b601344910de62a9512f3a2e0",
+      "verified_head": "0ef88b09ee3fb40b601344910de62a9512f3a2e0",
+      "verified_contract": "96a0586036419eff3a971518a3e6bcb47fed5d47b69de48bf1bf847049f85e5d",
+      "verified_work": "f05c95fe495ce792bcee88d79448ba54a3b987dab80bd9495d96e093d0e348e6"
+    },
+    {
+      "id": "FAC-140",
+      "title": "scheduled-interleaving lock regression via --require preload pause",
+      "kind": "factory",
+      "priority": 140,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs",
+        "tests/factory/lock-pause-preload.cjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "encode the coordinator's stronger scheduled-interleaving evidence in-repo: a --require preload blocks inside writeFileSync(owner.json) — a real mid-init owner (dir exists, payload absent) — while a contender claim must fail closed and leave the entry untouched; releasing lets the owner finish and free the lock",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scheduled-interleaving test passes deterministically (file rendezvous, no sleeps)",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'scheduled interleaving' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "d9c5ea6c3a5c23aafaf1305170f852ced6fbf1b4",
+      "verified_head": "d9c5ea6c3a5c23aafaf1305170f852ced6fbf1b4",
+      "verified_contract": "b64fc5e6b1efd05c1c29ee53734ce1566876d2d9dbaf16ca3bc4a55bf4a81096",
+      "verified_work": "6a0aa11a45abd426552345c52d27a6db11fb8ea84a8e5f116f354e6934111666"
+    },
+    {
+      "id": "FAC-141",
+      "title": "README Recover: document stale run.lock after killed process",
+      "kind": "factory",
+      "priority": 141,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "post-FAC-139 the lock has no auto-reclaim, so a killed mutating command leaves run.lock/ and every mutation fails closed until manual removal — the Recover section now tells operators to confirm the owner pid is gone and remove the directory",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README documents the killed-process stale-lock recovery",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'stale or mid-initialization' factory/README.md && grep -q 'remove the directory manually' factory/README.md"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "89686f6cf729db321dc6589b2a500147018bd443",
+      "verified_head": "89686f6cf729db321dc6589b2a500147018bd443",
+      "verified_contract": "f9dcf5166b61dee12e9ad26454d3ae24409873f0950b8a516e454de872fd7ffa",
+      "verified_work": "7d6c4b0b2ea45a1a846e12bc8979a9c8c8423cf0998e997618ed03aca35e17dc"
+    },
+    {
+      "id": "FAC-142",
+      "title": "list on an empty queue prints an explicit empty-state line",
+      "kind": "factory",
+      "priority": 142,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "cmdList: when items.length === 0 and not --json, print an explicit 'list: queue empty' line so a new operator's first command cannot be mistaken for a swallowed error; --json still prints []. Add a factory test asserting the marker on an empty-queue sandbox.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "list against a valid empty-queue root exits 0 with an explicit empty-state line (probed behavior: silent exit 0)",
+          "check": {
+            "type": "command",
+            "command": "T=$(mktemp -d) && mkdir -p \"$T/factory\" && node -e \"const d=require('./factory/backlog.json');d.items=[];require('fs').writeFileSync(process.argv[1],JSON.stringify(d))\" \"$T/factory/backlog.json\" && O=$(node scripts/factory/run.mjs --root \"$T\" list); R=$?; rm -rf \"$T\"; test $R -eq 0 && printf '%s' \"$O\" | grep -qi 'empty'"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "regression test covers the empty-queue list line",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'empty queue' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "c1ffe6b481217675c07e94a4dca8c5dcdd2b2023",
+      "verified_head": "c1ffe6b481217675c07e94a4dca8c5dcdd2b2023",
+      "verified_contract": "e71daa8da7b10707d8bdd965dfe8752bf329c4931bda255028e68cfc0225b536",
+      "verified_work": "64e362347fac79181ee043f90daf9cd71010694f35f86c0eff8aeac6ae4c223d"
+    },
+    {
+      "id": "FAC-143",
+      "title": "check timeout/cancellation kills the whole descendant process group",
+      "kind": "factory",
+      "priority": 143,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/backlog.schema.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "spawnSync timeout only killed the direct sh child: a reproduced fixture showed a backgrounded subshell surviving cancellation and writing marker.txt ~2s after the check already failed, and verify's return was unbounded (2.06s vs timeout_ms 1000). runCheckCommand now uses async spawn with detached:true (check = process-group leader), enforces timeout via kill(-pgid, SIGKILL), sweeps active check groups on runner exit and SIGINT/SIGTERM/SIGHUP, caps combined output at 8MB, and returns at child exit for a tightly bounded cancellation.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "descendant-group reaping regression test passes",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'descendant process group' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "schema doc states process-group timeout semantics",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'process group' factory/backlog.schema.md"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "04b1f1413b401435a773dbbb96e97db601008170",
+      "verified_head": "04b1f1413b401435a773dbbb96e97db601008170",
+      "verified_contract": "adda5baac13407362af17ff60833d3e210c351646741141a232107c1115e281a",
+      "verified_work": "7853e488374e84ce5653f3170014422f1c255ac9dcf8e0ed3dac3c53e69c0cfe"
+    },
+    {
+      "id": "FAC-144",
+      "title": "check evidence records kill signal; summary omits null duration",
+      "kind": "factory",
+      "priority": 144,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "pickResult now carries result.signal so a group-killed check is recorded as killed (SIGKILL), not just exit 1; writeDeliveryEvidence's checks mapping passes signal through and summary.md renders duration/signal conditionally — no more '(exit 0, null ms)' for file-exists/json-field checks.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "timed-out check row records signal SIGKILL (killed-vs-exited is distinguishable)",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'descendant process group' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "delivered summary.md never renders 'null ms' for untimed checks",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'reviewable bundle' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "947109e8ebfc951bf54b67bf4ae627fea055f153",
+      "verified_head": "947109e8ebfc951bf54b67bf4ae627fea055f153",
+      "verified_contract": "0c725031cc02775492007c2e3e1b8109eacebb0ea4d5d87f3baf8701192ec8d2",
+      "verified_work": "962ac926c57c024a9160be0f3dd6c9faadc45b7dba1616b97099d26dc894ac4e"
+    },
+    {
+      "id": "FAC-145",
+      "title": "README documents check process-group semantics; drop dead execFileSync import",
+      "kind": "factory",
+      "priority": 145,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md",
+        "scripts/factory/run.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Doc-sync for FAC-143/144: README states checks run in their own process group (timeout or runner signal SIGKILLs descendants), progress rows carry the kill signal, and Ctrl-C during verify kills the check group; also removes the unused execFileSync import left behind by the async conversion.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README states the process-group timeout/signal semantics",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'process group' factory/README.md && grep -q 'kill signal' factory/README.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner parses and the dead execFileSync import is gone",
+          "check": {
+            "type": "command",
+            "command": "node --check scripts/factory/run.mjs && ! grep -q execFileSync scripts/factory/run.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "683e8ee15483cb5bf8d173756d965ee4c51d6460",
+      "verified_head": "683e8ee15483cb5bf8d173756d965ee4c51d6460",
+      "verified_contract": "9dc986cb94d93aa0c980d59261c1a35b9354d323e2545c474dc1da9abb824d83",
+      "verified_work": "7500e1d32d1237aa0efef161b6f2e99d6767687ea138000e4b1331254ba4f767"
+    },
+    {
+      "id": "FAC-146",
+      "title": "deliver rebuilds any missing evidence file and reports structural gaps",
+      "kind": "factory",
+      "priority": 146,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The delivered-branch rebuild only fired on missing evidence.json: a crash between the evidence.json and summary.md writes (lines ~723/741) left summary.md permanently absent — re-deliver printed 'already delivered' while inspect failed with no repair path. Rebuild now triggers on any missing evidence file; a missing delivery dir/change.patch/bundle.json is reported as 'bundle incomplete' instead of falsely claiming a complete delivery.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "summary.md lost mid-evidence-write is rebuilt on re-deliver; structural bundle gaps are reported, not claimed complete",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'reviewable bundle' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "ca938e49e6b37c533a6133e7512b9fd81c7ac165",
+      "verified_head": "ca938e49e6b37c533a6133e7512b9fd81c7ac165",
+      "verified_contract": "fded9295a29b247e08f5ca86db3a47ea859ac33c66cd1764fe671b981616dfb6",
+      "verified_work": "2d0d52731a6fae81712fc8be0d10e47593272dd6fa743f370910328ae8ae789c"
+    },
+    {
+      "id": "FAC-147",
+      "title": "inspect flags bundle files the manifest does not claim",
+      "kind": "factory",
+      "priority": 147,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "inspect verified every LISTED untracked file exists but never checked the reverse: an extra file under files/ (tamper or writer bug) passed the integrity audit silently. Walk files/ and flag any path absent from bundle.json's untracked_files, making the audit complete in both directions.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "an unlisted file under files/ fails inspect with 'unlisted file present'; removing it passes again",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'manifest does not claim' tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "c4001db63f44735cbbcb235ff0bf5544e2f0311f",
+      "verified_head": "c4001db63f44735cbbcb235ff0bf5544e2f0311f",
+      "verified_contract": "76725d3d84140a5b86b0ca82d8aee8e4c004cfd1c2d2c5ca086792d2c2c99daa",
+      "verified_work": "a05159ce2d917cb57859b5346e7d4d1eb684c316f31bd9f1f4bbb51d0a7a9795"
+    },
+    {
+      "id": "FAC-148",
+      "title": "git helper carries a bounded timeout so a hung git cannot pin the lock",
+      "kind": "factory",
+      "priority": 148,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "git() is the only spawned child with no deadline: checks carry timeout_ms and lane helpers bound their own spawns, but a hung git (pathological filesystem, stuck index lock) blocks a mutating command forever while holding run.lock. Add FACTORY_GIT_TIMEOUT_MS (default 60000), fail fast on a killed git so the owner lock releases via the exit path, and prove it with a PATH-stubbed git that sleeps.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "a PATH-stubbed sleeping git makes claim fail within the bounded timeout, naming it, instead of hanging",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'bounded git timeout' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "default git path unaffected: the full factory suite stays green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "c7920ed11daaeb0292646169f37cb40c57f01f5c",
+      "verified_head": "c7920ed11daaeb0292646169f37cb40c57f01f5c",
+      "verified_contract": "d0d8bb3aa3cdea1187fda0c7827ee144ebfaee9597c45b8d510dc382b679292f",
+      "verified_work": "6fadd74f46961d047650b2859d92c9c7ff3a3cd285cbcf6dbcbc6e9018479e13"
+    },
+    {
+      "id": "FAC-149",
+      "title": "check evidence preserves multibyte UTF-8 split across stream chunks",
+      "kind": "factory",
+      "priority": 149,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Coordinator-reproduced P-level regression from the async collector (947109e): stdout += chunk decodes each Buffer separately, so a multibyte UTF-8 char straddling a chunk boundary records U+FFFD (probe: 汉字尾部 -> U+FFFD...). Collect Buffer chunks and decode once after the child exits, for stdout AND stderr, retaining group-kill and 8MB cap semantics.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "the coordinator's split-byte probe (stdout AND stderr) records exact UTF-8, no U+FFFD",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'multibyte UTF-8' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "timeout/group-kill and the rest of the suite stay green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "8a67811157884bd74aeb84b9c1c36c25627dcb83",
+      "verified_head": "8a67811157884bd74aeb84b9c1c36c25627dcb83",
+      "verified_contract": "2fbc56ca618cc537bf1e8418c0b0fb4567f12dde2cb9f86d0316f9924b877d1f",
+      "verified_work": "34db890af902d0861a0b56b13f671fdc3be128b25f474bed6f472ba9f551c4cf"
+    },
+    {
+      "id": "FAC-150",
+      "title": "README documents FACTORY_GIT_TIMEOUT_MS env knob",
+      "kind": "docs",
+      "priority": 150,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "FAC-148 added a new runner knob (FACTORY_GIT_TIMEOUT_MS, default 60000, bounding every git call) but the operator-facing Environment knobs section never listed it - the only undocumented knob in the section. Add the entry next to the check-command exports.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README env knobs section names FACTORY_GIT_TIMEOUT_MS with its bound and default",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'FACTORY_GIT_TIMEOUT_MS' factory/README.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "factory suite unaffected by the doc-only change",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "bd11121b9dae7a90be2653d700551d80dbfd79e7",
+      "verified_head": "bd11121b9dae7a90be2653d700551d80dbfd79e7",
+      "verified_contract": "d9601eb4ed78a7fdc16f4080d2695dc3c8630e892c5b94a83937fc7eec2c7ae3",
+      "verified_work": "78195ad666597a0d88d917f994e6209afcb2e2fb05c456161cda98c1076ee533"
+    },
+    {
+      "id": "FAC-151",
+      "title": "AGENTS.md points at the factory queue tooling",
+      "kind": "docs",
+      "priority": 151,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "AGENTS.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "No repo entry document (README.md, AGENTS.md, CONTEXT.md) mentions the factory: a new agent or reviewer cannot discover the durable queue, its runner entry point, or the gitignored evidence root without already knowing they exist. Add one bullet to AGENTS.md naming backlog.json, the runner entry, operator docs, and the runtime evidence root.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "AGENTS.md names the queue file, the runner entry, and the evidence root",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'factory/backlog.json' AGENTS.md && grep -q 'scripts/factory/run.mjs' AGENTS.md && grep -q '.codex/runtime/devin-factory' AGENTS.md"
+          }
+        }
+      ],
+      "verify": [
+        "node scripts/factory/run.mjs dry-run"
+      ],
+      "claimed_head": "55da905209884072f1e50f7a7de000328227e70c",
+      "verified_head": "55da905209884072f1e50f7a7de000328227e70c",
+      "verified_contract": "4ef3297dedea9148644ace641740cbb9074448acbfd2a9f90387c20610502440",
+      "verified_work": "2abb0f6a09cd7a2a0f645a78dc2b4ed030e363bb0ec1ead168a6ba6c0e7ba88a"
+    },
+    {
+      "id": "FAC-152",
+      "title": "commands reject unexpected extra positional arguments",
+      "kind": "factory",
+      "priority": 152,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "main() destructured [command, id] and silently dropped positionals[2+]: `claim IT-001 IT-002` claimed only the first id with no signal - a mutating action under a false sense of scope - and `status junk` ran anyway. Validate exact arity per command before dispatch so stray arguments fail loudly before any lock or mutation.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "claim with two ids fails naming the extra and mutates nothing; zero-arity commands reject stray args; unknown commands still report the command",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'extra positional' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "6bf2ec9a2d8c395892f2c035af1516b51224c1b9",
+      "verified_head": "6bf2ec9a2d8c395892f2c035af1516b51224c1b9",
+      "verified_contract": "fcab45cbcf1d08ee07f94663315b841159946216a1633bddc000c2b327796a94",
+      "verified_work": "d737292960a0c802c76b55c072208f7a1325d77d6d4ca6133a72d97218ad5c08"
+    },
+    {
+      "id": "FAC-153",
+      "title": "lane run logs stop clobbering the previous run's evidence",
+      "kind": "factory",
+      "priority": 153,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/checks/perf-lane.mjs",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "FAC-125 versioned per-run evidence dirs so a same-attempt re-verify never silently overwrites earlier evidence - but both lanes still wrote their run logs to fixed names at the shared evidence root (perf-lane run.log, host-probe run-<mode>.log and build.log). Move each log next to the versioned artifact it describes: staged/run.log, <output>.log sibling, and pkgDir/build.log scoped to the pkg it produced.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "perf-lane logs into the versioned staged dir; host-probe mode log is a versioned sibling; build.log lives in pkgDir",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'path.join(staged, \"run.log\")' scripts/factory/checks/perf-lane.mjs && grep -Fq 'log: `${output}.log`' scripts/factory/checks/host-probe.mjs && grep -q 'path.join(pkgDir, \"build.log\")' scripts/factory/checks/host-probe.mjs && ! grep -q 'path.join(evidence, \"run.log\")\\|path.join(evidence, \"build.log\")\\|run-\\${values.mode}.log' scripts/factory/checks/perf-lane.mjs scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "factory suite unaffected",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "304a3598966908eb0ad65a7527641a266420ab01",
+      "verified_head": "304a3598966908eb0ad65a7527641a266420ab01",
+      "verified_contract": "82073b5c2eeecb59c09d4517f06ecf8fd3835b7b62b9ea16dbd05e221ed625d2",
+      "verified_work": "32aea8040391710f0b300bd0cfd4e4a506f3feb8073ad68a53252c2db5e133fd"
+    },
+    {
+      "id": "FAC-154",
+      "title": "check rows record whether the process group outlived the command",
+      "kind": "factory",
+      "priority": 154,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real-CLI lifecycle audit (coordinator request): exit-resolve returns at command exit (36ms for `( sleep 6 ) & echo done`, correct), over-cap kills the group with an honest marker, and spawn ENOENT fails fast. But a passing check's detached descendants are dropped from evidence AND from the sweep registry - `( sleep 6 )&` left pid 51915 running with no trace. Killing them would break legitimate cross-check helpers, so record group_alive via kill(-pgid,0) instead of dropping it silently.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "a check leaving a detached descendant records group_alive true; a clean check records false; held pipes do not mark timed_out",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'process group outlived' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green incl. timeout/UTF-8 controls",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "37dc697097e722d0ece7e2da084e39a346c181be",
+      "verified_head": "37dc697097e722d0ece7e2da084e39a346c181be",
+      "verified_contract": "91c3821731759f4ae25780d8fc01d2430dabe40760d47726a682b9f573f4ba97",
+      "verified_work": "83613498911dd93919ad8847610ff6276126d60cc6eb9f7af9ef000de8a4f6d2"
+    },
+    {
+      "id": "FAC-155",
+      "title": "a throwing check fails the item instead of stranding it verifying",
+      "kind": "factory",
+      "priority": 155,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real-CLI reproduction: a json-field check on a malformed target makes readJson throw, escaping cmdVerify entirely - the item stays 'verifying' with a bare verify-start, no check row, no verify-end, and later criteria never run, while a command-check failure records honest evidence and marks failed. Catch per-check exceptions and record them as failed check results so the transition completes.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "a malformed-JSON json-field check records a failed check row naming the parse error, marks the item failed, runs later criteria, and writes verify-end ok=false",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'throwing check' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "2e18639a50e53beb81127d3272d7c8c32b26c182",
+      "verified_head": "2e18639a50e53beb81127d3272d7c8c32b26c182",
+      "verified_contract": "adbe1ea28c0857778a27b471a99b1d46cbbfb5a98a1605775eba239195709391",
+      "verified_work": "366adedafa2e5d6ed0f34a3029fceef53487d3ac1f442a7856ad92c07bfc0d11"
+    },
+    {
+      "id": "FAC-156",
+      "title": "README progress-row fields list gains group_alive",
+      "kind": "docs",
+      "priority": 156,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "FAC-154 added a new check-row field (group_alive: whether the check's process group outlived the command leader) but the README's progress-row enumeration predates it - the only evidence field absent from the operator-facing list.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "README progress-row description names group_alive",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'group_alive' factory/README.md"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "factory suite unaffected",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "037106a17d9d8dff0e4efc4c33b8fcc6da128676",
+      "verified_head": "037106a17d9d8dff0e4efc4c33b8fcc6da128676",
+      "verified_contract": "2da899756a16bf5cd1e95fa3a7215c47bee7e91fe2c2a0b6d8962ecfb125739c",
+      "verified_work": "38272370b511c1947385f98f77fb15f7159737adf131493f0539dbdab356f50b"
+    },
+    {
+      "id": "FAC-157",
+      "title": "alternate queues get isolated evidence subtrees under one root",
+      "kind": "factory",
+      "priority": 157,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real-CLI reproduction: items/<id>.jsonl, evidence/, and deliveries/ were keyed by item id only, so two queues under one root with a same-id item silently mingled notes, checks, and bundles (both queues' IT-001 notes landed in one log). Non-default queues now get a self-contained runtime subtree queues/<token>/ (path-derived + hash suffix); the default queue keeps the root layout so all existing deliveries stay put, and run.lock stays global since it serializes the shared worktree too.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "same-id items in default and --backlog queues write separate item logs; alt evidence lands in one queues/ subtree; lock stays at root",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'isolated evidence subtrees' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green (default-queue layout unchanged)",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "deb43ad8034f72b5ab140e69a2c741ad481106c0",
+      "verified_head": "deb43ad8034f72b5ab140e69a2c741ad481106c0",
+      "verified_contract": "9e6b97eb175e0e3a8410fdb24b3624da671d41adf7331c71dfc69a78bba41177",
+      "verified_work": "96c42a86e0511189edd9b69651c5e4c07e71013eeedcba6ebd398ac488d96552"
+    },
+    {
+      "id": "FAC-158",
+      "title": "dry-run inner steps carry a deadline",
+      "kind": "factory",
+      "priority": 158,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs",
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The last unbounded spawned child: dry-run's inner spawnSync had no timeout, so a wedged inner step could pin the operator terminal forever. Now FACTORY_DRY_RUN_STEP_TIMEOUT_MS (default 120s) bounds each inner step; ETIMEDOUT is surfaced as 'step timed out' in the failure. README env-knob list updated.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "1ms budget kills the first inner step with 'step timed out'; default deadline keeps dry-run green",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'dry-run inner steps' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "knob documented in the operator env list",
+          "check": {
+            "type": "command",
+            "command": "grep -n FACTORY_DRY_RUN_STEP_TIMEOUT_MS factory/README.md"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "819aa4039a59623775ed88d9d4d08ba3712cac2c",
+      "verified_head": "819aa4039a59623775ed88d9d4d08ba3712cac2c",
+      "verified_contract": "a4a7fbc230ca7926cea371bc87b0b8d3ef0aeca8ecec5b0aa094d16625a36188",
+      "verified_work": "5ae623f3450cf04bff282ed560f4f8e0325befdd68c0ad74f70a34578e09613e"
+    },
+    {
+      "id": "FAC-159",
+      "title": "README documents global options and queue isolation",
+      "kind": "factory",
+      "priority": 159,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "factory/README.md"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Doc-surface gap: --root, --backlog, and --json existed in HELP/options but had zero README coverage, and FAC-157's queues/<token>/ isolation was undocumented. Added a Global options section covering all four flags (command-scoped flags referenced), the isolated-subtree semantics, and the shared run.lock; Layout bullet now lists run.lock/ and queues/.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "every global option appears in the README",
+          "check": {
+            "type": "command",
+            "command": "for t in --root --backlog --json --retry 'queues/<token>'; do grep -q -- \"$t\" factory/README.md || exit 1; done"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "planning-doc check still passes",
+          "check": {
+            "type": "command",
+            "command": "node scripts/check-planning-docs.mjs --sha HEAD"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "5ac2780ae4176834f7930c4d4e5d9ac6bde91c45",
+      "verified_head": "5ac2780ae4176834f7930c4d4e5d9ac6bde91c45",
+      "verified_contract": "a2bb2a67a829fab156c2e1e0f77088094fd98084c58bec8de915067880a6d6bc",
+      "verified_work": "f0a820893107e7e49678873b3873152cd351724acb64732ac33df57c17c24408"
+    },
+    {
+      "id": "FAC-160",
+      "title": "pin output-cap and spawn-failure evidence paths in the suite",
+      "kind": "factory",
+      "priority": 160,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Two evidence paths from the coordinator async-runner audit had fixture-only coverage: (a) a check writing past the 8MB cap is group-SIGKILLed and records the overflow marker with timed_out=false, (b) an unspawnable check shell records 'spawn failed' with exit 1 instead of hanging. Both now have permanent suite regressions.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "cap kill + marker and spawn-failure rows pinned",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'output cap|shell cannot spawn' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "full factory suite green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "918ef086bfd2cb947bfa1bd4ec3fc59a9918ccd2",
+      "verified_head": "918ef086bfd2cb947bfa1bd4ec3fc59a9918ccd2",
+      "verified_contract": "6fb5d555a5ca1706be850bbbf9d545725cd228b59ed5fd469ab66c51a3f484f0",
+      "verified_work": "211612deba8e7b21b75250a8db3b51f2e332a7e0d0aec57b38ad62d1b9a28fc5"
+    },
+    {
+      "id": "FAC-161",
+      "title": "feat(host-matrix): --forgotten scenario pins stale running-CLOCK recovery",
+      "kind": "code",
+      "priority": 55,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/forgotten-clock.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable-vault probe proved the forgotten-CLOCK workflow contract-correct (stale running CLOCK under an open prior-day task projects `forgotten` on Timing + Active Task surfaces; Clock Out composes the close in the owner note only; all other notes byte-identical) but the state has zero permanent host coverage. Promote the probe: new tests/host-matrix/forgotten-clock.mjs exports seedForgottenClock(fixture) + runForgottenClock; run.mjs gains an exclusive --forgotten mode (seeds fixture pre-launch, runs the scenario, records forgotten-clock.json); host-probe.mjs gains --mode forgotten; README documents it.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/forgotten-clock.mjs exists and exports the seed and phase functions",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/forgotten-clock.mjs && grep -q 'export function seedForgottenClock' tests/host-matrix/forgotten-clock.mjs && grep -q 'export async function runForgottenClock' tests/host-matrix/forgotten-clock.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --forgotten flag, scenario registration, host-probe --mode forgotten",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'forgotten' tests/host-matrix/run.mjs && grep -q 'forgotten: \"--forgotten\"' scripts/factory/checks/host-probe.mjs && grep -q 'forgotten' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode forgotten exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode forgotten",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/forgotten-clock.mjs runs 4+5; 9/9 assertions PASS on installed Obsidian. Done-owner running CLOCK correctly degrades clock-owner-invalid (contract, not a defect). Native limits per tests/host-matrix/README.md.",
+      "claimed_head": "ad3f6858328a203620761770cbf384193b62bcae",
+      "verified_head": "ad3f6858328a203620761770cbf384193b62bcae",
+      "verified_contract": "6dad27036e349ec34879e28eaabebaf2e45f32a159ec175ba7d5b6980e51725c",
+      "verified_work": "36bfe6359ac5d38473037d107c0282169ace9920e78c29d3ad1ec0b8a4cac8e1"
+    },
+    {
+      "id": "FAC-162",
+      "title": "feat(host-matrix): --degraded scenario pins done-owner running-CLOCK fail-closed boundary",
+      "kind": "code",
+      "priority": 54,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/degraded-owner.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "The FAC-161 probe observed the contract's degraded path live: a running CLOCK whose owner resolves done/missing/stale/collided yields clock-owner-invalid, Timing renders the degraded empty-state with Try again, Active Task renders unavailable + mapped diagnostic, and all mutations fail closed with no markdown write. That safety boundary has zero permanent host coverage. New tests/host-matrix/degraded-owner.mjs seeds a stale running CLOCK under the fixture's DONE 'Complete' task LOGBOOK (existing structure; running line injected before the closed record) and asserts: degraded heading + error.refresh detail + retry affordance, no Clock out/current surface, Active Task data-state=unavailable, markdown byte-identical before/after surfaces and after retry (no silent repair). run.mjs gains exclusive --degraded mode; host-probe.mjs gains --mode degraded; README documents the contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/degraded-owner.mjs exists and exports the seed and phase functions",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/degraded-owner.mjs && grep -q 'export function seedDegradedOwnerClock' tests/host-matrix/degraded-owner.mjs && grep -q 'export async function runDegradedOwnerClock' tests/host-matrix/degraded-owner.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --degraded flag, scenario registration, host-probe --mode degraded, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'degraded' tests/host-matrix/run.mjs && grep -q 'degraded: \"--degraded\"' scripts/factory/checks/host-probe.mjs && grep -q 'degraded' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode degraded exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode degraded",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe run 3 evidence: done-owner running CLOCK rendered state=unavailable + 'Only an open `- [ ]` flexible task can be clocked in' (error.taskOwner = clock-owner-invalid). Pinned boundary is the fail-closed contract, not a product defect. Native limits per tests/host-matrix/README.md.",
+      "claimed_head": "64d27e6d69768fc301e46c02a93e18d0615f3de8",
+      "verified_head": "64d27e6d69768fc301e46c02a93e18d0615f3de8",
+      "verified_contract": "8860fbabcc0f1a8f354297e8fb532d2e8b750481400cd8818d969eeaced265f5",
+      "verified_work": "9f916f6d2ba2c3d71bf4eb5fb7238feacb07a41c5ae0ae3789c3f8150201c986"
+    },
+    {
+      "id": "FAC-163",
+      "title": "feat(host-matrix): --external-edit scenario pins vault authority under concurrent edits",
+      "kind": "code",
+      "priority": 53,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/external-edit.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable probe proved the concurrent-edit contract correct end-to-end: with a running CLOCK in today's note, an external append (user editing elsewhere) stays byte-identical across the re-index window, the clock survives re-resolution (panel still active), and Clock Out composes the close preserving the external bytes. Markdown-as-authority under concurrent edits is the project's core safety claim and had zero host coverage. New tests/host-matrix/external-edit.mjs exports seedExternalEdit (no-op placeholder kept minimal — the scenario clocks in live via the Plan tab instead of seeding) — actually keep it simple: single runExternalEdit export driving clock-in, external append, byte sampling over the re-index window, panel-state assertion, and Clock Out composition check. run.mjs gains exclusive --external-edit mode; host-probe.mjs gains --mode external-edit; README documents the contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/external-edit.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/external-edit.mjs && grep -q 'export async function runExternalEdit' tests/host-matrix/external-edit.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --external-edit flag, scenario registration, host-probe --mode external-edit, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'external-edit' tests/host-matrix/run.mjs && grep -q '\"external-edit\": \"--external-edit\"' scripts/factory/checks/host-probe.mjs && grep -q 'external-edit' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode external-edit exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode external-edit",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe runs 1-2 evidence: .codex/runtime/devin-factory/probes/external-edit.mjs; 6/6 assertions PASS on installed Obsidian. Byte sampling across the re-index window (500ms x 10s) guards against async rewrite races, unlike the probe's fixed sleep. Contract-correct today; the pin guards regression.",
+      "claimed_head": "98d37998837f1aca20145b7c2a4de5f7d6bff910",
+      "verified_head": "98d37998837f1aca20145b7c2a4de5f7d6bff910",
+      "verified_contract": "1b077839da043b0eeb4a9ccc8aeedabdf49d1fedb0ddb9df9c0a5bf794ac007f",
+      "verified_work": "adc80c7e81780d51212ea82839e890b91f557d1c4507ff2f88ccbbee2e01648e"
+    },
+    {
+      "id": "FAC-164",
+      "title": "feat(host-matrix): --pomo scenario pins standalone-POMO lifecycle and CLOCK-wins arbitration",
+      "kind": "code",
+      "priority": 52,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/pomo.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "POMOController contract (src/runtime/execution/pomo.ts): startStandalone writes standalonePomoStartEpochMs to plugin data when no CLOCK runs; afterClockIn sets taskPomoStartEpochMs and CLEARS standalone (CLOCK wins — destroyed, not masked); clearTask keeps standalone and drops task epoch. Zero host coverage. New tests/host-matrix/pomo.mjs drives: idle Timing shows Start POMO; click -> elapsed renders with POMO suffix + Stop affordance + data.json standalonePomoStartEpochMs numeric; Clock in Alpha -> current task projects, data.json standalone=null and taskPomoStartEpochMs set, POMO surface gone; Clock out -> idle empty-state returns with Start POMO and both epochs null (standalone does not resurrect). run.mjs gains exclusive --pomo mode; host-probe.mjs gains --mode pomo; README documents the arbitration contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/pomo.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/pomo.mjs && grep -q 'export async function runPomo' tests/host-matrix/pomo.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --pomo flag, scenario registration, host-probe --mode pomo, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'pomo' tests/host-matrix/run.mjs && grep -q 'pomo: \"--pomo\"' scripts/factory/checks/host-probe.mjs && grep -q 'POMO' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode pomo exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode pomo",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract source: src/runtime/execution/pomo.ts afterClockIn clears standalonePomoStartEpochMs (destroyed, not masked) — data.json field-level assertions pin the arbitration, not just the render.",
+      "claimed_head": "0e49c15e6daf0f4a0125b7c793144bf21f716ce7",
+      "verified_head": "0e49c15e6daf0f4a0125b7c793144bf21f716ce7",
+      "verified_contract": "c7379f3587ddad3e1448b8d063dfb642089b1b6d4ceaa8dbbdded24c641f94b3",
+      "verified_work": "1fb30dab7c574ea8bec7d669f2207356056eeb09b57f2e9707a55e6b3ac6844b"
+    },
+    {
+      "id": "FAC-165",
+      "title": "feat(host-matrix): --write-failure scenario pins honest uncertain-write recovery",
+      "kind": "code",
+      "priority": 51,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/write-failure.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable probe drove a real OS-level write fault (chmod -w on today's note) through Clock In: the file stayed byte-identical, the panel surfaced the honest uncertain-write feedback ('The note change could not be confirmed. Save, refresh, and try again.'), no partial CLOCK record landed, no pending state stuck, and after +w restore a retry Clock In persisted cleanly. This is the write-outcome-uncertain safety path — zero host coverage. New tests/host-matrix/write-failure.mjs drives the same sequence with the locked section wrapped in try/finally restoring permissions; run.mjs gains exclusive --write-failure mode; host-probe.mjs gains --mode write-failure; README documents the recovery contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/write-failure.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/write-failure.mjs && grep -q 'export async function runWriteFailure' tests/host-matrix/write-failure.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --write-failure flag, scenario registration, host-probe --mode write-failure, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'write-failure' tests/host-matrix/run.mjs && grep -q '\"write-failure\": \"--write-failure\"' scripts/factory/checks/host-probe.mjs && grep -q 'write-failure' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode write-failure exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode write-failure",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/write-failure.mjs run 1; 6/6 observations PASS — chmod-based fault needs no code hooks. The locked write section is wrapped in try/finally so a mid-assertion failure cannot leave the note read-only.",
+      "claimed_head": "2f332149fac0c470aff93c63088a9bea1c1e3bd8",
+      "verified_head": "2f332149fac0c470aff93c63088a9bea1c1e3bd8",
+      "verified_contract": "9102a8a4f5b8703fec0dfe3da6dabdf0b2399c6dbbe3d8b4886853fbe96ba02e",
+      "verified_work": "59a14415a9c3b106f666f775015382b805e41f971f7f513eb976d1e6f4e6edc4"
+    },
+    {
+      "id": "FAC-166",
+      "title": "fix(execution): plugin-data session block honors documented retry recovery + --plugin-data-failure host pin",
+      "kind": "code",
+      "priority": 52,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/runtime/execution/commands.ts",
+        "src/runtime/execution/application.ts",
+        "tests/runtime/execution/commands.test.ts",
+        "tests/host-matrix/plugin-data-failure.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real host probe found: Clock In persists the Markdown CLOCK, then the plugin-data postcondition save fails (data.json read-only) -> sessionBlocked becomes sticky so every later session intent (incl. Clock Out and disable-execution) is admission-rejected forever, the focused-blocked UI offers no recovery gesture, and the documented recovery 'Retry the setting/session action' cannot happen. Fix: ExecutionCoordinator gains a writability re-probe (pluginData.update(identity) = save+read-back of last confirmed data). Session-blocked admission probes first and only rejects while the store still fails; a new public recover() runs the same probe serialized through the mutation queue, and application #runRefresh calls it so refresh/vault-change gestures recover automatically once durable writes succeed. While saves keep failing the block still rejects plugin-data-failed (existing behavior pinned). commands.test.ts gains recovery tests; new tests/host-matrix/plugin-data-failure.mjs drives chmod 444 on data.json -> Clock In -> markdown persists + honest unavailable surface + Clock Out blocked -> chmod 644 -> recovery -> Clock Out succeeds, wrapped in try/finally; run.mjs gains exclusive --plugin-data-failure; host-probe --mode plugin-data-failure; README documents the contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "commands.ts session-blocked admission probes writability and exposes recover(); application.ts refresh path invokes it",
+          "check": {
+            "type": "command",
+            "command": "grep -q '#recoverSession' src/runtime/execution/commands.ts && grep -q 'recover()' src/runtime/execution/commands.ts && grep -q 'coordinator.recover()' src/runtime/execution/application.ts"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "unit lane green: commands.test.ts pins blocked-while-failing rejection and recovery-after-fault admission",
+          "check": {
+            "type": "command",
+            "command": "node tests/runtime/execution/run.mjs",
+            "timeout_ms": 180000
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "runner + lane wiring present: --plugin-data-failure flag, scenario registration, host-probe --mode plugin-data-failure, README",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/plugin-data-failure.mjs && grep -q 'plugin-data-failure' tests/host-matrix/run.mjs && grep -q 'plugin-data-failure' scripts/factory/checks/host-probe.mjs && grep -q 'plugin-data-failure' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "host-probe --mode plugin-data-failure exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode plugin-data-failure",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/plugin-data-failure run — clock persisted while plugin-data save failed; Active Task unavailable + error.pluginData; Clock Out unactionable; Active Task stayed unavailable after permission restore (no recovery path existed). Decision doc timing-write-safety line 644: 'Retry the setting/session action'. Sticky block is deliberate (commands.test.ts 'blocks later session transitions') — the fix keeps blocked-while-failing semantics and adds recovery-on-success, not silent clearing.",
+      "claimed_head": "752623f44c6f75a5073c8c665efcb58a00f76d66",
+      "verified_head": "752623f44c6f75a5073c8c665efcb58a00f76d66",
+      "verified_contract": "0a36a941a960e30404c730732feeba0b68e8e3be37da06a484a3ded52ed60283",
+      "verified_work": "017715b51897024a38152e155cec20bc406df4f354a3a89435e6b65fe8980593"
+    },
+    {
+      "id": "FAC-167",
+      "title": "test(host-matrix): --scan-degraded scenario pins unreadable-source degradation + refresh recovery",
+      "kind": "code",
+      "priority": 53,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/scan-degraded.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/scan-degraded.mjs: exclusive --scan-degraded scenario that chmods today's note 000 (real OS fault on the markdown source), triggers a workspace-index rebuild via a vault modify on a different note, asserts the execution surface degrades honestly (Timing unavailable + Try again; Active Task unavailable with the refresh-code detail; mutations fail closed — no Start POMO/Clock In execution while the source is unreadable), then restores 0644 and asserts the same refresh gesture heals to an accurate surface (idle/active state restored, markdown bytes unchanged throughout). Wire --scan-degraded flag + exclusivity + driver hash + screenshot name in run.mjs; add --mode scan-degraded in host-probe.mjs incl. the assertion-prefix guard entry; document the scenario in tests/host-matrix/README.md.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring present: tests/host-matrix/scan-degraded.mjs exists, --scan-degraded flag and scenario branch registered, driver hash list updated",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/scan-degraded.mjs && grep -q 'scan-degraded' tests/host-matrix/run.mjs && grep -q 'scan-degraded.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode scan-degraded wired including assertion-prefix guard entry",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'scan-degraded' scripts/factory/checks/host-probe.mjs && grep -q '\"scan-degraded\": \"sd-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the --scan-degraded scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'scan-degraded' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run: scenario passes with sd-* assertions in real Obsidian",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode scan-degraded",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: WorkspaceIndexIncompleteReason 'source-read-failed' (identity-index.ts) -> clock-index-unavailable degraded snapshot -> writeBlocked fail-closed (clock-index.ts:74, commands.ts #safeScan). chmod 000 makes adapter.read throw EACCES deterministically — unlike data.json the vault markdown path is a plain read, no queued-write ambiguity. Recovery gesture is the existing degraded empty-state Try again -> application.refresh() -> index rebuild.",
+      "claimed_head": "fc67e13277df08631e007493b94b9ab29a26df52",
+      "verified_head": "fc67e13277df08631e007493b94b9ab29a26df52",
+      "verified_contract": "2ef1e0b3b42c2c461252ea50bfe440e64d5c5f468848c09af8cd70228abd7de4",
+      "verified_work": "33de420d9882369c0437ba63fca1fe5de917e086f6c05013e120ae63f3b7a9b4"
+    },
+    {
+      "id": "FAC-168",
+      "title": "test(host-matrix): --ambiguous-owner scenario pins identity-collision fail-closed + resolution recovery",
+      "kind": "code",
+      "priority": 54,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/ambiguous-owner.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json",
+        "tests/ui/execution/application.test.ts"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/ambiguous-owner.mjs: exclusive --ambiguous-owner scenario. Clock in Alpha from the Plan tab; extract Alpha's real ^nl- block-id from today's note; create a second note containing the SAME block-id (terminal ^id on a decoy task line) so the workspace index reports the owner identity as a collision. Assert the execution surface fails closed honestly (Timing 'unavailable' + Try again, no Clock Out affordance, Active Task unavailable) while the CLOCK record still exists in the file, and no bytes are written to either note during the collision window. Then resolve the ambiguity by rewriting the decoy note's block-id to a different id: the running clock must project again (Timing shows the active Alpha clock), and Clock Out must compose the close in today's note only with the clock id preserved. Wire --ambiguous-owner flag + exclusivity + driver hash + screenshot name in run.mjs; --mode ambiguous-owner in host-probe.mjs incl. assertion-prefix guard (ao-); document in tests/host-matrix/README.md.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring present",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/ambiguous-owner.mjs && grep -q 'ambiguous-owner' tests/host-matrix/run.mjs && grep -q 'ambiguous-owner.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode ambiguous-owner wired incl. prefix guard",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'ambiguous-owner' scripts/factory/checks/host-probe.mjs && grep -q '\"ambiguous-owner\": \"ao-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'ambiguous-owner' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with ao-* assertions",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode ambiguous-owner",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: 'fail closed if the target is ambiguous'. identity-index identityLookup -> {kind:'collision'} for duplicate terminal ^block-id; application #resolveOwnerTask returns undefined on non-unique -> projectClockIndex degraded 'clock-owner-invalid'; commit.ts maps identity collision to conflict('identity-collision'). Distinct from FAC-162 (done owner): exercises the collision code path AND ambiguity resolution -> running-clock recovery, untested end-to-end.",
+      "claimed_head": "9ff7951ea17dc745c9aa1f01ad8fd41da29893ed",
+      "verified_head": "9ff7951ea17dc745c9aa1f01ad8fd41da29893ed",
+      "verified_contract": "f47ac22d0959175e3f2dbf18d48079cd6a8779db41aef04dac3e6fc1ce9800ef",
+      "verified_work": "69205ea53cf99d5c1c9c57d428591b897123047848c7c60827841b9bed90ba32"
+    },
+    {
+      "id": "FAC-169",
+      "title": "test(host-matrix): --multi-clock scenario pins multiple-running-clocks degradation + single-clock recovery",
+      "kind": "code",
+      "priority": 55,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/multi-clock.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/fixture.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/multi-clock.mjs: exclusive --multi-clock scenario. Seed two running CLOCK records before the vault is written (one under yesterday's done-task LOGBOOK like degraded-owner, one under today's Alpha via an injected LOGBOOK block), so the safety index reports snapshot.running.length === 2 -> projectClockIndex degrades 'multiple-running-clocks' -> error.overlap detail (distinct from error.taskOwner/error.refresh). Assert: Timing 'unavailable' + Try again + no Clock Out/mutation affordance; Active Task unavailable with the overlap detail; zero markdown writes; retry stays degraded. Then close the yesterday record via vault.modify (running line -> closed '--[end] => dur' line): the remaining today-Alpha clock must project again (current task + actionable Clock Out), Clock Out composes today's close, yesterday's note keeps only my manual close bytes. Wire --multi-clock flag + exclusivity + seed call + driver hash + screenshot name in run.mjs; --mode multi-clock in host-probe.mjs incl. prefix guard (mc-); README paragraph.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring + seed present",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/multi-clock.mjs && grep -q 'multi-clock' tests/host-matrix/run.mjs && grep -q 'multi-clock.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode multi-clock wired incl. prefix guard",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'multi-clock' scripts/factory/checks/host-probe.mjs && grep -q '\"multi-clock\": \"mc-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'multi-clock' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with mc-* assertions",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode multi-clock",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: projectClockIndex degrades 'multiple-running-clocks' when snapshot.running.length > 1 — runs BEFORE owner resolution, so the surface must show error.overlap (not error.taskOwner). Seeding mirrors seedDegradedOwnerClock (running line in yesterday done-task LOGBOOK) plus an injected '  - LOGBOOK::' block under today's Alpha (forgotten-clock seed pattern). Recovery = manual close of the foreign record — the user-facing story the error text itself prescribes.",
+      "claimed_head": "cc752693fb7a5b5f5bf7c7a58440de233f14ae5c",
+      "verified_head": "cc752693fb7a5b5f5bf7c7a58440de233f14ae5c",
+      "verified_contract": "6cfda40496f31dd415f3c793a676ef264aed4a845deee8485222055c1221280a",
+      "verified_work": "98c9f43ce27d03b9b3be1963c099e7793cb45f12fd89e73f15fc69484c3ecefd"
+    },
+    {
+      "id": "FAC-170",
+      "title": "fix(execution): clear refresh-owned feedback when a confirmed-healthy snapshot lands",
+      "kind": "code",
+      "priority": 60,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/ui/execution/panel.ts",
+        "tests/ui/execution/contracts.test.ts",
+        "tests/host-matrix/scan-degraded.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Root finding obsidian-refresh-warning-survives-auto-recovery (msg_ffb7056a670b): FAC-167's recovered screenshot showed the amber 'Timing data could not be refreshed' warning still rendered above a healthy Idle + Start POMO surface. panel.ts refreshExecution shows error.refresh feedback but a ready publish that arrives via vault-event auto-refresh (not a panel gesture) never clears the banner. Fix: tag refresh outcomes as kind 'refresh' via the existing showFeedback kind channel, and in the subscribeExecution listener clear the banner when it is refresh-owned and the new snapshot's status is 'ready'. Untagged action feedback (mutation outcomes, delete-confirmation) is preserved. Tests: contracts.test.ts pins the kind tag + ready-clear + delete-confirmation preservation; scan-degraded.mjs adds sd-degraded-refresh-warning-shown (non-vacuous) and sd-recovered-warning-cleared native assertions via a .spiral-day-execution__feedback probe.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "refresh feedback tagged kind=refresh and cleared on ready snapshot; action/delete-confirmation feedback untouched",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'feedback.dataset.kind === \"refresh\" && snapshot.status === \"ready\"' src/ui/execution/panel.ts && grep -c '}, \"refresh\")' src/ui/execution/panel.ts | grep -q '^2$' && grep -q 'kind === \"delete-confirmation\"' src/ui/execution/panel.ts"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "contract test pins the mechanism",
+          "check": {
+            "type": "command",
+            "command": "grep -q \"refresh-owned feedback clears on a confirmed-healthy snapshot\" tests/ui/execution/contracts.test.ts && node tests/ui/execution/run.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "native banner assertions present in scan-degraded scenario",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'sd-degraded-refresh-warning-shown' tests/host-matrix/scan-degraded.mjs && grep -q 'sd-recovered-warning-cleared' tests/host-matrix/scan-degraded.mjs"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with sd-* assertions including the new banner checks",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode scan-degraded",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Mechanism: showFeedback(next, kind?) already had a kind channel (used by delete-confirmation); refresh outcomes were untagged so a subscription-driven render could not distinguish them from action feedback. Clearing only kind==='refresh' on status==='ready' keeps mutation-outcome and delete-confirmation banners intact. Root report: obsidian-scan-degraded-inspected-0353.json. Evidence screenshot: FAC-167 attempt-2 execution-scan-degraded-recovered.png.",
+      "claimed_head": "c50ed739d0d63b7db02e8d3134ab3e405c61fe78",
+      "verified_head": "c50ed739d0d63b7db02e8d3134ab3e405c61fe78",
+      "verified_contract": "7f32c8c7c36dd220f40544b95c5c97a405ad36461dfa6c09ae8763f75bbe8545",
+      "verified_work": "5d85d9e7f56a6ae0b8f13cb4c3e759e16ac06a458c1066de449ed913b9cd83d4"
+    }
+  ]
+}

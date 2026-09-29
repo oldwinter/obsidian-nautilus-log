@@ -16,6 +16,116 @@ required. Add `--planner-tooltip-only` for this short read-only probe without
 Execution, lifecycle, or CLOCK scenarios; it cannot be combined with `--review`.
 The same isolated launcher, version guards, package hashes, and cleanup apply.
 
+Add `--forgotten` for the stale running-CLOCK recovery scenario instead of the
+standard lane. Before launch, the fixture's prior-day note gains a LOGBOOK
+holding one running CLOCK under the open Alpha task (~24h stale). The host must
+project `forgotten` on both the Timing tab and the Active Task view with an
+actionable warning and day-scale elapsed text. Clock Out then composes the
+close record in the prior-day owner note only — every other note stays
+byte-identical — and the record keeps its clock id with `--[end] => duration`.
+It cannot be combined with `--review`, `--privacy`, or `--planner-tooltip-only`.
+
+Add `--degraded` for the fail-closed boundary instead of the standard lane.
+Before launch, a running CLOCK is injected under the DONE "Complete" task's
+LOGBOOK in the prior-day note. The host must fail closed: the Timing tab
+renders the degraded empty-state with a retry affordance, the Active Task
+view renders `unavailable` with the mapped diagnostic, and opening the
+surfaces plus a retry writes no markdown at all (byte-identical). It cannot
+be combined with `--review`, `--privacy`, `--planner-tooltip-only`, or
+`--forgotten`.
+
+Add `--external-edit` for the concurrent-edit authority pin instead of the
+standard lane. The scenario clocks in Alpha from the Plan tab, then appends a
+line to today's note externally while the CLOCK runs. The vault modify event
+re-indexes the workspace; every byte sample across the window must preserve
+both the running record and the appended line (no clobber, no rewrite of user
+text), the panel must still project the active clock, and Clock Out must
+compose the close keeping the external bytes. It cannot be combined with
+`--review`, `--privacy`, `--planner-tooltip-only`, `--forgotten`, or
+`--degraded`.
+
+Add `--pomo` for the standalone-POMO arbitration instead of the standard
+lane. With no CLOCK, Start POMO persists `standalonePomoStartEpochMs` and the
+Timing tab renders the elapsed timer with a Stop affordance. Clocking in a
+task destroys the standalone epoch (CLOCK wins — not masked) and sets
+`taskPomoStartEpochMs`; Clocking out clears the task epoch and the standalone
+timer does not resurrect. Plugin-data field assertions pin the arbitration,
+not just the render. It cannot be combined with `--review`, `--privacy`,
+`--planner-tooltip-only`, `--forgotten`, `--degraded`, or `--external-edit`.
+
+Add `--write-failure` for the uncertain-write recovery path instead of the
+standard lane. The scenario makes today's note read-only (`chmod`) and
+attempts Clock In: the file must stay byte-identical, no partial CLOCK may
+land, the panel must surface the honest "could not be confirmed" uncertainty
+rather than a false success, and no pending state may stick. Permissions are
+restored in a `finally`, then a retry must compose the record. It cannot be
+combined with `--review`, `--privacy`, `--planner-tooltip-only`,
+`--forgotten`, `--degraded`, `--external-edit`, or `--pomo`.
+
+Add `--plugin-data-failure` for the plugin-data session block + retry recovery
+paths instead of the standard lane. The scenario replaces `data.json` with an
+empty directory — a deterministic real fault, because Obsidian's queued
+plugin-data write does not reliably honor the file's POSIX mode. Phase A
+starts a standalone POMO under the fault: the session must block honestly
+(`Timing unavailable` + `Try again`, Active Task `unavailable` with the
+plugin-data detail), a retried refresh while the fault holds must stay
+blocked, and after the bytes are restored the same gesture re-proves
+writability (save + read-back of last confirmed data), unblocks the session,
+and a retried Start POMO persists — the documented "retry the
+setting/session action" recovery. Phase B clocks in under the fault: the
+Markdown CLOCK must still persist (Markdown is authority) while the surface
+warns `plugin-data-failed`, Clock Out stays actionable, and after restore the
+close composes with the clock id preserved and the surface heals. Both
+faulted sections restore in a `finally`. It cannot be combined with
+`--review`, `--privacy`, `--planner-tooltip-only`, `--forgotten`,
+`--degraded`, `--external-edit`, `--pomo`, or `--write-failure`.
+
+Add `--scan-degraded` for the unreadable-source degradation path instead of
+the standard lane. Sources are read through `vault.cachedRead`, which serves
+Obsidian's content cache without touching the filesystem on a hit — so
+`chmod` on an already-indexed note is invisible to the scan and is not a
+valid fault. The scenario instead writes `scan-degraded-fault.md` to disk
+already `chmod 000` before Obsidian ever reads it: the watcher registers the
+TFile by stat only, so every `cachedRead` is a cache miss that falls through
+to `adapter.read` and throws `EACCES` deterministically. A scratch-note
+`vault.create` then schedules the rebuild: the execution surface must
+degrade honestly (`Timing unavailable` + `Try again`, Active Task
+`unavailable` with a mapped detail) and fail closed — no Start POMO surface
+while any source is unreadable — instead of silently dropping vault content.
+A second retried refresh under the fault stays degraded. Permissions are
+restored in a `finally`, deleting the fault file must heal the surface back
+to the accurate state, and every pre-existing markdown file's bytes are
+asserted unchanged throughout. It cannot be combined with `--review`,
+`--privacy`, `--planner-tooltip-only`, `--forgotten`, `--degraded`,
+`--external-edit`, `--pomo`, `--write-failure`, or `--plugin-data-failure`.
+
+Add `--ambiguous-owner` for the identity-collision fail-closed path instead
+of the standard lane. The scenario clocks in Alpha, extracts its real
+`^nl-…` owner id from the persisted note, then creates a decoy note carrying
+the same terminal block-id — an ambiguous target under the vault-authority
+contract. The execution surface must degrade honestly (`Timing unavailable`
++ `Try again`, no Clock Out affordance, Active Task `unavailable`) and
+write nothing to either note while the owner is ambiguous — the running
+CLOCK record stays open, untouched. Rewriting the decoy's block-id to a
+different value resolves the collision: the same running clock must project
+again and Clock Out must compose the close in today's note only, leaving
+the decoy byte-exact. The decoy note is deleted in a `finally`. It cannot
+be combined with any other exclusive flag.
+
+Add `--multi-clock` for the multiple-running-clocks degradation instead of
+the standard lane. The scenario seeds two running CLOCK records before the
+vault is written — one under yesterday's done-task LOGBOOK and one under
+today's Alpha — so `snapshot.running.length === 2` and the projection must
+degrade `multiple-running-clocks` without guessing an owner. The surface
+must fail closed honestly (`Timing unavailable` + `Try again`, no Clock
+Out affordance, Active Task `unavailable` with the `error.overlap` detail —
+distinct from `error.taskOwner`/`error.refresh`), write nothing, and stay
+degraded on retry. Closing the foreign record by hand via `vault.modify`
+restores a single running clock: today's Alpha clock must project again and
+Clock Out must compose the close in today's note only, leaving yesterday's
+manual close byte-exact. It cannot be combined with any other exclusive
+flag.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

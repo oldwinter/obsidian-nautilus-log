@@ -661,6 +661,47 @@ test("an unclassified standalone POMO save failure blocks later session transiti
   assert.equal(later.code, "plugin-data-failed");
 });
 
+test("a session block admits a retried action once the store saves again", async () => {
+  const runtime = harness({ states: [idle(), idle(2), idle(3), idle(4), idle(5)] });
+  await runtime.coordinator.start();
+  runtime.port.failSaves = true;
+  const failed = await runtime.coordinator.startStandalonePomo("pomo-save-failed");
+  assert.equal(failed.code, "plugin-data-failed");
+  runtime.port.failSaves = false;
+  const retried = await runtime.coordinator.startStandalonePomo("pomo-retried");
+  assert.equal(retried.outcome, "applied");
+  assert.equal(retried.snapshot.status, "ready");
+  assert.equal(retried.snapshot.writeBlocked, false);
+  assert.notEqual(runtime.store.data.standalonePomoStartEpochMs, null);
+});
+
+test("recover() unblocks the session once plugin data is writable", async () => {
+  const runtime = harness({ states: [idle(), idle(2), idle(3), idle(4), idle(5)] });
+  await runtime.coordinator.start();
+  runtime.port.failSaves = true;
+  const failed = await runtime.coordinator.startStandalonePomo("pomo-save-failed");
+  assert.equal(failed.code, "plugin-data-failed");
+  runtime.port.failSaves = false;
+  const recovered = await runtime.coordinator.recover();
+  assert.equal(recovered.status, "ready");
+  assert.equal(recovered.writeBlocked, false);
+  const after = await runtime.coordinator.startStandalonePomo("pomo-after-recover");
+  assert.equal(after.code, undefined);
+  assert.notEqual(runtime.store.data.standalonePomoStartEpochMs, null);
+});
+
+test("recover() keeps the session block while saves still fail", async () => {
+  const runtime = harness({ states: [idle(), idle(2)] });
+  await runtime.coordinator.start();
+  runtime.port.failSaves = true;
+  const failed = await runtime.coordinator.startStandalonePomo("pomo-save-failed");
+  assert.equal(failed.code, "plugin-data-failed");
+  const recovered = await runtime.coordinator.recover();
+  assert.equal(recovered.writeBlocked, true);
+  const later = await runtime.coordinator.startStandalonePomo("pomo-later");
+  assert.equal(later.code, "plugin-data-failed");
+});
+
 test("a mismatched committer receipt is treated as uncertain after the host call", async () => {
   const runtime = harness({
     states: [idle(), idle(2), idle(3)],

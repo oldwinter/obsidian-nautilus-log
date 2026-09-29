@@ -603,6 +603,8 @@ export class ExecutionApplication {
   async #runRefresh(generation: number): Promise<ExecutionApplicationSnapshot> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       this.#refreshAgain = false;
+      await this.#coordinator.recover();
+      if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
       const clocks = await this.#clockReader.scan();
       if (generation !== this.#refreshGeneration || this.#stopped) return this.#snapshot;
       if (this.#refreshAgain) continue;

@@ -703,3 +703,41 @@ test("UP-SET-08/09 suspend removes source work without stopping shared settings 
   await application.stop();
   await pluginData.stop();
 });
+
+test("resolving an owner-id collision unblocks writes and restores the running clock projection", async (t) => {
+  const initial = source([`- [ ] Alpha 30m ^${PLAN_A}`]);
+  const access = new MemoryAtomicTextAccess({ [PATH]: initial });
+  const pluginData = enabledPluginData();
+  const application = new ExecutionApplication({
+    access,
+    pluginData,
+    clock: new ManualSystemClock(NOW, "UTC", 60_000),
+  });
+  await application.start();
+  t.after(async () => {
+    await application.stop();
+    await pluginData.stop();
+  });
+
+  const alpha = await reference(initial, PLAN_A, 0);
+  const clockIn = await application.dispatch({ type: "clock-in", intentId: "clock-in-collision", target: alpha });
+  assert.equal(clockIn.outcome, "applied");
+  assert.equal(application.snapshot.focused?.ownerId, PLAN_A);
+  assert.equal(application.snapshot.writeBlocked, false);
+
+  // A second note carrying the owner's block-id makes the owner ambiguous:
+  // the projection degrades and writes fail closed.
+  access.create("decoy.md", `- [x] Decoy elsewhere ^${PLAN_A}\n`);
+  await application.refresh();
+  assert.equal(application.snapshot.status, "degraded");
+  assert.equal(application.snapshot.writeBlocked, true);
+  assert.equal(application.snapshot.focused, undefined);
+
+  // Resolving the ambiguity must unblock writes and restore the projection —
+  // the running CLOCK is still in the source and never stopped being valid.
+  access.modify("decoy.md", `- [x] Decoy elsewhere ^${PLAN_B}\n`);
+  await application.refresh();
+  assert.equal(application.snapshot.status, "ready");
+  assert.equal(application.snapshot.writeBlocked, false);
+  assert.equal(application.snapshot.focused?.ownerId, PLAN_A);
+});
