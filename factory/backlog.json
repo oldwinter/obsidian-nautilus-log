@@ -2485,6 +2485,56 @@
       "verified_head": "0e49c15e6daf0f4a0125b7c793144bf21f716ce7",
       "verified_contract": "c7379f3587ddad3e1448b8d063dfb642089b1b6d4ceaa8dbbdded24c641f94b3",
       "verified_work": "1fb30dab7c574ea8bec7d669f2207356056eeb09b57f2e9707a55e6b3ac6844b"
+    },
+    {
+      "id": "FAC-165",
+      "title": "feat(host-matrix): --write-failure scenario pins honest uncertain-write recovery",
+      "kind": "code",
+      "priority": 51,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/write-failure.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Disposable probe drove a real OS-level write fault (chmod -w on today's note) through Clock In: the file stayed byte-identical, the panel surfaced the honest uncertain-write feedback ('The note change could not be confirmed. Save, refresh, and try again.'), no partial CLOCK record landed, no pending state stuck, and after +w restore a retry Clock In persisted cleanly. This is the write-outcome-uncertain safety path — zero host coverage. New tests/host-matrix/write-failure.mjs drives the same sequence with the locked section wrapped in try/finally restoring permissions; run.mjs gains exclusive --write-failure mode; host-probe.mjs gains --mode write-failure; README documents the recovery contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/write-failure.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/write-failure.mjs && grep -q 'export async function runWriteFailure' tests/host-matrix/write-failure.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --write-failure flag, scenario registration, host-probe --mode write-failure, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'write-failure' tests/host-matrix/run.mjs && grep -q '\"write-failure\": \"--write-failure\"' scripts/factory/checks/host-probe.mjs && grep -q 'write-failure' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode write-failure exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode write-failure",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/write-failure.mjs run 1; 6/6 observations PASS — chmod-based fault needs no code hooks. The locked write section is wrapped in try/finally so a mid-assertion failure cannot leave the note read-only.",
+      "claimed_head": "2f332149fac0c470aff93c63088a9bea1c1e3bd8",
+      "verified_head": "2f332149fac0c470aff93c63088a9bea1c1e3bd8",
+      "verified_contract": "9102a8a4f5b8703fec0dfe3da6dabdf0b2399c6dbbe3d8b4886853fbe96ba02e",
+      "verified_work": "59a14415a9c3b106f666f775015382b805e41f971f7f513eb976d1e6f4e6edc4"
     }
   ]
 }

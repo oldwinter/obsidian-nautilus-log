@@ -53,6 +53,15 @@ timer does not resurrect. Plugin-data field assertions pin the arbitration,
 not just the render. It cannot be combined with `--review`, `--privacy`,
 `--planner-tooltip-only`, `--forgotten`, `--degraded`, or `--external-edit`.
 
+Add `--write-failure` for the uncertain-write recovery path instead of the
+standard lane. The scenario makes today's note read-only (`chmod`) and
+attempts Clock In: the file must stay byte-identical, no partial CLOCK may
+land, the panel must surface the honest "could not be confirmed" uncertainty
+rather than a false success, and no pending state may stick. Permissions are
+restored in a `finally`, then a retry must compose the record. It cannot be
+combined with `--review`, `--privacy`, `--planner-tooltip-only`,
+`--forgotten`, `--degraded`, `--external-edit`, or `--pomo`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \
