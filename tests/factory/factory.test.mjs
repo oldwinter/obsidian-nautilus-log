@@ -676,6 +676,31 @@ test("inspect audits a delivery bundle read-only", () => {
   }
 });
 
+test("inspect flags bundle files the manifest does not claim", () => {
+  const box = sandbox([makeItem({ allow_empty_diff: true })], { git: true });
+  try {
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    writeFileSync(path.join(box.dir, "src", "extra.txt"), "extra\n");
+    ok(box.run("claim", "IT-001"), "claim");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    ok(box.run("deliver", "IT-001"), "deliver");
+    const bundle = path.join(box.dir, ".codex", "runtime", "devin-factory", "deliveries", "IT-001", "attempt-1");
+    ok(box.run("inspect", "IT-001"), "clean bundle still passes");
+
+    mkdirSync(path.join(bundle, "files", "src"), { recursive: true });
+    writeFileSync(path.join(bundle, "files", "src", "smuggled.txt"), "planted\n");
+    const planted = box.run("inspect", "IT-001");
+    fails(planted, "inspect must flag a file absent from untracked_files");
+    assert.match(planted.stderr + planted.stdout, /unlisted file present.*smuggled\.txt/);
+    rmSync(path.join(bundle, "files", "src", "smuggled.txt"));
+    ok(box.run("inspect", "IT-001"), "inspect passes again after removing the extra file");
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("--backlog selects an alternate queue whose directory stays boundary-exempt", () => {
   const box = sandbox([makeItem()], { git: true });
   try {

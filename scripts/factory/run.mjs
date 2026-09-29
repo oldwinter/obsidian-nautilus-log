@@ -818,6 +818,22 @@ function cmdInspect(backlog, id) {
       problems.push(`untracked file listed but not captured: files/${file}`);
     }
   }
+  const filesDir = path.join(dir, "files");
+  if (existsSync(filesDir)) {
+    const listed = new Set(bundleManifest?.untracked_files ?? []);
+    const walkFiles = (d) => {
+      for (const entry of readdirSync(d, { withFileTypes: true })
+        .sort((a, b) => a.name.localeCompare(b.name))) {
+        const full = path.join(d, entry.name);
+        if (entry.isDirectory()) walkFiles(full);
+        else {
+          const rel = path.relative(filesDir, full).split(path.sep).join("/");
+          if (!listed.has(rel)) problems.push(`unlisted file present in bundle: files/${rel}`);
+        }
+      }
+    };
+    walkFiles(filesDir);
+  }
   if (existsSync(path.join(dir, "evidence.json"))) {
     try {
       evidence = readJson(path.join(dir, "evidence.json"));
