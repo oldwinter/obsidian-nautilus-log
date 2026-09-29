@@ -331,6 +331,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
       selectDate() {},
       refresh() {},
       setOnlyOverruns() {},
+      setSearchQuery() {},
       activate() {},
       insertPrimaryPlan: () => undefined,
     });
@@ -364,6 +365,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
       pending: false,
       error: false,
       onlyOverruns: false,
+      searchQuery: "",
     });
     break;
   }
