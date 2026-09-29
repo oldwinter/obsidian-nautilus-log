@@ -62,6 +62,19 @@ restored in a `finally`, then a retry must compose the record. It cannot be
 combined with `--review`, `--privacy`, `--planner-tooltip-only`,
 `--forgotten`, `--degraded`, `--external-edit`, or `--pomo`.
 
+Add `--plugin-data-failure` for the plugin-data session block + retry recovery
+path instead of the standard lane. The scenario makes `data.json` read-only
+(`chmod`) and attempts Clock In: the Markdown CLOCK must still persist
+(Markdown is authority), the Active Task surface must honestly report
+`plugin-data-failed` (`unavailable` + mapped detail), session mutations must
+stay blocked (Clock Out unactionable, no stuck pending). Permissions are
+restored in a `finally`, then a source change drives the refresh path that
+re-proves writability (save + read-back of last confirmed data) and unblocks
+the session — the documented "retry the setting/session action" recovery.
+Clock Out must then compose the close and preserve externally appended bytes.
+It cannot be combined with `--review`, `--privacy`, `--planner-tooltip-only`,
+`--forgotten`, `--degraded`, `--external-edit`, `--pomo`, or `--write-failure`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

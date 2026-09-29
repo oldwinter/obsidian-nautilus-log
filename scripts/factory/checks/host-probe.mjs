@@ -12,9 +12,10 @@
 // degraded (FAC-162 done-owner running-CLOCK fail-closed boundary),
 // --mode external-edit (FAC-163 concurrent-edit vault-authority pin),
 // --mode pomo (FAC-164 standalone-POMO lifecycle + CLOCK-wins arbitration),
-// --mode write-failure (FAC-165 uncertain-write recovery via chmod fault).
+// --mode write-failure (FAC-165 uncertain-write recovery via chmod fault),
+// --mode plugin-data-failure (FAC-166 plugin-data session block + retry recovery).
 
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -25,9 +26,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
-const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit", pomo: "--pomo", "write-failure": "--write-failure" };
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit", pomo: "--pomo", "write-failure": "--write-failure", "plugin-data-failure": "--plugin-data-failure" };
 function assertMode(mode) {
-  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -77,10 +78,23 @@ if (values.mode === "bound") {
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure"].includes(values.mode) ? 240_000 : 600_000,
+  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure"].includes(values.mode) ? 240_000 : 600_000,
   // Versioned sibling of the output dir; a fixed name at the evidence root
   // silently overwrote the previous run's log on a same-attempt re-verify.
   log: `${output}.log`,
 });
+// Exclusive scenario modes must produce their own assertions — a passing
+// default lane would otherwise hide a scenario that never ran (FAC-166 saw
+// exactly this when --plugin-data-failure was missing from run.mjs's
+// standard-lane guards).
+const SCENARIO_ASSERTION_PREFIX = {
+  forgotten: "forgotten-", degraded: "degraded-", "external-edit": "external-edit-",
+  pomo: "pomo-", "write-failure": "write-failure-", "plugin-data-failure": "pdf-",
+}[values.mode];
+if (SCENARIO_ASSERTION_PREFIX && result.status === 0) {
+  const report = JSON.parse(readFileSync(path.join(output, "evidence", "report.json"), "utf8"));
+  const ran = report.assertions.filter((entry) => entry.id.startsWith(SCENARIO_ASSERTION_PREFIX));
+  if (ran.length === 0) fail(`scenario mode ${values.mode} produced no ${SCENARIO_ASSERTION_PREFIX}* assertions (default lane ran instead)`);
+}
 console.log(`host-probe(${values.mode}) exit ${result.status ?? "timeout"} -> ${output}`);
 process.exitCode = result.status ?? 1;

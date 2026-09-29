@@ -2535,6 +2535,68 @@
       "verified_head": "2f332149fac0c470aff93c63088a9bea1c1e3bd8",
       "verified_contract": "9102a8a4f5b8703fec0dfe3da6dabdf0b2399c6dbbe3d8b4886853fbe96ba02e",
       "verified_work": "59a14415a9c3b106f666f775015382b805e41f971f7f513eb976d1e6f4e6edc4"
+    },
+    {
+      "id": "FAC-166",
+      "title": "fix(execution): plugin-data session block honors documented retry recovery + --plugin-data-failure host pin",
+      "kind": "code",
+      "priority": 52,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "src/runtime/execution/commands.ts",
+        "src/runtime/execution/application.ts",
+        "tests/runtime/execution/commands.test.ts",
+        "tests/host-matrix/plugin-data-failure.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Real host probe found: Clock In persists the Markdown CLOCK, then the plugin-data postcondition save fails (data.json read-only) -> sessionBlocked becomes sticky so every later session intent (incl. Clock Out and disable-execution) is admission-rejected forever, the focused-blocked UI offers no recovery gesture, and the documented recovery 'Retry the setting/session action' cannot happen. Fix: ExecutionCoordinator gains a writability re-probe (pluginData.update(identity) = save+read-back of last confirmed data). Session-blocked admission probes first and only rejects while the store still fails; a new public recover() runs the same probe serialized through the mutation queue, and application #runRefresh calls it so refresh/vault-change gestures recover automatically once durable writes succeed. While saves keep failing the block still rejects plugin-data-failed (existing behavior pinned). commands.test.ts gains recovery tests; new tests/host-matrix/plugin-data-failure.mjs drives chmod 444 on data.json -> Clock In -> markdown persists + honest unavailable surface + Clock Out blocked -> chmod 644 -> recovery -> Clock Out succeeds, wrapped in try/finally; run.mjs gains exclusive --plugin-data-failure; host-probe --mode plugin-data-failure; README documents the contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "commands.ts session-blocked admission probes writability and exposes recover(); application.ts refresh path invokes it",
+          "check": {
+            "type": "command",
+            "command": "grep -q '#recoverSession' src/runtime/execution/commands.ts && grep -q 'recover()' src/runtime/execution/commands.ts && grep -q 'coordinator.recover()' src/runtime/execution/application.ts"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "unit lane green: commands.test.ts pins blocked-while-failing rejection and recovery-after-fault admission",
+          "check": {
+            "type": "command",
+            "command": "node tests/runtime/execution/run.mjs",
+            "timeout_ms": 180000
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "runner + lane wiring present: --plugin-data-failure flag, scenario registration, host-probe --mode plugin-data-failure, README",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/plugin-data-failure.mjs && grep -q 'plugin-data-failure' tests/host-matrix/run.mjs && grep -q 'plugin-data-failure' scripts/factory/checks/host-probe.mjs && grep -q 'plugin-data-failure' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "host-probe --mode plugin-data-failure exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode plugin-data-failure",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Probe evidence: .codex/runtime/devin-factory/probes/plugin-data-failure run — clock persisted while plugin-data save failed; Active Task unavailable + error.pluginData; Clock Out unactionable; Active Task stayed unavailable after permission restore (no recovery path existed). Decision doc timing-write-safety line 644: 'Retry the setting/session action'. Sticky block is deliberate (commands.test.ts 'blocks later session transitions') — the fix keeps blocked-while-failing semantics and adds recovery-on-success, not silent clearing.",
+      "claimed_head": "752623f44c6f75a5073c8c665efcb58a00f76d66",
+      "verified_head": "752623f44c6f75a5073c8c665efcb58a00f76d66",
+      "verified_contract": "0a36a941a960e30404c730732feeba0b68e8e3be37da06a484a3ded52ed60283",
+      "verified_work": "017715b51897024a38152e155cec20bc406df4f354a3a89435e6b65fe8980593"
     }
   ]
 }

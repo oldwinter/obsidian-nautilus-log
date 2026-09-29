@@ -17,17 +17,19 @@ import { seedDegradedOwnerClock, runDegradedOwnerClock } from "./degraded-owner.
 import { runExternalEdit } from "./external-edit.mjs";
 import { runPomo } from "./pomo.mjs";
 import { runWriteFailure } from "./write-failure.mjs";
+import { runPluginDataFailure, expectedConsoleErrorPatterns as pluginDataFailureNoise } from "./plugin-data-failure.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
   "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
   privacy: { type: "boolean" }, forgotten: { type: "boolean" }, degraded: { type: "boolean" },
   "external-edit": { type: "boolean" }, pomo: { type: "boolean" }, "write-failure": { type: "boolean" },
+  "plugin-data-failure": { type: "boolean" },
   "planner-tooltip-only": { type: "boolean" },
   "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--forgotten] [--degraded] [--external-edit] [--pomo] [--write-failure] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--forgotten] [--degraded] [--external-edit] [--pomo] [--write-failure] [--plugin-data-failure] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
@@ -42,6 +44,8 @@ assert(!values.pomo || (!values.review && !values.privacy && !values["planner-to
   "--pomo cannot be combined with --review, --privacy, --planner-tooltip-only, --forgotten, --degraded, or --external-edit");
 assert(!values["write-failure"] || (!values.review && !values.privacy && !values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo),
   "--write-failure cannot be combined with --review, --privacy, --planner-tooltip-only, --forgotten, --degraded, --external-edit, or --pomo");
+assert(!values["plugin-data-failure"] || (!values.review && !values.privacy && !values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo && !values["write-failure"]),
+  "--plugin-data-failure cannot be combined with --review, --privacy, --planner-tooltip-only, --forgotten, --degraded, --external-edit, --pomo, or --write-failure");
 assert(!values["candidate-sha"] || /^[a-f0-9]{40}$/.test(values["candidate-sha"]), "Candidate SHA must have 40 lowercase hex characters");
 for (const name of ["expected-app-version", "expected-electron-version"]) {
   assert(!values[name] || /^\d+\.\d+\.\d+$/.test(values[name]), `Invalid --${name}`);
@@ -99,10 +103,10 @@ const report = {
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
   expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
-  scenarios: values.forgotten ? ["forgotten-clock"] : values.degraded ? ["degraded-owner-clock"] : values["external-edit"] ? ["external-edit"] : values.pomo ? ["pomo"] : values["write-failure"] ? ["write-failure"] : [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
+  scenarios: values.forgotten ? ["forgotten-clock"] : values.degraded ? ["degraded-owner-clock"] : values["external-edit"] ? ["external-edit"] : values.pomo ? ["pomo"] : values["write-failure"] ? ["write-failure"] : values["plugin-data-failure"] ? ["plugin-data-failure"] : [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "host-matrix/forgotten-clock.mjs", "host-matrix/degraded-owner.mjs", "host-matrix/external-edit.mjs", "host-matrix/pomo.mjs", "host-matrix/write-failure.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "host-matrix/forgotten-clock.mjs", "host-matrix/degraded-owner.mjs", "host-matrix/external-edit.mjs", "host-matrix/pomo.mjs", "host-matrix/write-failure.mjs", "host-matrix/plugin-data-failure.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
     persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
@@ -281,7 +285,7 @@ try {
   check("activation-preserves-all-markdown", JSON.stringify(report.fixture.files) === JSON.stringify(beforeNavigation), beforeNavigation);
   await openPlanner();
   await screenshot("planner");
-  if (!values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo && !values["write-failure"]) {
+  if (!values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo && !values["write-failure"] && !values["plugin-data-failure"]) {
     report.plannerTooltip = await observePlannerTooltip({ page, pageErrors: report.pageErrors, screenshot });
     await json(join(evidence, "planner-tooltip.json"), report.plannerTooltip);
     const svgName = report.plannerTooltip.target.ariaLabel ?? report.plannerTooltip.target.title;
@@ -291,7 +295,7 @@ try {
     check("planner-svg-tooltip-delay-observed", report.plannerTooltip.elapsedMilliseconds >= 900, report.plannerTooltip.elapsedMilliseconds);
     check("planner-svg-hover-no-page-errors", report.plannerTooltip.newPageErrors.length === 0, report.plannerTooltip.newPageErrors);
   }
-  if (!values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo && !values["write-failure"]) {
+  if (!values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo && !values["write-failure"] && !values["plugin-data-failure"]) {
     for (const [name, expected] of [["Collapse planner", "Expand planner"], ["Expand planner", "Collapse planner"],
       ["Hide completed items", "Show completed items"], ["Show completed items", "Hide completed items"]]) {
       await page.getByRole("button", { name, exact: true }).click();
@@ -369,6 +373,10 @@ try {
     report.writeFailure = await runWriteFailure({ page, fixture, vault,
       openExecution, check, screenshot });
     await json(join(evidence, "write-failure.json"), report.writeFailure);
+  } else if (values["plugin-data-failure"]) {
+    report.pluginDataFailure = await runPluginDataFailure({ page, fixture, vault, pluginId: manifest.id,
+      openExecution, check, screenshot });
+    await json(join(evidence, "plugin-data-failure.json"), report.pluginDataFailure);
   } else {
     check("planner-tooltip-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(await markdownHashes()), beforeNavigation);
   }
@@ -376,10 +384,14 @@ try {
   check("plugin-bytes-unchanged", JSON.stringify(sourcePackage) === JSON.stringify(report.package.afterRun), report.package.afterRun);
   await page.keyboard.press("Escape");
   await openPlanner();
-  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : values.forgotten ? "planner-after-forgotten" : values.degraded ? "planner-after-degraded" : values["external-edit"] ? "planner-after-external-edit" : values.pomo ? "planner-after-pomo" : values["write-failure"] ? "planner-after-write-failure" : "planner-after-ten-cycles");
+  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : values.forgotten ? "planner-after-forgotten" : values.degraded ? "planner-after-degraded" : values["external-edit"] ? "planner-after-external-edit" : values.pomo ? "planner-after-pomo" : values["write-failure"] ? "planner-after-write-failure" : values["plugin-data-failure"] ? "planner-after-plugin-data-failure" : "planner-after-ten-cycles");
   check("no-renderer-page-errors", report.pageErrors.length === 0, report.pageErrors);
-  const errors = report.console.filter((event) => event.type === "error");
-  check("no-renderer-console-errors", errors.length === 0, errors);
+  const expectedNoise = values["plugin-data-failure"] ? pluginDataFailureNoise : [];
+  const ignoredErrors = report.console.filter((event) => event.type === "error"
+    && expectedNoise.some((pattern) => pattern.test(event.text)));
+  const errors = report.console.filter((event) => event.type === "error"
+    && !expectedNoise.some((pattern) => pattern.test(event.text)));
+  check("no-renderer-console-errors", errors.length === 0, { unexpected: errors, ignored: ignoredErrors });
   const pluginRequests = report.network.filter((request) => request.pluginAttributed);
   check("no-plugin-attributed-renderer-requests", pluginRequests.length === 0, pluginRequests);
   check("within-runner-deadline", !report.deadlineExceeded, `${maximumRunMilliseconds / 1000} seconds`);

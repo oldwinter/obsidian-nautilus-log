@@ -199,6 +199,7 @@ export class ExecutionCoordinator {
   #stopPromise: Promise<void> | undefined;
   #hardBlocked = false;
   #sessionBlocked = false;
+  #recoverySequence = 0;
   #snapshot: ExecutionRuntimeSnapshot;
 
   constructor(dependencies: ExecutionCoordinatorDependencies) {
@@ -278,7 +279,7 @@ export class ExecutionCoordinator {
 
   startStandalonePomo(intentId: string): Promise<ExecutionCommandOutcome> {
     return this.#enqueue(intentId, async () => {
-      const rejected = this.#admissionRejection(intentId);
+      const rejected = await this.#admissionRejection(intentId);
       if (rejected) return rejected;
       const clocks = await this.#safeScan();
       if (clocks.kind !== "idle") {
@@ -319,7 +320,7 @@ export class ExecutionCoordinator {
 
   stopStandalonePomo(intentId: string): Promise<ExecutionCommandOutcome> {
     return this.#enqueue(intentId, async () => {
-      const rejected = this.#admissionRejection(intentId);
+      const rejected = await this.#admissionRejection(intentId);
       if (rejected) return rejected;
       const clocks = await this.#safeScan();
       if (clocks.kind === "degraded") return this.#reject(intentId, clocks, clocks.code);
@@ -344,7 +345,7 @@ export class ExecutionCoordinator {
     choice: TimeRecoveryChoice,
   ): Promise<ExecutionCommandOutcome> {
     return this.#enqueue(intentId, async () => {
-      const rejected = this.#admissionRejection(intentId, { allowTimeReview: true });
+      const rejected = await this.#admissionRejection(intentId, { allowTimeReview: true });
       if (rejected) return rejected;
       const clocks = await this.#safeScan();
       const standaloneStart = this.#pluginData.data.standalonePomoStartEpochMs;
@@ -385,7 +386,7 @@ export class ExecutionCoordinator {
 
   enableExecution(intentId: string): Promise<ExecutionCommandOutcome> {
     return this.#enqueue(intentId, async () => {
-      const rejected = this.#admissionRejection(intentId, { allowDisabled: true });
+      const rejected = await this.#admissionRejection(intentId, { allowDisabled: true });
       if (rejected) return rejected;
       const clocks = await this.#safeScan();
       if (clocks.kind === "degraded") return this.#reject(intentId, clocks, clocks.code);
@@ -408,7 +409,7 @@ export class ExecutionCoordinator {
 
   disableExecution(intent: DisableExecutionIntent): Promise<ExecutionCommandOutcome> {
     return this.#enqueue(intent.intentId, async () => {
-      const rejected = this.#admissionRejection(intent.intentId, { allowDisabled: true });
+      const rejected = await this.#admissionRejection(intent.intentId, { allowDisabled: true });
       if (rejected) return rejected;
       let clocks = await this.#safeScan();
       if (clocks.kind === "degraded") return this.#reject(intent.intentId, clocks, clocks.code);
@@ -486,7 +487,7 @@ export class ExecutionCoordinator {
     managePomo = true,
   ): Promise<ExecutionCommandOutcome> {
     const recoveryChoice = TIME_RECOVERY_ACTIONS.get(intent.action);
-    const rejected = this.#admissionRejection(intent.intentId, {
+    const rejected = await this.#admissionRejection(intent.intentId, {
       allowTimeReview: recoveryChoice !== undefined,
     });
     if (rejected) return rejected;
@@ -668,19 +669,48 @@ export class ExecutionCoordinator {
     }
   }
 
-  #admissionRejection(
+  recover(): Promise<ExecutionRuntimeSnapshot> {
+    if (!this.#sessionBlocked) return Promise.resolve(this.#snapshot);
+    return this.#enqueue(
+      `plugin-data-recover-${(this.#recoverySequence += 1)}`,
+      async () => this.#outcome(
+        "plugin-data-recover",
+        (await this.#recoverSession()) ? "applied" : "rejected",
+        this.#snapshot,
+      ),
+    ).then((outcome) => outcome.snapshot);
+  }
+
+  async #recoverSession(): Promise<boolean> {
+    if (!this.#sessionBlocked) return true;
+    try {
+      await this.#pluginData.update((current) => current);
+    } catch {
+      return false;
+    }
+    this.#sessionBlocked = false;
+    const clocks = await this.#safeScan();
+    const timeReview = this.#continuity.state?.kind === "time-review-required";
+    const code = clocks.kind === "degraded" ? clocks.code : timeReview ? "time-review-required" : undefined;
+    this.#setSnapshot(clocks.kind === "degraded" || timeReview ? "degraded" : "ready", clocks, code);
+    return true;
+  }
+
+  async #admissionRejection(
     intentId: string,
     options: {
       readonly allowDisabled?: boolean;
       readonly allowTimeReview?: boolean;
     } = {},
-  ): ExecutionCommandOutcome | undefined {
+  ): Promise<ExecutionCommandOutcome | undefined> {
     if (!this.#started) return this.#reject(intentId, this.#snapshot.clocks, "runtime-not-started");
     if (this.#stopping || this.#queue.state !== "accepting") {
       return this.#reject(intentId, this.#snapshot.clocks, "runtime-stopping");
     }
     if (this.#hardBlocked) return this.#reject(intentId, this.#snapshot.clocks, "write-outcome-uncertain");
-    if (this.#sessionBlocked) return this.#reject(intentId, this.#snapshot.clocks, "plugin-data-failed");
+    if (this.#sessionBlocked && !(await this.#recoverSession())) {
+      return this.#reject(intentId, this.#snapshot.clocks, "plugin-data-failed");
+    }
     if (!options.allowTimeReview && this.#continuity.state?.kind === "time-review-required") {
       return this.#reject(intentId, this.#snapshot.clocks, "time-review-required");
     }
