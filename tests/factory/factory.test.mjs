@@ -193,6 +193,30 @@ test("timed-out command check reaps its descendant process group", async () => {
   }
 });
 
+test("check output preserves multibyte UTF-8 split across stream chunks", () => {
+  // Coordinator-reproduced regression: writes one byte of a multibyte char,
+  // flushes, then the rest — per-chunk toString() corrupts it into U+FFFD.
+  const probe = `node -e "let b=Buffer.from('汉字尾部'),e=Buffer.from('错误尾部');` +
+    `process.stdout.write(b.subarray(0,1));process.stderr.write(e.subarray(0,1));` +
+    `setTimeout(()=>{process.stdout.write(b.subarray(1));process.stderr.write(e.subarray(1));},80)"`;
+  const box = sandbox([makeItem({
+    acceptance_criteria: [{ id: "AC1", description: "split UTF-8 probe", check: { type: "command", command: probe } }],
+  })]);
+  try {
+    ok(box.run("claim", "IT-001"), "claim");
+    mkdirSync(path.join(box.dir, "src"), { recursive: true });
+    writeFileSync(path.join(box.dir, "src", "ok.txt"), "ok\n");
+    ok(box.run("implemented", "IT-001"), "implemented");
+    ok(box.run("verify", "IT-001"), "verify");
+    const check = box.progress().find((row) => row.event === "check" && row.criterion === "AC1");
+    assert(check.output_tail.includes("汉字尾部"), `stdout lost its multibyte char: ${check.output_tail}`);
+    assert(check.output_tail.includes("错误尾部"), `stderr lost its multibyte char: ${check.output_tail}`);
+    assert(!check.output_tail.includes("�"), `evidence contains U+FFFD: ${check.output_tail}`);
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("a hung git is cut by a bounded git timeout instead of pinning the lock", () => {
   const box = sandbox([makeItem()]);
   const stubbin = path.join(box.dir, "stubbin");

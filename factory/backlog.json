@@ -1809,6 +1809,46 @@
       "verified_head": "c7920ed11daaeb0292646169f37cb40c57f01f5c",
       "verified_contract": "d0d8bb3aa3cdea1187fda0c7827ee144ebfaee9597c45b8d510dc382b679292f",
       "verified_work": "6fadd74f46961d047650b2859d92c9c7ff3a3cd285cbcf6dbcbc6e9018479e13"
+    },
+    {
+      "id": "FAC-149",
+      "title": "check evidence preserves multibyte UTF-8 split across stream chunks",
+      "kind": "factory",
+      "priority": 149,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Coordinator-reproduced P-level regression from the async collector (947109e): stdout += chunk decodes each Buffer separately, so a multibyte UTF-8 char straddling a chunk boundary records U+FFFD (probe: 汉字尾部 -> U+FFFD...). Collect Buffer chunks and decode once after the child exits, for stdout AND stderr, retaining group-kill and 8MB cap semantics.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "the coordinator's split-byte probe (stdout AND stderr) records exact UTF-8, no U+FFFD",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'multibyte UTF-8' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "timeout/group-kill and the rest of the suite stay green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "8a67811157884bd74aeb84b9c1c36c25627dcb83",
+      "verified_head": "8a67811157884bd74aeb84b9c1c36c25627dcb83",
+      "verified_contract": "2fbc56ca618cc537bf1e8418c0b0fb4567f12dde2cb9f86d0316f9924b877d1f",
+      "verified_work": "34db890af902d0861a0b56b13f671fdc3be128b25f474bed6f472ba9f551c4cf"
     }
   ]
 }

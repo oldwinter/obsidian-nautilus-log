@@ -462,14 +462,18 @@ async function runCheckCommand(command, env, timeoutMs) {
   const killGroup = () => { try { process.kill(-child.pid, "SIGKILL"); } catch { /* gone */ } };
   if (child.pid !== undefined) activeCheckGroups.add(child.pid);
   const cap = 8 * 1024 * 1024;
-  let stdout = "", stderr = "", overflowed = false;
+  // Chunks must stay Buffers until the child exits: decoding each chunk
+  // separately splits a multibyte UTF-8 character straddling a boundary into
+  // U+FFFD in the recorded evidence (spawnSync decoded once after concat).
+  const stdoutChunks = [], stderrChunks = [];
+  let stdoutBytes = 0, stderrBytes = 0, overflowed = false;
   child.stdout.on("data", (chunk) => {
-    if (stdout.length >= cap) { overflowed = true; killGroup(); return; }
-    stdout += chunk;
+    if (stdoutBytes >= cap) { overflowed = true; killGroup(); return; }
+    stdoutChunks.push(chunk); stdoutBytes += chunk.length;
   });
   child.stderr.on("data", (chunk) => {
-    if (stderr.length >= cap) { overflowed = true; killGroup(); return; }
-    stderr += chunk;
+    if (stderrBytes >= cap) { overflowed = true; killGroup(); return; }
+    stderrChunks.push(chunk); stderrBytes += chunk.length;
   });
   const result = await new Promise((resolve) => {
     let timedOut = false;
@@ -487,6 +491,8 @@ async function runCheckCommand(command, env, timeoutMs) {
   if (child.pid !== undefined) activeCheckGroups.delete(child.pid);
   child.stdout.destroy();
   child.stderr.destroy();
+  const stdout = Buffer.concat(stdoutChunks).toString("utf8");
+  const stderr = Buffer.concat(stderrChunks).toString("utf8");
   let outputTail = `${stdout}${stderr}`.trim().slice(-4096);
   if (overflowed) outputTail = `[output exceeded 8MB; check group killed]\n${outputTail}`;
   if (result.spawn_error) outputTail = `spawn failed: ${result.spawn_error}\n${outputTail}`;
