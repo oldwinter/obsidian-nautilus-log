@@ -1769,6 +1769,46 @@
       "verified_head": "c4001db63f44735cbbcb235ff0bf5544e2f0311f",
       "verified_contract": "76725d3d84140a5b86b0ca82d8aee8e4c004cfd1c2d2c5ca086792d2c2c99daa",
       "verified_work": "a05159ce2d917cb57859b5346e7d4d1eb684c316f31bd9f1f4bbb51d0a7a9795"
+    },
+    {
+      "id": "FAC-148",
+      "title": "git helper carries a bounded timeout so a hung git cannot pin the lock",
+      "kind": "factory",
+      "priority": 148,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "scripts/factory/run.mjs",
+        "tests/factory/factory.test.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "git() is the only spawned child with no deadline: checks carry timeout_ms and lane helpers bound their own spawns, but a hung git (pathological filesystem, stuck index lock) blocks a mutating command forever while holding run.lock. Add FACTORY_GIT_TIMEOUT_MS (default 60000), fail fast on a killed git so the owner lock releases via the exit path, and prove it with a PATH-stubbed git that sleeps.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "a PATH-stubbed sleeping git makes claim fail within the bounded timeout, naming it, instead of hanging",
+          "check": {
+            "type": "command",
+            "command": "node --test --test-name-pattern 'bounded git timeout' tests/factory/factory.test.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "default git path unaffected: the full factory suite stays green",
+          "check": {
+            "type": "command",
+            "command": "node --test tests/factory/factory.test.mjs"
+          }
+        }
+      ],
+      "verify": [
+        "node --test tests/factory/factory.test.mjs"
+      ],
+      "claimed_head": "c7920ed11daaeb0292646169f37cb40c57f01f5c",
+      "verified_head": "c7920ed11daaeb0292646169f37cb40c57f01f5c",
+      "verified_contract": "d0d8bb3aa3cdea1187fda0c7827ee144ebfaee9597c45b8d510dc382b679292f",
+      "verified_work": "6fadd74f46961d047650b2859d92c9c7ff3a3cd285cbcf6dbcbc6e9018479e13"
     }
   ]
 }

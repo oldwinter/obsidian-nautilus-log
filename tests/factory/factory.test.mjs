@@ -193,6 +193,35 @@ test("timed-out command check reaps its descendant process group", async () => {
   }
 });
 
+test("a hung git is cut by a bounded git timeout instead of pinning the lock", () => {
+  const box = sandbox([makeItem()]);
+  const stubbin = path.join(box.dir, "stubbin");
+  try {
+    // PATH-stubbed git that never returns. `exec` replaces the shell so the
+    // timeout kills the sleeper itself (no orphan outliving the test).
+    mkdirSync(stubbin);
+    writeFileSync(path.join(stubbin, "git"), "#!/bin/sh\nexec sleep 30\n", { mode: 0o755 });
+    const started = Date.now();
+    const claimed = box.run("claim", "IT-001", {
+      env: {
+        ...process.env,
+        PATH: `${stubbin}:${process.env.PATH}`,
+        FACTORY_GIT_TIMEOUT_MS: "400",
+      },
+    });
+    const elapsed = Date.now() - started;
+    fails(claimed, "a hung git must fail the command, not hang it");
+    assert(elapsed < 15_000, `claim did not return promptly: ${elapsed} ms`);
+    assert.match(
+      `${claimed.stdout}${claimed.stderr}`,
+      /timed out after 400 ms/,
+      "failure names the bounded timeout",
+    );
+  } finally {
+    box.cleanup();
+  }
+});
+
 test("retry consumes attempts and rejects claim past max_attempts", () => {
   const box = sandbox([makeItem({
     max_attempts: 2,

@@ -139,8 +139,21 @@ function writeJsonAtomic(file, value) {
   renameSync(tmp, file);
 }
 
+// `git` is the only spawned child without a caller-facing deadline: checks
+// carry timeout_ms and lane helpers bound their own spawns, but a hung git
+// (pathological filesystem, stuck index lock) would pin run.lock forever.
+// Bounded by FACTORY_GIT_TIMEOUT_MS (default 60s); a killed child fails the
+// command so our own lock is released via the exit path.
+const GIT_TIMEOUT_MS = Number(process.env.FACTORY_GIT_TIMEOUT_MS ?? 60_000);
+if (!Number.isFinite(GIT_TIMEOUT_MS) || GIT_TIMEOUT_MS <= 0) {
+  fail("FACTORY_GIT_TIMEOUT_MS must be a positive number of milliseconds");
+}
+
 function git(args, { allowFail = false } = {}) {
-  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8", timeout: GIT_TIMEOUT_MS });
+  if (result.error?.code === "ETIMEDOUT" || (result.status === null && result.signal != null)) {
+    fail(`git ${args.join(" ")} timed out after ${GIT_TIMEOUT_MS} ms`);
+  }
   if (result.status !== 0) {
     if (allowFail) return null;
     fail(`git ${args.join(" ")} failed: ${(result.stderr || result.error?.message || "").trim()}`);
