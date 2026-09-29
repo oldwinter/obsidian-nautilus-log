@@ -6,6 +6,7 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "date.next": "后一天",
   "date.today": "今天",
   "filter.overruns": "只看已完成的超时任务",
+  "filter.clear": "清除筛选",
   "search.label": "搜索任务标题",
   "search.placeholder": "输入以筛选，按 Esc 清空",
   "search.result": ({ count }) => count === 0
