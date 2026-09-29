@@ -2597,6 +2597,65 @@
       "verified_head": "752623f44c6f75a5073c8c665efcb58a00f76d66",
       "verified_contract": "0a36a941a960e30404c730732feeba0b68e8e3be37da06a484a3ded52ed60283",
       "verified_work": "017715b51897024a38152e155cec20bc406df4f354a3a89435e6b65fe8980593"
+    },
+    {
+      "id": "FAC-167",
+      "title": "test(host-matrix): --scan-degraded scenario pins unreadable-source degradation + refresh recovery",
+      "kind": "code",
+      "priority": 53,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/scan-degraded.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/scan-degraded.mjs: exclusive --scan-degraded scenario that chmods today's note 000 (real OS fault on the markdown source), triggers a workspace-index rebuild via a vault modify on a different note, asserts the execution surface degrades honestly (Timing unavailable + Try again; Active Task unavailable with the refresh-code detail; mutations fail closed — no Start POMO/Clock In execution while the source is unreadable), then restores 0644 and asserts the same refresh gesture heals to an accurate surface (idle/active state restored, markdown bytes unchanged throughout). Wire --scan-degraded flag + exclusivity + driver hash + screenshot name in run.mjs; add --mode scan-degraded in host-probe.mjs incl. the assertion-prefix guard entry; document the scenario in tests/host-matrix/README.md.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring present: tests/host-matrix/scan-degraded.mjs exists, --scan-degraded flag and scenario branch registered, driver hash list updated",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/scan-degraded.mjs && grep -q 'scan-degraded' tests/host-matrix/run.mjs && grep -q 'scan-degraded.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode scan-degraded wired including assertion-prefix guard entry",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'scan-degraded' scripts/factory/checks/host-probe.mjs && grep -q '\"scan-degraded\": \"sd-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the --scan-degraded scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'scan-degraded' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run: scenario passes with sd-* assertions in real Obsidian",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode scan-degraded",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: WorkspaceIndexIncompleteReason 'source-read-failed' (identity-index.ts) -> clock-index-unavailable degraded snapshot -> writeBlocked fail-closed (clock-index.ts:74, commands.ts #safeScan). chmod 000 makes adapter.read throw EACCES deterministically — unlike data.json the vault markdown path is a plain read, no queued-write ambiguity. Recovery gesture is the existing degraded empty-state Try again -> application.refresh() -> index rebuild.",
+      "claimed_head": "fc67e13277df08631e007493b94b9ab29a26df52",
+      "verified_head": "fc67e13277df08631e007493b94b9ab29a26df52",
+      "verified_contract": "2ef1e0b3b42c2c461252ea50bfe440e64d5c5f468848c09af8cd70228abd7de4",
+      "verified_work": "33de420d9882369c0437ba63fca1fe5de917e086f6c05013e120ae63f3b7a9b4"
     }
   ]
 }

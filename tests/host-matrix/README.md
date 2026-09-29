@@ -63,17 +63,41 @@ combined with `--review`, `--privacy`, `--planner-tooltip-only`,
 `--forgotten`, `--degraded`, `--external-edit`, or `--pomo`.
 
 Add `--plugin-data-failure` for the plugin-data session block + retry recovery
-path instead of the standard lane. The scenario makes `data.json` read-only
-(`chmod`) and attempts Clock In: the Markdown CLOCK must still persist
-(Markdown is authority), the Active Task surface must honestly report
-`plugin-data-failed` (`unavailable` + mapped detail), session mutations must
-stay blocked (Clock Out unactionable, no stuck pending). Permissions are
-restored in a `finally`, then a source change drives the refresh path that
-re-proves writability (save + read-back of last confirmed data) and unblocks
-the session — the documented "retry the setting/session action" recovery.
-Clock Out must then compose the close and preserve externally appended bytes.
-It cannot be combined with `--review`, `--privacy`, `--planner-tooltip-only`,
-`--forgotten`, `--degraded`, `--external-edit`, `--pomo`, or `--write-failure`.
+paths instead of the standard lane. The scenario replaces `data.json` with an
+empty directory — a deterministic real fault, because Obsidian's queued
+plugin-data write does not reliably honor the file's POSIX mode. Phase A
+starts a standalone POMO under the fault: the session must block honestly
+(`Timing unavailable` + `Try again`, Active Task `unavailable` with the
+plugin-data detail), a retried refresh while the fault holds must stay
+blocked, and after the bytes are restored the same gesture re-proves
+writability (save + read-back of last confirmed data), unblocks the session,
+and a retried Start POMO persists — the documented "retry the
+setting/session action" recovery. Phase B clocks in under the fault: the
+Markdown CLOCK must still persist (Markdown is authority) while the surface
+warns `plugin-data-failed`, Clock Out stays actionable, and after restore the
+close composes with the clock id preserved and the surface heals. Both
+faulted sections restore in a `finally`. It cannot be combined with
+`--review`, `--privacy`, `--planner-tooltip-only`, `--forgotten`,
+`--degraded`, `--external-edit`, `--pomo`, or `--write-failure`.
+
+Add `--scan-degraded` for the unreadable-source degradation path instead of
+the standard lane. Sources are read through `vault.cachedRead`, which serves
+Obsidian's content cache without touching the filesystem on a hit — so
+`chmod` on an already-indexed note is invisible to the scan and is not a
+valid fault. The scenario instead writes `scan-degraded-fault.md` to disk
+already `chmod 000` before Obsidian ever reads it: the watcher registers the
+TFile by stat only, so every `cachedRead` is a cache miss that falls through
+to `adapter.read` and throws `EACCES` deterministically. A scratch-note
+`vault.create` then schedules the rebuild: the execution surface must
+degrade honestly (`Timing unavailable` + `Try again`, Active Task
+`unavailable` with a mapped detail) and fail closed — no Start POMO surface
+while any source is unreadable — instead of silently dropping vault content.
+A second retried refresh under the fault stays degraded. Permissions are
+restored in a `finally`, deleting the fault file must heal the surface back
+to the accurate state, and every pre-existing markdown file's bytes are
+asserted unchanged throughout. It cannot be combined with `--review`,
+`--privacy`, `--planner-tooltip-only`, `--forgotten`, `--degraded`,
+`--external-edit`, `--pomo`, `--write-failure`, or `--plugin-data-failure`.
 
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
