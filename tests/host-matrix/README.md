@@ -112,6 +112,20 @@ again and Clock Out must compose the close in today's note only, leaving
 the decoy byte-exact. The decoy note is deleted in a `finally`. It cannot
 be combined with any other exclusive flag.
 
+Add `--multi-clock` for the multiple-running-clocks degradation instead of
+the standard lane. The scenario seeds two running CLOCK records before the
+vault is written — one under yesterday's done-task LOGBOOK and one under
+today's Alpha — so `snapshot.running.length === 2` and the projection must
+degrade `multiple-running-clocks` without guessing an owner. The surface
+must fail closed honestly (`Timing unavailable` + `Try again`, no Clock
+Out affordance, Active Task `unavailable` with the `error.overlap` detail —
+distinct from `error.taskOwner`/`error.refresh`), write nothing, and stay
+degraded on retry. Closing the foreign record by hand via `vault.modify`
+restores a single running clock: today's Alpha clock must project again and
+Clock Out must compose the close in today's note only, leaving yesterday's
+manual close byte-exact. It cannot be combined with any other exclusive
+flag.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \

@@ -2716,6 +2716,66 @@
       "verified_head": "9ff7951ea17dc745c9aa1f01ad8fd41da29893ed",
       "verified_contract": "f47ac22d0959175e3f2dbf18d48079cd6a8779db41aef04dac3e6fc1ce9800ef",
       "verified_work": "69205ea53cf99d5c1c9c57d428591b897123047848c7c60827841b9bed90ba32"
+    },
+    {
+      "id": "FAC-169",
+      "title": "test(host-matrix): --multi-clock scenario pins multiple-running-clocks degradation + single-clock recovery",
+      "kind": "code",
+      "priority": 55,
+      "state": "delivered",
+      "attempts": 1,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/multi-clock.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/fixture.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs",
+        "factory/backlog.json"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "Add tests/host-matrix/multi-clock.mjs: exclusive --multi-clock scenario. Seed two running CLOCK records before the vault is written (one under yesterday's done-task LOGBOOK like degraded-owner, one under today's Alpha via an injected LOGBOOK block), so the safety index reports snapshot.running.length === 2 -> projectClockIndex degrades 'multiple-running-clocks' -> error.overlap detail (distinct from error.taskOwner/error.refresh). Assert: Timing 'unavailable' + Try again + no Clock Out/mutation affordance; Active Task unavailable with the overlap detail; zero markdown writes; retry stays degraded. Then close the yesterday record via vault.modify (running line -> closed '--[end] => dur' line): the remaining today-Alpha clock must project again (current task + actionable Clock Out), Clock Out composes today's close, yesterday's note keeps only my manual close bytes. Wire --multi-clock flag + exclusivity + seed call + driver hash + screenshot name in run.mjs; --mode multi-clock in host-probe.mjs incl. prefix guard (mc-); README paragraph.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "scenario module + runner wiring + seed present",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/multi-clock.mjs && grep -q 'multi-clock' tests/host-matrix/run.mjs && grep -q 'multi-clock.mjs' tests/host-matrix/run.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "host-probe --mode multi-clock wired incl. prefix guard",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'multi-clock' scripts/factory/checks/host-probe.mjs && grep -q '\"multi-clock\": \"mc-' scripts/factory/checks/host-probe.mjs"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "README documents the scenario contract",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'multi-clock' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC4",
+          "description": "real host run passes with mc-* assertions",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode multi-clock",
+            "timeout_ms": 280000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract: projectClockIndex degrades 'multiple-running-clocks' when snapshot.running.length > 1 — runs BEFORE owner resolution, so the surface must show error.overlap (not error.taskOwner). Seeding mirrors seedDegradedOwnerClock (running line in yesterday done-task LOGBOOK) plus an injected '  - LOGBOOK::' block under today's Alpha (forgotten-clock seed pattern). Recovery = manual close of the foreign record — the user-facing story the error text itself prescribes.",
+      "claimed_head": "cc752693fb7a5b5f5bf7c7a58440de233f14ae5c",
+      "verified_head": "cc752693fb7a5b5f5bf7c7a58440de233f14ae5c",
+      "verified_contract": "6cfda40496f31dd415f3c793a676ef264aed4a845deee8485222055c1221280a",
+      "verified_work": "98c9f43ce27d03b9b3be1963c099e7793cb45f12fd89e73f15fc69484c3ecefd"
     }
   ]
 }

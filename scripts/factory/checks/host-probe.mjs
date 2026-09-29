@@ -15,7 +15,8 @@
 // --mode write-failure (FAC-165 uncertain-write recovery via chmod fault),
 // --mode plugin-data-failure (FAC-166 plugin-data session block + retry recovery),
 // --mode scan-degraded (FAC-167 unreadable-source degradation + refresh recovery),
-// --mode ambiguous-owner (FAC-168 identity-collision fail-closed + resolution recovery).
+// --mode ambiguous-owner (FAC-168 identity-collision fail-closed + resolution recovery),
+// --mode multi-clock (FAC-169 multiple-running-clocks degradation + single-clock recovery).
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -28,9 +29,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
-const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit", pomo: "--pomo", "write-failure": "--write-failure", "plugin-data-failure": "--plugin-data-failure", "scan-degraded": "--scan-degraded", "ambiguous-owner": "--ambiguous-owner" };
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit", pomo: "--pomo", "write-failure": "--write-failure", "plugin-data-failure": "--plugin-data-failure", "scan-degraded": "--scan-degraded", "ambiguous-owner": "--ambiguous-owner", "multi-clock": "--multi-clock" };
 function assertMode(mode) {
-  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure", "scan-degraded", "ambiguous-owner"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure", "scan-degraded", "ambiguous-owner", "multi-clock"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -80,7 +81,7 @@ if (values.mode === "bound") {
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure", "scan-degraded", "ambiguous-owner"].includes(values.mode) ? 240_000 : 600_000,
+  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit", "pomo", "write-failure", "plugin-data-failure", "scan-degraded", "ambiguous-owner", "multi-clock"].includes(values.mode) ? 240_000 : 600_000,
   // Versioned sibling of the output dir; a fixed name at the evidence root
   // silently overwrote the previous run's log on a same-attempt re-verify.
   log: `${output}.log`,
@@ -91,7 +92,7 @@ const result = runLogged(node24, args, {
 // standard-lane guards).
 const SCENARIO_ASSERTION_PREFIX = {
   forgotten: "forgotten-", degraded: "degraded-", "external-edit": "external-edit-",
-  pomo: "pomo-", "write-failure": "write-failure-", "plugin-data-failure": "pdf-", "scan-degraded": "sd-", "ambiguous-owner": "ao-",
+  pomo: "pomo-", "write-failure": "write-failure-", "plugin-data-failure": "pdf-", "scan-degraded": "sd-", "ambiguous-owner": "ao-", "multi-clock": "mc-",
 }[values.mode];
 if (SCENARIO_ASSERTION_PREFIX && result.status === 0) {
   const report = JSON.parse(readFileSync(path.join(output, "evidence", "report.json"), "utf8"));
