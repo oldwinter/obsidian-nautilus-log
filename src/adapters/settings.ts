@@ -181,13 +181,26 @@ export class SpiralDaySettingTab extends PluginSettingTab {
       detail.textContent = intro;
       card.append(detail);
       renderEmptyPlanGuidance(card, this.#dependencies.messages);
-    } else {
+    } else if (kind === "missing") {
       renderPlanMissingGuidance(card, this.#dependencies.messages, {
         intro,
         ...(this.#dependencies.insertPrimaryPlan
           ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
           : {}),
       });
+    } else {
+      const status = container.ownerDocument.createElement("p");
+      status.className = "spiral-day-onboarding__intro";
+      status.textContent = kind === "loading"
+        ? this.#dependencies.messages.t("execution", "plan.loading")
+        : this.#dependencies.messages.t("execution", "plan.unavailable");
+      card.append(status);
+      if (kind === "unavailable") {
+        const detail = container.ownerDocument.createElement("p");
+        detail.className = "spiral-day-onboarding__intro";
+        detail.textContent = this.#dependencies.messages.t("execution", "plan.unavailableDetail");
+        card.append(detail);
+      }
     }
     const execution = container.ownerDocument.createElement("p");
     execution.textContent = this.#dependencies.messages.t(
