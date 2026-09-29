@@ -79,8 +79,10 @@ cat .codex/runtime/devin-factory/items/FAC-101.jsonl  # per-item evidence
 ```
 
 Each progress row carries timestamp, event, item, attempt, prior/next state,
-check exit codes, kill signal, durations, output tails, and the current
-git HEAD.
+check exit codes, timeout/kill signal, durations, `group_alive` (whether the
+check's process group outlived the command leader — descendants are kept,
+not killed, so later checks can use their helpers), output tails, and the
+current git HEAD.
 
 Mutating commands serialize on `.codex/runtime/devin-factory/run.lock/`
 — a lock *directory* (`mkdir` is atomic) holding `owner.json` with the
