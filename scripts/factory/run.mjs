@@ -745,9 +745,19 @@ function cmdDeliver(backlog, id) {
   const item = findItem(backlog, id);
   const dir = path.join(runtimeDir, "deliveries", item.id, `attempt-${item.attempts}`);
   if (item.state === "delivered") {
-    if (existsSync(dir) && !existsSync(path.join(dir, "evidence.json"))) {
+    const rebuildable = existsSync(dir)
+      ? ["evidence.json", "summary.md"].filter((f) => !existsSync(path.join(dir, f)))
+      : [];
+    const structural = existsSync(dir)
+      ? ["change.patch", "bundle.json"].filter((f) => !existsSync(path.join(dir, f)))
+      : ["delivery dir"];
+    if (rebuildable.length > 0 && structural.length === 0) {
       writeDeliveryEvidence(dir, item);
-      console.log(`deliver ${item.id}: rebuilt missing evidence -> ${dir}`);
+      console.log(`deliver ${item.id}: rebuilt missing evidence (${rebuildable.join(", ")}) -> ${dir}`);
+      return;
+    }
+    if (structural.length > 0) {
+      console.log(`deliver ${item.id}: recorded delivered but bundle incomplete (missing ${structural.join(", ")}); run inspect for details -> ${dir}`);
       return;
     }
     console.log(`deliver ${item.id}: already delivered -> ${dir}`);

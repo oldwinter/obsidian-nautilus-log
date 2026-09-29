@@ -259,6 +259,19 @@ test("deliver is idempotent and produces a reviewable bundle", () => {
     ok(again, "re-deliver is an idempotent no-op");
     assert.match(again.stdout, /already delivered/);
     assert.equal(readFileSync(path.join(bundle, "evidence.json"), "utf8"), before, "bundle unchanged");
+
+    rmSync(path.join(bundle, "summary.md"));
+    const rebuiltSummary = box.run("deliver", "IT-001");
+    ok(rebuiltSummary, "deliver rebuilds summary.md lost to a mid-evidence-write crash");
+    assert.match(rebuiltSummary.stdout, /rebuilt missing evidence \(summary\.md\)/);
+    assert(existsSync(path.join(bundle, "summary.md")), "summary.md rebuilt");
+
+    rmSync(path.join(bundle, "bundle.json"));
+    const incomplete = box.run("deliver", "IT-001");
+    ok(incomplete, "deliver reports a structural bundle gap instead of claiming complete");
+    assert.match(incomplete.stdout, /bundle incomplete/);
+    assert.match(incomplete.stdout, /bundle\.json/);
+
     fails(box.run("verify", "IT-001"), "delivered item is terminal");
     fails(box.run("claim", "IT-001"), "delivered item cannot be claimed");
   } finally {
