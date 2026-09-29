@@ -10,7 +10,8 @@
 // app/Electron version and candidate-SHA binding assertions), --mode
 // forgotten (FAC-161 stale running-CLOCK recovery scenario), --mode
 // degraded (FAC-162 done-owner running-CLOCK fail-closed boundary),
-// --mode external-edit (FAC-163 concurrent-edit vault-authority pin).
+// --mode external-edit (FAC-163 concurrent-edit vault-authority pin),
+// --mode pomo (FAC-164 standalone-POMO lifecycle + CLOCK-wins arbitration).
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -23,9 +24,9 @@ import {
 const { values } = parseArgs({ options: { mode: { type: "string", default: "tooltip" } } });
 assertMode(values.mode);
 
-const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit" };
+const SCENARIO_FLAGS = { tooltip: "--planner-tooltip-only", review: "--review", privacy: "--privacy", bound: "--planner-tooltip-only", forgotten: "--forgotten", degraded: "--degraded", "external-edit": "--external-edit", pomo: "--pomo" };
 function assertMode(mode) {
-  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit"].includes(mode)) fail(`unknown --mode ${mode}`);
+  if (!["tooltip", "full", "review", "privacy", "bound", "forgotten", "degraded", "external-edit", "pomo"].includes(mode)) fail(`unknown --mode ${mode}`);
 }
 
 const evidence = evidenceDir("host-probe");
@@ -75,7 +76,7 @@ if (values.mode === "bound") {
 
 const result = runLogged(node24, args, {
   env: { PLAYWRIGHT_MODULE: playwright },
-  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit"].includes(values.mode) ? 240_000 : 600_000,
+  timeout: ["tooltip", "bound", "forgotten", "degraded", "external-edit", "pomo"].includes(values.mode) ? 240_000 : 600_000,
   // Versioned sibling of the output dir; a fixed name at the evidence root
   // silently overwrote the previous run's log on a same-attempt re-verify.
   log: `${output}.log`,

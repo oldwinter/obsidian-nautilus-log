@@ -2435,6 +2435,56 @@
       "verified_head": "98d37998837f1aca20145b7c2a4de5f7d6bff910",
       "verified_contract": "1b077839da043b0eeb4a9ccc8aeedabdf49d1fedb0ddb9df9c0a5bf794ac007f",
       "verified_work": "adc80c7e81780d51212ea82839e890b91f557d1c4507ff2f88ccbbee2e01648e"
+    },
+    {
+      "id": "FAC-164",
+      "title": "feat(host-matrix): --pomo scenario pins standalone-POMO lifecycle and CLOCK-wins arbitration",
+      "kind": "code",
+      "priority": 52,
+      "state": "delivered",
+      "attempts": 2,
+      "max_attempts": 3,
+      "module_boundary": [
+        "tests/host-matrix/pomo.mjs",
+        "tests/host-matrix/run.mjs",
+        "tests/host-matrix/README.md",
+        "scripts/factory/checks/host-probe.mjs"
+      ],
+      "allow_empty_diff": false,
+      "implementation": "POMOController contract (src/runtime/execution/pomo.ts): startStandalone writes standalonePomoStartEpochMs to plugin data when no CLOCK runs; afterClockIn sets taskPomoStartEpochMs and CLEARS standalone (CLOCK wins — destroyed, not masked); clearTask keeps standalone and drops task epoch. Zero host coverage. New tests/host-matrix/pomo.mjs drives: idle Timing shows Start POMO; click -> elapsed renders with POMO suffix + Stop affordance + data.json standalonePomoStartEpochMs numeric; Clock in Alpha -> current task projects, data.json standalone=null and taskPomoStartEpochMs set, POMO surface gone; Clock out -> idle empty-state returns with Start POMO and both epochs null (standalone does not resurrect). run.mjs gains exclusive --pomo mode; host-probe.mjs gains --mode pomo; README documents the arbitration contract.",
+      "acceptance_criteria": [
+        {
+          "id": "AC1",
+          "description": "tests/host-matrix/pomo.mjs exists and exports the phase function",
+          "check": {
+            "type": "command",
+            "command": "test -f tests/host-matrix/pomo.mjs && grep -q 'export async function runPomo' tests/host-matrix/pomo.mjs"
+          }
+        },
+        {
+          "id": "AC2",
+          "description": "runner + lane wiring present: --pomo flag, scenario registration, host-probe --mode pomo, README",
+          "check": {
+            "type": "command",
+            "command": "grep -q 'pomo' tests/host-matrix/run.mjs && grep -q 'pomo: \"--pomo\"' scripts/factory/checks/host-probe.mjs && grep -q 'POMO' tests/host-matrix/README.md"
+          }
+        },
+        {
+          "id": "AC3",
+          "description": "host-probe --mode pomo exits 0 and its report.json records all assertions passing in the real host",
+          "check": {
+            "type": "command",
+            "command": "node scripts/factory/checks/host-probe.mjs --mode pomo",
+            "timeout_ms": 300000
+          }
+        }
+      ],
+      "verify": [],
+      "notes": "Contract source: src/runtime/execution/pomo.ts afterClockIn clears standalonePomoStartEpochMs (destroyed, not masked) — data.json field-level assertions pin the arbitration, not just the render.",
+      "claimed_head": "0e49c15e6daf0f4a0125b7c793144bf21f716ce7",
+      "verified_head": "0e49c15e6daf0f4a0125b7c793144bf21f716ce7",
+      "verified_contract": "c7379f3587ddad3e1448b8d063dfb642089b1b6d4ceaa8dbbdded24c641f94b3",
+      "verified_work": "1fb30dab7c574ea8bec7d669f2207356056eeb09b57f2e9707a55e6b3ac6844b"
     }
   ]
 }

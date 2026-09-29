@@ -15,17 +15,18 @@ import { observePlannerTooltip } from "./planner-tooltip.mjs";
 import { seedForgottenClock, runForgottenClock } from "./forgotten-clock.mjs";
 import { seedDegradedOwnerClock, runDegradedOwnerClock } from "./degraded-owner.mjs";
 import { runExternalEdit } from "./external-edit.mjs";
+import { runPomo } from "./pomo.mjs";
 
 const { values } = parseArgs({ options: {
   executable: { type: "string" }, "plugin-dir": { type: "string" }, output: { type: "string" },
   "candidate-sha": { type: "string" }, review: { type: "boolean" }, help: { type: "boolean" },
   privacy: { type: "boolean" }, forgotten: { type: "boolean" }, degraded: { type: "boolean" },
-  "external-edit": { type: "boolean" },
+  "external-edit": { type: "boolean" }, pomo: { type: "boolean" },
   "planner-tooltip-only": { type: "boolean" },
   "expected-app-version": { type: "string" }, "expected-electron-version": { type: "string" },
 } });
 if (values.help) {
-  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--forgotten] [--degraded] [--external-edit] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
+  console.log("node tests/host-matrix/run.mjs --executable /path/to/Obsidian --plugin-dir /path/to/built/plugin --output /new/disposable/directory [--candidate-sha <40 hex>] [--review] [--privacy] [--forgotten] [--degraded] [--external-edit] [--pomo] [--planner-tooltip-only] [--expected-app-version 1.7.7 --expected-electron-version 32.2.5]\nSet PLAYWRIGHT_MODULE to an installed playwright module path when it is outside Node module resolution.");
   process.exit(0);
 }
 for (const name of ["executable", "plugin-dir", "output"]) assert(values[name], `Missing --${name}`);
@@ -36,6 +37,8 @@ assert(!values.degraded || (!values.review && !values.privacy && !values["planne
   "--degraded cannot be combined with --review, --privacy, --planner-tooltip-only, or --forgotten");
 assert(!values["external-edit"] || (!values.review && !values.privacy && !values["planner-tooltip-only"] && !values.forgotten && !values.degraded),
   "--external-edit cannot be combined with --review, --privacy, --planner-tooltip-only, --forgotten, or --degraded");
+assert(!values.pomo || (!values.review && !values.privacy && !values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"]),
+  "--pomo cannot be combined with --review, --privacy, --planner-tooltip-only, --forgotten, --degraded, or --external-edit");
 assert(!values["candidate-sha"] || /^[a-f0-9]{40}$/.test(values["candidate-sha"]), "Candidate SHA must have 40 lowercase hex characters");
 for (const name of ["expected-app-version", "expected-electron-version"]) {
   assert(!values[name] || /^\d+\.\d+\.\d+$/.test(values[name]), `Invalid --${name}`);
@@ -93,10 +96,10 @@ const report = {
   startedAt: new Date().toISOString(),
   candidateSha: values["candidate-sha"] ?? null,
   expectedVersions: { app: values["expected-app-version"] ?? null, electron: values["expected-electron-version"] ?? null },
-  scenarios: values.forgotten ? ["forgotten-clock"] : values.degraded ? ["degraded-owner-clock"] : values["external-edit"] ? ["external-edit"] : [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
+  scenarios: values.forgotten ? ["forgotten-clock"] : values.degraded ? ["degraded-owner-clock"] : values["external-edit"] ? ["external-edit"] : values.pomo ? ["pomo"] : [...(values["planner-tooltip-only"] ? ["planner-tooltip-only"] : ["planner", "planner-tooltip", "execution", "lifecycle", "clock-reload"]), ...(values.review ? ["review"] : []), ...(values.privacy ? ["privacy"] : [])],
   candidateBinding: "Operator-supplied label only. Package SHA256 values identify tested bytes. This runner does not certify Git cleanliness, remote equality, G0-G6, or a freeze.",
   driver: { playwrightVersion: require(`${playwrightModule}/package.json`).version,
-    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "host-matrix/forgotten-clock.mjs", "host-matrix/degraded-owner.mjs", "host-matrix/external-edit.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
+    files: await fileHashes(resolve(import.meta.dirname, ".."), ["host-matrix/run.mjs", "host-matrix/fixture.mjs", "host-matrix/review.mjs", "host-matrix/planner-tooltip.mjs", "host-matrix/forgotten-clock.mjs", "host-matrix/degraded-owner.mjs", "host-matrix/external-edit.mjs", "host-matrix/pomo.mjs", "lifecycle/real-host.mjs", "lifecycle/cleanup.mjs", "privacy/host.mjs"]),
     persistenceContract: await fileHashes(resolve(import.meta.dirname, "../.."), ["src/runtime/plugin-data.ts"]) },
   package: { sourceDirectory: pluginDir, manifest, source: sourcePackage, installed: installedPackage },
   fixture: { provenance: "Generated public synthetic notes only", date: fixture.today.logicalDate,
@@ -275,7 +278,7 @@ try {
   check("activation-preserves-all-markdown", JSON.stringify(report.fixture.files) === JSON.stringify(beforeNavigation), beforeNavigation);
   await openPlanner();
   await screenshot("planner");
-  if (!values.forgotten && !values.degraded && !values["external-edit"]) {
+  if (!values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo) {
     report.plannerTooltip = await observePlannerTooltip({ page, pageErrors: report.pageErrors, screenshot });
     await json(join(evidence, "planner-tooltip.json"), report.plannerTooltip);
     const svgName = report.plannerTooltip.target.ariaLabel ?? report.plannerTooltip.target.title;
@@ -285,7 +288,7 @@ try {
     check("planner-svg-tooltip-delay-observed", report.plannerTooltip.elapsedMilliseconds >= 900, report.plannerTooltip.elapsedMilliseconds);
     check("planner-svg-hover-no-page-errors", report.plannerTooltip.newPageErrors.length === 0, report.plannerTooltip.newPageErrors);
   }
-  if (!values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"]) {
+  if (!values["planner-tooltip-only"] && !values.forgotten && !values.degraded && !values["external-edit"] && !values.pomo) {
     for (const [name, expected] of [["Collapse planner", "Expand planner"], ["Expand planner", "Collapse planner"],
       ["Hide completed items", "Show completed items"], ["Show completed items", "Hide completed items"]]) {
       await page.getByRole("button", { name, exact: true }).click();
@@ -355,6 +358,10 @@ try {
     report.externalEdit = await runExternalEdit({ page, fixture, vault,
       openExecution, check, screenshot });
     await json(join(evidence, "external-edit.json"), report.externalEdit);
+  } else if (values.pomo) {
+    report.pomo = await runPomo({ page, fixture, vault, pluginId: manifest.id,
+      openExecution, check, screenshot });
+    await json(join(evidence, "pomo.json"), report.pomo);
   } else {
     check("planner-tooltip-preserves-all-markdown", JSON.stringify(beforeNavigation) === JSON.stringify(await markdownHashes()), beforeNavigation);
   }
@@ -362,7 +369,7 @@ try {
   check("plugin-bytes-unchanged", JSON.stringify(sourcePackage) === JSON.stringify(report.package.afterRun), report.package.afterRun);
   await page.keyboard.press("Escape");
   await openPlanner();
-  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : values.forgotten ? "planner-after-forgotten" : values.degraded ? "planner-after-degraded" : values["external-edit"] ? "planner-after-external-edit" : "planner-after-ten-cycles");
+  await screenshot(values["planner-tooltip-only"] ? "planner-after-tooltip" : values.forgotten ? "planner-after-forgotten" : values.degraded ? "planner-after-degraded" : values["external-edit"] ? "planner-after-external-edit" : values.pomo ? "planner-after-pomo" : "planner-after-ten-cycles");
   check("no-renderer-page-errors", report.pageErrors.length === 0, report.pageErrors);
   const errors = report.console.filter((event) => event.type === "error");
   check("no-renderer-console-errors", errors.length === 0, errors);

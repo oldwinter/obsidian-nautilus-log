@@ -44,6 +44,15 @@ compose the close keeping the external bytes. It cannot be combined with
 `--review`, `--privacy`, `--planner-tooltip-only`, `--forgotten`, or
 `--degraded`.
 
+Add `--pomo` for the standalone-POMO arbitration instead of the standard
+lane. With no CLOCK, Start POMO persists `standalonePomoStartEpochMs` and the
+Timing tab renders the elapsed timer with a Stop affordance. Clocking in a
+task destroys the standalone epoch (CLOCK wins — not masked) and sets
+`taskPomoStartEpochMs`; Clocking out clears the task epoch and the standalone
+timer does not resurrect. Plugin-data field assertions pin the arbitration,
+not just the render. It cannot be combined with `--review`, `--privacy`,
+`--planner-tooltip-only`, `--forgotten`, `--degraded`, or `--external-edit`.
+
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/node_modules/playwright \
 node tests/host-matrix/run.mjs \
