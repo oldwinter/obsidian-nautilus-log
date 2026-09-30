@@ -10,6 +10,8 @@ import type { ReviewCoordinatorSnapshot, RuntimeReviewTask } from "@review-sourc
 
 type Locale = "en" | "zh-CN";
 type Outcome = "applied" | "already-applied" | "rejected" | "uncertain";
+type CopyOutcome = "copied" | "failed";
+type CopyMode = CopyOutcome | "rejected";
 type ReadyReviewMode =
   | "full"
   | "search"
@@ -29,6 +31,7 @@ interface MutableStats {
   navigations: unknown[];
   selectedDates: Array<LogicalDate | null>;
   planMutations: number;
+  copies: string[];
 }
 
 const MINUTE = 60_000;
@@ -158,6 +161,11 @@ let nextOutcome: Outcome = "applied";
 let deferDispatch = false;
 let completeTargetOnRefresh = false;
 let resolveDeferred: ((outcome: Outcome) => void) | undefined;
+let nextCopyOutcome: CopyMode = "copied";
+let deferCopy = false;
+let resolveDeferredCopy: ((outcome: CopyOutcome) => void) | undefined;
+let deferDateSelection = false;
+let resolveDeferredDate: (() => void) | undefined;
 let intentSequence = 0;
 const reviewListeners = new Set<(snapshot: ReviewCoordinatorSnapshot) => void>();
 const executionListeners = new Set<(snapshot: ExecutionApplicationSnapshot) => void>();
@@ -170,6 +178,7 @@ const stats: MutableStats = {
   navigations: [],
   selectedDates: [],
   planMutations: 0,
+  copies: [],
 };
 
 function executionSnapshot(
@@ -314,9 +323,29 @@ const port = createReviewEntryPort({
   async navigateTask(value, location) {
     stats.navigations.push({ target: structuredClone(value), location });
   },
+  async copySummary(text) {
+    stats.copies.push(text);
+    if (!deferCopy) {
+      if (nextCopyOutcome === "rejected") throw new Error("Synthetic clipboard rejection");
+      return nextCopyOutcome;
+    }
+    deferCopy = false;
+    return new Promise((resolve) => {
+      resolveDeferredCopy = (value) => {
+        resolveDeferredCopy = undefined;
+        resolve(value);
+      };
+    });
+  },
   today: () => TODAY,
   async selectDate(date) {
     stats.selectedDates.push(date ? Object.freeze({ ...date }) : null);
+    if (deferDateSelection) {
+      deferDateSelection = false;
+      await new Promise<void>((resolve) => {
+        resolveDeferredDate = () => { resolveDeferredDate = undefined; resolve(); };
+      });
+    }
     currentDate = date ? Object.freeze({ ...date }) : TODAY;
     if (mode !== "building" && mode !== "over-limit" && mode !== "unavailable") {
       review = readySnapshot(mode, currentDate);
@@ -408,6 +437,23 @@ const api = Object.freeze({
   setNextOutcome(value: Outcome): void {
     nextOutcome = value;
   },
+  setNextCopyOutcome(value: CopyMode): void {
+    nextCopyOutcome = value;
+  },
+  deferNextCopy(): void {
+    deferCopy = true;
+  },
+  deferNextDateSelection(): void {
+    deferDateSelection = true;
+  },
+  resolveDateSelection(): void {
+    if (!resolveDeferredDate) throw new Error("No deferred Review date selection is pending");
+    resolveDeferredDate();
+  },
+  resolveCopy(value: CopyOutcome): void {
+    if (!resolveDeferredCopy) throw new Error("No deferred Review copy is pending");
+    resolveDeferredCopy(value);
+  },
   deferNextDispatch(): void {
     deferDispatch = true;
   },
@@ -431,6 +477,7 @@ const api = Object.freeze({
       },
       disposerCount: disposers.length,
       deferredDispatchPending: resolveDeferred !== undefined,
+      deferredCopyPending: resolveDeferredCopy !== undefined,
       completeTargetOnRefresh,
       isToday: sameDate(currentDate, TODAY),
     });

@@ -257,6 +257,151 @@ try {
     await capture(page, "states-wide-en");
   });
 
+  await scenario("copy-review-summary-output", async () => {
+    await open("full");
+    const copy = page.getByRole("button", { name: "Copy review summary", exact: true });
+    const english = "Spiral Day Review · 2026-08-29\n4/7 completed · 3 compared\nPlanned 1h 30m · Actual 1h 35m · Variance +5m";
+    await copy.focus();
+    await copy.click();
+    await page.getByText("Review summary copied.", { exact: true }).waitFor();
+    let copyStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-exact-english-whole-day-summary", JSON.stringify(copyStats.copies) === JSON.stringify([english]), copyStats.copies);
+    check("review.copy-preserves-button-focus", await copy.evaluate((element) => element === document.activeElement), await page.evaluate(() => document.activeElement?.textContent));
+
+    const search = page.getByRole("searchbox", { name: "Search task titles", exact: true });
+    await search.fill("Positive variance");
+    await page.getByRole("checkbox", { name: "Only completed overruns", exact: true }).check();
+    await copy.click();
+    copyStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-ignores-row-filters", copyStats.copies.length === 2 && copyStats.copies[1] === english
+      && await page.locator(".spiral-day-review__row").count() === 1, copyStats);
+
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    const chineseCopy = page.getByRole("button", { name: "复制回顾汇总", exact: true });
+    const chinese = "Spiral Day 回顾 · 2026-08-29\n已完成 4/7 项 · 已比较 3 项\n计划用时 1小时30分钟 · 实际用时 1小时35分钟 · 用时差异 +5分钟";
+    await chineseCopy.click();
+    copyStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-exact-chinese-whole-day-summary", copyStats.copies.at(-1) === chinese, copyStats.copies.at(-1));
+
+    await open("target");
+    const targetCopy = page.getByRole("button", { name: "Copy review summary", exact: true });
+    await targetCopy.click();
+    const noComparison = "Spiral Day Review · 2026-08-29\n0/1 completed · 0 compared\nPlanned — · Actual — · Variance —";
+    copyStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-no-comparisons-uses-dashes", copyStats.copies.at(-1) === noComparison, copyStats.copies.at(-1));
+
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-28");
+    await targetCopy.click();
+    await page.getByRole("button", { name: "Next day", exact: true }).click();
+    await page.getByRole("button", { name: "Next day", exact: true }).click();
+    await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-30");
+    await targetCopy.click();
+    copyStats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-allows-past-and-future-read-only-dates",
+      copyStats.copies.at(-2)?.startsWith("Spiral Day Review · 2026-08-28\n")
+        && copyStats.copies.at(-1)?.startsWith("Spiral Day Review · 2026-08-30\n"), copyStats.copies.slice(-2));
+  });
+
+  await scenario("copy-review-summary-delayed-date", async () => {
+    await open("full");
+    const observed = await page.evaluate(async () => {
+      const copy = document.querySelector(".spiral-day-review__copy-summary");
+      window.reviewHarness.deferNextCopy();
+      window.reviewHarness.deferNextDateSelection();
+      copy.click();
+      document.querySelector('[aria-label="Previous day"]').click();
+      window.reviewHarness.resolveCopy("copied");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const feedback = document.querySelector(".spiral-day-review__copy-feedback");
+      const result = { disabled: copy.disabled, feedbackHidden: feedback.hidden, date: document.querySelector('input[type="date"]').value };
+      copy.click();
+      result.copies = window.reviewHarness.stats().copies.length;
+      window.reviewHarness.resolveDateSelection();
+      return result;
+    });
+    check("review.copy-delayed-date-blocks-old-summary-and-feedback", observed.disabled && observed.feedbackHidden
+      && observed.copies === 1 && observed.date === "2026-08-28", observed);
+    const copy = page.getByRole("button", { name: "Copy review summary", exact: true });
+    await copy.click();
+    const copied = await page.evaluate(() => window.reviewHarness.stats().copies.at(-1));
+    check("review.copy-delayed-date-resumes-with-new-summary", copied.startsWith("Spiral Day Review · 2026-08-28\n"), copied);
+  });
+
+  await scenario("copy-review-summary-lifecycle", async () => {
+    await open("full");
+    const copy = page.locator(".spiral-day-review__copy-summary");
+    await page.evaluate(() => window.reviewHarness.deferNextCopy());
+    await copy.evaluate((button) => { button.click(); button.click(); });
+    await page.waitForFunction(() => window.reviewHarness.stats().deferredCopyPending === true);
+    let stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-single-flight-disables-duplicate", stats.copies.length === 1
+      && await copy.isDisabled() && await copy.textContent() === "Copying…", stats);
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    await copy.evaluate((button) => button.click());
+    stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-date-change-keeps-original-single-flight", await copy.isDisabled() && stats.copies.length === 1, stats);
+    await page.evaluate(() => window.reviewHarness.resolveCopy("copied"));
+    await page.waitForFunction(() => document.querySelector(".spiral-day-review__copy-summary")?.textContent === "Copy review summary");
+    check("review.copy-date-change-suppresses-obsolete-feedback",
+      !await page.locator(".spiral-day-review__copy-feedback").isVisible() && await copy.isEnabled(), await copy.textContent());
+
+    await page.evaluate(() => window.reviewHarness.deferNextCopy());
+    await copy.click();
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    await page.evaluate(() => window.reviewHarness.resolveCopy("copied"));
+    await page.waitForFunction(() => document.querySelector(".spiral-day-review__copy-summary")?.textContent === "复制回顾汇总");
+    check("review.copy-locale-change-suppresses-obsolete-feedback",
+      !await page.locator(".spiral-day-review__copy-feedback").isVisible(), await page.locator(".spiral-day-review__copy-feedback").textContent());
+
+    await page.evaluate(() => window.reviewHarness.setNextCopyOutcome("failed"));
+    await page.getByRole("button", { name: "复制回顾汇总", exact: true }).click();
+    check("review.copy-returned-failure-is-visible", await page.getByText("无法复制回顾汇总。", { exact: true }).isVisible(),
+      await page.locator(".spiral-day-review__copy-feedback").textContent());
+    await page.evaluate(() => window.reviewHarness.setNextCopyOutcome("rejected"));
+    await page.getByRole("button", { name: "复制回顾汇总", exact: true }).click();
+    check("review.copy-rejection-is-caught-and-visible", await page.getByText("无法复制回顾汇总。", { exact: true }).isVisible(),
+      await page.locator(".spiral-day-review__copy-feedback").textContent());
+
+    await open("target");
+    const targetCopy = page.getByRole("button", { name: "Copy review summary", exact: true });
+    await page.evaluate(() => window.reviewHarness.deferNextDispatch());
+    await page.getByRole("button", { name: "Complete", exact: true }).click();
+    await page.waitForFunction(() => window.reviewHarness.stats().deferredDispatchPending === true);
+    check("review.copy-disabled-during-mutation", await targetCopy.isDisabled(), await targetCopy.isDisabled());
+    await page.evaluate(() => window.reviewHarness.resolveDispatch("applied"));
+    await page.waitForFunction(() => document.querySelector("#review-root")?.getAttribute("aria-busy") === "false");
+    await page.evaluate(() => window.reviewHarness.setExecution("working"));
+    check("review.copy-disabled-while-execution-working", await targetCopy.isDisabled(), await targetCopy.isDisabled());
+    await page.evaluate(() => window.reviewHarness.setExecution("ready", { writeBlocked: true }));
+    check("review.copy-disabled-while-writes-blocked", await targetCopy.isDisabled(), await targetCopy.isDisabled());
+    await page.evaluate(() => window.reviewHarness.setExecution("stale"));
+    check("review.copy-hidden-while-execution-stale", !await targetCopy.isVisible(), await targetCopy.isVisible());
+    await page.evaluate(() => window.reviewHarness.setExecution("ready"));
+    for (const mode of ["building", "unavailable", "over-limit", "empty", "invalid-plan"]) {
+      await page.evaluate((value) => window.reviewHarness.setReviewMode(value), mode);
+      check(`review.copy-hidden-for-${mode}`, !await targetCopy.isVisible(), mode);
+    }
+
+    await open("full");
+    await page.evaluate(() => window.reviewHarness.deferNextCopy());
+    await page.getByRole("button", { name: "Copy review summary", exact: true }).click();
+    await page.evaluate(() => { window.reviewHarness.hide(); window.reviewHarness.show(); });
+    await page.evaluate(() => window.reviewHarness.resolveCopy("copied"));
+    await page.waitForFunction(() => document.querySelector(".spiral-day-review__copy-summary")?.textContent === "Copy review summary");
+    check("review.copy-hide-reopen-suppresses-obsolete-feedback", !await page.locator(".spiral-day-review__copy-feedback").isVisible(),
+      await page.locator(".spiral-day-review__copy-feedback").textContent());
+
+    await page.evaluate(() => window.reviewHarness.deferNextCopy());
+    await copy.click();
+    await page.evaluate(() => window.reviewHarness.destroy());
+    await page.evaluate(() => window.reviewHarness.resolveCopy("copied"));
+    await page.waitForTimeout(0);
+    stats = await page.evaluate(() => window.reviewHarness.stats());
+    check("review.copy-destroy-during-pending-does-not-update-dom", stats.deferredCopyPending === false
+      && await page.locator("#review-root").evaluate((element) => element.childElementCount === 0), stats);
+  });
+
   await scenario("task-title-search", async () => {
     await open("full");
     const search = page.getByRole("searchbox", { name: "Search task titles", exact: true });

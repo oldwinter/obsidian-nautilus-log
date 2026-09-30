@@ -232,6 +232,7 @@ open `- [ ]` line.
 ### Review
 
 Review compares planned and recorded time for a chosen date.
+Use **Copy review summary** to copy the selected date and its whole-day counts and comparable totals, even when filters hide rows.
 
 ![Review surface](user-guide/images/10-review-tab.png)
 
