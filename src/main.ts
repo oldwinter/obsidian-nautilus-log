@@ -314,6 +314,7 @@ export default class SpiralDayPlugin extends Plugin {
       intentId: () => this.#intentId("review"),
       messages: this.#messages,
       addDisposer: (dispose) => this.register(dispose),
+      copySummary: (text) => copyPlannerSummary({ summary: text }),
       insertPrimaryPlan: () => this.#insertPrimaryPlan(),
     });
 

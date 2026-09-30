@@ -25,6 +25,7 @@ export interface ReviewEntryDependencies {
   readonly intentId: () => string;
   readonly messages: ExecutionMessages;
   readonly addDisposer: (dispose: () => void) => void;
+  readonly copySummary: (text: string) => Promise<"copied" | "failed">;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
@@ -110,6 +111,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
         selectDate: (date) => { void refresh(() => dependencies.selectDate(date)); },
         refresh: () => { void refresh(dependencies.refresh); },
         activate: (key, action) => { void activate(key, action); },
+        copySummary: dependencies.copySummary,
         ...(dependencies.insertPrimaryPlan
           ? {
               insertPrimaryPlan: () => {
@@ -145,6 +147,7 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
           if (destroyed || target !== root) return;
           const opening = nextVisible && !visible;
           visible = nextVisible;
+          view.setVisible(visible);
           if (!visible && timer !== undefined) {
             root.ownerDocument.defaultView?.clearInterval(timer);
             timer = undefined;
