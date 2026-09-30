@@ -236,6 +236,10 @@ Review compares planned and recorded time for a chosen date.
 ![Review surface](user-guide/images/10-review-tab.png)
 
 - **Today** is writable. Past and future dates are read-only.
+- The line below the date controls shows the selected date's weekday in the
+  current locale. It stays paired with the date during loading and unavailable
+  states, and hides while the native date field is blank or has an uncommitted
+  date edit.
 - **Search task titles** filters the list as you type, ignoring case and outer
   spaces. It combines with **Only completed overruns** without changing the day
   summary. Press **Esc** in the search field to clear it. The search stays when

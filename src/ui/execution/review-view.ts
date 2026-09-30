@@ -25,6 +25,7 @@ export class ReviewView {
   readonly #next: HTMLButtonElement;
   readonly #today: HTMLButtonElement;
   readonly #refresh: HTMLButtonElement;
+  readonly #weekday: HTMLTimeElement;
   readonly #onlyOverruns: HTMLInputElement;
   readonly #clearFilters: HTMLButtonElement;
   readonly #search: HTMLInputElement;
@@ -41,6 +42,7 @@ export class ReviewView {
   readonly #rows = new Map<string, ReviewRowView>();
   readonly #actions: ReviewViewActions;
   #selectedDate: LogicalDate;
+  #weekdayFormatter: { readonly locale: ReviewMessages["locale"]; readonly formatter: Intl.DateTimeFormat } | undefined;
   #clearingFilters = false;
 
   constructor(root: HTMLElement, actions: ReviewViewActions) {
@@ -63,12 +65,21 @@ export class ReviewView {
     this.#date = document.createElement("input");
     this.#date.type = "date";
     this.#date.value = dateValue(this.#selectedDate);
+    this.#date.addEventListener("input", () => {
+      if (this.#date.value === dateValue(this.#selectedDate)) return;
+      this.#weekday.dateTime = "";
+      this.#weekday.textContent = "";
+      this.#weekday.hidden = true;
+    });
     this.#date.addEventListener("change", () => {
       const value = this.#date.valueAsDate;
       if (!value || !Number.isFinite(value.getTime())) return;
       this.#selectDate({ year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate() });
     });
     toolbar.append(this.#previous, this.#date, this.#next, this.#today, this.#refresh);
+    this.#weekday = document.createElement("time");
+    this.#weekday.className = "spiral-day-review__weekday";
+    this.#weekday.hidden = true;
     const search = document.createElement("label");
     search.className = "spiral-day-review__search";
     this.#searchLabel = document.createElement("span");
@@ -116,7 +127,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, search, filterRow, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, this.#weekday, search, filterRow, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -143,6 +154,7 @@ export class ReviewView {
     this.#searchLabel.textContent = messages.t("review", "search.label");
     this.#search.placeholder = messages.t("review", "search.placeholder");
     if (this.#search.value !== input.searchQuery) this.#search.value = input.searchQuery;
+    this.#syncSelectedDate(messages.locale, true);
     const query = input.searchQuery.trim().toLowerCase();
     this.#list.setAttribute("aria-label", messages.t("review", "list.label"));
     const reviewReady = review.state === "ready";
@@ -164,8 +176,9 @@ export class ReviewView {
       this.#setInsertGuidance(false, false, "", messages, pending);
       return;
     }
+    const selectedDateChanged = dateValue(this.#selectedDate) !== dateValue(review.displayedDate);
     this.#selectedDate = review.displayedDate;
-    if (this.#date.value !== dateValue(review.displayedDate)) this.#date.value = dateValue(review.displayedDate);
+    this.#syncSelectedDate(messages.locale, !selectedDateChanged);
     const enabled = !pending && execution.status === "ready" && !execution.writeBlocked;
     const summary = review.projection.summary;
     this.#counts.textContent = messages.t("review", "summary.counts", summary);
@@ -290,8 +303,32 @@ export class ReviewView {
 
   #selectDate(date: LogicalDate | null): void {
     this.#selectedDate = date ?? this.#actions.today();
-    this.#date.value = dateValue(this.#selectedDate);
+    this.#syncSelectedDate();
     this.#actions.selectDate(date);
+  }
+
+  #syncSelectedDate(locale?: ReviewMessages["locale"], preserveInvalidEdit = false): void {
+    if (locale !== undefined && this.#weekdayFormatter?.locale !== locale) {
+      this.#weekdayFormatter = {
+        locale,
+        formatter: new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }),
+      };
+    }
+    const value = dateValue(this.#selectedDate);
+    if (preserveInvalidEdit && this.#date.value !== value) {
+      this.#weekday.dateTime = "";
+      this.#weekday.textContent = "";
+      this.#weekday.hidden = true;
+      return;
+    }
+    if (this.#date.value !== value) this.#date.value = value;
+    if (!this.#weekdayFormatter) return;
+    const date = new Date(0);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCFullYear(this.#selectedDate.year, this.#selectedDate.month - 1, this.#selectedDate.day);
+    this.#weekday.dateTime = value;
+    this.#weekday.textContent = this.#weekdayFormatter.formatter.format(date);
+    this.#weekday.hidden = false;
   }
 
   #moveDate(offset: number): void {
