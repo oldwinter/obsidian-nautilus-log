@@ -237,6 +237,11 @@ try {
   const row = (title) => page.locator(".spiral-day-review__row").filter({ hasText: title });
   const metric = async (title, name) => (await row(title).locator(`[data-metric=${name}]`).textContent())?.trim();
   const visibleMutationCount = () => page.locator(".spiral-day-review__actions button:visible").count();
+  const weekdayState = (target = page) => target.locator(".spiral-day-review__weekday").evaluate((element) => ({
+    dateTime: element.getAttribute("datetime"),
+    hidden: element.hidden,
+    text: element.textContent?.trim(),
+  }));
 
   await scenario("states-summary-variance", async () => {
     await open("full");
@@ -254,6 +259,9 @@ try {
     const summary = await page.locator(".spiral-day-review__summary > p").allTextContents();
     check("review.summary-counts", summary[0] === "4/7 completed · 3 compared", summary);
     check("review.summary-compared-only", summary[1] === "Planned 1h 30m · Actual 1h 35m · Variance +5m", summary);
+    const initialWeekday = await weekdayState();
+    check("review.weekday-matches-initial-date", JSON.stringify(initialWeekday) === JSON.stringify({ dateTime: "2026-08-29", hidden: false, text: "Saturday" }), initialWeekday);
+    check("review.weekday-is-nonfocusable-time", await page.locator("time.spiral-day-review__weekday:not([tabindex])").count() === 1, await page.locator(".spiral-day-review__weekday").evaluate((element) => ({ tagName: element.tagName, tabIndex: element.tabIndex })));
     await capture(page, "states-wide-en");
   });
 
@@ -717,8 +725,18 @@ try {
     check("review.locale-preserves-keyed-focus", await handle.evaluate((element) => element.isConnected && document.activeElement === element), await page.evaluate(() => document.activeElement?.textContent));
     check("review.locale-updates-accessible-name", await handle.getAttribute("aria-label") === "打开“Live timer”的来源", await handle.getAttribute("aria-label"));
     check("review.locale-updates-state", (await row("Live timer").locator(".spiral-day-review__state").textContent())?.trim() === "计时中", await row("Live timer").locator(".spiral-day-review__state").textContent());
-    await page.setViewportSize({ width: 360, height: 900 });
-    check("review.narrow-no-horizontal-overflow", await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, innerWidth })));
+    const localizedWeekday = await weekdayState();
+    check("review.locale-updates-weekday", JSON.stringify(localizedWeekday) === JSON.stringify({ dateTime: "2026-08-29", hidden: false, text: "星期六" }), localizedWeekday);
+    await page.setViewportSize({ width: 320, height: 900 });
+    const narrowGeometry = await page.evaluate(() => {
+      const root = document.querySelector("#review-root")?.getBoundingClientRect();
+      const weekday = document.querySelector(".spiral-day-review__weekday")?.getBoundingClientRect();
+      return { innerWidth, scrollWidth: document.documentElement.scrollWidth, root, weekday };
+    });
+    check("review.narrow-no-horizontal-overflow", narrowGeometry.scrollWidth <= narrowGeometry.innerWidth
+      && narrowGeometry.root && narrowGeometry.weekday
+      && narrowGeometry.weekday.left >= narrowGeometry.root.left
+      && narrowGeometry.weekday.right <= narrowGeometry.root.right, narrowGeometry);
     await capture(page, "states-narrow-zh-CN");
   });
 
@@ -760,12 +778,14 @@ try {
 
     await page.getByRole("button", { name: "Previous day", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-28");
+    check("review.previous-pointer-updates-weekday", (await weekdayState()).text === "Friday", await weekdayState());
     check("review.past-date-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
     check("review.past-source-navigation-remains-enabled", await page.getByRole("button", { name: "Open source for Opaque target", exact: true }).isEnabled(), await page.getByRole("button", { name: "Open source for Opaque target", exact: true }).isEnabled());
     await capture(page, "past-read-only");
 
-    await page.getByRole("button", { name: "Next day", exact: true }).click();
+    await page.getByRole("button", { name: "Next day", exact: true }).press("Enter");
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-29");
+    check("review.next-keyboard-updates-weekday", (await weekdayState()).text === "Saturday", await weekdayState());
     check("review.current-date-restores-mutations", await visibleMutationCount() === 2 && await complete.isEnabled() && await clockIn.isEnabled(), {
       visible: await visibleMutationCount(), complete: await complete.isEnabled(), clockIn: await clockIn.isEnabled(),
     });
@@ -773,12 +793,83 @@ try {
     await page.getByRole("button", { name: "Next day", exact: true }).click();
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-30");
     check("review.future-date-hides-mutations", await visibleMutationCount() === 0, await visibleMutationCount());
-    await page.getByRole("button", { name: "Today", exact: true }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).press("Enter");
     await page.waitForFunction(() => document.querySelector("input[type=date]")?.value === "2026-08-29");
     check("review.today-control-selects-current-date", await date.inputValue() === "2026-08-29", await date.inputValue());
+    check("review.today-keyboard-updates-weekday", (await weekdayState()).text === "Saturday", await weekdayState());
     const dateStats = await page.evaluate(() => window.reviewHarness.stats());
     check("review.date-selection-does-not-mutate-plan", dateStats.planToken === "plan-generation-17" && dateStats.planMutations === 0 && dateStats.dispatches.length === 0, dateStats);
     check("review.date-controls-forward-null-for-today", dateStats.selectedDates.at(-1) === null, dateStats.selectedDates);
+  });
+
+  await scenario("weekday-edit-loading-boundaries", async () => {
+    await open("target");
+    const date = page.locator("input[type=date]");
+    const selectedBeforeBlank = await page.evaluate(() => window.reviewHarness.stats().selectedDates.length);
+    await date.evaluate((element) => {
+      element.value = "";
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    const blankWeekday = await weekdayState();
+    check("review.blank-native-edit-hides-weekday", JSON.stringify(blankWeekday) === JSON.stringify({ dateTime: "", hidden: true, text: "" }), blankWeekday);
+    check("review.blank-native-edit-does-not-select", await page.evaluate(() => window.reviewHarness.stats().selectedDates.length) === selectedBeforeBlank, await page.evaluate(() => window.reviewHarness.stats().selectedDates));
+    await page.evaluate(() => window.reviewHarness.setLocale("zh-CN"));
+    await page.evaluate(() => window.reviewHarness.setReviewMode("building"));
+    check("review.blank-edit-stays-hidden-through-locale-and-nonready-render", (await weekdayState()).hidden, await weekdayState());
+
+    await date.evaluate((element) => {
+      element.value = "2024-02-29";
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    check("review.valid-uncommitted-edit-hides-weekday", await date.inputValue() === "2024-02-29" && (await weekdayState()).hidden, { value: await date.inputValue(), weekday: await weekdayState() });
+    await page.evaluate(() => window.reviewHarness.setReviewMode("target"));
+    check("review.same-date-ready-render-preserves-uncommitted-edit", await date.inputValue() === "2024-02-29" && (await weekdayState()).hidden, { value: await date.inputValue(), weekday: await weekdayState() });
+    await date.evaluate((element) => {
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    check("review.valid-native-edit-uses-latest-locale", JSON.stringify(await weekdayState()) === JSON.stringify({ dateTime: "2024-02-29", hidden: false, text: "星期四" }), await weekdayState());
+    await page.evaluate(() => window.reviewHarness.setLocale("en"));
+    await page.evaluate(() => window.reviewHarness.setReviewMode("unavailable"));
+    check("review.unavailable-keeps-date-weekday-paired", JSON.stringify(await weekdayState()) === JSON.stringify({ dateTime: "2024-02-29", hidden: false, text: "Thursday" }), await weekdayState());
+    await page.evaluate(() => window.reviewHarness.setReviewMode("target"));
+    check("review.ready-confirmation-keeps-date-weekday-paired", JSON.stringify(await weekdayState()) === JSON.stringify({ dateTime: "2024-02-29", hidden: false, text: "Thursday" }), await weekdayState());
+
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 2024, month: 3, day: 1 }));
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    check("review.leap-day-navigation", await date.inputValue() === "2024-02-29" && (await weekdayState()).text === "Thursday", { value: await date.inputValue(), weekday: await weekdayState() });
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 101, month: 1, day: 1 }));
+    await page.getByRole("button", { name: "Previous day", exact: true }).click();
+    check("review.minimum-supported-year-boundary", await date.inputValue() === "0100-12-31" && (await weekdayState()).text === "Friday", { value: await date.inputValue(), weekday: await weekdayState() });
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 9998, month: 12, day: 31 }));
+    await page.getByRole("button", { name: "Next day", exact: true }).press("Enter");
+    check("review.maximum-supported-year-boundary", await date.inputValue() === "9999-01-01" && (await weekdayState()).text === "Friday", { value: await date.inputValue(), weekday: await weekdayState() });
+
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 2026, month: 8, day: 30 }));
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 2026, month: 8, day: 29 }));
+    check("review.stale-ready-snapshot-keeps-pair", await date.inputValue() === "2026-08-29" && JSON.stringify(await weekdayState()) === JSON.stringify({ dateTime: "2026-08-29", hidden: false, text: "Saturday" }), { value: await date.inputValue(), weekday: await weekdayState() });
+    await page.evaluate(() => window.reviewHarness.publishReadyDate({ year: 2026, month: 8, day: 30 }));
+    check("review.confirming-ready-snapshot-keeps-pair", await date.inputValue() === "2026-08-30" && JSON.stringify(await weekdayState()) === JSON.stringify({ dateTime: "2026-08-30", hidden: false, text: "Sunday" }), { value: await date.inputValue(), weekday: await weekdayState() });
+  });
+
+  await scenario("weekday-timezones", async () => {
+    for (const [label, timeZone] of [["west", "America/Los_Angeles"], ["east", "Pacific/Kiritimati"]]) {
+      const context = await browser.newContext({ timezoneId: timeZone, viewport: { width: 420, height: 740 } });
+      const zonedPage = await context.newPage();
+      zonedPage.on("console", (message) => report.console.push({ type: message.type(), text: `[${timeZone}] ${message.text()}` }));
+      zonedPage.on("pageerror", (error) => report.pageErrors.push({ message: `[${timeZone}] ${error.message}`, stack: error.stack }));
+      await zonedPage.goto(baseUrl, { waitUntil: "networkidle" });
+      await zonedPage.waitForFunction(() => window.reviewHarnessReady === true);
+      await zonedPage.evaluate(() => {
+        window.reviewHarness.setReviewMode("target", false);
+        window.reviewHarness.show();
+        window.reviewHarness.publishReadyDate({ year: 2024, month: 3, day: 1 });
+      });
+      const state = await weekdayState(zonedPage);
+      const value = await zonedPage.getByLabel("Review date", { exact: true }).inputValue();
+      check(`review.weekday-${label}-timezone-stable`, value === "2024-03-01"
+        && JSON.stringify(state) === JSON.stringify({ dateTime: "2024-03-01", hidden: false, text: "Friday" }), { timeZone, value, state });
+      await context.close();
+    }
   });
 
   report.browser.userAgent = await page.evaluate(() => navigator.userAgent);
