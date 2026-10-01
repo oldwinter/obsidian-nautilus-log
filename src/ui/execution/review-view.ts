@@ -28,6 +28,7 @@ export class ReviewView {
   readonly #onlyOverruns: HTMLInputElement;
   readonly #clearFilters: HTMLButtonElement;
   readonly #search: HTMLInputElement;
+  readonly #clearSearch: HTMLButtonElement;
   readonly #searchLabel: HTMLElement;
   readonly #filterLabel: HTMLElement;
   readonly #filterStatus: HTMLElement;
@@ -82,7 +83,16 @@ export class ReviewView {
       this.#search.value = "";
       actions.setSearchQuery("");
     });
+    const searchControls = document.createElement("div");
+    searchControls.className = "spiral-day-review__search-controls";
+    this.#clearSearch = button(() => {
+      this.#search.value = "";
+      actions.setSearchQuery("");
+      this.#search.focus({ preventScroll: true });
+    });
+    this.#clearSearch.hidden = true;
     search.append(this.#searchLabel, this.#search);
+    searchControls.append(search, this.#clearSearch);
     const filter = document.createElement("label");
     filter.className = "spiral-day-review__filter";
     this.#onlyOverruns = document.createElement("input");
@@ -116,7 +126,7 @@ export class ReviewView {
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
-    root.replaceChildren(toolbar, search, filterRow, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
+    root.replaceChildren(toolbar, searchControls, filterRow, this.#status, this.#guidance, this.#summary, this.#filterStatus, this.#list);
   }
 
   render(input: {
@@ -142,6 +152,11 @@ export class ReviewView {
     this.#onlyOverruns.checked = input.onlyOverruns;
     this.#searchLabel.textContent = messages.t("review", "search.label");
     this.#search.placeholder = messages.t("review", "search.placeholder");
+    this.#clearSearch.textContent = messages.t("review", "search.clear");
+    if (input.searchQuery === "" && this.#root.ownerDocument.activeElement === this.#clearSearch) {
+      this.#search.focus({ preventScroll: true });
+    }
+    this.#clearSearch.hidden = input.searchQuery === "";
     if (this.#search.value !== input.searchQuery) this.#search.value = input.searchQuery;
     const query = input.searchQuery.trim().toLowerCase();
     this.#list.setAttribute("aria-label", messages.t("review", "list.label"));

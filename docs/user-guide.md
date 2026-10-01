@@ -238,7 +238,9 @@ Review compares planned and recorded time for a chosen date.
 - **Today** is writable. Past and future dates are read-only.
 - **Search task titles** filters the list as you type, ignoring case and outer
   spaces. It combines with **Only completed overruns** without changing the day
-  summary. Press **Esc** in the search field to clear it. The search stays when
+  summary. Press **Esc** in the search field or select **Clear search** to clear
+  only the title search, keeping the overrun filter. The button returns focus
+  to the search field. The search stays when
   changing dates, switching tabs, or reopening the panel. Reloading the plugin
   resets it.
 - **Only completed overruns** hides everything except completed tasks whose
