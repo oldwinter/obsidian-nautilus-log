@@ -4,7 +4,7 @@ Status: proposed. Owner: oldwinter. Proposed on 2026-10-02.
 Class: HOST. Linked requirement: UP-EXE-08.
 
 The upstream Review title-navigation workflow is recorded in
-[Execution research](../research/execution-layer.md#review-state-machine).
+`docs/research/execution-layer.md`, under Review state machine.
 The Obsidian adapter already offers local title search and a Clear filters
 control. This proposal adds Clear search beside the title search field so
 pointer users can clear only that query without losing the overrun filter.
