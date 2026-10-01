@@ -339,6 +339,53 @@ try {
     check("review.search-second-escape-closes-panel", !await search.isVisible(), await search.isVisible());
   });
 
+  await scenario("clear-search-only", async () => {
+    for (const [locale, searchName, clearName, filterName] of [
+      ["en", "Search task titles", "Clear search", "Only completed overruns"],
+      ["zh-CN", "搜索任务标题", "清除搜索", "只看已完成的超时任务"],
+    ]) {
+      await open("full");
+      await page.evaluate((value) => window.reviewHarness.setLocale(value), locale);
+      await page.setViewportSize({ width: locale === "en" ? 900 : 320, height: 900 });
+      const search = page.getByRole("searchbox", { name: searchName, exact: true });
+      const clear = page.getByRole("button", { name: clearName, exact: true });
+      const filter = page.getByRole("checkbox", { name: filterName, exact: true });
+      check(`review.clear-search-${locale}-hidden-empty`, !await clear.isVisible(), await clear.count());
+      const summary = await page.locator(".spiral-day-review__summary").textContent();
+      const before = await page.evaluate(() => window.reviewHarness.stats());
+      await filter.check();
+      await search.fill("no matching title");
+      await clear.click();
+      check(`review.clear-search-${locale}-pointer-preserves-overruns`, await search.inputValue() === ""
+        && await filter.isChecked()
+        && JSON.stringify(await page.locator(".spiral-day-review__title").allTextContents()) === JSON.stringify(["Positive variance"])
+        && await search.evaluate((element) => element === document.activeElement)
+        && !await clear.isVisible(), await page.locator(".spiral-day-review__title").allTextContents());
+      await search.fill("   ");
+      await search.press("Tab");
+      check(`review.clear-search-${locale}-tab-reaches-button`, await clear.evaluate((element) => element === document.activeElement), await search.inputValue());
+      await clear.press("Enter");
+      check(`review.clear-search-${locale}-keyboard-clears-whitespace`, await search.inputValue() === ""
+        && await filter.isChecked() && await search.evaluate((element) => element === document.activeElement), await search.inputValue());
+      await search.fill("variance");
+      const bounds = await page.locator(".spiral-day-review__search-controls").boundingBox();
+      const buttonBounds = await clear.boundingBox();
+      check(`review.clear-search-${locale}-fits`, bounds && buttonBounds && buttonBounds.x + buttonBounds.width <= bounds.x + bounds.width + 1
+        && await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), { bounds, buttonBounds });
+      await clear.focus();
+      await page.evaluate(() => {
+        const input = document.querySelector("input[type=search]");
+        input.value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      check(`review.clear-search-${locale}-hidden-focus-recovered`, !await clear.isVisible()
+        && await search.evaluate((element) => element === document.activeElement), await clear.isVisible());
+      const after = await page.evaluate(() => window.reviewHarness.stats());
+      check(`review.clear-search-${locale}-no-side-effects`, JSON.stringify(after) === JSON.stringify(before)
+        && await page.locator(".spiral-day-review__summary").textContent() === summary, { before, after });
+    }
+  });
+
   await scenario("clear-filters", async () => {
     const titles = () => page.locator(".spiral-day-review__title").allTextContents();
     const clear = () => page.getByRole("button", { name: "Clear filters", exact: true });
