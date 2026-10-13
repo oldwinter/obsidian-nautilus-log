@@ -213,6 +213,11 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
   const heading = executionElement(root.ownerDocument, "h3");
   heading.textContent = options.messages.t("execution", "plan.scheduled");
   scheduled.append(heading);
+  // Mirror the unscheduled disclosure summary so a full day is scannable:
+  // entry count plus summed scheduled minutes. Shown only when the schedule
+  // placed something; empty states already explain themselves.
+  const scheduledMinutes = (entries: readonly { start: number; end: number }[]): number =>
+    entries.reduce((total, entry) => total + Math.max(0, entry.end - entry.start), 0);
   const list = executionElement(root.ownerDocument, "ul", "spiral-day-execution__rows");
   const placed = new Set<string>();
   const intervals = [
@@ -227,6 +232,14 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       end: entry.endMinutes,
     })),
   ].sort((left, right) => left.start - right.start || left.item.sourceOrder - right.item.sourceOrder);
+  if (intervals.length > 0) {
+    const summary = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
+    summary.textContent = options.messages.t("execution", "plan.scheduledSummary", {
+      count: intervals.length,
+      duration: formatMinutes(options.messages, scheduledMinutes(intervals)),
+    });
+    scheduled.append(summary);
+  }
   for (const interval of intervals) {
     placed.add(taskKey(interval.item));
     appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);

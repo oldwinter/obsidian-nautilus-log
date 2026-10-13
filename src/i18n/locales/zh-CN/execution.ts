@@ -42,6 +42,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "plan.unavailableDetail": "请保存日记并刷新。如果还是这样，请检查 设置 → Spiral Day 中的日记文件夹和日期格式，或从功能区打开规划器。",
   "plan.capacity": "容量",
   "plan.range": ({ start, end }) => `${start}–${end}`,
+  "plan.scheduledSummary": ({ count, duration }) => `${count} 项 · ${duration}`,
   "plan.unscheduledSummary": ({ count, duration }) => `${count} 项 · ${duration}`,
   "plan.remaining": ({ remaining, planned }) => `剩余 ${remaining} · 计划 ${planned}`,
   "review.pending": "正在准备回顾。",

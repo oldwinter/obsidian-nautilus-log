@@ -42,6 +42,7 @@ export type ExecutionCatalog = Readonly<{
   "plan.unavailableDetail": string;
   "plan.capacity": string;
   "plan.range": MessageFunction<{ start: string; end: string }>;
+  "plan.scheduledSummary": MessageFunction<{ count: number; duration: string }>;
   "plan.unscheduledSummary": MessageFunction<{ count: number; duration: string }>;
   "plan.remaining": MessageFunction<{ remaining: string; planned: string }>;
   "review.pending": string;
@@ -174,6 +175,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.unavailableDetail": "Save the Daily Note and refresh. If this keeps happening, check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon.",
   "plan.capacity": "Capacity",
   "plan.range": ({ start, end }) => `${start}–${end}`,
+  "plan.scheduledSummary": ({ count, duration }) => `${count} · ${duration}`,
   "plan.unscheduledSummary": ({ count, duration }) => `${count} · ${duration}`,
   "plan.remaining": ({ remaining, planned }) => `${remaining} remaining · ${planned} planned`,
   "review.pending": "Review is being prepared.",
