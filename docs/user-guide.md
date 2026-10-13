@@ -217,6 +217,8 @@ Plan.
   task at 100%.
 - Scheduled rows with partial progress also show remaining vs planned
   duration.
+- The **Scheduled** heading carries a muted count and summed scheduled time
+  (for example `2 · 2h 15m`) so a full day is scannable without counting rows.
 - Reopen a completed task from Planner, not from this tab.
 
 If the tab says **No Primary Plan was found today**, use **Insert into today's

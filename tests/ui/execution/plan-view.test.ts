@@ -323,3 +323,103 @@ for (const locale of ["en", "zh-CN"]) {
     assert.ok(collectText(root).includes(locale === "en" ? "Shortest remaining first" : "剩余用时短的优先"));
   });
 }
+
+function scheduledSummary(locale: string, slots: ReadonlyArray<{ task: typeof partialTask; startMinutes: number; endMinutes: number }>): string | null {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale,
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  const items = slots.map((slot) => slot.task);
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        items,
+        schedule: {
+          fixedEvents: slots
+            .filter((slot) => slot.task.kind === "fixed-event")
+            .map((slot) => ({ event: slot.task, startMinutes: slot.startMinutes, endMinutes: slot.endMinutes })),
+          plannedSlots: slots
+            .filter((slot) => slot.task.kind !== "fixed-event")
+            .map((slot) => ({ task: slot.task, startMinutes: slot.startMinutes, endMinutes: slot.endMinutes })),
+        },
+      },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  const section = root.querySelector(".spiral-day-execution__plan-section");
+  assert.ok(section);
+  const summary = section.children.find((child) => child.className === "spiral-day-execution__muted");
+  return summary?.textContent ?? null;
+}
+
+for (const [locale, expected] of [
+  ["en", "2 · 2h 15m"],
+  ["zh-CN", "2 项 · 2小时15分钟"],
+] as const) {
+  test(`Plan scheduled section summarizes entry count and summed time in ${locale}`, () => {
+    const standup = {
+      ...partialTask,
+      label: "Stand-up",
+      sourceOrder: 0,
+      source: { ...partialTask.source, sourceOrder: 0, blockId: "task-0" },
+    };
+    const draft = {
+      ...partialTask,
+      label: "Write a draft",
+      sourceOrder: 1,
+      source: { ...partialTask.source, sourceOrder: 1, blockId: "task-1" },
+    };
+    assert.equal(
+      scheduledSummary(locale, [
+        { task: standup, startMinutes: 540, endMinutes: 585 },
+        { task: draft, startMinutes: 600, endMinutes: 690 },
+      ]),
+      expected,
+    );
+  });
+}
+
+test("Plan scheduled section omits the summary when nothing is scheduled", () => {
+  const doneTask = {
+    ...partialTask,
+    status: "done" as const,
+    progressPercent: 100,
+    remainingDurationMinutes: 0,
+    executionEligible: false,
+  };
+  assert.equal(scheduledSummary("en", []), null);
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: { items: [doneTask], schedule: { fixedEvents: [], plannedSlots: [] } },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  const section = root.querySelector(".spiral-day-execution__plan-section");
+  assert.ok(section);
+  assert.equal(
+    section.children.some((child) => child.className === "spiral-day-execution__muted"),
+    false,
+  );
+});
