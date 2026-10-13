@@ -323,3 +323,131 @@ for (const locale of ["en", "zh-CN"]) {
     assert.ok(collectText(root).includes(locale === "en" ? "Shortest remaining first" : "剩余用时短的优先"));
   });
 }
+
+for (const locale of ["en", "zh-CN"]) {
+  test(`Plan hides completed scheduled tasks behind a toggle in ${locale}`, () => {
+    const document = new DocumentStub();
+    const root = document.createElement();
+    const openTask = {
+      ...partialTask,
+      label: "Open task",
+      sourceOrder: 0,
+      source: { ...partialTask.source, sourceOrder: 0, blockId: "task-open" },
+    };
+    const doneTask = {
+      ...partialTask,
+      label: "Done task",
+      status: "done" as const,
+      progressPercent: 100,
+      remainingDurationMinutes: 0,
+      executionEligible: false,
+      sourceOrder: 1,
+      source: { ...partialTask.source, sourceOrder: 1, blockId: "task-done" },
+    };
+    const items = Object.freeze([openTask, doneTask]);
+    let hideCompleted = false;
+    const options: PlanViewOptions = {
+      nowEpochMs: 0,
+      messages: createMessages({ locale, namespaces: {
+        execution: defineLocaleNamespace("execution", enExecution, zhCNExecution),
+      } }),
+      pending: new Set(), renderIcon: () => {},
+      dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+      navigateTask: () => assert.fail("Rendering must not navigate"),
+      setHideCompleted: (enabled) => { hideCompleted = enabled; },
+      execution: { writeBlocked: false } as PlanViewOptions["execution"],
+      snapshot: { state: "confirmed", projection: {
+        sourceFingerprint: "hide-completed",
+        items,
+        schedule: { fixedEvents: [], plannedSlots: [
+          { task: openTask, startMinutes: 600, endMinutes: 630 },
+          { task: doneTask, startMinutes: 630, endMinutes: 660 },
+        ] },
+      } } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+    };
+    const scheduledTitles = (): string[] => {
+      const section = root.children[0]!;
+      const list = section.children.find((child) => child.className === "spiral-day-execution__rows");
+      return list?.children.map((row) => row.querySelector(".spiral-day-execution__task-title")!.textContent) ?? [];
+    };
+    renderPlanView(root as unknown as HTMLElement, { ...options, hideCompleted });
+    assert.deepEqual(scheduledTitles(), ["Open task", "Done task"]);
+    const toggle = root.querySelector(".spiral-day-execution__hide-completed")!;
+    toggle.focus();
+    toggle.checked = true;
+    toggle.fire("change");
+    assert.equal(hideCompleted, true);
+    assert.deepEqual(scheduledTitles(), ["Open task"]);
+    assert.equal(document.activeElement?.className, "spiral-day-execution__hide-completed");
+    assert.ok(collectText(root).includes(locale === "en" ? "Hide completed" : "隐藏完成项"));
+  });
+}
+
+test("Plan shows a muted note when every scheduled task is completed and hidden", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  const doneTask = {
+    ...partialTask,
+    label: "Done task",
+    status: "done" as const,
+    progressPercent: 100,
+    remainingDurationMinutes: 0,
+    executionEligible: false,
+  };
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    hideCompleted: true,
+    setHideCompleted: () => {},
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        sourceFingerprint: "hide-completed-all-done",
+        items: [doneTask],
+        schedule: { fixedEvents: [], plannedSlots: [{ task: doneTask, startMinutes: 600, endMinutes: 630 }] },
+      },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  const text = collectText(root).join("\n");
+  assert.match(text, /Completed scheduled tasks are hidden/);
+  assert.equal(text.includes("Done task"), false);
+  const toggle = root.querySelector(".spiral-day-execution__hide-completed")!;
+  assert.equal(toggle.checked, true);
+});
+
+test("Plan omits the hide-completed toggle when nothing scheduled is done", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        sourceFingerprint: "hide-completed-none-done",
+        items: [partialTask],
+        schedule: { fixedEvents: [], plannedSlots: [{ task: partialTask, startMinutes: 600, endMinutes: 645 }] },
+      },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  assert.equal(root.querySelector(".spiral-day-execution__hide-completed"), null);
+  assert.ok(collectText(root).join("\n").includes("Write a draft"));
+});

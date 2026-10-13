@@ -672,12 +672,14 @@
   padding-inline: 4px;
 }
 
-.spiral-day-execution__shortest-first {
+.spiral-day-execution__shortest-first,
+.spiral-day-execution__hide-completed {
   accent-color: var(--spiral-day-execution-focus);
   flex-shrink: 0;
 }
 
-.spiral-day-execution__shortest-first:focus-visible {
+.spiral-day-execution__shortest-first:focus-visible,
+.spiral-day-execution__hide-completed:focus-visible {
   outline: 2px solid var(--spiral-day-execution-focus);
   outline-offset: 3px;
 }

@@ -31,6 +31,8 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "timing.pending": "正在确认更改",
   "plan.scheduled": "已排期",
   "plan.shortestFirst": "剩余用时短的优先",
+  "plan.hideCompleted": "隐藏完成项",
+  "plan.completedHidden": "已隐藏排期中的完成项。",
   "plan.unscheduled": "今日未排期",
   "plan.noPrimary": "今天没有找到主计划。",
   "plan.noPrimaryDetail": "请点「写入今日日记」，或把主计划标记写进今日日记并保存。下一步列在下面。",
