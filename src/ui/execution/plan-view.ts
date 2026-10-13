@@ -39,6 +39,8 @@ export interface PlanViewOptions {
   ) => void;
   readonly shortestFirst?: boolean;
   readonly setShortestFirst?: (enabled: boolean) => void;
+  readonly hideCompleted?: boolean;
+  readonly setHideCompleted?: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
@@ -177,6 +179,8 @@ function appendState(root: HTMLElement, heading: string, detail: string): void {
 export function renderPlanView(root: HTMLElement, options: PlanViewOptions): void {
   const previousSort = root.querySelector(".spiral-day-execution__shortest-first");
   const sortHadFocus = previousSort !== null && root.ownerDocument.activeElement === previousSort;
+  const previousHide = root.querySelector(".spiral-day-execution__hide-completed");
+  const hideHadFocus = previousHide !== null && root.ownerDocument.activeElement === previousHide;
   const unscheduledOpen = root
     .querySelector<HTMLDetailsElement>(".spiral-day-execution__unscheduled")
     ?.open ?? false;
@@ -227,9 +231,32 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       end: entry.endMinutes,
     })),
   ].sort((left, right) => left.start - right.start || left.item.sourceOrder - right.item.sourceOrder);
+  const hideCompleted = options.hideCompleted ?? false;
+  const hasCompletedScheduled = intervals.some((interval) => interval.item.status === "done");
+  const visibleIntervals = hideCompleted
+    ? intervals.filter((interval) => interval.item.status !== "done")
+    : intervals;
   for (const interval of intervals) {
     placed.add(taskKey(interval.item));
+  }
+  for (const interval of visibleIntervals) {
     appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);
+  }
+  let hideToggle: HTMLInputElement | undefined;
+  if (hasCompletedScheduled) {
+    const hideLabel = executionElement(root.ownerDocument, "label", "spiral-day-execution__sort");
+    hideToggle = executionElement(root.ownerDocument, "input", "spiral-day-execution__hide-completed");
+    hideToggle.type = "checkbox";
+    hideToggle.checked = hideCompleted;
+    const toggle = hideToggle;
+    toggle.addEventListener("change", () => {
+      options.setHideCompleted?.(toggle.checked);
+      renderPlanView(root, { ...options, hideCompleted: toggle.checked });
+    });
+    const text = executionElement(root.ownerDocument, "span");
+    text.textContent = options.messages.t("execution", "plan.hideCompleted");
+    hideLabel.append(toggle, text);
+    scheduled.append(hideLabel);
   }
   if (intervals.length === 0) {
     if (projection.items.length === 0) {
@@ -244,6 +271,10 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       appendCopySampleAction(empty, options.messages);
       scheduled.append(empty);
     }
+  } else if (visibleIntervals.length === 0) {
+    const empty = executionElement(root.ownerDocument, "p", "spiral-day-execution__muted");
+    empty.textContent = options.messages.t("execution", "plan.completedHidden");
+    scheduled.append(empty);
   } else scheduled.append(list);
 
   const unscheduledItems = projection.items.filter((item) =>
@@ -298,5 +329,6 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     unscheduled.append(empty);
   } else unscheduled.append(unscheduledList);
   root.append(scheduled, unscheduled);
-  if (sortHadFocus) (sortToggle ?? summary).focus();
+  if (hideHadFocus) (hideToggle ?? summary).focus();
+  else if (sortHadFocus) (sortToggle ?? summary).focus();
 }

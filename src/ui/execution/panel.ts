@@ -167,6 +167,7 @@ export function mountExecutionPanel(
   let recent: readonly ExecutionRecentTask[] = Object.freeze([]);
   let lastTab: ExecutionPanelTab = options.initialTab ?? "timing";
   let shortestFirst = false;
+  let hideCompletedPlan = false;
   let opened = false;
   let destroyed = false;
   let timer: number | undefined;
@@ -360,6 +361,8 @@ export function mountExecutionPanel(
     renderPlanView(planPanel, {
       shortestFirst,
       setShortestFirst: (enabled) => { shortestFirst = enabled; },
+      hideCompleted: hideCompletedPlan,
+      setHideCompleted: (enabled) => { hideCompletedPlan = enabled; },
       nowEpochMs: port.now(),
       ...(plan ? { snapshot: plan } : {}),
       execution,

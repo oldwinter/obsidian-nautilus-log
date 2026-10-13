@@ -26,6 +26,8 @@ Foundation version: `0.1.0`
   indicator.
 - Sort unscheduled Plan tasks by shortest remaining time to find a quick task
   for a spare moment. Turn the toggle off to restore note order.
+- Hide completed tasks on the Plan tab to focus on what is left. Turn the
+  toggle off to bring them back.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
 - Compare planned and recorded time in Review, search task titles, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review

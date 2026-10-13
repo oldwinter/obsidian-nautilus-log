@@ -32,6 +32,8 @@ export type ExecutionCatalog = Readonly<{
   "plan.scheduled": string;
   "plan.unscheduled": string;
   "plan.shortestFirst": string;
+  "plan.hideCompleted": string;
+  "plan.completedHidden": string;
   "plan.noPrimary": string;
   "plan.noPrimaryDetail": string;
   "plan.noTasks": string;
@@ -163,6 +165,8 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.pending": "Confirming change",
   "plan.scheduled": "Scheduled",
   "plan.shortestFirst": "Shortest remaining first",
+  "plan.hideCompleted": "Hide completed",
+  "plan.completedHidden": "Completed scheduled tasks are hidden.",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
   "plan.noPrimaryDetail": "Use Insert into today's Daily Note, or add the Primary Plan markers to today's Daily Note and save. The next steps are listed below.",
