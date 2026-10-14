@@ -191,7 +191,8 @@ panel opens on **Timing**.
   task** on the Plan tab if the list is empty or every task is done, then
   Clock In from Plan or the editor. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
-  forgotten-timer warning.
+  forgotten-timer warning. The active task also names when the CLOCK started,
+  so a warning that it may have been left running is easy to place.
 - Recent: closed CLOCKs kept for the configured retention window. Click the
   clock icon beside an open recent task to start timing it again without
   leaving the Timing tab.

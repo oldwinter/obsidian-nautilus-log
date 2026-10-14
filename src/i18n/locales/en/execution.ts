@@ -29,6 +29,7 @@ export type ExecutionCatalog = Readonly<{
   "timing.noRecent": string;
   "timing.deleteConfirm": string;
   "timing.pending": string;
+  "timing.startedAt": MessageFunction<{ time: string }>;
   "plan.scheduled": string;
   "plan.unscheduled": string;
   "plan.shortestFirst": string;
@@ -161,6 +162,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.noRecent": "No recently timed tasks.",
   "timing.deleteConfirm": "Activate again to delete this CLOCK.",
   "timing.pending": "Confirming change",
+  "timing.startedAt": ({ time }) => `Started at ${time}`,
   "plan.scheduled": "Scheduled",
   "plan.shortestFirst": "Shortest remaining first",
   "plan.unscheduled": "Unscheduled today",
