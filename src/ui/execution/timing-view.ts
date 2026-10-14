@@ -68,6 +68,12 @@ function thresholdReached(snapshot: ExecutionApplicationSnapshot, nowEpochMs: nu
     && nowEpochMs - startEpochMs >= snapshot.pomoThresholdMinutes * 60_000;
 }
 
+function formatClockStart(epochMs: number): string | null {
+  if (!Number.isFinite(epochMs)) return null;
+  const started = new Date(epochMs);
+  return `${String(started.getHours()).padStart(2, "0")}:${String(started.getMinutes()).padStart(2, "0")}`;
+}
+
 function titleButton(
   parent: HTMLElement,
   label: string,
@@ -187,7 +193,16 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     if (snapshot.execution.kind === "forgotten") {
       current.dataset.forgotten = "true";
     }
-    heading.append(elapsed);
+    const meta = root.ownerDocument.createElement("span");
+    meta.append(elapsed);
+    const startedAt = formatClockStart(focused.clock.startEpochMs);
+    if (startedAt !== null) {
+      const started = executionElement(root.ownerDocument, "time", "spiral-day-execution__row-meta");
+      started.dateTime = new Date(focused.clock.startEpochMs).toISOString();
+      started.textContent = messages.t("execution", "timing.startedAt", { time: startedAt });
+      meta.append(" ", started);
+    }
+    heading.append(meta);
 
     const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__actions");
     const openActiveTask = executionIconButton({

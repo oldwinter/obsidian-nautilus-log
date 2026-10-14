@@ -27,6 +27,8 @@ Foundation version: `0.1.0`
 - Sort unscheduled Plan tasks by shortest remaining time to find a quick task
   for a spare moment. Turn the toggle off to restore note order.
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
+  Timing shows when the current CLOCK started, so a forgotten-timer warning is
+  easy to place.
 - Compare planned and recorded time in Review, search task titles, filter to completed overruns, and
   recover from stale, conflicting, or unavailable timing data. The Review
   summary still covers the whole day.
