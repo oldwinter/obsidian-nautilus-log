@@ -108,6 +108,9 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
   article.setAttribute("aria-label", `${options.messages.t("execution", "active.title")}: ${focused.label}`);
   const title = executionElement(root.ownerDocument, "h2");
   title.textContent = focused.label;
+  const source = executionElement(root.ownerDocument, "p", "spiral-day-active-task__source");
+  source.textContent = focused.path;
+  source.title = focused.path;
   const timing = executionElement(root.ownerDocument, "div", "spiral-day-active-task__timing");
   const timingLabel = executionElement(root.ownerDocument, "span");
   timingLabel.textContent = options.messages.t("execution", "active.elapsed");
@@ -140,7 +143,7 @@ export function renderActiveTaskSurface(root: HTMLElement, options: ActiveTaskSu
   clockOut.disabled = options.snapshot.writeBlocked;
   const actions = executionElement(root.ownerDocument, "div", "spiral-day-active-task__actions");
   actions.append(open, copy, clockOut);
-  article.append(title, timing, actions);
+  article.append(title, source, timing, actions);
   root.append(article);
   updateActiveTaskElapsed(root, options.snapshot, options.nowEpochMs);
 }

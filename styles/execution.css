@@ -567,6 +567,14 @@
   line-height: 20px;
 }
 
+.spiral-day-active-task__source {
+  color: var(--text-muted, #626b78);
+  font-size: 11px;
+  line-height: 16px;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
 .spiral-day-active-task__timing {
   align-items: baseline;
   color: var(--text-muted, #626b78);
