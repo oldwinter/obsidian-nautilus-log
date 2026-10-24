@@ -109,8 +109,8 @@ surface is empty, stale, blocked, or unavailable.
   whose recorded time exceeded their plan. The summary still covers the whole
   day.
 - **Active Task:** the singleton view in the right sidebar. It follows the
-  current task, opens its source line, copies an Obsidian block link, and offers
-  Clock Out when a valid CLOCK is running.
+  current task, shows its source note, opens its source line, copies an Obsidian
+  block link, and offers Clock Out when a valid CLOCK is running.
 - **Command palette:** the three commands begin with `Spiral Day:` and Clock
   in the current task, Clock out the current task, or locate the Primary Plan.
 - **Editor menu:** with Execution enabled, right-click an eligible plan item to

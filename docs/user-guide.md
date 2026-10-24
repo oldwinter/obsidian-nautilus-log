@@ -259,7 +259,8 @@ Review compares planned and recorded time for a chosen date.
 ### Active Task
 
 This singleton view lives in the right sidebar. It follows the current CLOCK,
-opens the source line, copies an Obsidian block link, and offers Clock Out.
+shows the full path of its source note, opens the source line, copies an
+Obsidian block link, and offers Clock Out.
 
 If **Keep Active Task first in the right sidebar** is on, a successful Clock
 In opens this view. If Clock In succeeds but the sidebar cannot open, the
