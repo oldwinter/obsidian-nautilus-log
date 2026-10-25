@@ -3,10 +3,13 @@ import type {
   ExecutionApplicationSnapshot,
   ExecutionClockReference,
 } from "../../runtime/execution/application";
+import type { RuntimePlanProjection } from "../../runtime/projection-runtime";
+import type { RuntimeSnapshot } from "../../runtime/snapshots";
 import {
   executionElement,
   executionIconButton,
   formatExecutionDuration,
+  formatExecutionClockMinute,
   type ExecutionIconRenderer,
   type ExecutionMessages,
 } from "./shared-controls";
@@ -18,6 +21,18 @@ export interface ExecutionRecentTask {
   readonly sourceOrder: number;
   readonly label: string;
   readonly actualMinutes: number;
+}
+
+export interface ExecutionUpNextTask {
+  readonly key: string;
+  readonly ownerId: string | null;
+  readonly path: string;
+  readonly sourceOrder: number;
+  readonly label: string;
+  readonly startMinutes: number;
+  readonly endMinutes: number;
+  readonly remainingMinutes: number;
+  readonly sourceFingerprint: string;
 }
 
 export function recentTaskClockInIntent(
@@ -36,9 +51,57 @@ export function recentTaskClockInIntent(
   });
 }
 
+export function selectUpNextTask(
+  plan: RuntimeSnapshot<RuntimePlanProjection> | undefined,
+): ExecutionUpNextTask | undefined {
+  if (plan?.state !== "confirmed" || plan.projection.day.relation !== "today") return undefined;
+  const entry = plan.projection.schedule.plannedSlots
+    .filter(({ task }) =>
+      task.kind === "flexible-task"
+      && task.status === "open"
+      && task.executionEligible
+      && Number.isFinite(task.remainingDurationMinutes)
+      && task.remainingDurationMinutes > 0)
+    .slice()
+    .sort((left, right) =>
+      left.startMinutes - right.startMinutes
+      || left.endMinutes - right.endMinutes
+      || left.task.sourceOrder - right.task.sourceOrder)[0];
+  if (!entry) return undefined;
+  const { task } = entry;
+  return Object.freeze({
+    key: task.source.blockId ?? `${task.source.path}:${task.source.sourceOrder}`,
+    ownerId: task.source.blockId,
+    path: task.source.path,
+    sourceOrder: task.source.sourceOrder,
+    label: task.label,
+    startMinutes: entry.startMinutes,
+    endMinutes: entry.endMinutes,
+    remainingMinutes: task.remainingDurationMinutes,
+    sourceFingerprint: plan.projection.sourceFingerprint,
+  });
+}
+
+export function upNextClockInIntent(
+  task: ExecutionUpNextTask,
+  nowEpochMs: number,
+): Extract<ExecutionApplicationIntent, { readonly type: "clock-in" }> {
+  return Object.freeze({
+    type: "clock-in" as const,
+    intentId: `clock-in-next-${task.key}-${nowEpochMs}`,
+    target: Object.freeze({
+      path: task.path,
+      ownerId: task.ownerId,
+      sourceOrder: task.sourceOrder,
+      sourceFingerprint: task.sourceFingerprint,
+    }),
+  });
+}
+
 export interface TimingViewOptions {
   readonly nowEpochMs: number;
   readonly snapshot: ExecutionApplicationSnapshot;
+  readonly plan?: RuntimeSnapshot<RuntimePlanProjection>;
   readonly recent: readonly ExecutionRecentTask[];
   readonly pending: ReadonlySet<string>;
   readonly messages: ExecutionMessages;
@@ -66,6 +129,10 @@ function thresholdReached(snapshot: ExecutionApplicationSnapshot, nowEpochMs: nu
   return startEpochMs !== null
     && snapshot.pomoThresholdMinutes > 0
     && nowEpochMs - startEpochMs >= snapshot.pomoThresholdMinutes * 60_000;
+}
+
+function pendingKey(task: ExecutionUpNextTask): string {
+  return `task:${task.ownerId ?? `${task.path}:${task.sourceOrder}`}`;
 }
 
 function titleButton(
@@ -113,9 +180,51 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
     heading.textContent = messages.t("execution", "timing.idle");
     const detail = executionElement(root.ownerDocument, "p");
     detail.textContent = messages.t("execution", "timing.noActive");
-    const next = executionElement(root.ownerDocument, "p", "spiral-day-onboarding__next");
-    next.textContent = messages.t("execution", "timing.nextAction");
-    empty.append(heading, detail, next);
+    empty.append(heading, detail);
+    const upNext = snapshot.status === "ready" && snapshot.standalonePomoStartEpochMs === null
+      ? selectUpNextTask(options.plan)
+      : undefined;
+    if (upNext) {
+      const card = executionElement(root.ownerDocument, "article", "spiral-day-execution__up-next");
+      const label = executionElement(root.ownerDocument, "span", "spiral-day-execution__section-label");
+      label.textContent = messages.t("execution", "timing.upNext");
+      const cardHeading = executionElement(root.ownerDocument, "div", "spiral-day-execution__current-heading");
+      titleButton(cardHeading, upNext.label, () => options.navigateTask(upNext, "main"));
+      const meta = executionElement(root.ownerDocument, "span", "spiral-day-execution__row-meta");
+      meta.textContent = messages.t("execution", "timing.upNextMeta", {
+        range: messages.t("execution", "plan.range", {
+          start: formatExecutionClockMinute(upNext.startMinutes),
+          end: formatExecutionClockMinute(upNext.endMinutes),
+        }),
+        duration: messages.t("shared", "unit.duration", { minutes: upNext.remainingMinutes }),
+      });
+      const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__actions");
+      const clockIn = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.clockIn"),
+        icon: "clock",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__primary-action",
+        onActivate: () => options.dispatch(upNextClockInIntent(upNext, options.nowEpochMs)),
+      });
+      appendPending(clockIn, options.pending.has(pendingKey(upNext)), messages);
+      if (snapshot.writeBlocked) clockIn.disabled = true;
+      const openSource = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.openSource"),
+        icon: "external-link",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__secondary-action",
+        onActivate: () => options.navigateTask(upNext, "main"),
+      });
+      actions.append(clockIn, openSource);
+      card.append(label, cardHeading, meta, actions);
+      empty.append(card);
+    } else {
+      const next = executionElement(root.ownerDocument, "p", "spiral-day-onboarding__next");
+      next.textContent = messages.t("execution", "timing.nextAction");
+      empty.append(next);
+    }
     if (snapshot.standalonePomoStartEpochMs === null) {
       const pomo = executionIconButton({
         document: root.ownerDocument,

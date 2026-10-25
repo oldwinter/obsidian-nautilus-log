@@ -347,6 +347,7 @@ export function mountExecutionPanel(
     renderTimingView(timingPanel, {
       nowEpochMs: port.now(),
       snapshot: execution,
+      ...(plan ? { plan } : {}),
       recent,
       pending,
       messages: options.messages,

@@ -104,7 +104,8 @@ surface is empty, stale, blocked, or unavailable.
   ribbon entry. The panel contains **Timing**, **Plan**, and **Review** tabs.
   Timing and Plan are the active task workflows. Scheduled Plan tasks with
   partial progress show remaining and original planned duration below the time
-  range. Review compares planned and
+  range. When Timing is idle, it surfaces the next scheduled open task with
+  Clock In and Open source actions. Review compares planned and
   recorded time; select **Only completed overruns** to focus on completed tasks
   whose recorded time exceeded their plan. The summary still covers the whole
   day.

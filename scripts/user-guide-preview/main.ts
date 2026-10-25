@@ -279,13 +279,14 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
     const body = shell({
       title: "Execution · Timing",
       ribbon: "execution",
-      caption: "Timing idle state now says how to Insert or Clock In.",
+      caption: "Idle Timing surfaces the next scheduled task and its quick actions.",
     });
     const surface = el("div", "surface-card");
     body.append(surface);
     renderTimingView(surface, {
       nowEpochMs: Date.UTC(2026, 7, 28, 10, 0),
       snapshot: idleExecution(),
+      plan: confirmedPlanSnapshot(),
       recent: [],
       pending: new Set(),
       messages,

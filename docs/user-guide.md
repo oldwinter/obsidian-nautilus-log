@@ -186,10 +186,12 @@ panel opens on **Timing**.
 
 ![Timing idle guidance](user-guide/images/08-timing-idle.png)
 
-- Idle: no CLOCK. The empty state says to use **Insert into today's Daily
-  Note** on the Plan tab if there is no Primary Plan yet, or **Copy sample
-  task** on the Plan tab if the list is empty or every task is done, then
-  Clock In from Plan or the editor. You can start a standalone POMO.
+- Idle: no CLOCK. When today's confirmed plan has a scheduled open task,
+  **Up next** shows its time range, remaining duration, and **Clock in** /
+  **Open source** actions. Without an eligible scheduled task, the empty state
+  says to use **Insert into today's Daily Note** on the Plan tab if there is no
+  Primary Plan yet, or **Copy sample task** if the list is empty or every task
+  is done. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
   forgotten-timer warning.
 - Recent: closed CLOCKs kept for the configured retention window. Click the

@@ -180,6 +180,25 @@
   padding: 10px;
 }
 
+.spiral-day-execution__up-next {
+  background: color-mix(in srgb, var(--spiral-day-execution-task) 5%, var(--background-primary, #fff));
+  border: 1px solid color-mix(in srgb, var(--spiral-day-execution-task) 28%, var(--spiral-day-execution-border));
+  border-radius: 5px;
+  color: var(--text-normal, #252a32);
+  margin-top: 9px;
+  min-width: 0;
+  padding: 8px;
+}
+
+.spiral-day-execution__up-next .spiral-day-execution__row-meta {
+  display: block;
+  margin-top: 3px;
+}
+
+.spiral-day-execution__up-next .spiral-day-execution__actions {
+  margin-top: 7px;
+}
+
 .spiral-day-execution__empty {
   background: var(--spiral-day-execution-surface-subtle);
   border-color: var(--spiral-day-execution-border);

@@ -48,6 +48,11 @@ export function formatExecutionMinutes(minutes: number): string {
   return `${hours}h ${remainder}m`;
 }
 
+export function formatExecutionClockMinute(minutes: number): string {
+  const bounded = Math.max(0, Math.min(24 * 60, Math.round(minutes)));
+  return `${String(Math.floor(bounded / 60)).padStart(2, "0")}:${String(bounded % 60).padStart(2, "0")}`;
+}
+
 export function executionIconButton(input: {
   readonly document: Document;
   readonly label: string;
