@@ -112,7 +112,8 @@ const baseItems = [
   },
 ] as const;
 
-const items = new URLSearchParams(location.search).get("scenario") === "short-tasks"
+const scenario = new URLSearchParams(location.search).get("scenario");
+const items = scenario === "short-tasks"
   ? [...baseItems, ...[
       { label: "Finish the draft", durationMinutes: 60, remainingDurationMinutes: 5, progressPercent: 92 },
       { label: "Reply to a message", durationMinutes: 5, remainingDurationMinutes: 5, progressPercent: 0 },
@@ -144,10 +145,12 @@ const plan = Object.freeze({
     today: { year: 2026, month: 8, day: 29 },
     items,
     diagnostics: [],
-    day: {},
+    day: { relation: "today" },
     schedule: {
       fixedEvents: [],
-      plannedSlots: [{ task: items[0], startMinutes: 570, endMinutes: 615 }],
+      plannedSlots: scenario === "up-next-empty"
+        ? []
+        : [{ task: items[0], startMinutes: 570, endMinutes: 615 }],
     },
     capacity: { metrics: [
       { kind: "available", minutes: 155 },

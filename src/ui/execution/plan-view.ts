@@ -17,6 +17,7 @@ import {
 import {
   executionElement,
   executionIconButton,
+  formatExecutionClockMinute,
   type ExecutionIconRenderer,
   type ExecutionMessages,
 } from "./shared-controls";
@@ -40,11 +41,6 @@ export interface PlanViewOptions {
   readonly shortestFirst?: boolean;
   readonly setShortestFirst?: (enabled: boolean) => void;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
-}
-
-function clockMinute(minutes: number): string {
-  const bounded = Math.max(0, Math.min(24 * 60, Math.round(minutes)));
-  return `${String(Math.floor(bounded / 60)).padStart(2, "0")}:${String(bounded % 60).padStart(2, "0")}`;
 }
 
 function targetReference(
@@ -102,8 +98,8 @@ function appendTaskRow(
     metadata.textContent = options.messages.t("execution", "timing.active");
   } else if (range) {
     metadata.textContent = options.messages.t("execution", "plan.range", {
-      start: clockMinute(range[0]),
-      end: clockMinute(range[1]),
+      start: formatExecutionClockMinute(range[0]),
+      end: formatExecutionClockMinute(range[1]),
     });
   } else if (item.progressPercent > 0) {
     metadata.textContent = options.messages.t("execution", "plan.remaining", {
