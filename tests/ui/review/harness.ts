@@ -390,6 +390,11 @@ const api = Object.freeze({
     review = reviewSnapshot(mode, currentDate);
     if (publish) publishReview();
   },
+  publishReadyDate(date: LogicalDate): void {
+    const readyMode: ReadyReviewMode = mode === "building" || mode === "over-limit" || mode === "unavailable" ? "full" : mode;
+    review = readySnapshot(readyMode, date);
+    publishReview();
+  },
   setExecution(status: ExecutionApplicationSnapshot["status"], options = {}): void {
     execution = executionSnapshot(status, options);
     publishExecution();

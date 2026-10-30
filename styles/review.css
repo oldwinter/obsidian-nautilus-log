@@ -11,6 +11,7 @@
 }
 .spiral-day-review__toolbar input[type="date"] { min-width: 0; max-width: 100%; flex: 1; }
 .spiral-day-review__toolbar button { min-height: 30px; white-space: normal; }
+.spiral-day-review__weekday { display: block; margin-top: 6px; color: var(--text-muted); font-size: var(--font-ui-small); overflow-wrap: anywhere; }
 .spiral-day-review__filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; }
 .spiral-day-review__filter { display: flex; align-items: center; gap: 6px; min-height: 30px; font-size: var(--font-ui-small); overflow-wrap: anywhere; }
 .spiral-day-review__filter input { flex: none; }
