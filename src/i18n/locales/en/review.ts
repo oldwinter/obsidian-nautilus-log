@@ -8,6 +8,7 @@ export type ReviewCatalog = Readonly<{
   "filter.overruns": string;
   "filter.clear": string;
   "search.label": string;
+  "search.clear": string;
   "search.placeholder": string;
   "search.result": MessageFunction<{ count: number }>;
   "filter.result": MessageFunction<{ count: number }>;
@@ -50,6 +51,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "filter.overruns": "Only completed overruns",
   "filter.clear": "Clear filters",
   "search.label": "Search task titles",
+  "search.clear": "Clear search",
   "search.placeholder": "Type to filter; Esc to clear",
   "search.result": ({ count }) => count === 0
     ? "No tasks match these filters. Clear the search or turn off Only completed overruns. The summary covers the whole day."
