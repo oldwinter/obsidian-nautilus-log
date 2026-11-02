@@ -281,6 +281,12 @@ export default class SpiralDayPlugin extends Plugin {
       navigateTask: async (target, location) => {
         await this.#requireNavigator().openTask(target, location);
       },
+      copyLink: (target, label) => copyTaskMarkdownLink({
+        app: this.app,
+        target,
+        label,
+      }),
+      notify: (message, timeoutMs) => new Notice(message, timeoutMs),
       today: () => logicalDateAt(this.#requireClock()),
       selectDate: async (date) => {
         this.#reviewDate = date ? Object.freeze({ ...date }) : undefined;

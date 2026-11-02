@@ -4,7 +4,7 @@ import type { ReviewCatalog } from "../../i18n/locales/en/review";
 import type { RuntimeReviewTask } from "../../runtime/review/coordinator";
 
 export type ReviewMessages = Messages<CoreMessageNamespaces & { readonly review: ReviewCatalog }>;
-export type ReviewRowAction = "clock-in" | "complete" | "open-source";
+export type ReviewRowAction = "clock-in" | "complete" | "open-source" | "copy-link";
 
 export function reviewDuration(messages: ReviewMessages, minutes: number | null): string {
   return minutes === null ? "—" : messages.t("shared", "unit.duration", { minutes });
@@ -23,6 +23,7 @@ export class ReviewRowView {
   readonly #actions: HTMLDivElement;
   readonly #clockIn: HTMLButtonElement;
   readonly #complete: HTMLButtonElement;
+  readonly #copyLink: HTMLButtonElement;
   readonly #warning: HTMLElement;
 
   constructor(document: Document, activate: (action: ReviewRowAction) => void) {
@@ -53,7 +54,10 @@ export class ReviewRowView {
     this.#complete = document.createElement("button");
     this.#complete.type = "button";
     this.#complete.addEventListener("click", () => activate("complete"));
-    this.#actions.append(this.#clockIn, this.#complete);
+    this.#copyLink = document.createElement("button");
+    this.#copyLink.type = "button";
+    this.#copyLink.addEventListener("click", () => activate("copy-link"));
+    this.#actions.append(this.#copyLink, this.#clockIn, this.#complete);
     this.#warning = document.createElement("p");
     this.#warning.className = "spiral-day-review__warning";
     this.element.append(this.#title, this.#state, metrics, this.#actions, this.#warning);
@@ -63,6 +67,7 @@ export class ReviewRowView {
     this.#title.disabled = true;
     this.#clockIn.disabled = true;
     this.#complete.disabled = true;
+    this.#copyLink.disabled = true;
   }
 
   contains(element: Element | null): boolean {
@@ -78,7 +83,7 @@ export class ReviewRowView {
   update(row: ReviewRow<RuntimeReviewTask>, messages: ReviewMessages, enabled: boolean, writableDate: boolean, focusedOwner: string | undefined): boolean {
     const { task } = row;
     const active = this.element.ownerDocument.activeElement;
-    const mutationFocused = active === this.#clockIn || active === this.#complete;
+    const mutationFocused = active === this.#clockIn || active === this.#complete || active === this.#copyLink;
     const titleFocused = active === this.#title;
     this.element.dataset.state = row.state;
     this.#title.textContent = task.label;
@@ -98,13 +103,17 @@ export class ReviewRowView {
     });
     this.#clockIn.textContent = messages.t("review", "action.clockIn");
     this.#complete.textContent = messages.t("review", "action.complete");
+    this.#copyLink.textContent = messages.t("review", "action.copyLink");
+    this.#copyLink.setAttribute("aria-label", messages.t("review", "action.copyLink"));
     const done = task.status === "done";
     const hideMutations = done || !writableDate || !task.target;
     const mutationUnavailable = hideMutations || !enabled;
     if (mutationFocused && mutationUnavailable && !this.#title.disabled) this.#title.focus({ preventScroll: true });
-    this.#actions.hidden = hideMutations;
+    this.#actions.hidden = !task.target?.ownerId;
     this.#clockIn.hidden = hideMutations;
     this.#complete.hidden = hideMutations;
+    this.#copyLink.hidden = !task.target?.ownerId;
+    this.#copyLink.disabled = !enabled || !task.target?.ownerId;
     this.#clockIn.disabled = !enabled || !writableDate || !task.target || (task.ownerId !== undefined && task.ownerId === focusedOwner);
     this.#complete.disabled = !enabled || !writableDate || !task.target;
     this.#warning.textContent = !task.target
@@ -113,7 +122,9 @@ export class ReviewRowView {
         ? messages.t("review", "state.malformed")
         : "";
     this.#warning.hidden = this.#warning.textContent === "";
-    const focusedControlBecameUnavailable = (mutationFocused && mutationUnavailable)
+    const focusedControlBecameUnavailable = (mutationFocused && (active === this.#copyLink
+      ? this.#copyLink.disabled
+      : mutationUnavailable))
       || (titleFocused && this.#title.disabled);
     return focusedControlBecameUnavailable && this.element.ownerDocument.activeElement !== this.#title;
   }
