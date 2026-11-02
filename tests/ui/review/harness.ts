@@ -366,6 +366,7 @@ const api = Object.freeze({
       outcomeFeedback: () => ({ message: "", level: "info" }),
       navigatePrimary: () => undefined,
       openActiveTask: () => undefined,
+      copyTaskLink: async () => ({ kind: "unavailable", code: "clipboard-unavailable" }),
       createReviewSurface: port.createSurface,
     }, {
       trigger,

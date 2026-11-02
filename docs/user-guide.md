@@ -188,7 +188,8 @@ panel opens on **Timing**.
 
 - Idle: no CLOCK. When today's confirmed plan has a scheduled open task,
   **Up next** shows its time range, remaining duration, and **Clock in** /
-  **Open source** actions. Without an eligible scheduled task, the empty state
+  **Open source** / **Copy task link** actions. Copy task link places the
+  Obsidian block link on the clipboard without changing the note. Without an eligible scheduled task, the empty state
   says to use **Insert into today's Daily Note** on the Plan tab if there is no
   Primary Plan yet, or **Copy sample task** if the list is empty or every task
   is done. You can start a standalone POMO.

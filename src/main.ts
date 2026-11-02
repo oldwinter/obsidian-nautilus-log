@@ -475,6 +475,11 @@ export default class SpiralDayPlugin extends Plugin {
         openActiveTask: async () => {
           await openActiveTaskView(this.app);
         },
+        copyTaskLink: (target: SourceTaskReference, label: string) => copyTaskMarkdownLink({
+          app: this.app,
+          target,
+          label,
+        }),
         navigateTask: async (target: SourceTaskReference, location: "main" | "sidebar") => {
           await this.#requireNavigator().openTask(target, location);
         },
