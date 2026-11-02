@@ -16,6 +16,11 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
     ? "没有已完成的任务超出计划用时。汇总仍显示全天数据。"
     : `正在显示 ${count} 项已完成的超时任务。汇总仍显示全天数据。`,
   "summary.counts": ({ completed, total, compared }) => `已完成 ${completed}/${total} 项 · 已比较 ${compared} 项`,
+  "copy.heading": "Spiral Day 回顾",
+  "copy.action": "复制回顾汇总",
+  "copy.pending": "正在复制…",
+  "copy.copied": "已复制回顾汇总。",
+  "copy.failed": "无法复制回顾汇总。",
   "metric.planned": "计划用时",
   "metric.actual": "实际用时",
   "metric.variance": "用时差异",

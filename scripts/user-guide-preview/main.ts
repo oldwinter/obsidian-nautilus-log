@@ -334,6 +334,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
       setOnlyOverruns() {},
       setSearchQuery() {},
       activate() {},
+      copySummary: async () => "copied",
       insertPrimaryPlan: () => undefined,
     });
     const review = {

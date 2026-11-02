@@ -11,6 +11,7 @@ export interface ReviewViewActions {
   readonly setOnlyOverruns: (value: boolean) => void;
   readonly setSearchQuery: (value: string) => void;
   readonly activate: (key: string, action: ReviewRowAction) => void;
+  readonly copySummary: (text: string) => Promise<"copied" | "failed">;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
 }
 
@@ -37,11 +38,19 @@ export class ReviewView {
   readonly #summary: HTMLElement;
   readonly #counts: HTMLElement;
   readonly #totals: HTMLElement;
+  readonly #copySummary: HTMLButtonElement;
+  readonly #copyFeedback: HTMLElement;
   readonly #list: HTMLUListElement;
   readonly #rows = new Map<string, ReviewRowView>();
   readonly #actions: ReviewViewActions;
   #selectedDate: LogicalDate;
   #clearingFilters = false;
+  #copyInput: Readonly<{ sourceKey: string; text: string }> | undefined;
+  #copyPending = false;
+  #copyContext = 0;
+  #copyFeedbackState: "idle" | "copied" | "failed" = "idle";
+  #messages: ReviewMessages | undefined;
+  #destroyed = false;
 
   constructor(root: HTMLElement, actions: ReviewViewActions) {
     this.#root = root;
@@ -112,7 +121,13 @@ export class ReviewView {
     this.#summary.className = "spiral-day-review__summary";
     this.#counts = document.createElement("p");
     this.#totals = document.createElement("p");
-    this.#summary.append(this.#counts, this.#totals);
+    this.#copySummary = button(() => { void this.#copyCurrentSummary(); });
+    this.#copySummary.className = "spiral-day-review__copy-summary";
+    this.#copyFeedback = document.createElement("p");
+    this.#copyFeedback.className = "spiral-day-review__copy-feedback";
+    this.#copyFeedback.setAttribute("role", "status");
+    this.#copyFeedback.setAttribute("aria-live", "polite");
+    this.#summary.append(this.#counts, this.#totals, this.#copySummary, this.#copyFeedback);
     this.#list = document.createElement("ul");
     this.#list.className = "spiral-day-review__list";
     root.classList.add("spiral-day-review");
@@ -129,6 +144,7 @@ export class ReviewView {
     readonly searchQuery: string;
   }): void {
     const { review, execution, messages, pending } = input;
+    this.#messages = messages;
     this.#previous.textContent = "‹";
     this.#previous.setAttribute("aria-label", messages.t("review", "date.previous"));
     this.#next.textContent = "›";
@@ -136,6 +152,7 @@ export class ReviewView {
     this.#date.setAttribute("aria-label", messages.t("review", "date.label"));
     this.#today.textContent = messages.t("review", "date.today");
     this.#refresh.textContent = messages.t("review", "action.refresh");
+    this.#syncCopyPresentation();
     this.#filterLabel.textContent = messages.t("review", "filter.overruns");
     this.#clearFilters.textContent = messages.t("review", "filter.clear");
     this.#clearFilters.hidden = input.searchQuery === "" && !input.onlyOverruns;
@@ -156,6 +173,8 @@ export class ReviewView {
     this.#summary.hidden = !displayRows;
     this.#list.hidden = !displayRows;
     if (!ready) {
+      this.#setCopyInput(undefined);
+      this.#syncCopyPresentation();
       for (const row of this.#rows.values()) row.disable();
       this.#status.textContent = messages.t("review", review.state === "unavailable"
         ? review.reason === "history-over-limit" ? "state.overLimit" : "state.unavailable"
@@ -168,11 +187,21 @@ export class ReviewView {
     if (this.#date.value !== dateValue(review.displayedDate)) this.#date.value = dateValue(review.displayedDate);
     const enabled = !pending && execution.status === "ready" && !execution.writeBlocked;
     const summary = review.projection.summary;
-    this.#counts.textContent = messages.t("review", "summary.counts", summary);
+    const countsText = messages.t("review", "summary.counts", summary);
     const comparable = summary.compared > 0;
-    this.#totals.textContent = `${messages.t("review", "metric.planned")} ${reviewDuration(messages, comparable ? summary.plannedMinutes : null)} · ${messages.t("review", "metric.actual")} ${reviewDuration(messages, comparable ? summary.actualMinutes : null)} · ${messages.t("review", "metric.variance")} ${reviewVariance(messages, comparable ? summary.varianceMinutes : undefined)}`;
+    const totalsText = `${messages.t("review", "metric.planned")} ${reviewDuration(messages, comparable ? summary.plannedMinutes : null)} · ${messages.t("review", "metric.actual")} ${reviewDuration(messages, comparable ? summary.actualMinutes : null)} · ${messages.t("review", "metric.variance")} ${reviewVariance(messages, comparable ? summary.varianceMinutes : undefined)}`;
+    this.#counts.textContent = countsText;
+    this.#totals.textContent = totalsText;
     this.#totals.title = comparable ? "" : messages.t("review", "metric.noComparison");
     this.#totals.classList.toggle("spiral-day-review__overrun", summary.compared > 0 && summary.varianceMinutes > 0);
+    const copyText = `${messages.t("review", "copy.heading")} · ${dateValue(review.displayedDate)}\n${countsText}\n${totalsText}`;
+    this.#setCopyInput(hasRows && !pending && execution.status === "ready" && !execution.writeBlocked
+      ? {
+          sourceKey: `${messages.locale}\n${review.generation}\n${copyText}`,
+          text: copyText,
+        }
+      : undefined);
+    this.#syncCopyPresentation();
     const writableDate = dateValue(review.displayedDate) === dateValue(this.#actions.today());
     const emptyMessage = review.availability === "missing-note" ? "state.missingNote"
       : review.availability === "missing-plan" ? "state.missingPlan"
@@ -277,6 +306,59 @@ export class ReviewView {
     fallback.focus({ preventScroll: true });
   }
 
+  #setCopyInput(input: Readonly<{ sourceKey: string; text: string }> | undefined): void {
+    if (this.#copyInput?.sourceKey !== input?.sourceKey) {
+      this.#copyContext += 1;
+      this.#copyFeedbackState = "idle";
+    }
+    this.#copyInput = input;
+  }
+
+  #syncCopyPresentation(): void {
+    const messages = this.#messages;
+    if (!messages) return;
+    this.#copySummary.textContent = messages.t("review", this.#copyPending ? "copy.pending" : "copy.action");
+    this.#copySummary.disabled = this.#copyPending || !this.#copyInput;
+    this.#copyFeedback.textContent = this.#copyFeedbackState === "copied"
+      ? messages.t("review", "copy.copied")
+      : this.#copyFeedbackState === "failed" ? messages.t("review", "copy.failed") : "";
+    this.#copyFeedback.hidden = this.#copyFeedback.textContent === "";
+  }
+
+  async #copyCurrentSummary(): Promise<void> {
+    const input = this.#copyInput;
+    if (!input || this.#copyPending || this.#destroyed) return;
+    const document = this.#root.ownerDocument;
+    const restoreFocus = document.activeElement === this.#copySummary;
+    const context = this.#copyContext;
+    this.#copyPending = true;
+    this.#copyFeedbackState = "idle";
+    this.#syncCopyPresentation();
+    let outcome: "copied" | "failed" = "failed";
+    try {
+      outcome = await this.#actions.copySummary(input.text);
+    } catch {
+      outcome = "failed";
+    }
+    this.#copyPending = false;
+    if (this.#destroyed) return;
+    if (context !== this.#copyContext || this.#copyInput?.sourceKey !== input.sourceKey) {
+      this.#syncCopyPresentation();
+      return;
+    }
+    this.#copyFeedbackState = outcome;
+    this.#syncCopyPresentation();
+    if (restoreFocus && (document.activeElement === document.body || document.activeElement === this.#root)) {
+      this.#copySummary.focus({ preventScroll: true });
+    }
+  }
+
+  setVisible(visible: boolean): void {
+    if (visible) return;
+    this.#setCopyInput(undefined);
+    this.#syncCopyPresentation();
+  }
+
   #clearActiveFilters(): void {
     this.#clearingFilters = true;
     try {
@@ -289,6 +371,8 @@ export class ReviewView {
   }
 
   #selectDate(date: LogicalDate | null): void {
+    this.#setCopyInput(undefined);
+    this.#syncCopyPresentation();
     this.#selectedDate = date ?? this.#actions.today();
     this.#date.value = dateValue(this.#selectedDate);
     this.#actions.selectDate(date);
@@ -301,6 +385,8 @@ export class ReviewView {
   }
 
   destroy(): void {
+    this.#destroyed = true;
+    this.#setCopyInput(undefined);
     this.#rows.clear();
     this.#root.replaceChildren();
     this.#root.classList.remove("spiral-day-review");

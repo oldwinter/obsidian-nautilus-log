@@ -12,6 +12,11 @@ export type ReviewCatalog = Readonly<{
   "search.result": MessageFunction<{ count: number }>;
   "filter.result": MessageFunction<{ count: number }>;
   "summary.counts": MessageFunction<{ completed: number; total: number; compared: number }>;
+  "copy.heading": string;
+  "copy.action": string;
+  "copy.pending": string;
+  "copy.copied": string;
+  "copy.failed": string;
   "metric.planned": string;
   "metric.actual": string;
   "metric.variance": string;
@@ -58,6 +63,11 @@ export const enReview: ReviewCatalog = Object.freeze({
     ? "No completed tasks exceeded their plan. The summary covers the whole day."
     : `Showing ${count} completed ${count === 1 ? "overrun" : "overruns"}. The summary covers the whole day.`,
   "summary.counts": ({ completed, total, compared }) => `${completed}/${total} completed · ${compared} compared`,
+  "copy.heading": "Spiral Day Review",
+  "copy.action": "Copy review summary",
+  "copy.pending": "Copying…",
+  "copy.copied": "Review summary copied.",
+  "copy.failed": "Could not copy review summary.",
   "metric.planned": "Planned",
   "metric.actual": "Actual",
   "metric.variance": "Variance",
