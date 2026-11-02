@@ -109,6 +109,11 @@ export interface TimingViewOptions {
   readonly dispatch: (intent: ExecutionApplicationIntent) => void;
   readonly refresh: () => void;
   readonly openActiveTask: () => void;
+  readonly copyTaskLink: (target: {
+    readonly path: string;
+    readonly ownerId: string | null;
+    readonly sourceOrder: number;
+  }, label: string) => void;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
@@ -217,7 +222,19 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
         className: "spiral-day-execution__secondary-action",
         onActivate: () => options.navigateTask(upNext, "main"),
       });
-      actions.append(clockIn, openSource);
+      const copyLink = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.copyTaskLink"),
+        icon: "copy",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__secondary-action",
+        onActivate: () => options.copyTaskLink({
+          path: upNext.path,
+          ownerId: upNext.ownerId,
+          sourceOrder: upNext.sourceOrder,
+        }, upNext.label),
+      });
+      actions.append(clockIn, openSource, copyLink);
       card.append(label, cardHeading, meta, actions);
       empty.append(card);
     } else {

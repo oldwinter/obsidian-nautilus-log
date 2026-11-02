@@ -294,6 +294,7 @@ ${PRIMARY_PLAN_MARKERS.split("\n")[1]}`));
       dispatch() {},
       refresh() {},
       openActiveTask() {},
+      copyTaskLink() {},
       navigateTask() {},
       requestDelete() {},
     });

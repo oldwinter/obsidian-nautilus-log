@@ -202,6 +202,7 @@ function renderIdle(options: {
   const root = document.createElement();
   const dispatched: unknown[] = [];
   const navigated: unknown[] = [];
+  const copied: unknown[] = [];
   const messages = createMessages({
     locale: options.locale ?? "en",
     namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
@@ -217,10 +218,11 @@ function renderIdle(options: {
     dispatch: (intent) => { dispatched.push(intent); },
     refresh: () => assert.fail("Rendering must not refresh"),
     openActiveTask: () => assert.fail("Rendering must not open the active task"),
+    copyTaskLink: (target, label) => { copied.push({ target, label }); },
     navigateTask: (target, location) => { navigated.push({ target, location }); },
     requestDelete: () => assert.fail("Rendering must not delete"),
   });
-  return { document, root, dispatched, navigated };
+  return { document, root, dispatched, navigated, copied };
 }
 
 function byClass(document: TimingDocumentStub, className: string): TimingElementStub[] {
@@ -275,19 +277,22 @@ test("up-next card stays hidden for POMO and non-ready execution states", () => 
   }).document, "spiral-day-execution__up-next").length, 0);
 });
 
-test("up-next Clock In and source actions dispatch the selected target", () => {
+test("up-next Clock In, source, and copy-link actions use the selected target", () => {
   const plan = confirmedPlan([{
     task: flexibleTask(0, "Prepare release evidence"),
     startMinutes: 600,
     endMinutes: 645,
   }]);
-  const { document, dispatched, navigated } = renderIdle({ plan });
+  const { document, dispatched, navigated, copied } = renderIdle({ plan });
   const [clockIn] = byClass(document, "spiral-day-execution__primary-action");
-  const [openSource] = byClass(document, "spiral-day-execution__secondary-action");
+  const secondaryActions = byClass(document, "spiral-day-execution__secondary-action");
+  const [openSource, copyLink] = secondaryActions;
   assert.ok(clockIn);
   assert.ok(openSource);
+  assert.ok(copyLink);
   clockIn.listeners.get("click")?.();
   openSource.listeners.get("click")?.();
+  copyLink.listeners.get("click")?.();
   assert.deepEqual(dispatched, [upNextClockInIntent({
     key: "nl-task-0",
     ownerId: "nl-task-0",
@@ -312,6 +317,10 @@ test("up-next Clock In and source actions dispatch the selected target", () => {
       sourceFingerprint: "sha256:confirmed-source",
     },
     location: "main",
+  }]);
+  assert.deepEqual(copied, [{
+    target: { path: PATH, ownerId: "nl-task-0", sourceOrder: 0 },
+    label: "Prepare release evidence",
   }]);
 });
 

@@ -264,6 +264,7 @@ const surface = mountExecutionPanel({
   },
   navigatePrimary: () => undefined,
   openActiveTask: () => undefined,
+  copyTaskLink: async () => ({ kind: "unavailable", code: "clipboard-unavailable" }),
   navigateTask: () => undefined,
   refresh: async () => {
     refreshCalls += 1;
