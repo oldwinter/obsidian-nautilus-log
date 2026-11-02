@@ -15,9 +15,35 @@ export function reviewVariance(messages: ReviewMessages, minutes: number | undef
   return `${minutes > 0 ? "+" : minutes < 0 ? "−" : ""}${reviewDuration(messages, Math.abs(minutes))}`;
 }
 
+export interface ReviewTitlePart {
+  readonly text: string;
+  readonly match: boolean;
+}
+
+// Splits a row title into plain and matched runs for one case-insensitive
+// search query. Matching is presentation-only; filtering happens upstream.
+export function splitReviewTitleHighlight(label: string, query: string): readonly ReviewTitlePart[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return Object.freeze([{ text: label, match: false }]);
+  const haystack = label.toLowerCase();
+  const parts: ReviewTitlePart[] = [];
+  let rest = 0;
+  for (;;) {
+    const at = haystack.indexOf(needle, rest);
+    if (at < 0) break;
+    if (at > rest) parts.push({ text: label.slice(rest, at), match: false });
+    parts.push({ text: label.slice(at, at + needle.length), match: true });
+    rest = at + needle.length;
+  }
+  if (rest < label.length) parts.push({ text: label.slice(rest), match: false });
+  if (parts.length === 0) parts.push({ text: label, match: false });
+  return Object.freeze(parts);
+}
+
 export class ReviewRowView {
   readonly element: HTMLLIElement;
   readonly #title: HTMLButtonElement;
+  #titleKey: string | null = null;
   readonly #state: HTMLSpanElement;
   readonly #metrics: readonly { label: HTMLElement; value: HTMLElement }[];
   readonly #actions: HTMLDivElement;
@@ -75,13 +101,29 @@ export class ReviewRowView {
     return this.element.ownerDocument.activeElement === this.#title;
   }
 
-  update(row: ReviewRow<RuntimeReviewTask>, messages: ReviewMessages, enabled: boolean, writableDate: boolean, focusedOwner: string | undefined): boolean {
+  #renderTitle(label: string, searchQuery: string): void {
+    // Skip DOM churn (and keep title focus) while neither label nor query changed.
+    const key = `${searchQuery.trim().toLowerCase()}\n${label}`;
+    if (this.#titleKey === key) return;
+    this.#titleKey = key;
+    const document = this.element.ownerDocument;
+    this.#title.replaceChildren(
+      ...splitReviewTitleHighlight(label, searchQuery).map((part) => {
+        if (!part.match) return document.createTextNode(part.text);
+        const mark = document.createElement("mark");
+        mark.textContent = part.text;
+        return mark;
+      }),
+    );
+  }
+
+  update(row: ReviewRow<RuntimeReviewTask>, messages: ReviewMessages, enabled: boolean, writableDate: boolean, focusedOwner: string | undefined, searchQuery: string): boolean {
     const { task } = row;
     const active = this.element.ownerDocument.activeElement;
     const mutationFocused = active === this.#clockIn || active === this.#complete;
     const titleFocused = active === this.#title;
     this.element.dataset.state = row.state;
-    this.#title.textContent = task.label;
+    this.#renderTitle(task.label, searchQuery);
     this.#title.setAttribute("aria-label", messages.t("review", "action.openSource", { title: task.label }));
     this.#title.disabled = !enabled || !task.target?.ownerId;
     this.#state.textContent = messages.t("review", `state.${row.state}`);
