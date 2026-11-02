@@ -246,6 +246,9 @@ Review compares planned and recorded time for a chosen date.
 - **Only completed overruns** hides everything except completed tasks whose
   recorded time exceeded the plan. The day summary still covers the whole
   day.
+- Each task row has **Copy task link**. It copies an Obsidian block link for
+  the task, including completed tasks and read-only dates, without changing
+  the note. Rows without a safe block identity keep the action unavailable.
 - **Clear filters** resets both filters and returns focus to the search field.
 - Missing Daily Note and missing Primary Plan states now say how to create
   the note and add the markers. When the selected date is today,

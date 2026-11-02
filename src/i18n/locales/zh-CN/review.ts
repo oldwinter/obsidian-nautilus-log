@@ -40,6 +40,7 @@ export const zhCNReview: ReviewCatalog = Object.freeze({
   "state.noTarget": "无法安全定位此任务。如果是今天，请用「定位主计划」打开日记。如果区块 ID 重复，请只保留在一项上，然后保存并刷新。",
   "action.clockIn": "开始计时",
   "action.complete": "完成任务",
+  "action.copyLink": "复制任务链接",
   "action.openSource": ({ title }) => `打开“${title}”的来源`,
   "action.refresh": "刷新回顾",
   "action.failed": "未能确认此操作，请刷新后重试。",

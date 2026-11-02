@@ -107,8 +107,8 @@ surface is empty, stale, blocked, or unavailable.
   range. When Timing is idle, it surfaces the next scheduled open task with
   Clock In and Open source actions. Review compares planned and
   recorded time; select **Only completed overruns** to focus on completed tasks
-  whose recorded time exceeded their plan. The summary still covers the whole
-  day.
+  whose recorded time exceeded their plan. Each review row can also copy its
+  Obsidian task link. The summary still covers the whole day.
 - **Active Task:** the singleton view in the right sidebar. It follows the
   current task, opens its source line, copies an Obsidian block link, and offers
   Clock Out when a valid CLOCK is running.

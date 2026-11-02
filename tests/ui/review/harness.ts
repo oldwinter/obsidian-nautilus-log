@@ -137,6 +137,12 @@ class LocaleSource {
   locale: Locale = "en";
   readonly listeners = new Set<(locale: Locale) => void>();
 
+  t(namespace: string, key: string): string {
+    if (namespace !== "execution") return key;
+    const catalog = this.locale === "zh-CN" ? zhCNExecution : enExecution;
+    return String((catalog as Record<string, unknown>)[key] ?? key);
+  }
+
   subscribe(listener: (locale: Locale) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -313,6 +319,16 @@ const port = createReviewEntryPort({
   },
   async navigateTask(value, location) {
     stats.navigations.push({ target: structuredClone(value), location });
+  },
+  async copyLink(value, label) {
+    return { kind: "copied", link: `[[${value.path}#^${value.ownerId}|${label}]]` };
+  },
+  notify(message, timeoutMs) {
+    void timeoutMs;
+    const notice = document.createElement("div");
+    notice.setAttribute("role", "status");
+    notice.textContent = message;
+    document.body.append(notice);
   },
   today: () => TODAY,
   async selectDate(date) {
