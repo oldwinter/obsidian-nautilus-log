@@ -91,7 +91,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "notice.clockOutIdle": "当前没有计时任务。请在「计划」标签点「开始计时」。",
   "notice.clockInFocused": "这个任务已经在计时中。结束时请在「计划」标签点「结束计时」。",
   "notice.refreshed": "计时数据已刷新。",
-  "notice.taskLinkCopied": "当前任务链接已复制。",
+  "notice.taskLinkCopied": "任务链接已复制。",
   "notice.failed": "更改未应用。",
   "notice.sourceUnavailable": "无法打开该任务。请用「定位主计划」打开今日日记。如果区块 ID 缺失或重复，请只保留在一项上，然后保存并刷新。",
   "error.refresh": "无法刷新计时数据。请保存笔记，然后在「计时」标签点「重试」。",

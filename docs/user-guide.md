@@ -196,7 +196,8 @@ panel opens on **Timing**.
   forgotten-timer warning.
 - Recent: closed CLOCKs kept for the configured retention window. Click the
   clock icon beside an open recent task to start timing it again without
-  leaving the Timing tab.
+  leaving the Timing tab. Use the copy icon beside any recent task to copy its
+  Obsidian block link without opening the source note.
 
 A POMO threshold only changes warning styling. It does not stop the timer.
 Forgotten is a warning, not an automatic Clock Out. The Timing warning now
