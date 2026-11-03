@@ -161,6 +161,7 @@ const plan = Object.freeze({
 
 let snapshot = runtime("active");
 let refreshCalls = 0;
+let copiedRecentTask: string | undefined;
 const executionListeners = new Set<(value: ExecutionApplicationSnapshot) => void>();
 const planListeners = new Set<(value: RuntimeSnapshot<RuntimePlanProjection>) => void>();
 const trigger = document.querySelector<HTMLButtonElement>("#execution-trigger")!;
@@ -264,6 +265,10 @@ const surface = mountExecutionPanel({
   },
   navigatePrimary: () => undefined,
   openActiveTask: () => undefined,
+  copyTaskLink: async (target, label) => {
+    copiedRecentTask = `${label}#^${target.ownerId}`;
+    return { kind: "copied" as const, link: copiedRecentTask };
+  },
   navigateTask: () => undefined,
   refresh: async () => {
     refreshCalls += 1;
@@ -316,6 +321,7 @@ Object.assign(window, {
         viewportHeight: document.documentElement.clientHeight,
         viewportWidth: document.documentElement.clientWidth,
         refreshCalls,
+        copiedRecentTask,
       };
     },
     surface,

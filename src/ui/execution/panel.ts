@@ -5,6 +5,7 @@ import type {
 import type { ExecutionCommandOutcome } from "../../runtime/execution/commands";
 import type { RuntimePlanProjection } from "../../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../../runtime/snapshots";
+import type { TaskLinkCopyResult } from "../../adapters/task-link";
 import { renderPlanView } from "./plan-view";
 import { executionPopoverPlacement } from "./panel-layout";
 import {
@@ -39,6 +40,7 @@ export interface ExecutionPanelPort {
   readonly outcomeFeedback: (outcome: ExecutionCommandOutcome) => ExecutionPanelFeedback;
   readonly navigatePrimary: () => void | Promise<void>;
   readonly openActiveTask: () => void | Promise<void>;
+  readonly copyTaskLink?: (target: { readonly path: string; readonly ownerId: string; readonly sourceOrder: number }, label: string) => Promise<TaskLinkCopyResult>;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
@@ -355,6 +357,18 @@ export function mountExecutionPanel(
       dispatch,
       refresh: refreshExecution,
       openActiveTask: () => void Promise.resolve(port.openActiveTask()).catch(options.onError),
+      ...(port.copyTaskLink ? { copyTaskLink: (task: ExecutionRecentTask) => {
+        void port.copyTaskLink!({
+          path: task.path,
+          ownerId: task.ownerId,
+          sourceOrder: task.sourceOrder,
+        }, task.label).then((result) => {
+          showFeedback({
+            message: options.messages.t("execution", result.kind === "copied" ? "notice.taskLinkCopied" : "error.copyTaskLink"),
+            level: result.kind === "copied" ? "info" : "warning",
+          });
+        }).catch(options.onError);
+      } } : {}),
       navigateTask: (target, location) => void Promise.resolve(port.navigateTask(target, location)).catch(options.onError),
       requestDelete,
     });

@@ -225,7 +225,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "notice.clockOutIdle": "No task is being timed. Clock In from the Plan tab.",
   "notice.clockInFocused": "This task is already being timed. Clock Out from the Plan tab when you stop.",
   "notice.refreshed": "Timing data refreshed.",
-  "notice.taskLinkCopied": "Active task link copied.",
+  "notice.taskLinkCopied": "Task link copied.",
   "notice.failed": "The change was not applied.",
   "notice.sourceUnavailable": "This task cannot be opened. Use Locate Primary Plan to open today's Daily Note. If the block ID is missing or duplicated, keep it on exactly one item, then save and refresh.",
   "error.refresh": "Timing data could not be refreshed. Save the note, then use Try again on the Timing tab.",
