@@ -89,6 +89,8 @@ export type ExecutionCatalog = Readonly<{
   "notice.alreadyApplied": string;
   "notice.clockOutIdle": string;
   "notice.clockInFocused": string;
+  "notice.clockedOut": MessageFunction<{ duration: string; label: string }>;
+  "notice.clockedOutBrief": MessageFunction<{ label: string }>;
   "notice.refreshed": string;
   "notice.taskLinkCopied": string;
   "notice.failed": string;
@@ -224,6 +226,8 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "notice.alreadyApplied": "Already up to date.",
   "notice.clockOutIdle": "No task is being timed. Clock In from the Plan tab.",
   "notice.clockInFocused": "This task is already being timed. Clock Out from the Plan tab when you stop.",
+  "notice.clockedOut": ({ duration, label }) => `Clocked out after ${duration} · ${label}`,
+  "notice.clockedOutBrief": ({ label }) => `Clocked out · ${label}`,
   "notice.refreshed": "Timing data refreshed.",
   "notice.taskLinkCopied": "Active task link copied.",
   "notice.failed": "The change was not applied.",
