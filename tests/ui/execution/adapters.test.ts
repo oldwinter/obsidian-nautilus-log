@@ -6,8 +6,10 @@ import { registerExecutionEditorMenu } from "../../../src/adapters/editor-menu";
 import { ExecutionEntryAdapter } from "../../../src/adapters/execution-entry";
 import { executionFeedbackKey } from "../../../src/adapters/execution-feedback";
 import { executionOutcomeNotice } from "../../../src/adapters/notices";
+import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolver";
 import { enExecution } from "../../../src/i18n/locales/en/execution";
 import { zhCNExecution } from "../../../src/i18n/locales/zh-CN/execution";
+import { executionClockOutContext } from "../../../src/ui/execution/shared-controls";
 
 const englishTitles = {
   focusCurrent: enExecution["command.focusCurrent"],
@@ -218,4 +220,74 @@ test("already-focused Clock In already-applied names Clock Out on the Plan tab",
   }, messages);
   assert.equal(notice.message, "notice.clockInFocused");
   assert.equal(notice.level, "info");
+});
+
+test("applied Clock Out recaps the task and session in the active locale", () => {
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  const outcome = {
+    intentId: "clock-out-recap",
+    outcome: "applied" as const,
+    snapshot: {} as never,
+    pluginDataWarning: false,
+  };
+  const context = {
+    clockOut: {
+      label: "Prepare release evidence",
+      elapsedMs: 37 * 60_000 + 12_000,
+    },
+  };
+  assert.equal(
+    executionOutcomeNotice(outcome, messages, context).message,
+    "Clocked out after 37m · Prepare release evidence",
+  );
+  messages.setLocale("zh");
+  assert.equal(
+    executionOutcomeNotice(outcome, messages, context).message,
+    "结束计时：用时 37m · Prepare release evidence",
+  );
+});
+
+test("applied Clock Out under one minute uses the brief recap", () => {
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  const notice = executionOutcomeNotice({
+    intentId: "clock-out-brief",
+    outcome: "applied",
+    snapshot: {} as never,
+    pluginDataWarning: false,
+  }, messages, {
+    clockOut: { label: "Tidy the inbox", elapsedMs: 42_000 },
+  });
+  assert.equal(notice.message, "Clocked out · Tidy the inbox");
+  assert.equal(notice.level, "info");
+});
+
+test("Clock Out without a captured session keeps the generic confirmation", () => {
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  assert.equal(executionOutcomeNotice({
+    intentId: "clock-out-generic",
+    outcome: "applied",
+    snapshot: {} as never,
+    pluginDataWarning: false,
+  }, messages).message, "Change confirmed.");
+});
+
+test("Clock Out context captures the focused task and clamps elapsed time", () => {
+  assert.deepEqual(
+    executionClockOutContext({ label: "Prepare release evidence", clock: { startEpochMs: 1_000 } }, 61_000),
+    { clockOut: { label: "Prepare release evidence", elapsedMs: 60_000 } },
+  );
+  assert.deepEqual(
+    executionClockOutContext({ label: "Prepare release evidence", clock: { startEpochMs: 1_000 } }, 500),
+    { clockOut: { label: "Prepare release evidence", elapsedMs: 0 } },
+  );
+  assert.equal(executionClockOutContext(undefined, 61_000), undefined);
 });

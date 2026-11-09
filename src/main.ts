@@ -46,7 +46,11 @@ import type { ReviewClock } from "./core/review";
 import { enExecution } from "./i18n/locales/en/execution";
 import { zhCNExecution } from "./i18n/locales/zh-CN/execution";
 import { createMessages, defineLocaleNamespace } from "./i18n/resolver";
-import type { ExecutionMessages } from "./ui/execution/shared-controls";
+import {
+  executionClockOutContext,
+  type ExecutionMessages,
+  type ExecutionOutcomeContext,
+} from "./ui/execution/shared-controls";
 import type { ExecutionRecentTask } from "./ui/execution/timing-view";
 import type { PlannerProgressIntent } from "./ui/planner/controls";
 import {
@@ -465,8 +469,8 @@ export default class SpiralDayPlugin extends Plugin {
         subscribeExecution: (listener: (snapshot: ExecutionApplicationSnapshot) => void) => application.subscribe(listener),
         subscribePlan: (listener: (snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void) => this.#subscribePlan(listener),
         dispatch: (intent: ExecutionApplicationIntent) => this.#dispatchExecution(intent, false),
-        outcomeFeedback: (outcome: ExecutionCommandOutcome) => {
-          const notice = executionOutcomeNotice(outcome, this.#requireMessages());
+        outcomeFeedback: (outcome: ExecutionCommandOutcome, context?: ExecutionOutcomeContext) => {
+          const notice = executionOutcomeNotice(outcome, this.#requireMessages(), context);
           return Object.freeze({ message: notice.message, level: notice.level });
         },
         navigatePrimary: async () => {
@@ -571,8 +575,11 @@ export default class SpiralDayPlugin extends Plugin {
     intent: ExecutionApplicationIntent,
     toast: boolean,
   ): Promise<ExecutionCommandOutcome> {
+    const context = this.#clockOutContext(intent);
     const outcome = await this.#requireExecution().dispatch(intent);
-    if (toast) showExecutionNotice(executionOutcomeNotice(outcome, this.#requireMessages()));
+    if (toast) {
+      showExecutionNotice(executionOutcomeNotice(outcome, this.#requireMessages(), context));
+    }
     if ((outcome.outcome === "applied" || outcome.outcome === "already-applied")
       && intent.type === "clock-in"
       && this.#requirePluginData().data.settings.keepTimingFirst
@@ -585,6 +592,11 @@ export default class SpiralDayPlugin extends Plugin {
     }
     this.#requestReviewRefresh();
     return outcome;
+  }
+
+  #clockOutContext(intent: ExecutionApplicationIntent): ExecutionOutcomeContext | undefined {
+    if (intent.type !== "clock-out") return undefined;
+    return executionClockOutContext(this.#execution?.snapshot.focused, this.#requireClock().now());
   }
 
   async #focusCurrent(): Promise<void> {

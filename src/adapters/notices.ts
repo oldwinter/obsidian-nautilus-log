@@ -1,6 +1,10 @@
 import { Notice } from "obsidian";
 import type { ExecutionCommandOutcome } from "../runtime/execution/commands";
-import type { ExecutionMessages } from "../ui/execution/shared-controls";
+import {
+  formatExecutionClockOutSummary,
+  type ExecutionMessages,
+  type ExecutionOutcomeContext,
+} from "../ui/execution/shared-controls";
 import { executionFeedbackKey } from "./execution-feedback";
 
 export function firstRunNoticeKey(
@@ -20,8 +24,17 @@ export interface ExecutionNotice {
 export function executionOutcomeNotice(
   outcome: ExecutionCommandOutcome,
   messages: ExecutionMessages,
+  context?: ExecutionOutcomeContext,
 ): ExecutionNotice {
   if (outcome.outcome === "applied") {
+    const clockOut = context?.clockOut;
+    if (clockOut) {
+      return Object.freeze({
+        message: formatExecutionClockOutSummary(clockOut, messages),
+        level: "info",
+        durationMs: 4_000,
+      });
+    }
     return Object.freeze({ message: messages.t("execution", "notice.applied"), level: "info", durationMs: 3_000 });
   }
   if (outcome.outcome === "already-applied") {

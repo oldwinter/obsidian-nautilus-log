@@ -9,6 +9,10 @@ import type { RuntimePlanProjection } from "../../../src/runtime/projection-runt
 import type { RuntimeSnapshot } from "../../../src/runtime/snapshots";
 import { renderActiveTaskSurface } from "../../../src/ui/execution/active-task-view";
 import { mountExecutionPanel } from "../../../src/ui/execution/panel";
+import {
+  formatExecutionClockOutSummary,
+  type ExecutionOutcomeContext,
+} from "../../../src/ui/execution/shared-controls";
 
 const NOW = Date.UTC(2026, 7, 29, 2, 14, 35);
 const PATH = "Daily/2026-08-29.md";
@@ -243,7 +247,10 @@ const surface = mountExecutionPanel({
       pluginDataWarning: false,
     };
   },
-  outcomeFeedback(outcome) {
+  outcomeFeedback(outcome, context?: ExecutionOutcomeContext) {
+    if (outcome.outcome === "applied" && context?.clockOut) {
+      return { message: formatExecutionClockOutSummary(context.clockOut, messages), level: "info" as const };
+    }
     return {
       message: outcome.outcome === "applied"
         ? messages.t("execution", "notice.applied")

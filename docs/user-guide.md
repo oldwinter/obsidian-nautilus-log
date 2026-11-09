@@ -193,7 +193,8 @@ panel opens on **Timing**.
   Primary Plan yet, or **Copy sample task** if the list is empty or every task
   is done. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
-  forgotten-timer warning.
+  forgotten-timer warning. Clock Out confirms the task and session duration,
+  such as "Clocked out after 37m · Write the release note".
 - Recent: closed CLOCKs kept for the configured retention window. Click the
   clock icon beside an open recent task to start timing it again without
   leaving the Timing tab.
