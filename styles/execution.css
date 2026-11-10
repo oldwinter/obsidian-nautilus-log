@@ -195,6 +195,23 @@
   margin-top: 3px;
 }
 
+.spiral-day-execution__up-next .spiral-day-execution__countdown {
+  background: color-mix(in srgb, var(--spiral-day-execution-task) 10%, transparent);
+  border-radius: 999px;
+  color: var(--spiral-day-execution-task);
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 16px;
+  margin-top: 4px;
+  padding: 1px 6px;
+  width: max-content;
+}
+
+.spiral-day-execution__up-next .spiral-day-execution__countdown[hidden] {
+  display: none;
+}
+
 .spiral-day-execution__up-next .spiral-day-execution__actions {
   margin-top: 7px;
 }
@@ -273,6 +290,11 @@
 
 .spiral-day-execution__current-heading {
   align-items: baseline;
+}
+
+.spiral-day-execution__current-plan {
+  display: block;
+  margin-top: 3px;
 }
 
 .spiral-day-execution__task-title {

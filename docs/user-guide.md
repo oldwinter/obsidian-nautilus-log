@@ -188,12 +188,15 @@ panel opens on **Timing**.
 
 - Idle: no CLOCK. When today's confirmed plan has a scheduled open task,
   **Up next** shows its time range, remaining duration, and **Clock in** /
-  **Open source** actions. Without an eligible scheduled task, the empty state
+  **Open source** actions. It also counts down to the planned start, or says
+  **Scheduled now** once the window is open. Without an eligible scheduled task, the empty state
   says to use **Insert into today's Daily Note** on the Plan tab if there is no
   Primary Plan yet, or **Copy sample task** if the list is empty or every task
   is done. You can start a standalone POMO.
 - Active: shows the current task, elapsed time, Clock Out, and optional
-  forgotten-timer warning.
+  forgotten-timer warning. When today's confirmed plan contains the same task,
+  it also shows the planned duration and, after progress is recorded, the
+  remaining duration.
 - Recent: closed CLOCKs kept for the configured retention window. Click the
   clock icon beside an open recent task to start timing it again without
   leaving the Timing tab.

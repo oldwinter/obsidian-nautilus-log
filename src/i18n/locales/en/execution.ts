@@ -24,7 +24,11 @@ export type ExecutionCatalog = Readonly<{
   "timing.nextAction": string;
   "timing.upNext": string;
   "timing.upNextMeta": MessageFunction<{ range: string; duration: string }>;
+  "timing.upNextStartsIn": MessageFunction<{ duration: string }>;
+  "timing.upNextScheduledNow": string;
   "timing.active": string;
+  "timing.currentPlan": MessageFunction<{ planned: string }>;
+  "timing.currentPlanRemaining": MessageFunction<{ remaining: string; planned: string }>;
   "timing.forgotten": string;
   "timing.pomo": string;
   "timing.recent": string;
@@ -158,7 +162,11 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.nextAction": "If there is no Primary Plan yet, use Insert into today's Daily Note on the Plan tab. If the list is empty or every task is done, use Copy sample task on the Plan tab. Otherwise clock in from the Plan tab on an open `- [ ]` flexible task, or right-click that task in the Daily Note. Standalone POMO can run when no CLOCK is active.",
   "timing.upNext": "Up next",
   "timing.upNextMeta": ({ range, duration }) => `${range} · ${duration} remaining`,
+  "timing.upNextStartsIn": ({ duration }) => `Starts in ${duration}`,
+  "timing.upNextScheduledNow": "Scheduled now",
   "timing.active": "Current task",
+  "timing.currentPlan": ({ planned }) => `${planned} planned`,
+  "timing.currentPlanRemaining": ({ remaining, planned }) => `${remaining} remaining · ${planned} planned`,
   "timing.forgotten": "This CLOCK may have been left running. Forgotten is a warning only — use Clock out when you stop.",
   "timing.pomo": "POMO",
   "timing.recent": "Recent",

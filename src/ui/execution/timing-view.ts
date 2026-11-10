@@ -1,9 +1,13 @@
+import type { PlanItem } from "../../core/model";
 import type {
   ExecutionApplicationIntent,
   ExecutionApplicationSnapshot,
   ExecutionClockReference,
 } from "../../runtime/execution/application";
-import type { RuntimePlanProjection } from "../../runtime/projection-runtime";
+import type {
+  RuntimePlanItemSource,
+  RuntimePlanProjection,
+} from "../../runtime/projection-runtime";
 import type { RuntimeSnapshot } from "../../runtime/snapshots";
 import {
   executionElement,
@@ -96,6 +100,110 @@ export function upNextClockInIntent(
       sourceFingerprint: task.sourceFingerprint,
     }),
   });
+}
+
+export interface UpNextCountdown {
+  readonly state: "upcoming" | "active";
+  readonly minutes: number;
+}
+
+function localDayMinute(nowEpochMs: number, minutes: number): number {
+  const now = new Date(nowEpochMs);
+  return new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    Math.floor(minutes / 60),
+    minutes % 60,
+    0,
+    0,
+  ).getTime();
+}
+
+export function upNextCountdown(
+  startMinutes: number,
+  endMinutes: number,
+  nowEpochMs: number,
+): UpNextCountdown | undefined {
+  if (!Number.isFinite(startMinutes)
+    || !Number.isFinite(endMinutes)
+    || !Number.isFinite(nowEpochMs)
+    || endMinutes <= startMinutes) return undefined;
+  const startEpochMs = localDayMinute(nowEpochMs, startMinutes);
+  const endEpochMs = localDayMinute(nowEpochMs, endMinutes);
+  if (!Number.isFinite(startEpochMs) || !Number.isFinite(endEpochMs) || endEpochMs <= startEpochMs) {
+    return undefined;
+  }
+  const untilStart = startEpochMs - nowEpochMs;
+  if (untilStart > 0) {
+    return Object.freeze({
+      state: "upcoming" as const,
+      minutes: Math.max(1, Math.ceil(untilStart / 60_000)),
+    });
+  }
+  if (nowEpochMs < endEpochMs) {
+    return Object.freeze({
+      state: "active" as const,
+      minutes: Math.max(1, Math.ceil((endEpochMs - nowEpochMs) / 60_000)),
+    });
+  }
+  return undefined;
+}
+
+export function upNextCountdownLabel(
+  startMinutes: number,
+  endMinutes: number,
+  nowEpochMs: number,
+  messages: ExecutionMessages,
+): { readonly state: UpNextCountdown["state"]; readonly text: string } | undefined {
+  const countdown = upNextCountdown(startMinutes, endMinutes, nowEpochMs);
+  if (!countdown) return undefined;
+  return countdown.state === "active"
+    ? {
+        state: countdown.state,
+        text: messages.t("execution", "timing.upNextScheduledNow"),
+      }
+    : {
+        state: countdown.state,
+        text: messages.t("execution", "timing.upNextStartsIn", {
+          duration: messages.t("shared", "unit.duration", { minutes: countdown.minutes }),
+        }),
+      };
+}
+
+export function applyUpNextCountdown(
+  element: HTMLElement,
+  input: {
+    readonly startMinutes: number;
+    readonly endMinutes: number;
+    readonly nowEpochMs: number;
+    readonly messages: ExecutionMessages;
+  },
+): void {
+  const label = upNextCountdownLabel(
+    input.startMinutes,
+    input.endMinutes,
+    input.nowEpochMs,
+    input.messages,
+  );
+  if (!label) {
+    if (!element.hidden) element.hidden = true;
+    if (element.textContent !== "") element.textContent = "";
+    if (element.dataset.state !== undefined) delete element.dataset.state;
+    return;
+  }
+  if (element.hidden) element.hidden = false;
+  if (element.dataset.state !== label.state) element.dataset.state = label.state;
+  if (element.textContent !== label.text) element.textContent = label.text;
+}
+
+export function selectFocusedPlanItem(
+  plan: RuntimeSnapshot<RuntimePlanProjection> | undefined,
+  focused: ExecutionApplicationSnapshot["focused"],
+): PlanItem<RuntimePlanItemSource> | undefined {
+  if (plan?.state !== "confirmed" || !focused) return undefined;
+  return plan.projection.items.find((item) =>
+    item.source.path === focused.path && item.source.blockId === focused.ownerId);
 }
 
 export interface TimingViewOptions {
@@ -198,6 +306,15 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
         }),
         duration: messages.t("shared", "unit.duration", { minutes: upNext.remainingMinutes }),
       });
+      const countdown = executionElement(root.ownerDocument, "span", "spiral-day-execution__countdown");
+      countdown.dataset.upNextStartMinutes = String(upNext.startMinutes);
+      countdown.dataset.upNextEndMinutes = String(upNext.endMinutes);
+      applyUpNextCountdown(countdown, {
+        startMinutes: upNext.startMinutes,
+        endMinutes: upNext.endMinutes,
+        nowEpochMs: options.nowEpochMs,
+        messages,
+      });
       const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__actions");
       const clockIn = executionIconButton({
         document: root.ownerDocument,
@@ -218,7 +335,7 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
         onActivate: () => options.navigateTask(upNext, "main"),
       });
       actions.append(clockIn, openSource);
-      card.append(label, cardHeading, meta, actions);
+      card.append(label, cardHeading, meta, countdown, actions);
       empty.append(card);
     } else {
       const next = executionElement(root.ownerDocument, "p", "spiral-day-onboarding__next");
@@ -297,6 +414,21 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
       current.dataset.forgotten = "true";
     }
     heading.append(elapsed);
+    const planItem = selectFocusedPlanItem(options.plan, focused);
+    const planMeta = planItem
+      ? executionElement(root.ownerDocument, "span", "spiral-day-execution__current-plan")
+      : undefined;
+    if (planItem && planMeta) {
+      const planned = messages.t("shared", "unit.duration", { minutes: planItem.durationMinutes });
+      planMeta.textContent = planItem.progressPercent > 0
+        ? messages.t("execution", "timing.currentPlanRemaining", {
+            remaining: messages.t("shared", "unit.duration", {
+              minutes: planItem.remainingDurationMinutes,
+            }),
+            planned,
+          })
+        : messages.t("execution", "timing.currentPlan", { planned });
+    }
 
     const actions = executionElement(root.ownerDocument, "div", "spiral-day-execution__actions");
     const openActiveTask = executionIconButton({
@@ -352,7 +484,7 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
       remove.disabled = true;
     }
     actions.append(openActiveTask, clockOut, complete, remove);
-    current.append(label, heading, actions);
+    current.append(label, heading, ...(planMeta ? [planMeta] : []), actions);
     if (snapshot.execution.kind === "forgotten") {
       const warning = executionElement(root.ownerDocument, "p", "spiral-day-execution__warning");
       warning.textContent = messages.t("execution", "timing.forgotten");

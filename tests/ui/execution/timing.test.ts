@@ -8,9 +8,12 @@ import { createMessages, defineLocaleNamespace } from "../../../src/i18n/resolve
 import type { ExecutionApplicationSnapshot } from "../../../src/runtime/execution/application";
 import type { RuntimePlanItemSource } from "../../../src/runtime/projection-runtime";
 import {
+  applyUpNextCountdown,
   recentTaskClockInIntent,
   renderTimingView,
+  selectFocusedPlanItem,
   selectUpNextTask,
+  upNextCountdown,
   upNextClockInIntent,
   type ExecutionRecentTask,
   type TimingViewOptions,
@@ -42,6 +45,10 @@ const PATH = "Daily/2026-08-29.md";
 const OWNER = "nl-11111111-1111-4111-8111-111111111111";
 const NOW = Date.UTC(2026, 7, 29, 2, 14, 35);
 
+function localNow(hour: number, minute: number, second = 0): number {
+  return new Date(2026, 7, 29, hour, minute, second, 0).getTime();
+}
+
 function flexibleTask(
   sourceOrder: number,
   label: string,
@@ -72,6 +79,7 @@ function confirmedPlan(
     projection: {
       sourceFingerprint: "sha256:confirmed-source",
       day: { relation },
+      items: slots.map(({ task: item }) => item),
       schedule: { plannedSlots: slots },
     },
   } as unknown as NonNullable<TimingViewOptions["plan"]>;
@@ -148,12 +156,73 @@ test("up next Clock In uses the confirmed fingerprint and stable source target",
   });
 });
 
+test("up next countdown rounds up to the start minute and switches once the window opens", () => {
+  assert.deepEqual(upNextCountdown(600, 645, localNow(9, 47, 30)), {
+    state: "upcoming",
+    minutes: 13,
+  });
+  assert.deepEqual(upNextCountdown(600, 645, localNow(9, 48)), {
+    state: "upcoming",
+    minutes: 12,
+  });
+  assert.deepEqual(upNextCountdown(600, 645, localNow(10, 14)), {
+    state: "active",
+    minutes: 31,
+  });
+  assert.equal(upNextCountdown(600, 645, localNow(10, 45)), undefined);
+});
+
+test("up next countdown applies visible and hidden labels", () => {
+  const document = new TimingDocumentStub();
+  const element = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  applyUpNextCountdown(element as unknown as HTMLElement, {
+    startMinutes: 600,
+    endMinutes: 645,
+    nowEpochMs: localNow(9, 48),
+    messages,
+  });
+  assert.equal(element.hidden, false);
+  assert.equal(element.dataset.state, "upcoming");
+  assert.equal(element.textContent, "Starts in 12m");
+  applyUpNextCountdown(element as unknown as HTMLElement, {
+    startMinutes: 600,
+    endMinutes: 645,
+    nowEpochMs: localNow(10, 45),
+    messages,
+  });
+  assert.equal(element.hidden, true);
+  assert.equal(element.textContent, "");
+  assert.equal(element.dataset.state, undefined);
+});
+
+test("focused plan item uses the stable owner within the confirmed plan", () => {
+  const item = flexibleTask(0, "Prepare release evidence");
+  const plan = confirmedPlan([{ task: item, startMinutes: 600, endMinutes: 645 }]);
+  assert.equal(selectFocusedPlanItem(plan, {
+    ownerId: "nl-task-0",
+    path: PATH,
+    sourceOrder: 0,
+    label: item.label,
+  } as ExecutionApplicationSnapshot["focused"])?.label, item.label);
+  assert.equal(selectFocusedPlanItem(plan, {
+    ownerId: "other-owner",
+    path: PATH,
+    sourceOrder: 0,
+    label: item.label,
+  } as ExecutionApplicationSnapshot["focused"]), undefined);
+});
+
 class TimingElementStub {
   className = "";
   textContent = "";
   type = "";
   title = "";
   disabled = false;
+  hidden = false;
   readonly dataset: Record<string, string> = {};
   readonly children: TimingElementStub[] = [];
   readonly attributes = new Map<string, string>();
@@ -197,6 +266,7 @@ function renderIdle(options: {
   readonly plan?: TimingViewOptions["plan"];
   readonly snapshot?: TimingViewOptions["snapshot"];
   readonly pending?: ReadonlySet<string>;
+  readonly nowEpochMs?: number;
 }) {
   const document = new TimingDocumentStub();
   const root = document.createElement();
@@ -207,7 +277,7 @@ function renderIdle(options: {
     namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
   });
   renderTimingView(root as unknown as HTMLElement, {
-    nowEpochMs: NOW,
+    nowEpochMs: options.nowEpochMs ?? NOW,
     snapshot: options.snapshot ?? idleSnapshot(),
     ...(options.plan ? { plan: options.plan } : {}),
     recent: [],
@@ -221,6 +291,67 @@ function renderIdle(options: {
     requestDelete: () => assert.fail("Rendering must not delete"),
   });
   return { document, root, dispatched, navigated };
+}
+
+function activeSnapshot(overrides: Partial<ExecutionApplicationSnapshot> = {}): TimingViewOptions["snapshot"] {
+  const startEpochMs = NOW - 10 * 60_000;
+  return {
+    status: "ready",
+    focused: {
+      ownerId: "nl-task-0",
+      path: PATH,
+      sourceOrder: 0,
+      label: "Prepare release evidence",
+      clock: {
+        path: PATH,
+        ownerId: "nl-task-0",
+        clockId: "nl-clock-0",
+        fromOffset: 120,
+        startEpochMs,
+        targetKey: "nl-clock-0",
+      },
+    },
+    execution: {
+      kind: "active",
+      ownerId: "nl-task-0",
+      clockId: "nl-clock-0",
+      startEpochMs,
+      elapsedMs: 10 * 60_000,
+      taskPomoStartEpochMs: startEpochMs,
+    },
+    standalonePomoStartEpochMs: null,
+    pomoThresholdMinutes: 45,
+    writeBlocked: false,
+    ...overrides,
+  } as TimingViewOptions["snapshot"];
+}
+
+function renderActive(options: {
+  readonly locale?: "en" | "zh-CN";
+  readonly plan?: TimingViewOptions["plan"];
+  readonly snapshot?: TimingViewOptions["snapshot"];
+}) {
+  const document = new TimingDocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: options.locale ?? "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderTimingView(root as unknown as HTMLElement, {
+    nowEpochMs: NOW,
+    snapshot: options.snapshot ?? activeSnapshot(),
+    ...(options.plan ? { plan: options.plan } : {}),
+    recent: [],
+    pending: new Set(),
+    messages,
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    refresh: () => assert.fail("Rendering must not refresh"),
+    openActiveTask: () => assert.fail("Rendering must not open the active task"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    requestDelete: () => assert.fail("Rendering must not delete"),
+  });
+  return { document, root };
 }
 
 function byClass(document: TimingDocumentStub, className: string): TimingElementStub[] {
@@ -273,6 +404,48 @@ test("up-next card stays hidden for POMO and non-ready execution states", () => 
     plan,
     snapshot: idleSnapshot({ status: "working" }),
   }).document, "spiral-day-execution__up-next").length, 0);
+});
+
+test("idle Timing shows a live start countdown or scheduled-now label", () => {
+  const plan = confirmedPlan([{
+    task: flexibleTask(0, "Prepare release evidence"),
+    startMinutes: 600,
+    endMinutes: 645,
+  }]);
+  const upcoming = renderIdle({ plan, nowEpochMs: localNow(9, 48) });
+  const [upcomingCountdown] = byClass(upcoming.document, "spiral-day-execution__countdown");
+  assert.ok(upcomingCountdown);
+  assert.equal(upcomingCountdown.textContent, "Starts in 12m");
+  assert.equal(upcomingCountdown.dataset.state, "upcoming");
+  const active = renderIdle({ plan, nowEpochMs: localNow(10, 14) });
+  const [activeCountdown] = byClass(active.document, "spiral-day-execution__countdown");
+  assert.ok(activeCountdown);
+  assert.equal(activeCountdown.textContent, "Scheduled now");
+  assert.equal(activeCountdown.dataset.state, "active");
+});
+
+test("active Timing shows planned and remaining time for the focused task", () => {
+  const item = flexibleTask(0, "Prepare release evidence", {
+    durationMinutes: 60,
+    remainingDurationMinutes: 45,
+    progressPercent: 25,
+  });
+  const plan = confirmedPlan([{ task: item, startMinutes: 600, endMinutes: 645 }]);
+  const english = renderActive({ plan });
+  const [englishPlan] = byClass(english.document, "spiral-day-execution__current-plan");
+  assert.ok(englishPlan);
+  assert.equal(englishPlan.textContent, "45m remaining · 1h planned");
+  const chinese = renderActive({ plan, locale: "zh-CN" });
+  const [chinesePlan] = byClass(chinese.document, "spiral-day-execution__current-plan");
+  assert.ok(chinesePlan);
+  assert.equal(chinesePlan.textContent, "剩余 45分钟 · 计划 1小时");
+});
+
+test("active Timing omits plan metadata when the plan is not confirmed", () => {
+  const { document } = renderActive({
+    plan: { state: "stale" } as TimingViewOptions["plan"],
+  });
+  assert.equal(byClass(document, "spiral-day-execution__current-plan").length, 0);
 });
 
 test("up-next Clock In and source actions dispatch the selected target", () => {
