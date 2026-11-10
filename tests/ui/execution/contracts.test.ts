@@ -131,6 +131,8 @@ test("execution styles cover interaction states and the build discovers every st
   for (const selector of [
     ".spiral-day-execution__tabpanel",
     ".spiral-day-execution__tab[aria-selected=\"true\"]",
+    ".spiral-day-execution__up-next .spiral-day-execution__countdown",
+    ".spiral-day-execution__current-plan",
     ".spiral-day-active-task-view",
     ".spiral-day-execution-pomo-stop[hidden]",
     ".spiral-day-execution[data-delete-armed=\"true\"]",
@@ -161,6 +163,17 @@ test("elapsed timers update in place without replacing focused controls", async 
   assert.doesNotMatch(panel, /setInterval\(\(\) => render\(\), 1_000\)/);
   assert.match(activeTask, /setInterval\(\(\) => this\.#tick\(\), 1_000\)/);
   assert.doesNotMatch(activeTask, /setInterval\(\(\) => this\.#render\(\), 1_000\)/);
+});
+
+test("up-next countdown updates on the existing in-place timer", async () => {
+  const [panel, timingView] = await Promise.all([
+    readFile("src/ui/execution/panel.ts", "utf8"),
+    readFile("src/ui/execution/timing-view.ts", "utf8"),
+  ]);
+  assert.match(panel, /querySelectorAll<HTMLElement>\("\[data-up-next-start-minutes\]"\)/);
+  assert.match(panel, /applyUpNextCountdown\(countdown, \{/);
+  assert.match(timingView, /countdown\.dataset\.upNextStartMinutes/);
+  assert.match(timingView, /countdown\.dataset\.upNextEndMinutes/);
 });
 
 test("plan refresh preserves the unscheduled disclosure state", async () => {

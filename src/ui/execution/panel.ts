@@ -16,7 +16,11 @@ import {
   type ExecutionIconRenderer,
   type ExecutionMessages,
 } from "./shared-controls";
-import { renderTimingView, type ExecutionRecentTask } from "./timing-view";
+import {
+  applyUpNextCountdown,
+  renderTimingView,
+  type ExecutionRecentTask,
+} from "./timing-view";
 
 export type ExecutionPanelTab = "timing" | "plan" | "review";
 
@@ -253,6 +257,17 @@ export function mountExecutionPanel(
       } else {
         delete elapsed.dataset.warning;
       }
+    }
+    for (const countdown of popover.querySelectorAll<HTMLElement>("[data-up-next-start-minutes]")) {
+      const startMinutes = Number(countdown.dataset.upNextStartMinutes);
+      const endMinutes = Number(countdown.dataset.upNextEndMinutes);
+      if (!Number.isFinite(startMinutes) || !Number.isFinite(endMinutes)) continue;
+      applyUpNextCountdown(countdown, {
+        startMinutes,
+        endMinutes,
+        nowEpochMs: now,
+        messages: options.messages,
+      });
     }
   };
 

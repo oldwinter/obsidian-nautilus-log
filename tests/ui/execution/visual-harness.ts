@@ -88,8 +88,8 @@ const baseItems = [
     executionEligible: true,
     label: "Prepare exact-SHA release evidence",
     durationMinutes: 45,
-    remainingDurationMinutes: 45,
-    progressPercent: 0,
+    remainingDurationMinutes: 34,
+    progressPercent: 25,
     urgent: true,
     sourceOrder: 0,
     source: { path: PATH, blockId: OWNER, sourceOrder: 0 },
@@ -150,7 +150,11 @@ const plan = Object.freeze({
       fixedEvents: [],
       plannedSlots: scenario === "up-next-empty"
         ? []
-        : [{ task: items[0], startMinutes: 570, endMinutes: 615 }],
+        : [{
+            task: items[0],
+            startMinutes: scenario === "up-next-upcoming" ? 630 : 570,
+            endMinutes: scenario === "up-next-upcoming" ? 675 : 615,
+          }],
     },
     capacity: { metrics: [
       { kind: "available", minutes: 155 },
