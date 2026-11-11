@@ -99,7 +99,7 @@ surface is empty, stale, blocked, or unavailable.
 
 - **Planner:** the ribbon icon named **Open Spiral Day**. The Planner shows
   capacity, scheduled slots, overflow, progress controls, completed visibility,
-  playback, and summary copy.
+  playback, summary copy, and a shortcut to the plan's Daily Note.
 - **Execution:** enable **Execution Layer** in settings, then use the timer
   ribbon entry. The panel contains **Timing**, **Plan**, and **Review** tabs.
   Timing and Plan are the active task workflows. Scheduled Plan tasks with

@@ -37,6 +37,7 @@ export type PlannerCatalog = Readonly<{
   "announcement.debugOff": string;
   "announcement.debugOn": string;
   "announcement.expanded": string;
+  "announcement.openNoteFailed": string;
   "announcement.playbackFinished": string;
   "announcement.playbackStarted": string;
   "announcement.progressCompleted": MessageFunction<{ title: string }>;
@@ -54,6 +55,7 @@ export type PlannerCatalog = Readonly<{
   "control.debugEnable": string;
   "control.expand": string;
   "control.hideCompleted": string;
+  "control.openNote": string;
   "control.play": string;
   "control.playbackRunning": string;
   "control.refresh": string;

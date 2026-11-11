@@ -13,6 +13,7 @@ import {
   type PlannerRuntimePort,
   type PlannerViewContext,
 } from "../../../src/ui/planner/view.ts";
+import { createMessages } from "../../../src/i18n/resolver.ts";
 import { BOUNDS, DISPLAYED_DATE, plannerProjection } from "./fixtures.ts";
 
 type Story = "confirmed" | "loading" | "missing" | "over-limit" | "error" | "stale" | "past" | "future";
@@ -23,6 +24,8 @@ const widthSelect = document.querySelector<HTMLSelectElement>("#width")!;
 const storySelect = document.querySelector<HTMLSelectElement>("#story")!;
 const themeSelect = document.querySelector<HTMLSelectElement>("#theme")!;
 const contextSelect = document.querySelector<HTMLSelectElement>("#context")!;
+const localeSelect = document.querySelector<HTMLSelectElement>("#locale")!;
+const openNoteStatus = document.querySelector<HTMLOutputElement>("#open-note-status")!;
 
 let listener: ((snapshot: RuntimeSnapshot<ReturnType<typeof plannerProjection>>) => void) | undefined;
 let generation = 0;
@@ -92,12 +95,21 @@ const icons = {
   debug: "b",
   expand: "v",
   "hide-completed": "o",
+  "open-note": "↗",
   "show-completed": "x",
   play: ">",
   refresh: "r",
 } as const;
 
+const openPrimaryPaths: string[] = [];
+const messages = createMessages();
 const surface = mountPlannerSurface(surfaceRoot, runtime, viewContext(), {
+  messages,
+  onCopySummary: () => "copied",
+  onOpenPrimary: (path) => {
+    openPrimaryPaths.push(path);
+    openNoteStatus.value = `Opened: ${path}`;
+  },
   renderIcon: (button, icon) => {
     const glyph = document.createElement("span");
     glyph.className = "harness-icon";
@@ -204,6 +216,7 @@ themeSelect.addEventListener("change", () => {
   document.body.classList.toggle("theme-dark", themeSelect.value === "dark");
 });
 contextSelect.addEventListener("change", () => surface.setContext(viewContext()));
+localeSelect.addEventListener("change", () => surface.setLocale(localeSelect.value));
 applyWidth();
 
 Object.assign(window, {
@@ -229,6 +242,9 @@ Object.assign(window, {
     },
     runtimeVisibility() {
       return [...runtimeVisibility];
+    },
+    openPrimaryPaths() {
+      return [...openPrimaryPaths];
     },
     assertWideBoundary,
     assertCompactBoundary,
