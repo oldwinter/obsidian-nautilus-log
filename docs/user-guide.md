@@ -172,6 +172,8 @@ You can:
 - See the spiral schedule, overflow, and warnings.
 - Hide or show completed items.
 - Copy a plan summary.
+- Open the plan's Daily Note directly from the Planner header when you want to
+  edit it.
 - Play the day as a temporary playback, then return to the live schedule.
 - Refresh after you edit the Daily Note.
 - Advance or reopen progress on a row when Execution Layer is on.

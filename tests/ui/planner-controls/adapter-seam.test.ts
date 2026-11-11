@@ -21,6 +21,7 @@ interface CapturedMount {
     readonly instanceId: string;
     readonly locale: string;
     readonly onCopySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
+    readonly onOpenPrimary?: (path: string) => void | Promise<void>;
     readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
     readonly renderIcon: (element: HTMLElement, icon: "play") => void;
   };
@@ -253,6 +254,7 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   let resolveContextFailure = false;
   const progressCalls: PlannerProgressIntent[] = [];
   const summaryCalls: string[] = [];
+  const openPrimaryCalls: string[] = [];
   const runtime = { state: "ready", connect: () => { throw new Error("surface is seam-stubbed"); } };
   const dependencies: PlannerItemViewDependencies = {
     runtime: runtime as PlannerItemViewDependencies["runtime"],
@@ -261,6 +263,7 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
       summaryCalls.push(summary);
       return "copied";
     },
+    openPrimary: async (path) => { openPrimaryCalls.push(path); },
     dispatchPlannerProgress: (intent) => { progressCalls.push(intent); },
     locale: () => "zh-CN",
     subscribeLocale(listener) {
@@ -307,6 +310,8 @@ test("TC-UP-CTL-01-006 adapter factory binds and unbinds the complete planner li
   assert.equal(iconElement.icon, "play");
   assert.equal(await mount.options.onCopySummary?.("day summary"), "copied");
   assert.deepEqual(summaryCalls, ["day summary"]);
+  await mount.options.onOpenPrimary?.("Journal/2026-08-28.md");
+  assert.deepEqual(openPrimaryCalls, ["Journal/2026-08-28.md"]);
 
   await view.setState({
     logicalDate: { year: 2026, month: 8, day: 28 },

@@ -322,6 +322,9 @@ export default class SpiralDayPlugin extends Plugin {
       defaultLogicalDate: () => logicalDateAt(this.#requireClock()),
       copySummary: (summary) => copyPlannerSummary({ summary }),
       insertPrimaryPlan: () => this.#insertPrimaryPlan(),
+      openPrimary: async (path) => {
+        await this.#requireNavigator().openPrimary(path);
+      },
       dispatchPlannerProgress: (intent) => this.#dispatchPlannerProgress(intent),
       locale: () => this.#requireMessages().locale,
       subscribeLocale: (listener) => this.#requireMessages().subscribe(listener),

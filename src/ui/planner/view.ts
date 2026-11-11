@@ -83,7 +83,7 @@ export interface PlannerViewContext {
   readonly hostContext: PlannerHostContext;
 }
 
-export type PlannerIconName = "collapse" | "copy" | "debug" | "expand" | "hide-completed" | "show-completed" | "play" | "refresh";
+export type PlannerIconName = "collapse" | "copy" | "debug" | "expand" | "hide-completed" | "open-note" | "show-completed" | "play" | "refresh";
 export type PlannerIconRenderer = (element: HTMLElement, icon: PlannerIconName) => void;
 
 export interface PlannerSurfaceOptions {
@@ -95,6 +95,7 @@ export interface PlannerSurfaceOptions {
   readonly messages?: Messages;
   readonly onCopySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
   readonly onInsertPrimaryPlan?: () => void | Promise<void>;
+  readonly onOpenPrimary?: (path: string) => void | Promise<void>;
   readonly onProgressIntent?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly renderIcon?: PlannerIconRenderer;
   readonly reducedMotion?: boolean;
@@ -254,6 +255,7 @@ function defaultIconRenderer(button: HTMLElement, icon: PlannerIconName): void {
     debug: "#",
     expand: "+",
     "hide-completed": "o",
+    "open-note": "↗",
     "show-completed": "x",
     play: ">",
     refresh: "↻",
@@ -523,6 +525,7 @@ class PlannerSurfaceController implements PlannerSurface {
   readonly #messages: Messages;
   readonly #onCopySummary: PlannerSurfaceOptions["onCopySummary"];
   readonly #onInsertPrimaryPlan: PlannerSurfaceOptions["onInsertPrimaryPlan"];
+  readonly #onOpenPrimary: PlannerSurfaceOptions["onOpenPrimary"];
   readonly #onProgressIntent: ((intent: PlannerProgressIntent) => void | Promise<void>) | undefined;
   readonly #controls: PlannerControlsController;
   readonly #disclosures: PlannerDisclosuresController;
@@ -571,6 +574,7 @@ class PlannerSurfaceController implements PlannerSurface {
       : createMessages({ locale: options.locale }));
     this.#onCopySummary = options.onCopySummary;
     this.#onInsertPrimaryPlan = options.onInsertPrimaryPlan;
+    this.#onOpenPrimary = options.onOpenPrimary;
     this.#onProgressIntent = options.onProgressIntent;
     const acquisitions: Array<() => void> = [];
     try {
@@ -1151,9 +1155,11 @@ class PlannerSurfaceController implements PlannerSurface {
           ? "control-debug"
           : icon === "copy"
             ? "control-copy"
-            : icon === "refresh"
-              ? "control-refresh"
-              : "control-play";
+            : icon === "open-note"
+              ? "control-open-note"
+              : icon === "refresh"
+                ? "control-refresh"
+                : "control-play";
     this.#renderIcon(button, icon);
     button.addEventListener("click", () => {
       if (button.getAttribute("aria-disabled") !== "true") action();
@@ -1199,6 +1205,13 @@ class PlannerSurfaceController implements PlannerSurface {
     const headerEnd = element(this.#root.ownerDocument, "div", "spiral-day-planner__header-end");
     const controls = element(this.#root.ownerDocument, "div", "spiral-day-planner__controls");
     controls.append(
+      ...(this.#onOpenPrimary
+        ? [this.#createIconButton("open-note", this.#messages.t("planner", "control.openNote"), () => {
+          void Promise.resolve(this.#onOpenPrimary?.(projection.sourcePath)).catch(() => {
+            this.#live.announce(this.#messages.t("planner", "announcement.openNoteFailed"), "assertive");
+          });
+        })]
+        : []),
       this.#createIconButton("refresh", this.#messages.t("planner", "control.refresh"), () => {
         this.probeRuntimeNow();
         this.#live.announce(this.#messages.t("planner", "announcement.refreshRequested"));

@@ -28,6 +28,13 @@ test("missing-plan copy names the required HTML markers in both locales", () => 
   assert.match(zhCNPlanner["status.missingDetail"], /<!-- \/nautilus-log:plan -->/);
 });
 
+test("planner opens the current Daily Note from a bilingual header control", () => {
+  assert.equal(enPlanner["control.openNote"], "Open Daily Note");
+  assert.equal(zhCNPlanner["control.openNote"], "打开日记");
+  assert.match(enPlanner["announcement.openNoteFailed"], /file explorer/);
+  assert.match(zhCNPlanner["announcement.openNoteFailed"], /文件列表/);
+});
+
 test("review overrun filter label matches the bilingual handbook", () => {
   assert.equal(enReview["filter.overruns"], "Only completed overruns");
   assert.equal(zhCNReview["filter.overruns"], "只看已完成的超时任务");
