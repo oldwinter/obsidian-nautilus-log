@@ -119,6 +119,103 @@ test("Plan displays the projected remaining duration without deriving it from th
   assert.deepEqual(metadata({ ...partialTask, progressPercent: 33, remainingDurationMinutes: 40 }), ["10:00–10:45", "40m remaining · 1h planned"]);
 });
 
+for (const [locale, label] of [
+  ["en", "Now"],
+  ["zh-CN", "现在"],
+] as const) {
+  test(`Plan marks the current time between scheduled rows in ${locale}`, () => {
+    const document = new DocumentStub();
+    const root = document.createElement();
+    const messages = createMessages({
+      locale,
+      namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+    });
+    const first = {
+      ...partialTask,
+      label: "First task",
+      sourceOrder: 0,
+      source: { ...partialTask.source, sourceOrder: 0, blockId: "task-0" },
+    };
+    const second = {
+      ...partialTask,
+      label: "Second task",
+      sourceOrder: 1,
+      source: { ...partialTask.source, sourceOrder: 1, blockId: "task-1" },
+    };
+    renderPlanView(root as unknown as HTMLElement, {
+      nowEpochMs: 0,
+      messages,
+      pending: new Set(),
+      renderIcon: () => {},
+      dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+      navigateTask: () => assert.fail("Rendering must not navigate"),
+      execution: { writeBlocked: false } as PlanViewOptions["execution"],
+      snapshot: {
+        state: "confirmed",
+        projection: {
+          items: [first, second],
+          day: {
+            relation: "today",
+            showNowNeedle: true,
+            scheduleFromMinutes: 10 * 60 + 30,
+          },
+          schedule: {
+            fixedEvents: [],
+            plannedSlots: [
+              { task: first, startMinutes: 9 * 60, endMinutes: 10 * 60 },
+              { task: second, startMinutes: 11 * 60, endMinutes: 12 * 60 },
+            ],
+          },
+        },
+      } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+    });
+    const list = root.querySelector(".spiral-day-execution__rows");
+    assert.ok(list);
+    assert.deepEqual(list.children.map((child) => child.className), [
+      "spiral-day-execution__plan-row",
+      "spiral-day-execution__now-marker",
+      "spiral-day-execution__plan-row",
+    ]);
+    const marker = list.children[1]!;
+    assert.equal(marker.dataset.nowMinute, "630");
+    assert.deepEqual(collectText(marker), [label, "10:30"]);
+  });
+}
+
+test("Plan omits the current-time marker outside today", () => {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        items: [partialTask],
+        day: {
+          relation: "past",
+          showNowNeedle: false,
+          scheduleFromMinutes: 10 * 60,
+        },
+        schedule: {
+          fixedEvents: [],
+          plannedSlots: [{ task: partialTask, startMinutes: 600, endMinutes: 645 }],
+        },
+      },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  assert.equal(collectText(root).includes("Now"), false);
+});
+
 function collectText(element: ElementStub): string[] {
   return [element.textContent, ...element.children.flatMap(collectText)].filter((value) => value !== "");
 }

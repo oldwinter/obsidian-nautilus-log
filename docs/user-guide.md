@@ -219,6 +219,8 @@ Plan.
   task at 100%.
 - Scheduled rows with partial progress also show remaining vs planned
   duration.
+- A **Now** divider marks the current time between scheduled rows, so past and
+  upcoming work are easy to scan.
 - Reopen a completed task from Planner, not from this tab.
 
 If the tab says **No Primary Plan was found today**, use **Insert into today's
