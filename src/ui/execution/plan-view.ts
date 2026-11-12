@@ -59,6 +59,33 @@ function taskKey(item: PlanItem<RuntimePlanItemSource>): string {
   return item.source.blockId ?? `${item.source.path}:${item.sourceOrder}`;
 }
 
+function nowMinute(projection: RuntimePlanProjection): number | undefined {
+  const day = projection.day;
+  return day?.relation === "today"
+    && day.showNowNeedle
+    && Number.isFinite(day.scheduleFromMinutes)
+    ? day.scheduleFromMinutes
+    : undefined;
+}
+
+function appendNowMarker(
+  parent: HTMLElement,
+  minute: number,
+  messages: ExecutionMessages,
+): void {
+  const marker = executionElement(parent.ownerDocument, "li", "spiral-day-execution__now-marker");
+  marker.dataset.nowMinute = String(minute);
+  const label = executionElement(parent.ownerDocument, "span", "spiral-day-execution__now-label");
+  label.textContent = messages.t("execution", "plan.now");
+  const line = executionElement(parent.ownerDocument, "span", "spiral-day-execution__now-line");
+  line.setAttribute("aria-hidden", "true");
+  const time = executionElement(parent.ownerDocument, "time", "spiral-day-execution__now-time");
+  time.textContent = formatExecutionClockMinute(minute);
+  marker.setAttribute("aria-label", `${label.textContent} ${time.textContent}`);
+  marker.append(label, line, time);
+  parent.append(marker);
+}
+
 export function isCurrentExecutionItem(
   item: PlanItem<RuntimePlanItemSource>,
   execution: ExecutionApplicationSnapshot,
@@ -223,9 +250,18 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
       end: entry.endMinutes,
     })),
   ].sort((left, right) => left.start - right.start || left.item.sourceOrder - right.item.sourceOrder);
+  const currentMinute = nowMinute(projection);
+  let nowMarkerInserted = false;
   for (const interval of intervals) {
+    if (currentMinute !== undefined && !nowMarkerInserted && currentMinute < interval.end) {
+      appendNowMarker(list, currentMinute, options.messages);
+      nowMarkerInserted = true;
+    }
     placed.add(taskKey(interval.item));
     appendTaskRow(list, interval.item, projection, options, [interval.start, interval.end]);
+  }
+  if (currentMinute !== undefined && !nowMarkerInserted && intervals.length > 0) {
+    appendNowMarker(list, currentMinute, options.messages);
   }
   if (intervals.length === 0) {
     if (projection.items.length === 0) {

@@ -32,6 +32,7 @@ export const zhCNExecution: ExecutionCatalog = Object.freeze({
   "timing.deleteConfirm": "再次操作以删除这个 CLOCK。",
   "timing.pending": "正在确认更改",
   "plan.scheduled": "已排期",
+  "plan.now": "现在",
   "plan.shortestFirst": "剩余用时短的优先",
   "plan.unscheduled": "今日未排期",
   "plan.noPrimary": "今天没有找到主计划。",

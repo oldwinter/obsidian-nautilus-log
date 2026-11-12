@@ -418,6 +418,29 @@
   padding: 0;
 }
 
+.spiral-day-execution__now-marker {
+  align-items: center;
+  color: var(--spiral-day-execution-focus);
+  display: grid;
+  font-size: 10.5px;
+  font-weight: 700;
+  gap: 8px;
+  grid-template-columns: auto minmax(16px, 1fr) auto;
+  list-style: none;
+  min-height: 28px;
+  padding: 2px 3px;
+}
+
+.spiral-day-execution__now-line {
+  background: currentColor;
+  height: 1px;
+  opacity: 0.35;
+}
+
+.spiral-day-execution__now-time {
+  font-variant-numeric: tabular-nums;
+}
+
 .spiral-day-execution__row,
 .spiral-day-execution__plan-row {
   border-bottom: 1px solid var(--spiral-day-execution-border);

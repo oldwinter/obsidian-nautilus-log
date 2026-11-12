@@ -145,7 +145,11 @@ const plan = Object.freeze({
     today: { year: 2026, month: 8, day: 29 },
     items,
     diagnostics: [],
-    day: { relation: "today" },
+    day: {
+      relation: "today",
+      showNowNeedle: true,
+      scheduleFromMinutes: 10 * 60,
+    },
     schedule: {
       fixedEvents: [],
       plannedSlots: scenario === "up-next-empty"

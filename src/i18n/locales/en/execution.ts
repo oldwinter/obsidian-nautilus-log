@@ -32,6 +32,7 @@ export type ExecutionCatalog = Readonly<{
   "timing.deleteConfirm": string;
   "timing.pending": string;
   "plan.scheduled": string;
+  "plan.now": string;
   "plan.unscheduled": string;
   "plan.shortestFirst": string;
   "plan.noPrimary": string;
@@ -166,6 +167,7 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "timing.deleteConfirm": "Activate again to delete this CLOCK.",
   "timing.pending": "Confirming change",
   "plan.scheduled": "Scheduled",
+  "plan.now": "Now",
   "plan.shortestFirst": "Shortest remaining first",
   "plan.unscheduled": "Unscheduled today",
   "plan.noPrimary": "No Primary Plan was found today.",
