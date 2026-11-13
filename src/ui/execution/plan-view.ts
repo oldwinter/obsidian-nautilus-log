@@ -59,6 +59,56 @@ function taskKey(item: PlanItem<RuntimePlanItemSource>): string {
   return item.source.blockId ?? `${item.source.path}:${item.sourceOrder}`;
 }
 
+function appendDayProgress(
+  parent: HTMLElement,
+  projection: RuntimePlanProjection,
+  messages: ExecutionMessages,
+): void {
+  const countable = projection.items.filter((item) => item.status !== "plain");
+  if (countable.length === 0) return;
+  const completed = countable.filter((item) => item.status === "done").length;
+  const container = executionElement(
+    parent.ownerDocument,
+    "div",
+    "spiral-day-execution__day-progress",
+  );
+  container.dataset.completed = String(completed);
+  container.dataset.total = String(countable.length);
+  const heading = executionElement(
+    parent.ownerDocument,
+    "div",
+    "spiral-day-execution__day-progress-heading",
+  );
+  const label = executionElement(
+    parent.ownerDocument,
+    "span",
+    "spiral-day-execution__section-label",
+  );
+  label.textContent = messages.t("execution", "plan.progress");
+  const count = executionElement(
+    parent.ownerDocument,
+    "span",
+    "spiral-day-execution__day-progress-count",
+  );
+  const countText = messages.t("execution", "plan.progressCount", {
+    completed,
+    total: countable.length,
+  });
+  count.textContent = countText;
+  heading.append(label, count);
+  const meter = executionElement(
+    parent.ownerDocument,
+    "progress",
+    "spiral-day-execution__day-progress-meter",
+  );
+  meter.max = countable.length;
+  meter.value = completed;
+  meter.setAttribute("aria-label", messages.t("execution", "plan.progress"));
+  meter.setAttribute("aria-valuetext", countText);
+  container.append(heading, meter);
+  parent.append(container);
+}
+
 export function isCurrentExecutionItem(
   item: PlanItem<RuntimePlanItemSource>,
   execution: ExecutionApplicationSnapshot,
@@ -205,6 +255,7 @@ export function renderPlanView(root: HTMLElement, options: PlanViewOptions): voi
     return;
   }
   const { projection } = snapshot;
+  appendDayProgress(root, projection, options.messages);
   const scheduled = executionElement(root.ownerDocument, "section", "spiral-day-execution__plan-section");
   const heading = executionElement(root.ownerDocument, "h3");
   heading.textContent = options.messages.t("execution", "plan.scheduled");

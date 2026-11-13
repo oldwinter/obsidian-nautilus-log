@@ -13,8 +13,11 @@ class ElementStub {
   className = "";
   textContent = "";
   readonly dataset: Record<string, string> = {};
+  readonly attributes = new Map<string, string>();
   readonly children: ElementStub[] = [];
   checked = false;
+  max = 0;
+  value = 0;
   readonly listeners = new Map<string, (event?: { shiftKey: boolean }) => void>();
   focus(): void { this.ownerDocument.activeElement = this; }
   fire(event: string): void { this.listeners.get(event)?.(); }
@@ -30,7 +33,7 @@ class ElementStub {
     }
     return null;
   }
-  setAttribute(): void {}
+  setAttribute(name: string, value: string): void { this.attributes.set(name, value); }
   addEventListener(event: string, listener: (event?: { shiftKey: boolean }) => void): void { this.listeners.set(event, listener); }
 }
 
@@ -122,6 +125,105 @@ test("Plan displays the projected remaining duration without deriving it from th
 function collectText(element: ElementStub): string[] {
   return [element.textContent, ...element.children.flatMap(collectText)].filter((value) => value !== "");
 }
+
+function dayProgress(
+  items: readonly PlanItem<RuntimePlanItemSource>[],
+  locale = "en",
+): {
+  readonly container: ElementStub;
+  readonly count: ElementStub;
+  readonly meter: ElementStub;
+  readonly text: readonly string[];
+} | null {
+  const document = new DocumentStub();
+  const root = document.createElement();
+  const messages = createMessages({
+    locale,
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderPlanView(root as unknown as HTMLElement, {
+    nowEpochMs: 0,
+    messages,
+    pending: new Set(),
+    renderIcon: () => {},
+    dispatch: () => assert.fail("Rendering must not dispatch an execution intent"),
+    navigateTask: () => assert.fail("Rendering must not navigate"),
+    execution: { writeBlocked: false } as PlanViewOptions["execution"],
+    snapshot: {
+      state: "confirmed",
+      projection: {
+        items,
+        schedule: { fixedEvents: [], plannedSlots: [] },
+      },
+    } as unknown as NonNullable<PlanViewOptions["snapshot"]>,
+  });
+  const container = root.querySelector(".spiral-day-execution__day-progress");
+  if (!container) return null;
+  const count = container.querySelector(".spiral-day-execution__day-progress-count");
+  const meter = container.querySelector(".spiral-day-execution__day-progress-meter");
+  assert.ok(count);
+  assert.ok(meter);
+  return { container, count, meter, text: collectText(container) };
+}
+
+const doneTask: PlanItem<RuntimePlanItemSource> = {
+  ...partialTask,
+  status: "done",
+  label: "Finished task",
+  progressPercent: 100,
+  remainingDurationMinutes: 0,
+  executionEligible: false,
+  sourceOrder: 1,
+  source: { ...partialTask.source, sourceOrder: 1, blockId: "task-2" },
+};
+
+const plainTask: PlanItem<RuntimePlanItemSource> = {
+  ...partialTask,
+  kind: "fixed-event",
+  status: "plain",
+  label: "Plain event",
+  progressPercent: 0,
+  remainingDurationMinutes: 60,
+  executionEligible: false,
+  startMinutes: 600,
+  endMinutes: 660,
+  sourceOrder: 2,
+  source: { ...partialTask.source, sourceOrder: 2, blockId: "task-3" },
+};
+
+for (const [locale, label, countText] of [
+  ["en", "Day progress", "1 of 2 done"],
+  ["zh-CN", "今日进度", "已完成 1/2"],
+] as const) {
+  test(`Plan summarizes completed checkbox items in ${locale}`, () => {
+    const progress = dayProgress([partialTask, doneTask, plainTask], locale);
+    assert.ok(progress);
+    assert.equal(progress.container.dataset.completed, "1");
+    assert.equal(progress.container.dataset.total, "2");
+    assert.equal(progress.meter.value, 1);
+    assert.equal(progress.meter.max, 2);
+    assert.equal(progress.meter.attributes.get("aria-label"), label);
+    assert.equal(progress.meter.attributes.get("aria-valuetext"), countText);
+    assert.equal(progress.count.textContent, countText);
+    assert.deepEqual(progress.text, [label, countText]);
+  });
+}
+
+test("Plan reaches full day progress when every checkbox item is done", () => {
+  const progress = dayProgress([doneTask, { ...doneTask, sourceOrder: 3, source: {
+    ...doneTask.source,
+    sourceOrder: 3,
+    blockId: "task-4",
+  } }]);
+  assert.ok(progress);
+  assert.equal(progress.meter.value, 2);
+  assert.equal(progress.meter.max, 2);
+  assert.equal(progress.count.textContent, "2 of 2 done");
+});
+
+test("Plan omits day progress when the plan has no checkbox items", () => {
+  assert.equal(dayProgress([plainTask]), null);
+});
 
 test("Plan missing state shows the Primary Plan markers and next actions", () => {
   const document = new DocumentStub();
