@@ -227,6 +227,36 @@ function byClass(document: TimingDocumentStub, className: string): TimingElement
   return document.elements.filter((element) => element.className === className);
 }
 
+test("recent Timing rows render a copy-link control beside resume", () => {
+  const document = new TimingDocumentStub();
+  const root = document.createElement();
+  const copied: ExecutionRecentTask[] = [];
+  const messages = createMessages({
+    locale: "en",
+    namespaces: { execution: defineLocaleNamespace("execution", enExecution, zhCNExecution) },
+  });
+  renderTimingView(root as unknown as HTMLElement, {
+    nowEpochMs: NOW,
+    snapshot: idleSnapshot(),
+    recent: [task],
+    pending: new Set(),
+    messages,
+    renderIcon: () => {},
+    dispatch: () => {},
+    refresh: () => {},
+    openActiveTask: () => {},
+    copyTaskLink: (recent) => { copied.push(recent); },
+    navigateTask: () => {},
+    requestDelete: () => {},
+  });
+  const actions = byClass(document, "spiral-day-execution__icon-button");
+  assert.equal(actions.length, 2);
+  const copy = actions.find((button) => button.attributes.get("aria-label") === enExecution["action.copyTaskLink"]);
+  assert.ok(copy);
+  copy.listeners.get("click")?.();
+  assert.deepEqual(copied, [task]);
+});
+
 test("idle Timing shows an up-next card instead of the long generic guidance", () => {
   const plan = confirmedPlan([{
     task: flexibleTask(0, "Prepare release evidence"),

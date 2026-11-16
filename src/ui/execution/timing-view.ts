@@ -109,6 +109,7 @@ export interface TimingViewOptions {
   readonly dispatch: (intent: ExecutionApplicationIntent) => void;
   readonly refresh: () => void;
   readonly openActiveTask: () => void;
+  readonly copyTaskLink?: (task: ExecutionRecentTask) => void;
   readonly navigateTask: (
     target: { readonly path: string; readonly ownerId: string | null; readonly sourceOrder: number },
     location: "main" | "sidebar",
@@ -387,7 +388,15 @@ export function renderTimingView(root: HTMLElement, options: TimingViewOptions):
       });
       appendPending(resume, options.pending.has(`task:${task.ownerId}`), messages);
       if (snapshot.writeBlocked) resume.disabled = true;
-      details.append(actual, resume);
+      const copy = executionIconButton({
+        document: root.ownerDocument,
+        label: messages.t("execution", "action.copyTaskLink"),
+        icon: "copy",
+        renderIcon: options.renderIcon,
+        className: "spiral-day-execution__icon-button",
+        onActivate: () => options.copyTaskLink?.(task),
+      });
+      details.append(actual, copy, resume);
       item.append(details);
       list.append(item);
     }
