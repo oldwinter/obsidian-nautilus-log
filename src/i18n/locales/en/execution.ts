@@ -39,6 +39,8 @@ export type ExecutionCatalog = Readonly<{
   "plan.noTasks": string;
   "plan.noUnscheduled": string;
   "plan.emptyReady": string;
+  "plan.progress": string;
+  "plan.progressCount": MessageFunction<{ completed: number; total: number }>;
   "plan.loading": string;
   "plan.unavailable": string;
   "plan.unavailableDetail": string;
@@ -173,6 +175,8 @@ export const enExecution: ExecutionCatalog = Object.freeze({
   "plan.noTasks": "No unfinished direct tasks are available. Use Copy sample task and paste an open `- [ ]` flexible task between the markers, then save.",
   "plan.noUnscheduled": "Every open flexible task is already on the schedule.",
   "plan.emptyReady": "The Primary Plan has no list items yet. Use Copy sample task and paste a `- [ ]` task between the markers, then save.",
+  "plan.progress": "Day progress",
+  "plan.progressCount": ({ completed, total }) => `${completed} of ${total} done`,
   "plan.loading": "Refreshing today's plan.",
   "plan.unavailable": "Today's plan is unavailable.",
   "plan.unavailableDetail": "Save the Daily Note and refresh. If this keeps happening, check Daily Note folder and date format in Settings → Spiral Day, or open Planner from the ribbon.",

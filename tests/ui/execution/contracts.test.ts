@@ -131,6 +131,7 @@ test("execution styles cover interaction states and the build discovers every st
   for (const selector of [
     ".spiral-day-execution__tabpanel",
     ".spiral-day-execution__tab[aria-selected=\"true\"]",
+    ".spiral-day-execution__day-progress-meter",
     ".spiral-day-active-task-view",
     ".spiral-day-execution-pomo-stop[hidden]",
     ".spiral-day-execution[data-delete-armed=\"true\"]",

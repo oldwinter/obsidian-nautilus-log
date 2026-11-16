@@ -110,6 +110,22 @@ const baseItems = [
       sourceOrder: 1,
     },
   },
+  {
+    kind: "flexible-task",
+    status: "done",
+    executionEligible: false,
+    label: "Review yesterday's notes",
+    durationMinutes: 15,
+    remainingDurationMinutes: 0,
+    progressPercent: 100,
+    urgent: false,
+    sourceOrder: 9,
+    source: {
+      path: PATH,
+      blockId: "nl-44444444-4444-4444-8444-444444444444",
+      sourceOrder: 9,
+    },
+  },
 ] as const;
 
 const scenario = new URLSearchParams(location.search).get("scenario");

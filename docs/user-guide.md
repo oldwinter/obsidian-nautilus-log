@@ -219,6 +219,8 @@ Plan.
   task at 100%.
 - Scheduled rows with partial progress also show remaining vs planned
   duration.
+- A compact **Day progress** bar summarizes checkbox completion across today's
+  plan, so the day's state stays visible without counting rows.
 - Reopen a completed task from Planner, not from this tab.
 
 If the tab says **No Primary Plan was found today**, use **Insert into today's
