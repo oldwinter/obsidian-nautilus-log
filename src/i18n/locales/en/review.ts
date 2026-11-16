@@ -36,6 +36,7 @@ export type ReviewCatalog = Readonly<{
   "state.noTarget": string;
   "action.clockIn": string;
   "action.complete": string;
+  "action.copyLink": string;
   "action.openSource": MessageFunction<{ title: string }>;
   "action.refresh": string;
   "action.failed": string;
@@ -82,6 +83,7 @@ export const enReview: ReviewCatalog = Object.freeze({
   "state.noTarget": "This task cannot be identified safely. If this is today, use Locate Primary Plan to open the note. If the block ID is duplicated, keep it on exactly one item, then save and refresh.",
   "action.clockIn": "Clock in",
   "action.complete": "Complete",
+  "action.copyLink": "Copy task link",
   "action.openSource": ({ title }) => `Open source for ${title}`,
   "action.refresh": "Refresh review",
   "action.failed": "The action could not be confirmed. Refresh and try again.",

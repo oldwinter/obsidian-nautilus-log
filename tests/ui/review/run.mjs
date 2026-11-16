@@ -236,7 +236,7 @@ try {
 
   const row = (title) => page.locator(".spiral-day-review__row").filter({ hasText: title });
   const metric = async (title, name) => (await row(title).locator(`[data-metric=${name}]`).textContent())?.trim();
-  const visibleMutationCount = () => page.locator(".spiral-day-review__actions button:visible").count();
+  const visibleMutationCount = () => page.locator(".spiral-day-review__actions button:not(:first-child):visible").count();
 
   await scenario("states-summary-variance", async () => {
     await open("full");
@@ -251,6 +251,13 @@ try {
       actual: await metric("No recorded time", "actual"),
       variance: await metric("No recorded time", "variance"),
     });
+    const copyLink = row("No recorded time").getByRole("button", { name: "Copy task link", exact: true });
+    check("review.completed-row-keeps-copy-link", await copyLink.isVisible() && await copyLink.isEnabled(), {
+      visible: await copyLink.isVisible(),
+      enabled: await copyLink.isEnabled(),
+    });
+    await copyLink.click();
+    await page.getByText("Task link copied.", { exact: true }).waitFor();
     const summary = await page.locator(".spiral-day-review__summary > p").allTextContents();
     check("review.summary-counts", summary[0] === "4/7 completed · 3 compared", summary);
     check("review.summary-compared-only", summary[1] === "Planned 1h 30m · Actual 1h 35m · Variance +5m", summary);

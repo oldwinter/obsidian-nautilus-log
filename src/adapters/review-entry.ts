@@ -10,6 +10,7 @@ import type { ExecutionReviewSurface } from "../ui/execution/panel";
 import { ReviewView } from "../ui/execution/review-view";
 import type { ReviewRowAction } from "../ui/execution/review-row";
 import type { SourceTaskReference } from "./source-navigation";
+import type { TaskLinkCopyResult } from "./task-link";
 
 export interface ReviewEntryDependencies {
   readonly dispatch: (intent: ExecutionApplicationIntent) => Promise<ExecutionCommandOutcome>;
@@ -18,6 +19,8 @@ export interface ReviewEntryDependencies {
   readonly reviewSnapshot: () => ReviewCoordinatorSnapshot;
   readonly subscribeReview: (listener: (snapshot: ReviewCoordinatorSnapshot) => void) => () => void;
   readonly navigateTask: (target: SourceTaskReference, location: "main" | "sidebar") => void | Promise<void>;
+  readonly copyLink: (target: SourceTaskReference, label: string) => TaskLinkCopyResult | Promise<TaskLinkCopyResult>;
+  readonly notify?: (message: string, timeoutMs: number) => void;
   readonly today: () => LogicalDate;
   readonly selectDate: (date: LogicalDate | null) => Promise<void>;
   readonly refresh: () => Promise<void>;
@@ -78,6 +81,24 @@ export function createReviewEntryPort(dependencies: ReviewEntryDependencies): Re
         const row = review.projection.rows.find((candidate) => candidate.task.key === key);
         const target = row?.task.target;
         if (!row || !target) return;
+        if (action === "copy-link") {
+          if (!target.ownerId) return;
+          pending = true;
+          render();
+          try {
+            const result = await dependencies.copyLink(target, row.task.label);
+            dependencies.notify?.(
+              dependencies.messages.t("execution", result.kind === "copied" ? "notice.taskLinkCopied" : "error.copyTaskLink"),
+              result.kind === "copied" ? 3_000 : 5_000,
+            );
+          } catch {
+            error = true;
+          } finally {
+            pending = false;
+            render();
+          }
+          return;
+        }
         if (action === "open-source" && !target.ownerId) return;
         if (action !== "open-source") {
           const today = dependencies.today();
