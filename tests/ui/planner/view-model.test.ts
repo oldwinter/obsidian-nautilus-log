@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -78,4 +79,17 @@ test("UP-INS-03 runtime-unavailable model embeds no recovery mutation", () => {
   assert.equal(model.state, "runtime-unavailable");
   assert.equal(model.mutationEnabled, false);
   assert.match(model.message, /not ready/);
+});
+
+test("confirmed Planner exposes a read-only shortcut to its Daily Note", async () => {
+  const [view, adapter, main] = await Promise.all([
+    readFile("src/ui/planner/view.ts", "utf8"),
+    readFile("src/adapters/planner-view.ts", "utf8"),
+    readFile("src/main.ts", "utf8"),
+  ]);
+  assert.match(view, /this\.#createIconButton\("open-note", this\.#messages\.t\("planner", "control\.openNote"\)/);
+  assert.match(view, /this\.#onOpenPrimary\?\.\(projection\.sourcePath\)/);
+  assert.match(adapter, /"open-note": "file-text"/);
+  assert.match(adapter, /onOpenPrimary: this\.#dependencies\.openPrimary/);
+  assert.match(main, /openPrimary: async \(path\) => \{\s*await this\.#requireNavigator\(\)\.openPrimary\(path\);/);
 });

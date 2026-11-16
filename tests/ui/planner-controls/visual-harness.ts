@@ -184,6 +184,7 @@ let projectionCallCount = 0;
 let revisionSequence = 1;
 let adapterView: SpiralDayPlannerView | undefined;
 let adapterIntentCount = 0;
+const adapterOpenPrimaryPaths: string[] = [];
 let adapterLocale: SupportedLocale = "en";
 const adapterLocaleListeners = new Set<(locale: string) => void>();
 let patternEvidenceContainer: HTMLElement | undefined;
@@ -415,6 +416,7 @@ const obsidianIconNames: Readonly<Record<PlannerIconName, string>> = Object.free
   debug: "bug",
   expand: "chevron-down",
   "hide-completed": "eye-off",
+  "open-note": "file-text",
   "show-completed": "eye",
   play: "play",
   refresh: "refresh-cw",
@@ -934,6 +936,7 @@ window.issue24Harness = {
     adapterRoot.style.boxSizing = "border-box";
     adapterRoot.style.width = "520px";
     adapterIntentCount = 0;
+    adapterOpenPrimaryPaths.length = 0;
     adapterLocale = "en";
     let adapterHostContext: "main" | "sidebar" = "main";
     const ordinaryDebugArtifactsAbsent = () => {
@@ -958,6 +961,7 @@ window.issue24Harness = {
       runtime,
       defaultLogicalDate: () => DISPLAYED_DATE,
       debugControl: () => true,
+      openPrimary: (path) => { adapterOpenPrimaryPaths.push(path); },
       dispatchPlannerProgress: () => { adapterIntentCount += 1; },
       locale: () => adapterLocale,
       subscribeLocale(listener) {
@@ -976,6 +980,10 @@ window.issue24Harness = {
     const adapterSurfaceRoot = () => adapterRoot.querySelector<HTMLElement>(":scope > .spiral-day-planner");
     const opened = adapterSurfaceRoot() !== null
       && adapterRoot.querySelectorAll("[data-obsidian-icon] svg.lucide").length >= 4;
+    adapterRoot.querySelector<HTMLButtonElement>('[data-control="open-note"]')?.click();
+    await nextFrame();
+    const openNoteShortcut = adapterOpenPrimaryPaths.length === 1
+      && adapterOpenPrimaryPaths[0] === SOURCE_PATH;
     const mainSchedule = adapterRoot.querySelector<HTMLDetailsElement>(".spiral-day-planner__schedule");
     const mainCompactScheduleInitiallyOpen = mainSchedule?.open === true;
     mainSchedule?.querySelector<HTMLElement>("summary")?.click();
@@ -1171,6 +1179,7 @@ window.issue24Harness = {
       mainWideToCompactScheduleOpen,
       mainWideToCompactLayout,
       mainWideToCompactSchedulePresent,
+      openNoteShortcut,
       opened,
       ordinaryDebugAbsentAfterDisable,
       ordinaryDebugAbsentInitially,

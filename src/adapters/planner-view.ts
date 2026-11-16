@@ -33,6 +33,7 @@ export interface PlannerItemViewDependencies {
   readonly debugControl?: () => boolean;
   readonly copySummary?: (summary: string) => PlannerSummaryCopyOutcome | Promise<PlannerSummaryCopyOutcome>;
   readonly insertPrimaryPlan?: () => void | Promise<void>;
+  readonly openPrimary?: (path: string) => void | Promise<void>;
   readonly dispatchPlannerProgress?: (intent: PlannerProgressIntent) => void | Promise<void>;
   readonly locale?: () => string;
   readonly subscribeLocale?: (listener: (locale: string) => void) => () => void;
@@ -53,6 +54,7 @@ const ICONS: Readonly<Record<PlannerIconName, IconName>> = Object.freeze({
   debug: "bug",
   expand: "chevron-down",
   "hide-completed": "eye-off",
+  "open-note": "file-text",
   "show-completed": "eye",
   play: "play",
   refresh: "refresh-cw",
@@ -258,6 +260,9 @@ export class SpiralDayPlannerView extends ItemView {
             : {}),
           ...(this.#dependencies.insertPrimaryPlan
             ? { onInsertPrimaryPlan: this.#dependencies.insertPrimaryPlan }
+            : {}),
+          ...(this.#dependencies.openPrimary
+            ? { onOpenPrimary: this.#dependencies.openPrimary }
             : {}),
           ...(this.#dependencies.dispatchPlannerProgress
             ? { onProgressIntent: this.#dependencies.dispatchPlannerProgress }

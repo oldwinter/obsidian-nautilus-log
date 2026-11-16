@@ -15,7 +15,7 @@ const obsidianBrowserStub = {
     build.onLoad({ filter: /.*/, namespace: "issue24-browser-obsidian" }, () => ({
       contents: `
         import {
-          Bug, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Play, RefreshCw,
+          Bug, ChevronDown, ChevronUp, Copy, Eye, EyeOff, FileText, Play, RefreshCw,
           createElement as createLucideElement,
         } from "lucide";
 
@@ -34,6 +34,7 @@ const obsidianBrowserStub = {
             "eye": Eye,
             "eye-off": EyeOff,
             "copy": Copy,
+            "file-text": FileText,
             "play": Play,
             "refresh-cw": RefreshCw,
           })[icon];
