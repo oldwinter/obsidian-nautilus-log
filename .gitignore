@@ -4,3 +4,6 @@ styles.css
 *.js.map
 .DS_Store
 npm-debug.log*
+
+# Verification-skill runtime evidence (see .claude/skills/verify/SKILL.md)
+/.codex/runtime/
