@@ -30,8 +30,9 @@ Foundation version: `0.1.0`
 - Track one active task with CLOCK, CLOCK Out, task POMO, and standalone POMO.
   Timing also keeps recent tasks handy for resuming or copying their block links.
 - Compare planned and recorded time in Review, search task titles, filter to completed overruns, and
-  recover from stale, conflicting, or unavailable timing data. The Review
-  summary still covers the whole day.
+  recover from stale, conflicting, or unavailable timing data. Matching search
+  words are highlighted in the visible titles. The Review summary still covers
+  the whole day.
 - Open the Planner and Active Task surfaces from Obsidian's workspace and sidebar.
 
 Spiral Day never writes a Markdown file during a read-only refresh. It writes

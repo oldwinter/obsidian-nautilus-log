@@ -224,7 +224,7 @@ export class ReviewView {
         view = new ReviewRowView(this.#root.ownerDocument, (action) => this.#actions.activate(row.task.key, action));
         this.#rows.set(row.task.key, view);
       }
-      if (view.update(row, messages, enabled, writableDate, execution.focused?.ownerId)) fallbackIndex ??= index;
+      if (view.update(row, messages, enabled, writableDate, execution.focused?.ownerId, query)) fallbackIndex ??= index;
       const current = this.#list.children[index];
       if (current !== view.element) this.#list.insertBefore(view.element, current ?? null);
       orderedRows.push(view);
