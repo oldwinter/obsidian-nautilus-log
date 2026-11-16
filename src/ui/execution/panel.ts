@@ -10,9 +10,11 @@ import { executionPopoverPlacement } from "./panel-layout";
 import {
   ExecutionRovingTabs,
   executionElement,
+  executionClockOutContext,
   executionIconButton,
   executionLiveRegion,
   formatExecutionDuration,
+  type ExecutionOutcomeContext,
   type ExecutionIconRenderer,
   type ExecutionMessages,
 } from "./shared-controls";
@@ -36,7 +38,10 @@ export interface ExecutionPanelPort {
   readonly subscribeExecution: (listener: (snapshot: ExecutionApplicationSnapshot) => void) => () => void;
   readonly subscribePlan: (listener: (snapshot: RuntimeSnapshot<RuntimePlanProjection>) => void) => () => void;
   readonly dispatch: (intent: ExecutionApplicationIntent) => Promise<ExecutionCommandOutcome>;
-  readonly outcomeFeedback: (outcome: ExecutionCommandOutcome) => ExecutionPanelFeedback;
+  readonly outcomeFeedback: (
+    outcome: ExecutionCommandOutcome,
+    context?: ExecutionOutcomeContext,
+  ) => ExecutionPanelFeedback;
   readonly navigatePrimary: () => void | Promise<void>;
   readonly openActiveTask: () => void | Promise<void>;
   readonly navigateTask: (
@@ -259,13 +264,17 @@ export function mountExecutionPanel(
   const dispatch = (input: ExecutionApplicationIntent): void => {
     const key = pendingKey(input);
     if (pending.has(key) || destroyed) return;
+    const requestedAt = port.now();
+    const context = input.type === "clock-out"
+      ? executionClockOutContext(execution?.focused, requestedAt)
+      : undefined;
     feedback.hidden = true;
     feedback.textContent = "";
     delete feedback.dataset.kind;
     pending.add(key);
     render();
     void port.dispatch(input).then((outcome) => {
-      showFeedback(port.outcomeFeedback(outcome));
+      showFeedback(port.outcomeFeedback(outcome, context));
     }, (error: unknown) => {
       showFeedback({
         message: options.messages.t("execution", "error.generic"),

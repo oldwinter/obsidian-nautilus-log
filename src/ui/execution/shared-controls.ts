@@ -18,6 +18,31 @@ export type ExecutionIconName =
 
 export type ExecutionIconRenderer = (element: HTMLElement, icon: ExecutionIconName) => void;
 
+export interface ExecutionClockOutSummary {
+  readonly label: string;
+  readonly elapsedMs: number;
+}
+
+export interface ExecutionOutcomeContext {
+  readonly clockOut?: ExecutionClockOutSummary;
+}
+
+export function executionClockOutContext(
+  focused: {
+    readonly label: string;
+    readonly clock: { readonly startEpochMs: number };
+  } | undefined,
+  nowEpochMs: number,
+): ExecutionOutcomeContext | undefined {
+  if (!focused) return undefined;
+  return Object.freeze({
+    clockOut: Object.freeze({
+      label: focused.label,
+      elapsedMs: Math.max(0, nowEpochMs - focused.clock.startEpochMs),
+    }),
+  });
+}
+
 export function executionElement<K extends keyof HTMLElementTagNameMap>(
   document: Document,
   name: K,
@@ -51,6 +76,19 @@ export function formatExecutionMinutes(minutes: number): string {
 export function formatExecutionClockMinute(minutes: number): string {
   const bounded = Math.max(0, Math.min(24 * 60, Math.round(minutes)));
   return `${String(Math.floor(bounded / 60)).padStart(2, "0")}:${String(bounded % 60).padStart(2, "0")}`;
+}
+
+export function formatExecutionClockOutSummary(
+  summary: ExecutionClockOutSummary,
+  messages: ExecutionMessages,
+): string {
+  if (!Number.isFinite(summary.elapsedMs) || summary.elapsedMs < 60_000) {
+    return messages.t("execution", "notice.clockedOutBrief", { label: summary.label });
+  }
+  return messages.t("execution", "notice.clockedOut", {
+    duration: formatExecutionMinutes(summary.elapsedMs / 60_000),
+    label: summary.label,
+  });
 }
 
 export function executionIconButton(input: {
